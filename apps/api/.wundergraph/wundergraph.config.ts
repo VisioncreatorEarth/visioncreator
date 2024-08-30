@@ -8,18 +8,8 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
-const countries = introspect.graphql({
-  apiNamespace: "countries",
-  url: "https://countries.trevorblades.com/",
-});
-
-const spaceX = introspect.graphql({
-  apiNamespace: "spacex",
-  url: "https://spacex-api.fly.dev/graphql/",
-});
-
 configureWunderGraphApplication({
-  apis: [countries, spaceX],
+  apis: [],
   server,
   operations,
   generate: {
@@ -36,7 +26,7 @@ configureWunderGraphApplication({
         {
           userInfoEndpoint:
             process.env.NODE_ENV === "production"
-              ? "https://next.visioncreator.works/auth/userinfo"
+              ? "https://visioncreator.earth/auth/userinfo"
               : "http://127.0.0.1:3000/auth/userinfo",
         },
       ],
@@ -46,7 +36,7 @@ configureWunderGraphApplication({
     ...cors.allowAll,
     allowedOrigins:
       process.env.NODE_ENV === "production"
-        ? ["https://next.visioncreator.works"]
+        ? ["https://visioncreator.earth"]
         : [
             "http://127.0.0.1:3000",
             new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
@@ -55,7 +45,7 @@ configureWunderGraphApplication({
   options: {
     publicNodeUrl:
       process.env.NODE_ENV === "production"
-        ? "https://visioncreator.fly.dev"
+        ? "https://api-visioncreator-earth.fly.dev"
         : "http://127.0.0.1:9991",
   },
   authorization: {

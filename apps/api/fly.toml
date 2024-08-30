@@ -1,4 +1,5 @@
-app = 'visioncreator-earth'
+app = 'api-visioncreator-earth'
+primary_region = "fra"
 
 [build]
 
