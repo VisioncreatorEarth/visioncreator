@@ -13,7 +13,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      PROJECT_ID: ${{secrets.SUPABASE_PROJECT_ID }}
+      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
 
     steps:
       - uses: actions/checkout@v3
@@ -26,13 +26,17 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Run Seed Script (if needed)
+      - name: Link Supabase Project
         run: |
           cd packages/supacreator/supabase
-          supabase db reset --linked
+          supabase link --project-ref $PROJECT_ID
 
       - name: Deploy Supabase Changes
         run: |
           cd packages/supacreator/supabase
-          supabase link --project-ref $PROJECT_ID
           supabase db push
+
+      - name: Run Seed Script
+        run: |
+          cd packages/supacreator/supabase
+          supabase db reset
