@@ -113,17 +113,12 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 6. Push your updates to the main branch and supabase production gets automatically migrated
 
 ### API
-1. The api gets deployed via fly.io. To deploy the api, go into your apps/api/ folder and deploy in the terminal via 'flyctl deploy'
-
-2. Set the following environment variables:
-  - WG_SECURE_COOKIE_HASH_KEY (https://docs.wundergraph.com/docs/self-hosted/security)
-  - WG_SECURE_COOKIE_BLOCK_KEY (https://docs.wundergraph.com/docs/self-hosted/security)
-  - WG_CSRF_TOKEN_SECRET (https://docs.wundergraph.com/docs/self-hosted/security)
-  - SUPABASE_URL
-  - SUPABASE_SERVICE_ROLE
-  - SECRET_GOCARDLESS_ACCESS_TOKEN
-  - NANGO_SECRET_KEY
-  - NANGO_HOST
+1. Store the following environment variables in your github repository secrets:
+- `FLY_API_TOKEN`
+- `SUPABASE_URL`,
+- `SUPABASE_SERVICE_ROLE`,
+- `NANGO_SECRET_KEY`,
+- `NANGO_HOST`
 
 ### Frontend
 1. Go to vercel and deploy the svelte frontend apps/app.
