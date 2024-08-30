@@ -3,47 +3,33 @@
 import type { ClientOperationErrors, GraphQLError } from "@wundergraph/sdk/client";
 
 export type OperationErrors = {
-	CreateMandate: CreateMandateErrors;
-	CreateSubscription: CreateSubscriptionErrors;
-	ListSubscriptions: ListSubscriptionsErrors;
-	LoadCustomers: LoadCustomersErrors;
 	MyNewsletterStatus: MyNewsletterStatusErrors;
 	calculateCID: CalculateCIDErrors;
 	createInvite: CreateInviteErrors;
 	createSchema: CreateSchemaErrors;
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
-	listTodos: ListTodosErrors;
 	queryComposer: QueryComposerErrors;
 	queryDB: QueryDBErrors;
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMe: QueryMeErrors;
 	querySchemas: QuerySchemasErrors;
 	queryUserStats: QueryUserStatsErrors;
-	subLeaderboard: SubLeaderboardErrors;
-	subMe: SubMeErrors;
 	toggleNewsletter: ToggleNewsletterErrors;
 	updateMe: UpdateMeErrors;
 };
 
-export type CreateMandateErrors = ClientOperationErrors;
-export type CreateSubscriptionErrors = ClientOperationErrors;
-export type ListSubscriptionsErrors = ClientOperationErrors;
-export type LoadCustomersErrors = ClientOperationErrors;
 export type MyNewsletterStatusErrors = ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateSchemaErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;
-export type ListTodosErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;
 export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
 export type QuerySchemasErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
-export type SubLeaderboardErrors = ClientOperationErrors;
-export type SubMeErrors = ClientOperationErrors;
 export type ToggleNewsletterErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
