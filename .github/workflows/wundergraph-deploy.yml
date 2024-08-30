@@ -27,9 +27,9 @@ jobs:
           cd apps/api
 
           # Check if the app exists
-          if ! flyctl apps list | grep -q "visioncreator-earth"; then
+          if ! flyctl apps list | grep -q "api-visioncreator-earth"; then
             echo "App does not exist. Creating new app..."
-            flyctl apps create visioncreator-earth
+            flyctl apps create api-visioncreator-earth
           else
             echo "App already exists. Proceeding with deployment..."
           fi
