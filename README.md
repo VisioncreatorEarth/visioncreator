@@ -59,7 +59,7 @@ Pull schema from remote
 npx supabase db pull --schema auth, storage
 ```
 
-Local Diff of schema writing a local migration file
+Local Diff of schema writing a local migration file (needed when updating schema via Supabase Dashboard UI)
 
 ```
 npx supabase db diff -f migration_xyz
@@ -75,7 +75,9 @@ npx supabase migration up
 
 ### Nango 3rd-Party API Gateway
 1. Signup to Nango Cloud.
+
 2. Switch the Environment to Prod
+
 3. Add the Listmonk Integration, then add a new connection with your user credentials.
 - Integration Unique Key: listmonk
 - Connection ID: listmonk-vc
@@ -85,21 +87,30 @@ npx supabase migration up
 
 ### Postgres DB
 1. Log into Supabase and create a new Database
+
 2. Save your Postgres DB Master Password in a Password Manager of your Choice
-3. Generate Supabase Access Token:
+
+3. Seed your database before first push manually (ATTENTION: only do this the first time, otherwise you loose data)
+In your local environment:
+```
+cd packages/supacreator/supabase
+npx supabase link --project-ref "project_id"
+npx supabase db reset --linked
+```
+
+4. Generate Supabase Access Token:
 If you haven't already, generate a Supabase access token:
 - Go to https://app.supabase.com/
 - Click on your profile icon > Account
 - Go to Access Tokens and generate a new token
-4. Setup GitHub Secrets:
+
+5. Setup GitHub Secrets:
 In your GitHub repository, go to Settings > Secrets and Variables > Actions, and add the following secrets:
 - `SUPABASE_ACCESS_TOKEN`: Your Supabase access token
 - `SUPABASE_PROJECT_ID`: Your Supabase project ID
 - `SUPABASE_DB_PASSWORD`: Your Supabase database password
-5. Push to main branch and migrations are automagically applied.
 
-```
-5. Push your updates to the main branch and supabase production gets automatically migrated
+6. Push your updates to the main branch and supabase production gets automatically migrated
 
 ### API
 1. The api gets deployed via fly.io. To deploy the api, go into your apps/api/ folder and deploy in the terminal via 'flyctl deploy'
