@@ -114,23 +114,21 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 
 ### API
 1. Store the following environment variables in your github repository secrets:
-- `FLY_API_TOKEN`
+- `FLY_API_TOKEN`,
 - `SUPABASE_URL`,
 - `SUPABASE_SERVICE_ROLE`,
 - `NANGO_SECRET_KEY`,
 - `NANGO_HOST`
 
 ### Frontend
-1. Go to vercel and deploy the svelte frontend apps/app.
-2. Connect your domain.
-3. Leave the Build and Output Settings as default.
-4. Set the following environment variables:
+1. Go to vercel, connect your repo and deploy the svelte frontend apps/app.
+2. Connect in the Vercel UI your repo and deploy the project, while setting the following vars:
 - PUBLIC_SUPABASE_ANON_KEY
 - PUBLIC_SUPABASE_URL
 - SECRET_SUPABASE_JWT_SECRET
 - SECRET_SUPABASE_SERVICE_ROLE
-- PUBLIC_BASE_URL (https://{domain the app is deployed to})
+- PUBLIC_BASE_URL (https://{domain the frontend app is deployed to})
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
-- SECRET_ANTHROPIC_API_KEY
-- SECRET_GOCARDLESS_ACCESS_TOKEN
+
+4. Connect your domain.
