@@ -1,9 +1,9 @@
-name: Deploy Wundergraph Changes
+name: Deploy to Fly.io
 
 on:
   push:
     branches:
-      - main
+      - main # or your default branch
 
 jobs:
   deploy:
@@ -26,6 +26,16 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd apps/api
+
+          # Check if the app exists
+          if ! flyctl apps list | grep -q "visioncreator-earth"; then
+            echo "App does not exist. Creating new app..."
+            flyctl apps create visioncreator-earth
+          else
+            echo "App already exists. Proceeding with deployment..."
+          fi
+
+          # Set secrets
           flyctl secrets set \
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
             WG_SECURE_COOKIE_HASH_KEY="${{ env.WG_SECURE_COOKIE_HASH_KEY }}" \
@@ -34,4 +44,6 @@ jobs:
             SUPABASE_SERVICE_ROLE="${{ secrets.SUPABASE_SERVICE_ROLE }}" \
             NANGO_SECRET_KEY="${{ secrets.NANGO_SECRET_KEY }}" \
             NANGO_HOST="${{ secrets.NANGO_HOST }}"
+
+          # Deploy the app
           flyctl deploy --remote-only
