@@ -1,7 +1,6 @@
 # Welcome to Visioncreator
 
-
-## Launch
+## Launch Development Environment
 ```
 npm i
 npm run dev
@@ -60,36 +59,52 @@ Pull schema from remote
 npx supabase db pull --schema auth, storage
 ```
 
+Local Diff of schema writing a local migration file
+
+```
+npx supabase db diff -f migration_xyz
+```
+
 Local migration of schema
 ```
 npx supabase migration up
 ```
 
 
-Note:
-Nango package repo is a git submodule, pull all latest update from remote with:
-
-```
-git submodule update --remote --merge
-```
-
-
 ## Deployment to production
 
-### Nango API Gateway
-- Signup to Nango Cloud.
-- Switch the Environment to Prod
-- In Integrations, add the Listmonk Integration, then add a new connection with your user credentials.
-  - Integration Unique Key: listmonk
-  - Connection ID: listmonk-vc
-  - Domain: listmonk.domain.earth
-  - username
-  - password
+### Nango 3rd-Party API Gateway
+1. Signup to Nango Cloud.
+2. Switch the Environment to Prod
+3. Add the Listmonk Integration, then add a new connection with your user credentials.
+- Integration Unique Key: listmonk
+- Connection ID: listmonk-vc
+- Domain: listmonk.domain.earth
+- username
+- password
+
+### Postgres DB
+1. Log into Supabase and create a new Database
+2. Save your Postgres DB Master Password in a Password Manager of your Choice
+3. Generate Supabase Access Token:
+If you haven't already, generate a Supabase access token:
+- Go to https://app.supabase.com/
+- Click on your profile icon > Account
+- Go to Access Tokens and generate a new token
+4. Setup GitHub Secrets:
+In your GitHub repository, go to Settings > Secrets and Variables > Actions, and add the following secrets:
+- `SUPABASE_ACCESS_TOKEN`: Your Supabase access token
+- `SUPABASE_PROJECT_ID`: Your Supabase project ID
+- `SUPABASE_DB_PASSWORD`: Your Supabase database password
+5. Push to main branch and migrations are automagically applied.
+
+```
+5. Push your updates to the main branch and supabase production gets automatically migrated
 
 ### API
-The api gets deployed via fly.io.
-To deploy the api, go into your apps/api/ folder and deploy in the terminal via 'flyctl deploy'
-- Set the following environment variables:
+1. The api gets deployed via fly.io. To deploy the api, go into your apps/api/ folder and deploy in the terminal via 'flyctl deploy'
+
+2. Set the following environment variables:
   - WG_SECURE_COOKIE_HASH_KEY (https://docs.wundergraph.com/docs/self-hosted/security)
   - WG_SECURE_COOKIE_BLOCK_KEY (https://docs.wundergraph.com/docs/self-hosted/security)
   - WG_CSRF_TOKEN_SECRET (https://docs.wundergraph.com/docs/self-hosted/security)
@@ -100,16 +115,16 @@ To deploy the api, go into your apps/api/ folder and deploy in the terminal via 
   - NANGO_HOST
 
 ### Frontend
-- Go to vercel and deploy the svelte frontend apps/app.
-- Connect your domain.
-- Leave the Build and Output Settings as default.
-- Set the following environment variables:
-  - PUBLIC_SUPABASE_ANON_KEY
-  - PUBLIC_SUPABASE_URL
-  - SECRET_SUPABASE_JWT_SECRET
-  - SECRET_SUPABASE_SERVICE_ROLE
-  - PUBLIC_BASE_URL (https://{domain the app is deployed to})
-  - SECRET_LISTMONK_PASSWORD
-  - SECRET_LISTMONK_USER
-  - SECRET_ANTHROPIC_API_KEY
-  - SECRET_GOCARDLESS_ACCESS_TOKEN
+1. Go to vercel and deploy the svelte frontend apps/app.
+2. Connect your domain.
+3. Leave the Build and Output Settings as default.
+4. Set the following environment variables:
+- PUBLIC_SUPABASE_ANON_KEY
+- PUBLIC_SUPABASE_URL
+- SECRET_SUPABASE_JWT_SECRET
+- SECRET_SUPABASE_SERVICE_ROLE
+- PUBLIC_BASE_URL (https://{domain the app is deployed to})
+- SECRET_LISTMONK_PASSWORD
+- SECRET_LISTMONK_USER
+- SECRET_ANTHROPIC_API_KEY
+- SECRET_GOCARDLESS_ACCESS_TOKEN

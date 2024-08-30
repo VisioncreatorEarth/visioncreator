@@ -26,17 +26,8 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Link Supabase Project
+      - name: Deploy Supabase Migration
         run: |
           cd packages/supacreator/supabase
           supabase link --project-ref $PROJECT_ID
-
-      - name: Deploy Supabase Changes
-        run: |
-          cd packages/supacreator/supabase
           supabase db push
-
-      - name: Run Seed Script
-        run: |
-          cd packages/supacreator/supabase
-          supabase db reset
