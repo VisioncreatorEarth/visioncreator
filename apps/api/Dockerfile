@@ -12,7 +12,7 @@ RUN apk add --no-cache curl && \
     cat wunderctl.tar.gz | tar -xz -C /usr/local/bin && \
     rm wunderctl.tar.gz
 
-    
+
 # Copy the necessary files
 COPY package.json /app/
 COPY .wundergraph ./.wundergraph
@@ -28,7 +28,7 @@ ENV CI=true \
     WG_SERVER_URL=http://127.0.0.1:9992 \
     WG_SERVER_HOST=127.0.0.1 \
     WG_SERVER_PORT=9992 \
-    WG_PUBLIC_NODE_URL=https://next-visioncreator.fly.dev
+    WG_PUBLIC_NODE_URL=https://api-visioncreator-earth.fly.dev
 
 # Install npm dependencies
 RUN npm install
