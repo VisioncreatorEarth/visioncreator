@@ -3,11 +3,6 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
-	import StartWelcome from '$lib/components/StartWelcome.svelte';
-	import StartNameInput from '$lib/components/StartNameInput.svelte';
-	import StartGreeting from '$lib/components/StartGreeting.svelte';
-	import StartStory from '$lib/components/StartStory.svelte';
-
 	import { readable } from 'svelte/store';
 
 	const launchDate = new Date('2024-09-21T21:09:24+02:00').getTime();
