@@ -61,12 +61,12 @@
 			</p>
 			<p class="text-tertiary-600 text-sm @3xl:text-lg">Inspirations</p>
 		</div>
-		<div class="text-center">
+		<!-- <div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
 				{getLevel($query.data.invites)}
 			</p>
 			<p class="text-tertiary-600 text-sm @3xl:text-lg">My Level</p>
-		</div>
+		</div> -->
 		<div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
 				{$query.data.waitingPosition}

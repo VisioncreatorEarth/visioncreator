@@ -58,7 +58,7 @@
 	</p>
 {:else if $query.data && $query.data.list}
 	<div class="space-y-6">
-		{#if selfEntry}
+		<!-- {#if selfEntry}
 			<div class="p-4 space-y-4 sm:p-8 sm:space-y-8 bg-surface-800 rounded-3xl">
 				{#if getLevel(selfEntry.numericValue) >= 3}
 					<div class="text-center">
@@ -131,7 +131,7 @@
 					{/each}
 				</div>
 			</div>
-		{/if}
+		{/if} -->
 
 		<ul class="space-y-2 @3xl:space-y-4">
 			{#each $query.data.list as { primaryText, identifier, numericValue }, index}

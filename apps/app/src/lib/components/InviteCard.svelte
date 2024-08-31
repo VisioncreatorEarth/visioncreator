@@ -30,6 +30,12 @@
 <div
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
+	<!-- <p class="text-lg mb-4">
+		<span class="h1 text-4xl">Transform your life, one habit at a time!</span> <br />Start by
+		consuming our 1min a day story.
+		<br />Share the story on social media to climb our ranks. <br />The further up the leaderboard
+		the faster you will get access after our launch.
+	</p> -->
 	{#if $showQRCode}
 		<QRCode
 			data={invitationLink}

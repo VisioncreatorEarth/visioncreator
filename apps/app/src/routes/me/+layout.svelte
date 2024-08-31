@@ -118,7 +118,7 @@
 								Settings
 							</a>
 						</li>
-						<li class="mr-2">
+						<!-- <li class="mr-2">
 							<a
 								href="#"
 								class={`inline-block p-4 rounded-t-lg ${
@@ -130,7 +130,7 @@
 							>
 								Logs
 							</a>
-						</li>
+						</li> -->
 					</ul>
 					<button
 						class="p-2 text-tertiary-400 hover:text-tertiary-300"

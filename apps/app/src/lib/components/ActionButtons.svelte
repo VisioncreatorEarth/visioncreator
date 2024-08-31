@@ -49,7 +49,7 @@
 			<ComposeView view={viewForm} />
 		</div>
 	{:else}
-		<div class="grid grid-cols-1 @sm:grid-cols-2 @md:grid-cols-3 gap-2 mb-4">
+		<div class="grid grid-cols-1 @sm:grid-cols-2 @md:grid-cols-2 gap-2 mb-2">
 			<form
 				method="post"
 				action="?/signout"
@@ -67,13 +67,13 @@
 			>
 				Update Name
 			</button>
-			<button
+			<!-- <button
 				class="btn @sm:btn-sm @lg:btn-md variant-ghost-secondary w-full"
 				on:click={toggleNewMandate}
 				disabled={loading}
 			>
 				Create Mandate
-			</button>
+			</button> -->
 		</div>
 	{/if}
 </div>
