@@ -70,11 +70,15 @@ npx supabase db diff -f migration_xyz
 ```
 
 Local migration of schema
+
 ```
 npx supabase migration up
 ```
 
-
+Reset Database (be carful with --linked as this resets the remote production db)
+```
+npx supabase db reset (without argument local db, with --linked remote production db)
+```
 ## Deployment to production
 
 ### Nango 3rd-Party API Gateway

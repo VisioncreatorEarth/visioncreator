@@ -24,7 +24,7 @@ export default createOperation.mutation({
     // Fetch user's name from Supabase
     const { data: profile, error: profileError } = await context.supabase
       .from("profiles")
-      .select("full_name")
+      .select("name")
       .eq("id", input.id)
       .single();
 
@@ -33,7 +33,7 @@ export default createOperation.mutation({
       throw new Error("Failed to fetch user profile");
     }
 
-    const userName = profile.full_name || "";
+    const userName = profile.name || "";
     console.log("User profile fetched. Name:", userName);
 
     try {

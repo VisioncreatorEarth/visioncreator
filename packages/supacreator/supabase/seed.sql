@@ -5,19 +5,18 @@ BEGIN
     INSERT INTO auth.users (id, email, raw_user_meta_data, created_at, email_confirmed_at)
     VALUES (
         '00000000-0000-0000-0000-000000000001',
-        'db@visioncreator.earth',
-        jsonb_build_object('full_name', 'Visioncreator', 'avatar_url', ''),
+        'hello@visioncreator.earth',
+        jsonb_build_object('name', 'Visioncreator'),
         now(),
         now()
     )
     ON CONFLICT (id) DO NOTHING;
 
     -- Insert the corresponding profile with the same hardcoded UUID
-    INSERT INTO public.profiles (id, full_name, avatar_url, created_at)
+    INSERT INTO public.profiles (id, name, created_at)
     VALUES (
         '00000000-0000-0000-0000-000000000001',
         'Visioncreator',
-        '',
         now()
     )
     ON CONFLICT (id) DO NOTHING;

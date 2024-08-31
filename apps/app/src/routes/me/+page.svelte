@@ -34,20 +34,17 @@
 		const supabaseMe = await supabase.auth.getUser();
 		Me.update((store) => ({ ...store, id: supabaseMe.data.user?.id || '' }));
 
-		if (
-			!supabaseMe.data.user?.user_metadata.inviter &&
-			!supabaseMe.data.user?.user_metadata.full_name
-		) {
+		if (!supabaseMe.data.user?.user_metadata.inviter && !supabaseMe.data.user?.user_metadata.name) {
 			try {
 				const { data, error } = await supabase.auth.updateUser({
-					data: { inviter: $futureMe.visionid, full_name: $futureMe.name || 'UpdateMyName' }
+					data: { inviter: $futureMe.visionid, name: $futureMe.name || 'UpdateMyName' }
 				});
 				if (error) throw error;
 				log('success', 'Supabase user metadata updated successfully');
 
 				const updateNameResult = await $updateNameMutation.mutateAsync({
 					id: session.user.id,
-					full_name: $futureMe.name || 'MyName'
+					name: $futureMe.name || 'MyName'
 				});
 				log('success', 'User name updated successfully', updateNameResult);
 

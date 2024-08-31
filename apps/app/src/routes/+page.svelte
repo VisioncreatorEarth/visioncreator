@@ -166,12 +166,6 @@
 		backgroundMusic.play();
 	};
 
-	const toggleMute = () => {
-		isMuted = !isMuted;
-		typingSound.muted = isMuted;
-		backgroundMusic.muted = isMuted;
-	};
-
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			nextState();
