@@ -45,4 +45,4 @@ jobs:
             NANGO_HOST="${{ secrets.NANGO_HOST }}"
 
           # Deploy the app
-          flyctl deploy --remote-only --no-cache
+          flyctl deploy --remote-only
