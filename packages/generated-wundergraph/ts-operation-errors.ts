@@ -3,13 +3,13 @@
 import type { ClientOperationErrors, GraphQLError } from "@wundergraph/sdk/client";
 
 export type OperationErrors = {
+	MyNewsletterStatus: MyNewsletterStatusErrors;
+	NewsletterToggle: NewsletterToggleErrors;
 	calculateCID: CalculateCIDErrors;
 	createInvite: CreateInviteErrors;
 	createSchema: CreateSchemaErrors;
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
-	myNewsletterStatus: MyNewsletterStatusErrors;
-	newsletterToggle: NewsletterToggleErrors;
 	queryComposer: QueryComposerErrors;
 	queryDB: QueryDBErrors;
 	queryLeaderboard: QueryLeaderboardErrors;
@@ -19,13 +19,13 @@ export type OperationErrors = {
 	updateMe: UpdateMeErrors;
 };
 
+export type MyNewsletterStatusErrors = ClientOperationErrors;
+export type NewsletterToggleErrors = ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateSchemaErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;
-export type MyNewsletterStatusErrors = ClientOperationErrors;
-export type NewsletterToggleErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;
 export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
