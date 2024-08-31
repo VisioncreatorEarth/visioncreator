@@ -10,6 +10,26 @@
 	let { session, supabase } = data;
 	$: ({ session } = data);
 
+	const updateNameMutation = createMutation({
+		operationName: 'updateMe'
+	});
+
+	const createInviteMutation = createMutation({
+		operationName: 'createInvite'
+	});
+
+	const toggleNewsletterMutation = createMutation({
+		operationName: 'ToggleNewsletter'
+	});
+
+	const me = createQuery({
+		operationName: 'queryMe',
+		input: {
+			id: session.user.id
+		},
+		liveQuery: true
+	});
+
 	onMount(async () => {
 		const supabaseMe = await supabase.auth.getUser();
 		Me.update((store) => ({ ...store, id: supabaseMe.data.user?.id || '' }));
@@ -53,26 +73,6 @@
 		return () => {
 			log('info', 'Me page unmounted');
 		};
-	});
-
-	const updateNameMutation = createMutation({
-		operationName: 'updateMe'
-	});
-
-	const createInviteMutation = createMutation({
-		operationName: 'createInvite'
-	});
-
-	const toggleNewsletterMutation = createMutation({
-		operationName: 'ToggleNewsletter'
-	});
-
-	const me = createQuery({
-		operationName: 'queryMe',
-		input: {
-			id: session.user.id
-		},
-		liveQuery: true
 	});
 </script>
 

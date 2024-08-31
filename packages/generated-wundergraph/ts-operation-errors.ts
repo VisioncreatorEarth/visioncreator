@@ -4,6 +4,7 @@ import type { ClientOperationErrors, GraphQLError } from "@wundergraph/sdk/clien
 
 export type OperationErrors = {
 	MyNewsletterStatus: MyNewsletterStatusErrors;
+	ToggleNewsletter: ToggleNewsletterErrors;
 	calculateCID: CalculateCIDErrors;
 	createInvite: CreateInviteErrors;
 	createSchema: CreateSchemaErrors;
@@ -15,11 +16,11 @@ export type OperationErrors = {
 	queryMe: QueryMeErrors;
 	querySchemas: QuerySchemasErrors;
 	queryUserStats: QueryUserStatsErrors;
-	toggleNewsletter: ToggleNewsletterErrors;
 	updateMe: UpdateMeErrors;
 };
 
 export type MyNewsletterStatusErrors = ClientOperationErrors;
+export type ToggleNewsletterErrors = ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateSchemaErrors = ClientOperationErrors;
@@ -31,5 +32,4 @@ export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
 export type QuerySchemasErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
-export type ToggleNewsletterErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;

@@ -116,12 +116,17 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 - Goto https://supabase.com/dashboard/project/projectid/auth/url-configuration and set:
   - Site URL: https://domain.earth
   - Redirect URL: https://domain.earth/me
-- Setup Email Tempaltes - Goto https://supabase.com/dashboard/project/ejlwxsdcqfznwupoqvsp/auth/templates
+- Setup Email Tempaltes - Goto https://supabase.com/dashboard/project/projectid/auth/templates
   - Generate the maizzle email templates inside of packages/maizzle and copy and paste them into the Supabase UI.
   - Confirm Signup -> Visionletter SignUp
   - Magic Link -> Magic Signin
-- TODO: Then wire up custom Mail Server
-- TODO: And supabase domain
+- Setup Custom SMTP Mail Provider with Postmark: Goto https://supabase.com/dashboard/project/projectid/settings/auth#auth-config-smtp-form
+  - Host: smtp.postmarkapp.com
+  - Port: 587
+  - Minimum interval: 30
+  - username and password credentials from postmark dashboard
+- Add custom supabase domain
+  - Goto https://supabase.com/dashboard/project/projectid/settings/general and configure custom domain
 
 ### API
 1. Store the following environment variables in your github repository secrets:
