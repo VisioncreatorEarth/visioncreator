@@ -20,7 +20,22 @@ export default createOperation.mutation({
       throw new AuthorizationError({ message: "User ID does not match." });
     }
     console.log("Authorization passed. Fetching user profile...");
+
     // Fetch user's name from Supabase
-    return "Geht doch";
+    const { data: profile, error: profileError } = await context.supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", input.id)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching user profile:", profileError);
+      throw new Error("Failed to fetch user profile");
+    }
+
+    const userName = profile.full_name || "";
+    console.log("User profile fetched. Name:", userName);
+
+    return userName;
   },
 });

@@ -6,7 +6,6 @@ export type OperationErrors = {
 	MyNewsletterStatus: MyNewsletterStatusErrors;
 	NewsletterToggle: NewsletterToggleErrors;
 	NewsletterToggleORIGINAL: NewsletterToggleORIGINALErrors;
-	Test: TestErrors;
 	calculateCID: CalculateCIDErrors;
 	createInvite: CreateInviteErrors;
 	createSchema: CreateSchemaErrors;
@@ -24,7 +23,6 @@ export type OperationErrors = {
 export type MyNewsletterStatusErrors = ClientOperationErrors;
 export type NewsletterToggleErrors = ClientOperationErrors;
 export type NewsletterToggleORIGINALErrors = ClientOperationErrors;
-export type TestErrors = ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateSchemaErrors = ClientOperationErrors;

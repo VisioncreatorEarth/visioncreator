@@ -26,19 +26,6 @@
 	onDestroy(() => {
 		eventBus.off('updateMe', handleUpdateMe);
 	});
-
-	const testMutation = createMutation({
-		operationName: 'Test'
-	});
-
-	async function handleTestClick() {
-		try {
-			const result = await $testMutation.mutateAsync({});
-			console.log('Test mutation result:', result);
-		} catch (error) {
-			console.error('Test mutation error:', error);
-		}
-	}
 </script>
 
 <div class="w-full max-w-6xl bg-surface-800 rounded-3xl">
@@ -87,14 +74,5 @@
 			</p>
 			<p class="text-tertiary-600 text-sm @3xl:text-lg">Waiting Position</p>
 		</div>
-	</div>
-
-	<div class="flex justify-center p-4">
-		<button
-			class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
-			on:click={handleTestClick}
-		>
-			Test Wundergraph Endpoint
-		</button>
 	</div>
 </div>
