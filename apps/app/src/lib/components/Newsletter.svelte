@@ -6,7 +6,7 @@
 	export let me: { email: string; id: string };
 
 	const newsletterStatus = createQuery({
-		operationName: 'MyNewsletterStatus',
+		operationName: 'myNewsletterStatus',
 		input: {
 			id: me.id,
 			email: me.email
@@ -14,7 +14,7 @@
 	});
 
 	const toggleNewsletterMutation = createMutation({
-		operationName: 'ToggleNewsletter'
+		operationName: 'newsletterToggle'
 	});
 
 	$: {
