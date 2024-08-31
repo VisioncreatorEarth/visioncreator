@@ -193,13 +193,17 @@
 		<div class="@container h-full">
 			<div class="flex flex-col items-center justify-center w-full h-full">
 				{#if $countdown > 0}
-					<div class="h1 text-8xl font-bold text-white mb-8 tracking-wider opacity-75">
+					<div
+						class="h1 text-4xl sm:text-6xl md:text-8xl font-bold text-white mb-4 sm:mb-8 tracking-wider opacity-75"
+					>
 						{Math.floor($countdown / 86400)}d {Math.floor(($countdown % 86400) / 3600)}h {Math.floor(
 							($countdown % 3600) / 60
 						)}m {$countdown % 60}s
 					</div>
 				{:else}
-					<div class="h1 text-8xl font-bold text-center text-white mb-8 tracking-wider opacity-75">
+					<div
+						class="h1 text-4xl sm:text-6xl md:text-8xl font-bold text-center text-white mb-4 sm:mb-8 tracking-wider opacity-75"
+					>
 						you are amazing
 					</div>
 				{/if}
