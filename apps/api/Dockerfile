@@ -32,8 +32,11 @@ ENV CI=true \
 # Install npm dependencies
 RUN npm install
 
+# Generate the WunderGraph configuration
+RUN wunderctl generate --wundergraph-dir=.wundergraph
+
 # Expose only the node, server is private
 EXPOSE 9991
 
-# Generate WunderGraph configuration and start the server at runtime
-CMD wunderctl generate --wundergraph-dir=.wundergraph && wunderctl start --wundergraph-dir=.wundergraph
+# Command to run the application
+CMD wunderctl start --wundergraph-dir=.wundergraph
