@@ -19,7 +19,7 @@
 	});
 
 	const toggleNewsletterMutation = createMutation({
-		operationName: 'newsletterToggle'
+		operationName: 'NewsletterToggle'
 	});
 
 	const me = createQuery({
