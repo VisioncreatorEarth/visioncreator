@@ -33,21 +33,14 @@
 
 	const handleToggleNewsletter = async () => {
 		try {
-			console.log('Attempting to toggle newsletter subscription...', {
-				id: me.id,
-				email: me.email
-			});
 			log('info', 'Toggling newsletter subscription...', { id: me.id, email: me.email });
-			console.log('toggleNewsletterMutation state before mutation:', $toggleNewsletterMutation);
 			const response = await $toggleNewsletterMutation.mutateAsync({
 				id: me.id,
 				email: me.email
 			});
 			console.log('Toggle newsletter response:', response);
 			log('success', `Newsletter subscription toggled.`, { response });
-			console.log('Refetching newsletter status...');
 			await $newsletterStatus.refetch();
-			console.log('Newsletter status after refetch:', $newsletterStatus.data);
 			log(
 				'info',
 				`Newsletter status refetched. New status: ${
