@@ -8,7 +8,29 @@
 	import StartGreeting from '$lib/components/StartGreeting.svelte';
 	import StartStory from '$lib/components/StartStory.svelte';
 
+	import { readable } from 'svelte/store';
+
+	const launchDate = new Date('2024-09-21T21:21:21+02:00').getTime();
+
+	const countdown = readable(0, (set) => {
+		const interval = setInterval(() => {
+			const now = new Date().getTime();
+			const distance = launchDate - now;
+			set(Math.floor(distance / 1000));
+		}, 1000);
+
+		return () => clearInterval(interval);
+	});
+
+	onMount(() => {
+		// Countdown is automatically started due to the readable store
+	});
+
 	const drawerStore = getDrawerStore();
+
+	function openSignupModal() {
+		drawerStore.open({ position: 'bottom' });
+	}
 
 	let state = 1;
 	let typingSound: HTMLAudioElement;
@@ -169,9 +191,33 @@
 
 	<div class="h-full overlay">
 		<div class="@container h-full">
-			<div
-				class="min-h-full flex flex-col justify-end text-center items-center mx-auto max-w-xl @4xl:max-w-6xl p-2 gap-4 pb-12 @3xl:pb-16"
-			>
+			<div class="flex flex-col items-center justify-center w-full h-full">
+				{#if $countdown > 0}
+					<div class="h1 text-8xl font-bold text-white mb-8 tracking-wider opacity-75">
+						{Math.floor($countdown / 86400)}d {Math.floor(($countdown % 86400) / 3600)}h {Math.floor(
+							($countdown % 3600) / 60
+						)}m {$countdown % 60}s
+					</div>
+				{:else}
+					<div class="h1 text-8xl font-bold text-center text-white mb-8 tracking-wider opacity-75">
+						you are amazing
+					</div>
+				{/if}
+
+				<button
+					type="button"
+					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
+					on:click={() => drawerStore.open({ position: 'bottom' })}
+				>
+					Sign Up to Waitlist
+				</button>
+			</div>
+
+			<!--
+				<div
+					class="min-h-full flex flex-col justify-end text-center items-center mx-auto max-w-xl @4xl:max-w-6xl p-2 gap-4 pb-12 @3xl:pb-16"
+				>
+
 				{#if state === 1}
 					<StartWelcome
 						heading={labels.welcome.heading}
@@ -193,8 +239,10 @@
 						{typingSound}
 						on:next={() => drawerStore.open({ position: 'bottom' })}
 					/>
+
 				{/if}
-			</div>
+				</div>
+				-->
 		</div>
 	</div>
 

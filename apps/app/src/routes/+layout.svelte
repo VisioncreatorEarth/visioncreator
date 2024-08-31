@@ -55,10 +55,10 @@
 					<div
 						class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 					>
-						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">Newsletter</div>
+						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">Visionletter</div>
 						<p class="max-w-2xl text-md @3xl:text-lg">
-							Erfahre wöchentliche Updates, wie wir uns entwickeln und wo du auf deiner Warteliste
-							stehst, bis du von uns Eingeladen wirst.
+							Join our journey! Get weekly insider updates and watch your waitlist position climb.
+							Be part of something extraordinary – are you ready?
 						</p>
 					</div>
 					{#if $authReady}
@@ -71,10 +71,8 @@
 							appearance={{
 								theme: vcAuthTheme
 							}}
-							localization={{
-								variables: vcAuthLocalization
-							}}
-						/>{/if}
+						/>
+					{/if}
 				</div>
 			{/if}
 			{#if dev}

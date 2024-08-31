@@ -112,6 +112,17 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 
 6. Push your updates to the main branch and supabase production gets automatically migrated
 
+7. Setup Mail
+- Goto https://supabase.com/dashboard/project/projectid/auth/url-configuration and set:
+  - Site URL: https://domain.earth
+  - Redirect URL: https://domain.earth/me
+- Setup Email Tempaltes - Goto https://supabase.com/dashboard/project/ejlwxsdcqfznwupoqvsp/auth/templates
+  - Generate the maizzle email templates inside of packages/maizzle and copy and paste them into the Supabase UI.
+  - Confirm Signup -> Visionletter SignUp
+  - Magic Link -> Magic Signin
+- TODO: Then wire up custom Mail Server
+- TODO: And supabase domain
+
 ### API
 1. Store the following environment variables in your github repository secrets:
 - `FLY_API_TOKEN`,
@@ -130,5 +141,4 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 - PUBLIC_BASE_URL (https://{domain the frontend app is deployed to})
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
-
-4. Connect your domain.
+3. Connect your domain.
