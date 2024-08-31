@@ -27,101 +27,14 @@
 		drawerStore.open({ position: 'bottom' });
 	}
 
-	let state = 1;
-	let typingSound: HTMLAudioElement;
-	let backgroundMusic: HTMLAudioElement;
-	let isMuted = false;
-
-	const names = [
-		'Emma',
-		'Liam',
-		'Olivia',
-		'Noah',
-		'Ava',
-		'Ethan',
-		'Sophia',
-		'Mason',
-		'Isabella',
-		'William',
-		'Mia',
-		'James',
-		'Charlotte',
-		'Benjamin',
-		'Amelia',
-		'Lucas',
-		'Harper',
-		'Henry',
-		'Evelyn',
-		'Alexander',
-		'Abigail',
-		'Michael',
-		'Emily',
-		'Daniel',
-		'Elizabeth'
-	];
-
-	const targetAudiences = [
-		'founder',
-		'employee',
-		'student',
-		'freelancer',
-		'changemaker',
-		'hustler',
-		'mother',
-		'father',
-		'visionary',
-		'designer',
-		'lost soul',
-		'writer',
-		'creator',
-		'business owner',
-		'entrepreneur',
-		'artist',
-		'digital nomad',
-		'developer',
-		'student',
-		'dreamer'
-	];
-
 	const labels = {
-		welcome: {
-			heading: 'to every',
-			description: 'a life with fire in the belly - every day - is waiting for us',
-			subline:
-				'make history - discover, build and own society-shaping ventures serving humanity - create autonomy for millions and yourself, while earning multiple income streams',
-			buttonText: "Let's go"
-		},
 		nameInput: {
-			placeholder: "What's your name?",
-			buttonText: "I'am in!",
-			persuasiveText:
-				'Unlock your true potential: Becoming a Visioncreator is your gateway to discovering your passion and turning it into sustainable income streams, while serving humanity at earth scale',
-			callToActionPrefix: 'are you ready to',
-			callToActionOptions: [
-				'design a purposeful life you love',
-				'become a master of a craft you enjoy',
-				'build prosperity and abundance on earth'
-			]
-		},
-		greeting: {
-			title: 'Wonderful to have you around, {name}!',
-			description: "Let's look into your future and dive into your new life",
-			buttonText: 'Show me my future'
-		},
-		story: {
-			muteButtonText: 'mute',
-			unmuteButtonText: 'play sound',
-			waitlistButtonText: 'Join Waitinglist Now'
+			placeholder: "What's your name?"
 		}
 	};
 
-	let totalVisioncreators = 10000;
-
 	onMount(() => {
 		if (typeof window !== 'undefined') {
-			typingSound = new Audio('typing.mp3');
-			backgroundMusic = new Audio('inthenameoflove.mp3');
-
 			// Add global keydown event listener
 			window.addEventListener('keydown', handleKeydown);
 		}
@@ -146,24 +59,9 @@
 		}
 	}
 
-	const nextState = () => {
-		if (state < 4) {
-			state++;
-			if (state === 4) {
-				startStory();
-			}
-		} else {
-			drawerStore.open({ position: 'bottom' });
-		}
-	};
-
-	const startStory = () => {
-		backgroundMusic.play();
-	};
-
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
-			nextState();
+			drawerStore.open({ position: 'bottom' });
 		}
 	}
 </script>
@@ -173,10 +71,6 @@
 	<video autoplay loop muted playsinline class="background-video">
 		<source src="wald.mp4" type="video/mp4" />
 	</video>
-
-	<!-- {#if state !== 4 && state !== 5}
-		<StartNewsTicker {names} bind:totalVisioncreators />
-	{/if} -->
 
 	<div class="h-full overlay">
 		<div class="@container h-full">
@@ -197,6 +91,14 @@
 					</div>
 				{/if}
 
+				<div class="w-full max-w-6xl mb-4">
+					<input
+						bind:value={$futureMe.name}
+						placeholder={labels.nameInput.placeholder}
+						class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+					/>
+				</div>
+
 				<button
 					type="button"
 					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
@@ -205,37 +107,6 @@
 					Sign Up to Waitlist
 				</button>
 			</div>
-
-			<!--
-				<div
-					class="min-h-full flex flex-col justify-end text-center items-center mx-auto max-w-xl @4xl:max-w-6xl p-2 gap-4 pb-12 @3xl:pb-16"
-				>
-
-				{#if state === 1}
-					<StartWelcome
-						heading={labels.welcome.heading}
-						description={labels.welcome.description}
-						buttonText={labels.welcome.buttonText}
-						{targetAudiences}
-						subline={labels.welcome.subline}
-						on:next={nextState}
-					/>
-				{:else if state === 2}
-					<StartNameInput labels={labels.nameInput} on:next={nextState} />
-				{:else if state === 3}
-					<StartGreeting labels={labels.greeting} on:next={nextState} />
-				{:else if state === 4}
-					<StartStory
-						labels={labels.story}
-						{isMuted}
-						{toggleMute}
-						{typingSound}
-						on:next={() => drawerStore.open({ position: 'bottom' })}
-					/>
-
-				{/if}
-				</div>
-				-->
 		</div>
 	</div>
 
@@ -277,5 +148,14 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
+	}
+
+	input::placeholder {
+		color: #d1d5db;
+	}
+
+	input:focus {
+		outline: none;
+		box-shadow: 0 0 0 1px theme('colors.primary.500');
 	}
 </style>
