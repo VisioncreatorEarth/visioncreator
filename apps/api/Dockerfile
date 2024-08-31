@@ -12,7 +12,6 @@ RUN apk add --no-cache curl && \
     cat wunderctl.tar.gz | tar -xz -C /usr/local/bin && \
     rm wunderctl.tar.gz
 
-
 # Copy the necessary files
 COPY package.json /app/
 COPY .wundergraph ./.wundergraph
@@ -33,11 +32,8 @@ ENV CI=true \
 # Install npm dependencies
 RUN npm install
 
-# Generate the WunderGraph configuration
-RUN wunderctl generate --wundergraph-dir=.wundergraph
-
 # Expose only the node, server is private
 EXPOSE 9991
 
-# Command to run the application
-CMD wunderctl start --wundergraph-dir=.wundergraph
+# Generate WunderGraph configuration and start the server at runtime
+CMD wunderctl generate --wundergraph-dir=.wundergraph && wunderctl start --wundergraph-dir=.wundergraph
