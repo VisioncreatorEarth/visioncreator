@@ -45,6 +45,10 @@ Also go to the nango dashboard 127.0.0.1:3003 and setup your listmonk (listmonk-
 
 After setting up all ENV var, restart again with npm run dev.
 
+## Generate Maizzle Templates
+
+Go into packages/maizzle and run npm run dev, this generates your email templates, which you can copy and past into listmonk and supabase.
+
 ## Supabase CLI
 
 Link remote project
