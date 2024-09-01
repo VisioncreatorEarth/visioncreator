@@ -18,6 +18,58 @@ export default createOperation.mutation({
       throw new AuthorizationError({ message: "User ID does not match." });
     }
 
+    // Generate a random name if no name was provided, if it's less than 4 characters, or if it's more than 20 characters
+    if (!input.name || input.name.length < 3 || input.name.length > 20) {
+      const adjectives = [
+        "Sparkling",
+        "Lucky",
+        "Smooth",
+        "Dreamy",
+        "Bright",
+        "Shining",
+        "Joyful",
+        "Lively",
+        "Charming",
+        "Playful",
+        "Glowing",
+        "Happy",
+        "Brilliant",
+        "Energetic",
+        "Alluring",
+        "Cheerful",
+        "Elegant",
+        "Fancy",
+        "Peaceful",
+        "Fascinating",
+      ];
+      const animals = [
+        "Anteater",
+        "Whale",
+        "Salamander",
+        "Kangaroo",
+        "Duckbill",
+        "Giraffe",
+        "Monkey",
+        "Beaver",
+        "Wildcat",
+        "Elephant",
+        "Aardvark",
+        "Raccoon",
+        "Porcupine",
+        "Manatee",
+        "Parrot",
+        "Monkey",
+        "Koala",
+        "Toucan",
+        "Koala",
+        "Fox",
+      ];
+      const randomAdjective =
+        adjectives[Math.floor(Math.random() * adjectives.length)];
+      const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+      input.name = `${randomAdjective}${randomAnimal}`;
+    }
+
     const retryCount = 3;
     let attempt = 0;
     let success = false;

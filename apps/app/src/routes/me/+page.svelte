@@ -44,7 +44,7 @@
 
 				const updateNameResult = await $updateNameMutation.mutateAsync({
 					id: session.user.id,
-					name: $futureMe.name || 'MyName'
+					name: $futureMe.name
 				});
 				log('success', 'User name updated successfully', updateNameResult);
 
