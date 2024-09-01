@@ -4,8 +4,6 @@
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
 
-	const launchDate = new Date('2024-09-21T21:09:24+02:00').getTime();
-
 	const drawerStore = getDrawerStore();
 
 	const labels = {
@@ -56,14 +54,26 @@
 	<div class="h-full overlay">
 		<div class="@container h-full">
 			<div class="flex flex-col items-center justify-center w-full h-full">
-				<Countdown large={true} />
-
-				<div class="w-full max-w-6xl mb-4 p-4">
-					<input
-						bind:value={$futureMe.name}
-						placeholder={labels.nameInput.placeholder}
-						class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
-					/>
+				<div class="w-full max-w-3xl mb-12 p-4 text-center flex flex-col space-y-8">
+					<div
+						class="glassmorphism-card text-center p-6 @md:p-8 rounded-xl shadow-2xl backdrop-blur-sm"
+					>
+						<h2 class="text-white text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2">
+							Spark humanity's next leap.
+						</h2>
+					</div>
+					<Countdown large={true} />
+					<p class="text-lg @md:text-xl text-white">
+						Sign up now for our weekly Visionletter, share our journey and get a chance at one of 21
+						exclusive once-in-a-lifetime pioneer surprises.
+					</p>
+					<div class="w-full">
+						<input
+							bind:value={$futureMe.name}
+							placeholder="Your first name"
+							class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+						/>
+					</div>
 				</div>
 
 				<button
@@ -71,7 +81,7 @@
 					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 					on:click={() => drawerStore.open({ position: 'bottom' })}
 				>
-					Sign Up to Waitlist
+					Visionletter Sign Up
 				</button>
 			</div>
 		</div>
