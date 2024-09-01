@@ -43,6 +43,10 @@
 			drawerStore.open({ position: 'bottom' });
 		}
 	}
+
+	function openDrawer(isLogin: boolean) {
+		drawerStore.open({ position: 'bottom', meta: { isLogin } });
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -77,9 +81,8 @@
 				</div>
 
 				<button
-					type="button"
+					on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
 					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
-					on:click={() => drawerStore.open({ position: 'bottom' })}
 				>
 					Visionletter Sign Up
 				</button>
@@ -88,7 +91,9 @@
 	</div>
 
 	<footer class="fixed inset-x-0 bottom-0 p-4 text-xs text-center text-white">
-		<button on:click={() => drawerStore.open({ position: 'bottom' })} class="mx-1">Login</button>
+		<button on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })} class="mx-1"
+			>Login</button
+		>
 		<a href="/en/privacy-policy" class="mx-1">Datenschutz - Privacy Policy</a>
 		<a href="/en/imprint" class="mx-1">Impressum - Legal</a>
 	</footer>

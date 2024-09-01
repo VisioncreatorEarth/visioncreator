@@ -202,13 +202,13 @@
 
 		{#if $submissionResult.success}
 			<div
-				class="w-full px-4 py-12 mb-2 text-xl font-semibold text-center text-white rounded-lg bg-success-600"
+				class="w-full px-6 py-4 mb-4 text-base font-medium text-center text-success-600 dark:text-success-400 rounded-lg bg-success-200 dark:bg-success-800 bg-opacity-50 dark:bg-opacity-50"
 			>
 				{$submissionResult.message}
 			</div>
 		{:else if $submissionResult.message}
 			<div
-				class="w-full px-4 py-12 mb-2 text-xl font-semibold text-center text-white rounded-lg bg-error-500"
+				class="w-full px-6 py-4 mb-4 text-base font-medium text-center text-error-600 dark:text-error-400 rounded-lg bg-error-200 dark:bg-error-800 bg-opacity-50 dark:bg-opacity-50"
 			>
 				{$submissionResult.message}
 				<div class="flex justify-center mt-4">
@@ -218,7 +218,7 @@
 							currentField.set(0);
 							submissionResult.set({ success: false, message: '' });
 						}}
-						class="font-semibold btn btn-sm md:btn-base variant-filled-secondary"
+						class="px-4 py-2 text-sm font-medium text-error-600 dark:text-error-400 bg-error-200 dark:bg-error-800 border border-error-400 dark:border-error-600 rounded-md hover:bg-error-300 dark:hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error-400 dark:focus:ring-error-500"
 					>
 						Try Again
 					</button>

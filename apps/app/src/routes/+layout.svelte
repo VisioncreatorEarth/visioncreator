@@ -14,7 +14,7 @@
 	import { dev } from '$app/environment';
 
 	let authReady = writable(false);
-
+	let authAction = writable('signup');
 	export let data: LayoutData;
 
 	initializeStores();
@@ -30,6 +30,7 @@
 					authReady.set(true);
 				}, 100);
 				authReady.set(false);
+				authAction.set(state.action || 'signup');
 			}
 		});
 		const { data } = supabase.auth.onAuthStateChange((event, _session) => {
@@ -55,10 +56,17 @@
 					<div
 						class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 					>
-						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">Visionletter</div>
+						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">
+							{$authAction === 'signup' ? 'Visionletter' : 'Welcome Back!'}
+						</div>
 						<p class="max-w-2xl text-md @3xl:text-lg">
-							Join our journey! Get weekly insider updates and watch your waitlist position climb.
-							Be part of something extraordinary – are you ready?
+							{#if $authAction === 'signup'}
+								Join our journey! Get weekly insider updates and watch your waitlist position climb.
+								Be part of something extraordinary – are you ready?
+							{:else}
+								Great to see you again! Ready to continue our journey together? Let's make some
+								vision magic happen!
+							{/if}
 						</p>
 					</div>
 					{#if $authReady}
@@ -74,7 +82,7 @@
 						/>
 					{/if}
 				</div>
-			{/if}
+			{/if}}
 			{#if dev}
 				<div class="fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2">
 					<a
