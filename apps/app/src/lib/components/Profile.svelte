@@ -36,10 +36,10 @@
 		<div class="absolute inset-0 bg-opacity-40 bg-surface-900" />
 
 		<div class="relative z-10 flex flex-col items-center text-tertiary-300">
-			<div class="px-6 py-2 font-bold text-white bg-transparent text-md rounded-t-3xl">
+			<!-- <div class="px-6 py-2 font-bold text-white bg-transparent text-md rounded-t-3xl">
 				{$query.data.name}
-			</div>
-			<div class="flex flex-col items-center p-8">
+			</div> -->
+			<div class="flex flex-col items-center pt-16 p-8">
 				<Avatar
 					me={{
 						data: { seed: $me.authID },
@@ -58,9 +58,15 @@
 	<div class="flex items-center justify-evenly p-4 @3xl:p-8 space-x-4">
 		<div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
+				{$query.data.waitingPosition}
+			</p>
+			<p class="text-tertiary-600 text-sm @3xl:text-lg">My Vision Rank</p>
+		</div>
+		<div class="text-center">
+			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
 				{$query.data.invites}
 			</p>
-			<p class="text-tertiary-600 text-sm @3xl:text-lg">Inspirations</p>
+			<p class="text-tertiary-600 text-sm @3xl:text-lg">VCs inspired</p>
 		</div>
 		<!-- <div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
@@ -68,11 +74,5 @@
 			</p>
 			<p class="text-tertiary-600 text-sm @3xl:text-lg">My Level</p>
 		</div> -->
-		<div class="text-center">
-			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
-				{$query.data.waitingPosition}
-			</p>
-			<p class="text-tertiary-600 text-sm @3xl:text-lg">Waiting Position</p>
-		</div>
 	</div>
 </div>

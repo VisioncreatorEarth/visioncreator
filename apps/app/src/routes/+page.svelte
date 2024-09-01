@@ -3,29 +3,10 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
-	import { readable } from 'svelte/store';
 
 	const launchDate = new Date('2024-09-21T21:09:24+02:00').getTime();
 
-	const countdown = readable(0, (set) => {
-		const interval = setInterval(() => {
-			const now = new Date().getTime();
-			const distance = launchDate - now;
-			set(Math.floor(distance / 1000));
-		}, 1000);
-
-		return () => clearInterval(interval);
-	});
-
-	onMount(() => {
-		// Countdown is automatically started due to the readable store
-	});
-
 	const drawerStore = getDrawerStore();
-
-	function openSignupModal() {
-		drawerStore.open({ position: 'bottom' });
-	}
 
 	const labels = {
 		nameInput: {
@@ -75,23 +56,9 @@
 	<div class="h-full overlay">
 		<div class="@container h-full">
 			<div class="flex flex-col items-center justify-center w-full h-full">
-				{#if $countdown > 0}
-					<div
-						class="h1 text-4xl sm:text-6xl md:text-8xl font-bold text-white mb-4 sm:mb-8 tracking-wider opacity-75"
-					>
-						{Math.floor($countdown / 86400)}d {Math.floor(($countdown % 86400) / 3600)}h {Math.floor(
-							($countdown % 3600) / 60
-						)}m {$countdown % 60}s
-					</div>
-				{:else}
-					<div
-						class="h1 text-4xl sm:text-6xl md:text-8xl font-bold text-center text-white mb-4 sm:mb-8 tracking-wider opacity-75"
-					>
-						you are amazing
-					</div>
-				{/if}
+				<Countdown large={true} />
 
-				<div class="w-full max-w-6xl mb-4">
+				<div class="w-full max-w-6xl mb-4 p-4">
 					<input
 						bind:value={$futureMe.name}
 						placeholder={labels.nameInput.placeholder}
@@ -111,9 +78,9 @@
 	</div>
 
 	<footer class="fixed inset-x-0 bottom-0 p-4 text-xs text-center text-white">
-		<button on:click={() => drawerStore.open({ position: 'bottom' })} class="mx-2">Login</button>
-		<a href="/data-privacy" class="mx-2">Data Privacy</a>
-		<a href="/imprint" class="mx-2">Imprint</a>
+		<button on:click={() => drawerStore.open({ position: 'bottom' })} class="mx-1">Login</button>
+		<a href="/en/privacy-policy" class="mx-1">Datenschutz - Privacy Policy</a>
+		<a href="/en/imprint" class="mx-1">Impressum - Legal</a>
 	</footer>
 </div>
 

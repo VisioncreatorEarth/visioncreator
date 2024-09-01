@@ -30,12 +30,23 @@
 <div
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
-	<!-- <p class="text-lg mb-4">
-		<span class="h1 text-4xl">Transform your life, one habit at a time!</span> <br />Start by
-		consuming our 1min a day story.
-		<br />Share the story on social media to climb our ranks. <br />The further up the leaderboard
-		the faster you will get access after our launch.
-	</p> -->
+	<div class="text-lg p-4 rounded-lg">
+		<h3 class="text-2xl font-bold mb-2 text-primary-300">Your Chance to Shine!</h3>
+		<ul class="space-y-2">
+			<li>
+				Claim your exclusive - once-in-a-lifetime surprise - limited to the first 21 visioncreators!
+			</li>
+			<li>+1 free ticket to our inaugural event</li>
+		</ul>
+		<p class="mt-4 font-semibold text-secondary-300 text-lg sm:text-xl md:text-2xl">
+			Time's running!
+		</p>
+	</div>
+	<Countdown />
+	<p class="mb-6">
+		Inspire your friends to follow our journey, lead the way, and claim your top 21 spot!
+	</p>
+
 	{#if $showQRCode}
 		<QRCode
 			data={invitationLink}
