@@ -148,11 +148,13 @@
 						}}
 					/>
 
-					<div class="flex-1 px-4 text-xl @3xl:text-2xl text-tertiary-400">
+					<div
+						class="flex-1 px-4 text-xl @3xl:text-2xl text-tertiary-400 overflow-hidden whitespace-nowrap text-ellipsis"
+					>
 						{primaryText}
 					</div>
 
-					<div class="flex justify-between px-4 @3xl:px-6 space-x-4 max-h-12">
+					<div class="flex justify-between px-4 @3xl:px-4 space-x-2 max-h-12 flex-shrink-0">
 						{#each $query.data.stats as stat}
 							<div class="flex flex-col items-center text-right">
 								<p class="text-tertiary-400 text-lg @3xl:text-2xl font-semibold leading-tight">
