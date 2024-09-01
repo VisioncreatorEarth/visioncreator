@@ -12,10 +12,17 @@
 		}
 	};
 
+	let videoElement: HTMLVideoElement;
+
 	onMount(() => {
 		if (typeof window !== 'undefined') {
 			// Add global keydown event listener
 			window.addEventListener('keydown', handleKeydown);
+
+			// Load video after everything else
+			if (videoElement) {
+				videoElement.load();
+			}
 		}
 
 		// Clean up the event listener when the component is destroyed
@@ -51,7 +58,15 @@
 
 <svelte:window on:keydown={handleKeydown} />
 <div class="video-container">
-	<video autoplay loop muted playsinline class="background-video">
+	<video
+		bind:this={videoElement}
+		autoplay
+		loop
+		muted
+		playsinline
+		class="background-video"
+		poster="wald-first-frame.jpg"
+	>
 		<source src="wald.mp4" type="video/mp4" />
 	</video>
 
