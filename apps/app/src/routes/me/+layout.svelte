@@ -83,9 +83,17 @@
 						<ActionButtons me={{ id: session.user.id }} />
 					{:else if $activeTab === 'settings'}
 						<Newsletter me={{ email: session.user.email, id: session.user.id }} />
-					{:else if $activeTab === 'logs'}
-						<div class="h-full overflow-hidden" style="display: contents;">
-							<ComposeView {view} />
+					{:else if $activeTab === 'legalinfo'}
+						<div class="flex space-x-4 rounded-lg">
+							<a
+								href="/en/privacy-policy"
+								class="btn hover:variant-filled-surface variant-ghost-surface"
+							>
+								Privacy Policy
+							</a>
+							<a href="/en/imprint" class="btn hover:variant-filled-surface variant-ghost-surface">
+								Imprint
+							</a>
 						</div>
 					{/if}
 				</div>
@@ -118,7 +126,8 @@
 								Settings
 							</a>
 						</li>
-						<!-- <li class="mr-2">
+
+						<li class="mr-2">
 							<a
 								href="#"
 								class={`inline-block p-4 rounded-t-lg ${
@@ -126,11 +135,11 @@
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('logs')}
+								on:click|preventDefault={() => setActiveTab('legalinfo')}
 							>
-								Logs
+								Legal Info
 							</a>
-						</li> -->
+						</li>
 					</ul>
 					<button
 						class="p-2 text-tertiary-400 hover:text-tertiary-300"

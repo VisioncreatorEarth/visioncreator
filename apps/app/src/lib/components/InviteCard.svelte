@@ -34,7 +34,7 @@
 		<h3 class="text-2xl font-bold mb-2 text-primary-300">Your Chance to Shine!</h3>
 		<ul class="space-y-2">
 			<li>
-				Claim your exclusive - once-in-a-lifetime surprise - limited to the first 21 visioncreators!
+				Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 visioncreators!
 			</li>
 			<li>+1 free ticket to our inaugural event</li>
 		</ul>
@@ -44,7 +44,7 @@
 	</div>
 	<Countdown />
 	<p class="mb-6">
-		Inspire your friends to follow our journey, lead the way, and claim your top 21 spot!
+		Lead the way, inspire your friends to follow our journey to stay in the top 21!
 	</p>
 
 	{#if $showQRCode}
