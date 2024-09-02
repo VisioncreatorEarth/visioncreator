@@ -33,10 +33,8 @@
 	<div class="text-lg p-4 rounded-lg">
 		<h3 class="text-2xl font-bold mb-2 text-primary-300">Your Chance to Shine!</h3>
 		<ul class="space-y-2">
-			<li>
-				Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 visioncreators!
-			</li>
-			<li>+1 free ticket to our inaugural event</li>
+			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
+			<!-- <li>+1 free ticket to our inaugural event</li> -->
 		</ul>
 		<p class="mt-4 font-semibold text-secondary-300 text-lg sm:text-xl md:text-2xl">
 			Time's running!
@@ -44,7 +42,7 @@
 	</div>
 	<Countdown />
 	<p class="mb-6">
-		Lead the way, inspire your friends to follow our journey to stay in the top 21!
+		Lead the way and inspire your friends to follow our journey to stay in the top 21!
 	</p>
 
 	{#if $showQRCode}
