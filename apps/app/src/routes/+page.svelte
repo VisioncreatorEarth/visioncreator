@@ -95,12 +95,12 @@
 					</div> -->
 				</div>
 
-				<button
+				<!-- <button
 					on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
 					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 				>
 					Visionletter Sign Up
-				</button>
+				</button> -->
 			</div>
 		</div>
 	</div>
