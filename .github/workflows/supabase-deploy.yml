@@ -35,6 +35,7 @@ jobs:
           cd packages/supacreator/supabase
           supabase link --project-ref $PROJECT_ID
           supabase db dump -f db_dump_$(date +%Y%m%d_%H%M%S).sql
+          ls -la  # List files to confirm dump was created
 
       - name: Upload DB Dump to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -52,4 +53,6 @@ jobs:
           supabase db push
 
       - name: Clean up local dump file
-        run: rm packages/supacreator/supabase/db_dump_*.sql
+        run: |
+          cd packages/supacreator/supabase
+          rm db_dump_*.sql
