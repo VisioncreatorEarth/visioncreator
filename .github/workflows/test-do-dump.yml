@@ -1,27 +1,27 @@
-# name: Upload Random Text File to DO Spaces
+name: Upload Random Text File to DO Spaces
 
-# on:
-#   push:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
 
-# jobs:
-#   upload:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout Repository
-#         uses: actions/checkout@v2
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-#       - name: Generate Random Text File
-#         run: |
-#           echo "This is a random text file: $(date)" > random_file.txt
+      - name: Generate Random Text File
+        run: |
+          echo "This is a random text file: $(date)" > random_file.txt
 
-#       - name: Upload to DO Spaces
-#         uses: BetaHuhn/do-spaces-action@v2
-#         with:
-#           access_key: ${{ secrets.DO_ACCESS_KEY }}
-#           secret_key: ${{ secrets.DO_SECRET_KEY }}
-#           space_name: ${{ secrets.DO_SPACE_NAME }}
-#           space_region: ${{ secrets.DO_SPACE_REGION }}
-#           source: random_file.txt
-#           out_dir: random_files
+      - name: Upload to DO Spaces
+        uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: random_file.txt
+          out_dir: random_files
