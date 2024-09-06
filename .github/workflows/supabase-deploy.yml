@@ -1,62 +1,23 @@
-name: Supabase Operations
+name: Deploy Supabase Changes
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-  schedule:
-    - cron: "0 * * * *" # Run every hour
-
-env:
-  SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-  SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-  PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-  DO_SPACE_NAME: ${{ secrets.DO_SPACE_NAME }}
-  DO_SPACE_REGION: ${{ secrets.DO_SPACE_REGION }}
-  DO_ACCESS_KEY: ${{ secrets.DO_ACCESS_KEY }}
-  DO_SECRET_KEY: ${{ secrets.DO_SECRET_KEY }}
 
 jobs:
-  backup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Supabase Login
-        run: supabase login $SUPABASE_ACCESS_TOKEN
-
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-
-      - name: Perform pg_dump
-        run: |
-          supabase db dump -f backup.sql
-
-      - name: Install s3cmd
-        run: sudo apt-get install -y s3cmd
-
-      - name: Configure s3cmd
-        run: |
-          echo "[default]
-          access_key = $DO_ACCESS_KEY
-          secret_key = $DO_SECRET_KEY
-          host_base = $DO_SPACE_REGION.digitaloceanspaces.com
-          host_bucket = %(bucket)s.$DO_SPACE_REGION.digitaloceanspaces.com" > ~/.s3cfg
-
-      - name: Upload to DigitalOcean Space
-        run: |
-          s3cmd put backup.sql s3://$DO_SPACE_NAME/backups/supabase_$(date +%Y%m%d_%H%M%S).sql
-
   deploy:
     runs-on: ubuntu-latest
-    needs: backup
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      DO_SPACE_NAME: ${{ secrets.DO_SPACE_NAME }}
+      DO_ACCESS_KEY: ${{ secrets.DO_ACCESS_KEY }}
+      DO_SECRET_KEY: ${{ secrets.DO_SECRET_KEY }}
+
     steps:
       - uses: actions/checkout@v3
 
@@ -65,11 +26,24 @@ jobs:
         with:
           version: latest
 
+      - name: Install s3cmd
+        run: sudo apt-get install s3cmd
+
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
+
+      - name: Dump Supabase Database
+        run: |
+          cd packages/supacreator/supabase
+          supabase link --project-ref $PROJECT_ID
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          supabase db dump -f supabase_dump_$TIMESTAMP.sql
+
+      - name: Upload Dump to Digital Ocean Space
+        run: |
+          s3cmd --access_key=$DO_ACCESS_KEY --secret_key=$DO_SECRET_KEY --host=$DO_SPACE_REGION.digitaloceanspaces.com --host-bucket="%(bucket)s.$DO_SPACE_REGION.digitaloceanspaces.com" put packages/supacreator/supabase/supabase_dump_*.sql s3://$DO_SPACE_NAME/supabase_backups/
 
       - name: Deploy Supabase Migration
         run: |
           cd packages/supacreator/supabase
-          supabase link --project-ref $PROJECT_ID
           supabase db push
