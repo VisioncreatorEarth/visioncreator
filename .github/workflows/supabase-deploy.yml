@@ -33,9 +33,14 @@ jobs:
           DUMP_FILE="db_dump_$(date +%Y%m%d_%H%M%S).sql"
           supabase db dump -f $DUMP_FILE
           echo "DUMP_FILE=$DUMP_FILE" >> $GITHUB_ENV
-          find . -name "db_dump_*.sql" | tee dump_file_path.txt
-          echo "DUMP_FILE_PATH=$(cat dump_file_path.txt)" >> $GITHUB_ENV
-          cat dump_file_path.txt
+          ls -la
+          pwd
+
+      - name: Prepare for Upload
+        run: |
+          DUMP_FILE_PATH=$(find ${{ github.workspace }} -name "${{ env.DUMP_FILE }}")
+          echo "Found dump file at: $DUMP_FILE_PATH"
+          echo "DUMP_FILE_PATH=$DUMP_FILE_PATH" >> $GITHUB_ENV
 
       - name: Upload DB Dump to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -52,4 +57,10 @@ jobs:
         run: supabase db push
 
       - name: Clean up local dump file
-        run: rm ${{ env.DUMP_FILE_PATH }}
+        run: |
+          if [ -f "${{ env.DUMP_FILE_PATH }}" ]; then
+            rm "${{ env.DUMP_FILE_PATH }}"
+            echo "Deleted dump file: ${{ env.DUMP_FILE_PATH }}"
+          else
+            echo "Dump file not found at: ${{ env.DUMP_FILE_PATH }}"
+          fi
