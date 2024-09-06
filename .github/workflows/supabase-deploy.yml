@@ -33,7 +33,9 @@ jobs:
           DUMP_FILE="db_dump_$(date +%Y%m%d_%H%M%S).sql"
           supabase db dump -f $DUMP_FILE
           echo "DUMP_FILE=$DUMP_FILE" >> $GITHUB_ENV
-          ls -la  # List files to confirm dump was created
+          find . -name "db_dump_*.sql" | tee dump_file_path.txt
+          echo "DUMP_FILE_PATH=$(cat dump_file_path.txt)" >> $GITHUB_ENV
+          cat dump_file_path.txt
 
       - name: Upload DB Dump to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -42,7 +44,7 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ./packages/supacreator/supabase/${{ env.DUMP_FILE }}
+          source: ${{ env.DUMP_FILE_PATH }}
           out_dir: supabase_backups
 
       - name: Deploy Supabase Migration
@@ -50,5 +52,4 @@ jobs:
         run: supabase db push
 
       - name: Clean up local dump file
-        working-directory: ./packages/supacreator/supabase
-        run: rm ${{ env.DUMP_FILE }}
+        run: rm ${{ env.DUMP_FILE_PATH }}
