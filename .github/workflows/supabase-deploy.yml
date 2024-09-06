@@ -26,16 +26,10 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Link Supabase Project
+      - name: Backup and Migrate Supabase DB
         run: |
           cd packages/supacreator/supabase
           supabase link --project-ref $PROJECT_ID
-
-      - name: Dump DB
-        run: |
           supabase db dump -f db_dump_$(date +%Y%m%d_%H%M%S).sql
           ls -la  # List files to confirm dump was created
-
-      - name: Migrate DB
-        run: |
           supabase db push
