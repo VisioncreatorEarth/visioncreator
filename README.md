@@ -155,3 +155,7 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
 3. Connect your domain.
+
+
+## Backup & Recovery Process
+1. Setup
