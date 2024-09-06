@@ -14,10 +14,6 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      DO_ACCESS_KEY: ${{ secrets.DO_ACCESS_KEY }}
-      DO_SECRET_KEY: ${{ secrets.DO_SECRET_KEY }}
-      DO_SPACE_NAME: ${{ secrets.DO_SPACE_NAME }}
-      DO_SPACE_REGION: ${{ secrets.DO_SPACE_REGION }}
 
     steps:
       - uses: actions/checkout@v3
@@ -32,7 +28,6 @@ jobs:
 
       - name: Dump Supabase Database
         run: |
-          cd packages/supacreator/supabase
           supabase link --project-ref $PROJECT_ID
           supabase db dump -f db_dump_$(date +%Y%m%d_%H%M%S).sql
           ls -la  # List files to confirm dump was created
@@ -40,19 +35,15 @@ jobs:
       - name: Upload DB Dump to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
         with:
-          access_key: ${{ env.DO_ACCESS_KEY }}
-          secret_key: ${{ env.DO_SECRET_KEY }}
-          space_name: ${{ env.DO_SPACE_NAME }}
-          space_region: ${{ env.DO_SPACE_REGION }}
-          source: packages/supacreator/supabase/db_dump_*.sql
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: db_dump_*.sql
           out_dir: supabase_backups
 
       - name: Deploy Supabase Migration
-        run: |
-          cd packages/supacreator/supabase
-          supabase db push
+        run: supabase db push
 
       - name: Clean up local dump file
-        run: |
-          cd packages/supacreator/supabase
-          rm db_dump_*.sql
+        run: rm db_dump_*.sql
