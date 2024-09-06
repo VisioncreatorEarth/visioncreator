@@ -27,11 +27,10 @@ jobs:
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
       - name: Backup and Migrate Supabase DB
+        working-directory: ./packages/supacreator/supabase
         run: |
-          cd packages/supacreator/supabase
           supabase link --project-ref $PROJECT_ID
           supabase db dump -f db_dump_$(date +%Y%m%d_%H%M%S).sql
-          ls -la  # List files to confirm dump was created
 
       - name: Upload DB Dump to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -40,15 +39,13 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: packages/supacreator/supabase/db_dump_*.sql
+          source: ./packages/supacreator/supabase/db_dump_*.sql
           out_dir: supabase_backups
 
       - name: Deploy Supabase Migration
-        run: |
-          cd packages/supacreator/supabase
-          supabase db push
+        working-directory: ./packages/supacreator/supabase
+        run: supabase db push
 
       - name: Clean up local dump file
-        run: |
-          cd packages/supacreator/supabase
-          rm db_dump_*.sql
+        working-directory: ./packages/supacreator/supabase
+        run: rm db_dump_*.sql
