@@ -82,6 +82,28 @@
 		This is a contract mandated by data privacy laws that guarantees that they process personal data
 		of our website visitors only based on our instructions and in compliance with the GDPR.
 	</p>
+	<h3>webgo</h3>
+	<p>
+		The provider is the webgo GmbH, Heidenkampsweg 81, 20097, Hamburg, Germany (hereinafter referred
+		to as &ldquo;webgo&rdquo;). Whenever you visit our website, webgo will record a variety of
+		logfiles, including your IP addresses.
+	</p>
+	<p>
+		For details, please refer to the Data Privacy Policy of webgo: <a
+			href="https://www.webgo.de/datenschutz/"
+			target="_blank"
+			rel="noopener noreferrer">https://www.webgo.de/datenschutz/</a
+		>.
+	</p>
+	<p>
+		We use webgo on the basis of Art. 6 (1)(f) GDPR. We have a legitimate interest in making the
+		depiction of our website as dependable as possible. If you have been asked for your respective
+		consent, processing shall occur exclusively on the basis of Art. 6 (1)(a) GDPR and &sect; 25(1)
+		TDDDG, if the consent comprises the archiving of cookies or access to information on the
+		user&rsquo;s device (e.g., device finger printing) as defined in the TDDDG. Such consent may be
+		revoked at any time.
+	</p>
+
 	<h3>External Hosting</h3>
 	<p>
 		This website is hosted externally. Personal data collected on this website are stored on the
@@ -108,9 +130,13 @@
 		/>
 		<br />
 		DMCA Agent Fly.io, Inc., 2261 Market Street #4990 San Francisco, CA 94114; support@fly.io<br />
+		DMCA Agent Fly.io, Inc. ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data
+		Privacy Framework.<br />
 		<br />
 		Vercel Inc., 440 N Barranca Avenue #4133 Covina, CA 91723 United States; privacy@vercel.com<br
 		/>
+		Vercel Inc. ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data Privacy
+		Framework.<br />
 		GDPR representative* EU:<br />
 		European Data Protection Office, Avenue Huart Hamoir 71, 1030 Brussels, Belgium; privacy@edpo.com<br
 		/>
@@ -118,6 +144,8 @@
 		EDPO UK Ltd, 8 Northumberland Avenue, London WC2N 5BY, United Kingdom; privacy@edpo.com<br />
 		<br />
 		AC PM LLC, 1 N Dearborn Street, Suite 500, Chicago, IL 60602; privacy@activecampaign.com<br />
+		AC PM LLC ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data Privacy Framework.<br
+		/>
 		GDPR representative* EU:<br />
 		EU-REP.Global GmbH, Attn: ActiveCampaign, Hopfenstr. 1d, 24114 Kiel, Germany; activecampaign@eu-rep.global<br
 		/>
@@ -126,6 +154,8 @@
 		London, WC2B 5AH, United Kingdom; activecampaign@eu-rep.global<br />
 		<br />
 		DigitalOcean, LLC, 101 6th Ave New York, NY 10013, ATTN: Legal; privacy@digitalocean.com<br />
+		DigitalOcean, LLC ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data Privacy
+		Framework.<br />
 		<br />
 		*GDPR representative = DSGVO Vertreter
 	</p>
