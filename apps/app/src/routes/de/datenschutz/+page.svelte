@@ -60,9 +60,10 @@
 	</p>
 	<p>
 		Details entnehmen Sie der Datenschutzerkl&auml;rung von Hetzner: <a
-			href="https://www.hetzner.com/de/rechtliches/datenschutz"
+			href="https://www.hetzner.com/de/legal/privacy-policy/"
 			target="_blank"
-			rel="noopener noreferrer">https://www.hetzner.com/de/rechtliches/datenschutz</a
+			rel="noopener noreferrer"
+			>https://www.hetzner.com/de/legal/privacy-policy/https://www.hetzner.com/de/legal/privacy-policy/</a
 		>.
 	</p>
 	<p>
@@ -75,6 +76,13 @@
 		Einwilligung ist jederzeit widerrufbar.
 	</p>
 
+	<h4>Auftragsverarbeitung</h4>
+	<p>
+		Wir haben einen Vertrag &uuml;ber Auftragsverarbeitung (AVV) zur Nutzung des oben genannten
+		Dienstes geschlossen. Hierbei handelt es sich um einen datenschutzrechtlich vorgeschriebenen
+		Vertrag, der gew&auml;hrleistet, dass dieser die personenbezogenen Daten unserer Websitebesucher
+		nur nach unseren Weisungen und unter Einhaltung der DSGVO verarbeitet.
+	</p>
 	<h3>Externes Hosting</h3>
 	<p>
 		Diese Website wird extern gehostet. Die personenbezogenen Daten, die auf dieser Website erfasst
@@ -121,7 +129,16 @@
 		DP Data Protection Services UK Ltd., Attn: ActiveCampaign, 16 Great Queen Street, Covent Garden,
 		London, WC2B 5AH, United Kingdom; activecampaign@eu-rep.global<br />
 		<br />
+		DigitalOcean, LLC, 101 6th Ave New York, NY 10013, ATTN: Legal; privacy@digitalocean.com<br />
+		<br />
 		*GDPR representative = DSGVO Vertreter
+	</p>
+	<h4>Auftragsverarbeitung</h4>
+	<p>
+		Wir haben einen Vertrag &uuml;ber Auftragsverarbeitung (AVV) zur Nutzung des oben genannten
+		Dienstes geschlossen. Hierbei handelt es sich um einen datenschutzrechtlich vorgeschriebenen
+		Vertrag, der gew&auml;hrleistet, dass dieser die personenbezogenen Daten unserer Websitebesucher
+		nur nach unseren Weisungen und unter Einhaltung der DSGVO verarbeitet.
 	</p>
 	<h2>3. Allgemeine Hinweise und Pflicht&shy;informationen</h2>
 	<h3>Datenschutz</h3>

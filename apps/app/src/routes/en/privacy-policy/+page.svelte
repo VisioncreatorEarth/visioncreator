@@ -3,7 +3,6 @@
 		<a href="/en/privacy-policy">English</a>
 		<a href="/de/datenschutz">Deutsch</a>
 	</svelte:fragment>
-
 	<h1>Privacy Policy</h1>
 	<h2>1. An overview of data protection</h2>
 	<h3>General information</h3>
@@ -63,9 +62,9 @@
 	</p>
 	<p>
 		For details, please view the data privacy policy of Hetzner: <a
-			href="https://www.hetzner.com/de/rechtliches/datenschutz"
+			href="https://www.hetzner.com/de/legal/privacy-policy/"
 			target="_blank"
-			rel="noopener noreferrer">https://www.hetzner.com/de/rechtliches/datenschutz</a
+			rel="noopener noreferrer">https://www.hetzner.com/de/legal/privacy-policy/</a
 		>.
 	</p>
 	<p>
@@ -77,6 +76,12 @@
 		consent can be revoked at any time.
 	</p>
 
+	<h4>Data processing</h4>
+	<p>
+		We have concluded a data processing agreement (DPA) for the use of the above-mentioned service.
+		This is a contract mandated by data privacy laws that guarantees that they process personal data
+		of our website visitors only based on our instructions and in compliance with the GDPR.
+	</p>
 	<h3>External Hosting</h3>
 	<p>
 		This website is hosted externally. Personal data collected on this website are stored on the
@@ -120,7 +125,15 @@
 		DP Data Protection Services UK Ltd., Attn: ActiveCampaign, 16 Great Queen Street, Covent Garden,
 		London, WC2B 5AH, United Kingdom; activecampaign@eu-rep.global<br />
 		<br />
+		DigitalOcean, LLC, 101 6th Ave New York, NY 10013, ATTN: Legal; privacy@digitalocean.com<br />
+		<br />
 		*GDPR representative = DSGVO Vertreter
+	</p>
+	<h4>Data processing</h4>
+	<p>
+		We have concluded a data processing agreement (DPA) for the use of the above-mentioned service.
+		This is a contract mandated by data privacy laws that guarantees that they process personal data
+		of our website visitors only based on our instructions and in compliance with the GDPR.
 	</p>
 	<h2>3. General information and mandatory information</h2>
 	<h3>Data protection</h3>
