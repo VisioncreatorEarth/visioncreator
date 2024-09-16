@@ -15,11 +15,11 @@ jobs:
     permissions:
       contents: write
     env:
-      DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-      DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      DB_HOST: aws-0-eu-central-1.pooler.supabase.com
+      DB_USER: postgres
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
+      DB_NAME: postgres
     steps:
       - uses: actions/checkout@v3
         with:
@@ -38,15 +38,22 @@ jobs:
           DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
           echo "DB_URL=$DB_URL" >> $GITHUB_ENV
 
-      - name: Debug Connection String (Masked)
+      - name: Set folder name
         run: |
-          echo "Connection string: postgresql://$DB_USER.$SUPABASE_PROJECT_ID:****@$DB_HOST:5432/$DB_NAME"
+          DATE=$(date +'%Y-%m-%d')
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            FOLDER_NAME="${DATE}_daily"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            FOLDER_NAME="${DATE}_${SHORT_SHA}"
+          fi
+          echo "FOLDER_NAME=$FOLDER_NAME" >> $GITHUB_ENV
 
       - name: Backup schema and roles
-        run: supabase db dump --db-url "$DB_URL" -f schema_roles_backup.sql --debug
+        run: supabase db dump --db-url "$DB_URL" -f schema_roles_backup.sql
 
       - name: Backup data
-        run: supabase db dump --db-url "$DB_URL" -f data_backup.sql --data-only --use-copy --debug
+        run: supabase db dump --db-url "$DB_URL" -f data_backup.sql --data-only --use-copy
 
       - name: Upload schema and roles backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -56,7 +63,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: schema_roles_backup.sql
-          out_dir: supabase_backups/$(date +%Y-%m-%d)
+          out_dir: ${{ env.FOLDER_NAME }}
 
       - name: Upload data backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -66,7 +73,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: data_backup.sql
-          out_dir: supabase_backups/$(date +%Y-%m-%d)
+          out_dir: ${{ env.FOLDER_NAME }}
 
       - name: Clean up local backup files
         run: |
