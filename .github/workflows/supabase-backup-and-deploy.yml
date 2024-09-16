@@ -63,7 +63,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ env.BACKUP_FILENAME }}
-          out_dir: /
+          out_dir: ""
 
       - name: Clean up local backup files
         run: rm ${{ env.BACKUP_FILENAME }}
