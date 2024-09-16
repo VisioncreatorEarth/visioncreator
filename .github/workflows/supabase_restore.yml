@@ -53,25 +53,21 @@ jobs:
       - name: Link to Supabase project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID
 
-      - name: Get database connection info
+      - name: Get database connection string
         run: |
-          DB_HOST=$(supabase db get-connection-string | grep -oP '(?<=@)[^:]+')
-          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+          CONNECTION_STRING=$(supabase db get-connection-string)
+          echo "CONNECTION_STRING=$CONNECTION_STRING" >> $GITHUB_ENV
 
       - name: Restore full database
         run: |
           # Terminate all connections to the database
           PGPASSWORD=$SUPABASE_DB_PASSWORD psql \
-            -h $DB_HOST \
-            -U postgres \
-            -d postgres \
+            "$CONNECTION_STRING" \
             -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'postgres' AND pid <> pg_backend_pid();"
 
           # Restore the full backup
           PGPASSWORD=$SUPABASE_DB_PASSWORD psql \
-            -h $DB_HOST \
-            -U postgres \
-            -d postgres \
+            "$CONNECTION_STRING" \
             -f ./backup_to_restore.sql
 
       - name: Cleanup
