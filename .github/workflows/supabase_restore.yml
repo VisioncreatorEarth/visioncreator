@@ -29,11 +29,6 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Create minimal Supabase config
-        run: |
-          mkdir -p supabase
-          echo "project_id = \"$SUPABASE_PROJECT_ID\"" > supabase/config.toml
-
       - name: Link to Supabase project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID
 
@@ -55,9 +50,6 @@ jobs:
 
       - name: Restore database
         run: |
-          # Reset the database
-          supabase db reset
-
           # Get the connection string
           DB_URL=$(supabase db get-connection-string)
 
@@ -70,16 +62,29 @@ jobs:
             --command 'SET session_replication_role = replica' \
             --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_data.sql
 
-          # Restore migration history
+      - name: Restore migration history
+        run: |
+          DB_URL=$(supabase db get-connection-string)
           psql "$DB_URL" \
             --single-transaction \
             --variable ON_ERROR_STOP=1 \
             --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_migrations.sql
 
+      - name: Restore auth and storage schemas
+        run: |
+          DB_URL=$(supabase db get-connection-string)
+          supabase db diff --schema auth,storage > changes.sql
+          psql "$DB_URL" -f changes.sql
+
+      - name: Enable publication on tables
+        run: |
+          echo "Please manually enable replication for tables in the Supabase Dashboard under Publications."
+
       - name: Cleanup
-        run: rm -rf ${{ github.event.inputs.backup_folder }}
+        run: rm -rf ${{ github.event.inputs.backup_folder }} changes.sql
 
       - name: Restoration complete
         run: |
           echo "Database restore completed from backup folder: ${{ github.event.inputs.backup_folder }}"
           echo "Please verify your database to ensure the restoration was successful."
+          echo "Remember to manually enable replication for tables in the Supabase Dashboard under Publications."
