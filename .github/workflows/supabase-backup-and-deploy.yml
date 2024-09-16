@@ -1,4 +1,4 @@
-name: Supabase Backup and Deploy
+name: Supabase Full Backup and Deploy
 
 on:
   push:
@@ -13,7 +13,8 @@ jobs:
     permissions:
       contents: write
     env:
-      OLD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -21,10 +22,11 @@ jobs:
         with:
           version: latest
 
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+      - name: Supabase Login
+        run: supabase login $SUPABASE_ACCESS_TOKEN
+
+      - name: Link Supabase project
+        run: supabase link --project-ref $PROJECT_ID
 
       - name: Set backup filename
         run: |
@@ -39,16 +41,11 @@ jobs:
 
       - name: Backup database
         run: |
-          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_roles.sql --role-only
-          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_schema.sql
-          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_data.sql --use-copy --data-only
+          supabase db dump -f ${{ env.BACKUP_PREFIX }}_roles.sql --role-only
+          supabase db dump -f ${{ env.BACKUP_PREFIX }}_schema.sql
+          supabase db dump -f ${{ env.BACKUP_PREFIX }}_data.sql --data-only
 
-      - name: Backup migration history
-        run: |
-          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_history_schema.sql --schema supabase_migrations
-          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_history_data.sql --use-copy --data-only --schema supabase_migrations
-
-      - name: Upload backups to DO Spaces
+      - name: Upload full backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
@@ -56,7 +53,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ env.BACKUP_PREFIX }}*
-          out_dir: backups
+          out_dir: ""
 
       - name: Clean up local backup files
         run: rm ${{ env.BACKUP_PREFIX }}*
@@ -66,7 +63,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
