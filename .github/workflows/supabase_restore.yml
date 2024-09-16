@@ -17,6 +17,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,7 +38,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
         run: |
           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set aws_secret_access_key $AWS_SECRET_KEY
           aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
           aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
 
@@ -53,8 +54,7 @@ jobs:
         run: |
           supabase init
           supabase link --project-ref $SUPABASE_PROJECT_ID
-          supabase db reset --linked
-          supabase db push ./backup_to_restore.sql
+          supabase db push ./backup_to_restore.sql --password $SUPABASE_DB_PASSWORD --db-url postgres://postgres:$SUPABASE_DB_PASSWORD@db.$SUPABASE_PROJECT_ID.supabase.co:5432/postgres
 
       - name: Cleanup
         run: rm backup_to_restore.sql
