@@ -41,7 +41,7 @@ jobs:
         run: supabase link --project-ref $SUPABASE_PROJECT_ID
 
       - name: Reset Supabase Database
-        run: supabase db reset --linked
+        run: echo -e "$DB_PASSWORD\ny" | supabase db reset --linked --non-interactive
 
       - name: Install PostgreSQL 15 client and jq
         run: |
