@@ -15,7 +15,10 @@ jobs:
     permissions:
       contents: write
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+      DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -27,11 +30,11 @@ jobs:
 
       - name: Backup schema and roles
         run: |
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema_backup.sql
+          supabase db dump "postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:5432/$DB_NAME" -f schema_backup.sql
 
       - name: Backup data
         run: |
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f data_backup.sql --data-only --use-copy
+          supabase db dump "postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:5432/$DB_NAME" -f data_backup.sql --data-only --use-copy
 
       - name: Upload schema backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2

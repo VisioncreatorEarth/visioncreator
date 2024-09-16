@@ -118,6 +118,11 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions, and
 - `SUPABASE_PROJECT_ID`: Your Supabase project ID
 - `SUPABASE_DB_PASSWORD`: Your Supabase database password
 
+for db backup dumps to digital ocean
+- `SUPABASE_DB_HOST`: get from your postgres connection string
+- `SUPABASE_DB_NAME`: get from your postgres connection string
+- `SUPABASE_DB_USER`: get from your postgres connection string
+
 6. Push your updates to the main branch and supabase production gets automatically migrated
 
 7. Setup Mail
