@@ -15,6 +15,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,16 +46,16 @@ jobs:
         run: mkdir -p ${{ env.BACKUP_PREFIX }}
 
       - name: Backup roles
-        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_roles.sql --role-only
+        run: PGPASSWORD=$DB_PASSWORD supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_roles.sql --role-only
 
       - name: Backup schema
-        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_schema.sql
+        run: PGPASSWORD=$DB_PASSWORD supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_schema.sql
 
       - name: Backup data
-        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_data.sql --data-only --use-copy
+        run: PGPASSWORD=$DB_PASSWORD supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_data.sql --data-only --use-copy
 
       - name: Backup migration history
-        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_migrations.sql --schema supabase_migrations
+        run: PGPASSWORD=$DB_PASSWORD supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_migrations.sql --schema supabase_migrations
 
       - name: Upload backup folder to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -68,7 +69,6 @@ jobs:
 
       - name: Clean up local backup folder
         run: rm -rf ${{ env.BACKUP_PREFIX }}
-
   deploy:
     needs: backup
     runs-on: ubuntu-latest
