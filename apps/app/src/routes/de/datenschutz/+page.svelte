@@ -83,29 +83,6 @@
 		Vertrag, der gew&auml;hrleistet, dass dieser die personenbezogenen Daten unserer Websitebesucher
 		nur nach unseren Weisungen und unter Einhaltung der DSGVO verarbeitet.
 	</p>
-	<h3>webgo</h3>
-	<p>
-		Anbieter ist die webgo GmbH, Heidenkampsweg 81, 20097, Hamburg (nachfolgend &bdquo;webgo&ldquo;)
-		Wenn Sie unsere Website besuchen, erfasst webgo verschiedene Logfiles inklusive Ihrer
-		IP-Adressen.
-	</p>
-	<p>
-		Details entnehmen Sie der Datenschutzerkl&auml;rung von webgo: <a
-			href="https://www.webgo.de/datenschutz/"
-			target="_blank"
-			rel="noopener noreferrer">https://www.webgo.de/datenschutz/</a
-		>.
-	</p>
-	<p>
-		Die Verwendung von webgo erfolgt auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO. Wir haben ein
-		berechtigtes Interesse an einer m&ouml;glichst zuverl&auml;ssigen Darstellung unserer Website.
-		Sofern eine entsprechende Einwilligung abgefragt wurde, erfolgt die Verarbeitung
-		ausschlie&szlig;lich auf Grundlage von Art. 6 Abs. 1 lit. a DSGVO und &sect; 25 Abs. 1 TDDDG,
-		soweit die Einwilligung die Speicherung von Cookies oder den Zugriff auf Informationen im
-		Endger&auml;t des Nutzers (z.&nbsp;B. f&uuml;r Device-Fingerprinting) im Sinne des TDDDG
-		umfasst. Die Einwilligung ist jederzeit widerrufbar.
-	</p>
-
 	<h3>Externes Hosting</h3>
 	<p>
 		Diese Website wird extern gehostet. Die personenbezogenen Daten, die auf dieser Website erfasst
