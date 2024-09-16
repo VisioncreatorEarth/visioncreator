@@ -14,7 +14,7 @@ jobs:
       contents: write
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,12 +25,12 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Initialize Supabase project
+      - name: Initialize and link Supabase project
         run: |
           supabase init
-          supabase link --project-ref $PROJECT_ID
+          supabase link --project-ref $SUPABASE_PROJECT_ID
 
-      - name: Set backup filename
+      - name: Set backup prefix
         run: |
           TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
@@ -41,24 +41,33 @@ jobs:
           fi
           echo "BACKUP_PREFIX=$BACKUP_PREFIX" >> $GITHUB_ENV
 
-      - name: Backup database
-        run: |
-          supabase db dump -f ${{ env.BACKUP_PREFIX }}_roles.sql --role-only
-          supabase db dump -f ${{ env.BACKUP_PREFIX }}_schema.sql
-          supabase db dump -f ${{ env.BACKUP_PREFIX }}_data.sql --data-only
+      - name: Create backup folder
+        run: mkdir -p ${{ env.BACKUP_PREFIX }}
 
-      - name: Upload full backup to DO Spaces
+      - name: Backup roles
+        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_roles.sql --role-only
+
+      - name: Backup schema
+        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_schema.sql
+
+      - name: Backup data
+        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_data.sql --data-only --use-copy
+
+      - name: Backup migration history
+        run: supabase db dump -f ${{ env.BACKUP_PREFIX }}/${{ env.BACKUP_PREFIX }}_migrations.sql --schema supabase_migrations
+
+      - name: Upload backup folder to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ env.BACKUP_PREFIX }}*
-          out_dir: ""
+          source: ${{ env.BACKUP_PREFIX }}
+          out_dir: backups
 
-      - name: Clean up local backup files
-        run: rm ${{ env.BACKUP_PREFIX }}*
+      - name: Clean up local backup folder
+        run: rm -rf ${{ env.BACKUP_PREFIX }}
 
   deploy:
     needs: backup
