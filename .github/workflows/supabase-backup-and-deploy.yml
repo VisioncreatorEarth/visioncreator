@@ -25,8 +25,10 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Link Supabase project
-        run: supabase link --project-ref $PROJECT_ID
+      - name: Initialize Supabase project
+        run: |
+          supabase init
+          supabase link --project-ref $PROJECT_ID
 
       - name: Set backup filename
         run: |
@@ -75,8 +77,12 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
+      - name: Initialize and link Supabase project
+        run: |
+          supabase init
+          supabase link --project-ref $PROJECT_ID
+
       - name: Deploy Supabase Migration
         run: |
           cd packages/supacreator/supabase
-          supabase link --project-ref $PROJECT_ID
           supabase db push
