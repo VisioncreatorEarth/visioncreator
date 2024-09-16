@@ -3,6 +3,10 @@
 		<a href="/en/imprint">English</a>
 		<a href="/de/impressum">Deutsch</a>
 	</svelte:fragment>
+	<div class="image-container mb-10">
+		<img src="/impressum-siegel.png" alt="Impressum Siegel" />
+	</div>
+
 	<h1>Site Notice</h1>
 
 	<p>

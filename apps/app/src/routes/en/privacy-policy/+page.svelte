@@ -3,6 +3,11 @@
 		<a href="/en/privacy-policy">English</a>
 		<a href="/de/datenschutz">Deutsch</a>
 	</svelte:fragment>
+
+	<div class="image-container mb-10">
+		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
+	</div>
+
 	<h1>Privacy Policy</h1>
 	<h2>1. An overview of data protection</h2>
 	<h3>General information</h3>
