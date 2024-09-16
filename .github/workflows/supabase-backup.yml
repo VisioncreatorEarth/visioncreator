@@ -54,7 +54,7 @@ jobs:
         run: supabase db dump --db-url "$DB_URL" -f data_backup.sql --data-only --use-copy
 
       - name: Upload schema and roles backup to DO Spaces
-        uses: BetaHuhn/do-spaces-action@v3
+        uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
@@ -64,7 +64,7 @@ jobs:
           out_dir: ${{ env.FOLDER_NAME }}
 
       - name: Upload data backup to DO Spaces
-        uses: BetaHuhn/do-spaces-action@v3
+        uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
