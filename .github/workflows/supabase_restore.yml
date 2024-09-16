@@ -17,7 +17,6 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,9 +52,9 @@ jobs:
       - name: Initialize Supabase project and restore database
         run: |
           supabase init
-          supabase link --project-ref $SUPABASE_PROJECT_ID --password $SUPABASE_DB_PASSWORD
-          supabase db reset --linked --password $SUPABASE_DB_PASSWORD
-          supabase db push ./backup_to_restore.sql --password $SUPABASE_DB_PASSWORD
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+          supabase db reset --linked
+          supabase db push ./backup_to_restore.sql
 
       - name: Cleanup
         run: rm backup_to_restore.sql
