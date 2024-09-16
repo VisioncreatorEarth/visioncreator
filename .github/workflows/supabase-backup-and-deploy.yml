@@ -1,4 +1,4 @@
-name: Supabase Full Backup
+name: Supabase Full Backup and Deploy
 
 on:
   push:
@@ -40,20 +40,20 @@ jobs:
           DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
           echo "DB_URL=$DB_URL" >> $GITHUB_ENV
 
-      - name: Set folder name
+      - name: Set backup filename
         run: |
           TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            FOLDER_NAME="${TIMESTAMP}_daily"
+            BACKUP_FILENAME="${TIMESTAMP}_cronjob.dump"
           else
             SHORT_SHA=$(git rev-parse --short HEAD)
-            FOLDER_NAME="${TIMESTAMP}_${SHORT_SHA}"
+            BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.dump"
           fi
-          echo "FOLDER_NAME=$FOLDER_NAME" >> $GITHUB_ENV
+          echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
 
       - name: Backup entire database (including auth)
         run: |
-          /usr/lib/postgresql/15/bin/pg_dump "$DB_URL" -F c -f full_backup.dump
+          /usr/lib/postgresql/15/bin/pg_dump "$DB_URL" -F c -f ${{ env.BACKUP_FILENAME }}
 
       - name: Upload full backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
@@ -62,11 +62,11 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: full_backup.dump
-          out_dir: ${{ env.FOLDER_NAME }}
+          source: ${{ env.BACKUP_FILENAME }}
+          out_dir: /
 
       - name: Clean up local backup files
-        run: rm full_backup.dump
+        run: rm ${{ env.BACKUP_FILENAME }}
 
   deploy:
     needs: backup
