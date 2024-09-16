@@ -18,6 +18,8 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+      SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,7 +45,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
         run: |
           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set aws_secret_access_key $AWS_SECRET_KEY
           aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
           aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
 
@@ -55,11 +57,12 @@ jobs:
 
       - name: Restore database
         run: |
-          # Get the connection string
-          DB_URL=$(supabase db get-connection-string)
+          # Construct the connection string
+          ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
+          DB_URL="postgres://postgres:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:5432/${SUPABASE_DB_NAME}"
 
           # Restore in the correct order
-          psql "$DB_URL" \
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" \
             --single-transaction \
             --variable ON_ERROR_STOP=1 \
             --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_roles.sql \
@@ -69,17 +72,19 @@ jobs:
 
       - name: Restore migration history
         run: |
-          DB_URL=$(supabase db get-connection-string)
-          psql "$DB_URL" \
+          ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
+          DB_URL="postgres://postgres:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:5432/${SUPABASE_DB_NAME}"
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" \
             --single-transaction \
             --variable ON_ERROR_STOP=1 \
             --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_migrations.sql
 
       - name: Restore auth and storage schemas
         run: |
-          DB_URL=$(supabase db get-connection-string)
+          ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
+          DB_URL="postgres://postgres:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:5432/${SUPABASE_DB_NAME}"
           supabase db diff --schema auth,storage > changes.sql
-          psql "$DB_URL" -f changes.sql
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" -f changes.sql
 
       - name: Enable publication on tables
         run: |
