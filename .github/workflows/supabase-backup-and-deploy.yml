@@ -27,8 +27,7 @@ jobs:
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
       - name: Initialize Supabase project
-        run: |
-          supabase init --no-deno-config --no-intellij-config
+        run: supabase init
 
       - name: Link Supabase project
         run: |
@@ -72,7 +71,6 @@ jobs:
 
       - name: Clean up local backup folder
         run: rm -rf ${{ env.BACKUP_PREFIX }}
-
   deploy:
     needs: backup
     runs-on: ubuntu-latest
