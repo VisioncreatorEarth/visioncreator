@@ -20,6 +20,7 @@ jobs:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
       SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
+      SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,7 +60,7 @@ jobs:
         run: |
           # Construct the connection string
           ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgres://postgres:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:5432/${SUPABASE_DB_NAME}"
+          DB_URL="postgres://$SUPABASE_DB_USER:${ENCODED_PASSWORD}@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
 
           # Restore in the correct order
           PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" \
@@ -73,7 +74,7 @@ jobs:
       - name: Restore migration history
         run: |
           ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgres://postgres:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:5432/${SUPABASE_DB_NAME}"
+          DB_URL="postgres://$SUPABASE_DB_USER:${ENCODED_PASSWORD}@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
           PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" \
             --single-transaction \
             --variable ON_ERROR_STOP=1 \
@@ -82,7 +83,7 @@ jobs:
       - name: Restore auth and storage schemas
         run: |
           ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgres://postgres:${ENCODED_PASSWORD}@${SUPABASE_DB_HOST}:5432/${SUPABASE_DB_NAME}"
+          DB_URL="postgres://$SUPABASE_DB_USER:${ENCODED_PASSWORD}@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
           supabase db diff --schema auth,storage > changes.sql
           PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" -f changes.sql
 
