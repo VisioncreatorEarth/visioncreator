@@ -29,7 +29,7 @@ jobs:
       - name: Initialize Supabase project
         run: |
           supabase init
-          supabase link --project-ref $SUPABASE_PROJECT_ID --password $SUPABASE_DB_PASSWORD
+          supabase link --project-ref $SUPABASE_PROJECT_ID
 
       - name: Set backup filename
         run: |
@@ -42,8 +42,28 @@ jobs:
           fi
           echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
 
-      - name: Backup entire database (including schema, roles, auth, and data)
-        run: supabase db dump --file ${{ env.BACKUP_FILENAME }} --password $SUPABASE_DB_PASSWORD
+      - name: Get database connection info
+        run: |
+          DB_HOST=$(supabase db get-connection-string | grep -oP '(?<=@)[^:]+')
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Backup entire database (including all schemas, roles, auth, and data)
+        run: |
+          PGPASSWORD=$SUPABASE_DB_PASSWORD pg_dump \
+            -h $DB_HOST \
+            -U postgres \
+            -d postgres \
+            --clean \
+            --if-exists \
+            --format=plain \
+            --no-owner \
+            --no-privileges \
+            > ${{ env.BACKUP_FILENAME }}
 
       - name: Install AWS CLI
         run: |

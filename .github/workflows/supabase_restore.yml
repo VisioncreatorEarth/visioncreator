@@ -1,4 +1,4 @@
-name: Supabase Restore
+name: Supabase Full Database Restore
 
 on:
   workflow_dispatch:
@@ -27,10 +27,10 @@ jobs:
         with:
           version: latest
 
-      - name: Install AWS CLI
+      - name: Install AWS CLI and PostgreSQL client
         run: |
           sudo apt-get update
-          sudo apt-get install -y awscli
+          sudo apt-get install -y awscli postgresql-client
 
       - name: Configure AWS CLI for DigitalOcean Spaces
         env:
@@ -38,7 +38,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
         run: |
           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_KEY
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
           aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
           aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
 
@@ -50,16 +50,34 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Initialize Supabase project and restore database
+      - name: Link to Supabase project
+        run: supabase link --project-ref $SUPABASE_PROJECT_ID
+
+      - name: Get database connection info
         run: |
-          supabase init
-          supabase link --project-ref $SUPABASE_PROJECT_ID
-          supabase db push ./backup_to_restore.sql --password $SUPABASE_DB_PASSWORD --db-url postgres://postgres:$SUPABASE_DB_PASSWORD@db.$SUPABASE_PROJECT_ID.supabase.co:5432/postgres
+          DB_HOST=$(supabase db get-connection-string | grep -oP '(?<=@)[^:]+')
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+
+      - name: Restore full database
+        run: |
+          # Terminate all connections to the database
+          PGPASSWORD=$SUPABASE_DB_PASSWORD psql \
+            -h $DB_HOST \
+            -U postgres \
+            -d postgres \
+            -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'postgres' AND pid <> pg_backend_pid();"
+
+          # Restore the full backup
+          PGPASSWORD=$SUPABASE_DB_PASSWORD psql \
+            -h $DB_HOST \
+            -U postgres \
+            -d postgres \
+            -f ./backup_to_restore.sql
 
       - name: Cleanup
         run: rm backup_to_restore.sql
 
       - name: Restoration complete
         run: |
-          echo "Database restore completed from backup: ${{ github.event.inputs.backup_filename }}.sql"
+          echo "Full database restore completed from backup: ${{ github.event.inputs.backup_filename }}.sql"
           echo "Please verify your database to ensure the restoration was successful."
