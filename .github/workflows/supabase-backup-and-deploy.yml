@@ -25,8 +25,10 @@ jobs:
         with:
           version: latest
 
-      - name: Install jq
-        run: sudo apt-get install jq -y
+      - name: Install jq and postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq postgresql-client
 
       - name: Construct DB URL with encoded password
         run: |
@@ -45,35 +47,22 @@ jobs:
           fi
           echo "FOLDER_NAME=$FOLDER_NAME" >> $GITHUB_ENV
 
-      - name: Backup schema and roles
-        run: supabase db dump --db-url "$DB_URL" -f schema_backup.sql
+      - name: Backup entire database (including auth)
+        run: |
+          pg_dump "$DB_URL" -F c -f full_backup.dump
 
-      - name: Backup data
-        run: supabase db dump --db-url "$DB_URL" -f data_backup.sql --data-only --use-copy
-
-      - name: Upload schema and roles backup to DO Spaces
+      - name: Upload full backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: schema_backup.sql
-          out_dir: ${{ env.FOLDER_NAME }}
-
-      - name: Upload data backup to DO Spaces
-        uses: BetaHuhn/do-spaces-action@v2
-        with:
-          access_key: ${{ secrets.DO_ACCESS_KEY }}
-          secret_key: ${{ secrets.DO_SECRET_KEY }}
-          space_name: ${{ secrets.DO_SPACE_NAME }}
-          space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: data_backup.sql
+          source: full_backup.dump
           out_dir: ${{ env.FOLDER_NAME }}
 
       - name: Clean up local backup files
-        run: |
-          rm schema_backup.sql data_backup.sql
+        run: rm full_backup.dump
 
   deploy:
     needs: backup
