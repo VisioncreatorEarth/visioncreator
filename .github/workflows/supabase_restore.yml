@@ -15,12 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm == 'CONFIRM'
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+      DB_USER: ${{ secrets.SUPABASE_DB_USER }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-      SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
-      SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,16 +28,14 @@ jobs:
         with:
           version: latest
 
-      - name: Supabase Login
-        run: supabase login $SUPABASE_ACCESS_TOKEN
-
-      - name: Create minimal Supabase config
+      - name: Install PostgreSQL 15 client and jq
         run: |
-          mkdir -p supabase
-          echo "project_id = \"$SUPABASE_PROJECT_ID\"" > supabase/config.toml
-
-      - name: Link to Supabase project
-        run: supabase link --project-ref $SUPABASE_PROJECT_ID
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-15 jq
+          sudo update-alternatives --install /usr/bin/psql psql /usr/lib/postgresql/15/bin/psql 1500
+          psql --version
 
       - name: Configure AWS CLI for DigitalOcean Spaces
         env:
@@ -56,14 +53,15 @@ jobs:
           aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
             cp --recursive s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_folder }} ./${{ github.event.inputs.backup_folder }}
 
+      - name: Construct DB URL with encoded password
+        run: |
+          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
+          DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
+          echo "DB_URL=$DB_URL" >> $GITHUB_ENV
+
       - name: Restore database
         run: |
-          # Construct the connection string
-          ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgres://$SUPABASE_DB_USER:${ENCODED_PASSWORD}@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
-
-          # Restore in the correct order
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" \
+          psql "$DB_URL" \
             --single-transaction \
             --variable ON_ERROR_STOP=1 \
             --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_roles.sql \
@@ -73,19 +71,15 @@ jobs:
 
       - name: Restore migration history
         run: |
-          ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgres://$SUPABASE_DB_USER:${ENCODED_PASSWORD}@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" \
+          psql "$DB_URL" \
             --single-transaction \
             --variable ON_ERROR_STOP=1 \
             --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_migrations.sql
 
       - name: Restore auth and storage schemas
         run: |
-          ENCODED_PASSWORD=$(echo -n "$SUPABASE_DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgres://$SUPABASE_DB_USER:${ENCODED_PASSWORD}@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
           supabase db diff --schema auth,storage > changes.sql
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$DB_URL" -f changes.sql
+          psql "$DB_URL" -f changes.sql
 
       - name: Enable publication on tables
         run: |
