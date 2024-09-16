@@ -28,9 +28,13 @@ jobs:
         with:
           version: latest
 
-      - name: Construct DB URL
+      - name: Install jq
+        run: sudo apt-get install jq -y
+
+      - name: Construct DB URL with encoded password
         run: |
-          DB_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:6543/$DB_NAME"
+          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
+          DB_URL="postgresql://$DB_USER:$ENCODED_PASSWORD@$DB_HOST:6543/$DB_NAME"
           echo "DB_URL=$DB_URL" >> $GITHUB_ENV
 
       - name: Backup schema and roles
