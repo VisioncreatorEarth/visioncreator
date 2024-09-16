@@ -40,8 +40,15 @@ jobs:
       - name: Link to Supabase project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID
 
+      - name: Construct DB URL with encoded password
+        run: |
+          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
+          DB_URL="postgresql://$DB_USER:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
+          echo "DB_URL=$DB_URL" >> $GITHUB_ENV
+
       - name: Reset Supabase Database
-        run: echo -e "$DB_PASSWORD\ny" | supabase db reset --linked --non-interactive
+        run: |
+          supabase db reset --linked --db-url "$DB_URL"
 
       - name: Install PostgreSQL 15 client and jq
         run: |
@@ -67,12 +74,6 @@ jobs:
           mkdir -p ${{ github.event.inputs.backup_folder }}
           aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
             cp --recursive s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_folder }} ./${{ github.event.inputs.backup_folder }}
-
-      - name: Construct DB URL with encoded password
-        run: |
-          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
-          echo "DB_URL=$DB_URL" >> $GITHUB_ENV
 
       - name: Restore database
         run: |
