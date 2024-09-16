@@ -15,6 +15,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,10 +26,13 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Initialize and link Supabase project
+      - name: Initialize Supabase project
         run: |
-          supabase init
-          supabase link --project-ref $SUPABASE_PROJECT_ID --password ${{ secrets.SUPABASE_DB_PASSWORD }}
+          supabase init --no-deno-config --no-intellij-config
+
+      - name: Link Supabase project
+        run: |
+          echo -n "$SUPABASE_DB_PASSWORD" | supabase link --project-ref $SUPABASE_PROJECT_ID --password-stdin
 
       - name: Set backup prefix
         run: |
@@ -64,7 +68,7 @@ jobs:
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
           source: ${{ env.BACKUP_PREFIX }}
-          out_dir: backups
+          out_dir: ""
 
       - name: Clean up local backup folder
         run: rm -rf ${{ env.BACKUP_PREFIX }}
@@ -74,7 +78,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -86,10 +91,13 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Initialize and link Supabase project
+      - name: Initialize Supabase project
         run: |
-          supabase init
-          supabase link --project-ref $PROJECT_ID
+          supabase init --no-deno-config --no-intellij-config
+
+      - name: Link Supabase project
+        run: |
+          echo -n "$SUPABASE_DB_PASSWORD" | supabase link --project-ref $SUPABASE_PROJECT_ID --password-stdin
 
       - name: Deploy Supabase Migration
         run: |
