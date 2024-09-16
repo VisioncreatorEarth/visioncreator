@@ -1,0 +1,59 @@
+name: Supabase Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "CONFIRM" to proceed with database restore'
+        required: true
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'CONFIRM'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client and AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-15 awscli jq
+          pg_restore --version
+          aws --version
+
+      - name: Configure AWS CLI for DigitalOcean Spaces
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
+          aws configure set default.s3.endpoint https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
+
+      - name: Get latest backup file
+        run: |
+          LATEST_BACKUP=$(aws s3 ls s3://${{ secrets.DO_SPACE_NAME }}/ --recursive | sort | tail -n 1 | awk '{print $4}')
+          echo "Latest backup file: $LATEST_BACKUP"
+          aws s3 cp s3://${{ secrets.DO_SPACE_NAME }}/$LATEST_BACKUP ./latest_backup.dump
+          echo "LATEST_BACKUP=$LATEST_BACKUP" >> $GITHUB_ENV
+
+      - name: Restore database
+        env:
+          SUPABASE_DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
+          SUPABASE_DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
+          SUPABASE_DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          CONNECTION_STRING="postgresql://$SUPABASE_DB_USER:$SUPABASE_DB_PASSWORD@$SUPABASE_DB_HOST:5432/$SUPABASE_DB_NAME"
+          pg_restore --clean --if-exists --no-owner --no-privileges --no-comments --dbname="$CONNECTION_STRING" latest_backup.dump
+
+      - name: Cleanup
+        run: rm latest_backup.dump
+
+      - name: Restoration complete
+        run: |
+          echo "Database restore completed from backup: ${{ env.LATEST_BACKUP }}"
+          echo "Please verify your database to ensure the restoration was successful."
