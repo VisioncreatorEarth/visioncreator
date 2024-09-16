@@ -477,28 +477,84 @@
 	<p>
 		Wenn Sie den auf der Website angebotenen Newsletter beziehen m&ouml;chten, ben&ouml;tigen wir
 		von Ihnen eine E-Mail-Adresse sowie Informationen, welche uns die &Uuml;berpr&uuml;fung
-		gestatten, dass Sie der Inhaber der angegebenen E-Mail-Adresse sind und mit dem Empfang des
+		gestatten, dass Sie der Inhaber der angegebenen E-Mail-Adresse und mit dem Empfang des
 		Newsletters einverstanden sind. Weitere Daten werden nicht bzw. nur auf freiwilliger Basis
-		erhoben. Diese Daten verwenden wir ausschlie&szlig;lich f&uuml;r den Versand der angeforderten
-		Informationen und geben diese nicht an Dritte weiter.
+		erhoben. F&uuml;r die Abwicklung der Newsletter nutzen wir Newsletterdiensteanbieter, die
+		nachfolgend beschrieben werden.
+	</p>
+	<h3>ActiveCampaign</h3>
+	<p>
+		Diese Website nutzt ActiveCampaign f&uuml;r den Versand von Newslettern. Anbieter ist die
+		ActiveCampaign, Inc., 1 N Dearborn, 5th Floor Chicago, Illinois 60602, USA.
 	</p>
 	<p>
-		Die Verarbeitung der in das Newsletteranmeldeformular eingegebenen Daten erfolgt
-		ausschlie&szlig;lich auf Grundlage Ihrer Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Die erteilte
-		Einwilligung zur Speicherung der Daten, der E-Mail-Adresse sowie deren Nutzung zum Versand des
-		Newsletters k&ouml;nnen Sie jederzeit widerrufen, etwa &uuml;ber den
-		&bdquo;Austragen&ldquo;-Link im Newsletter. Die Rechtm&auml;&szlig;igkeit der bereits erfolgten
-		Datenverarbeitungsvorg&auml;nge bleibt vom Widerruf unber&uuml;hrt.
+		ActiveCampaign ist ein Dienst, mit dem u.a. der Versand von Newslettern organisiert und
+		analysiert werden kann. Die von Ihnen zum Zwecke des Newsletterbezugs eingegeben Daten werden
+		auf den Servern von ActiveCampaign in den USA gespeichert.
 	</p>
+	<h4>Datenanalyse durch ActiveCampaign</h4>
+	<p>
+		Mit Hilfe von ActiveCampaign ist es uns m&ouml;glich, unsere Newsletter-Kampagnen zu
+		analysieren. So k&ouml;nnen wir z.&nbsp;B. sehen, ob eine Newsletter-Nachricht ge&ouml;ffnet
+		wurde und welche Links ggf. angeklickt wurden. Auf diese Weise k&ouml;nnen wir u.a. feststellen,
+		welche Links besonders oft angeklickt wurden.
+	</p>
+	<p>
+		Au&szlig;erdem k&ouml;nnen wir erkennen, ob nach dem &Ouml;ffnen / Anklicken bestimmte vorher
+		definierte Aktionen durchgef&uuml;hrt wurden (Conversion-Rate). Wir k&ouml;nnen so z.&nbsp;B.
+		erkennen, ob Sie nach dem Anklicken des Newsletters einen Kauf get&auml;tigt haben.
+	</p>
+	<p>
+		ActiveCampaign erm&ouml;glicht es uns auch, die Newsletter-Empf&auml;nger anhand verschiedener
+		Kategorien zu unterteilen (&ldquo;clustern&rdquo;). Dabei lassen sich die
+		Newsletterempf&auml;nger z.&nbsp;B. nach Alter, Geschlecht oder Wohnort unterteilen. Auf diese
+		Weise lassen sich die Newsletter besser an die jeweiligen Zielgruppen anpassen. Wenn Sie keine
+		Analyse durch ActiveCampaign wollen, m&uuml;ssen Sie den Newsletter abbestellen. Hierf&uuml;r
+		stellen wir in jeder Newsletternachricht einen entsprechenden Link zur Verf&uuml;gung.
+	</p>
+	<p>
+		Ausf&uuml;hrliche Informationen zu den Funktionen von ActiveCampaign entnehmen Sie folgendem
+		Link: <a
+			href="https://www.activecampaign.com/email-marketing"
+			target="_blank"
+			rel="noopener noreferrer">https://www.activecampaign.com/email-marketing</a
+		>.
+	</p>
+	<p>
+		Die Datenschutzerkl&auml;rung von ActiveCampaign finden Sie unter: <a
+			href="https://www.activecampaign.com/privacy-policy"
+			target="_blank"
+			rel="noopener noreferrer">https://www.activecampaign.com/privacy-policy</a
+		>.
+	</p>
+	<h4>Rechtsgrundlage</h4>
+	<p>
+		Die Datenverarbeitung erfolgt auf Grundlage Ihrer Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Sie
+		k&ouml;nnen diese Einwilligung jederzeit widerrufen. Die Rechtm&auml;&szlig;igkeit der bereits
+		erfolgten Datenverarbeitungsvorg&auml;nge bleibt vom Widerruf unber&uuml;hrt.
+	</p>
+	<p>
+		Die Daten&uuml;bertragung in die USA wird auf die Standardvertragsklauseln der EU-Kommission
+		gest&uuml;tzt. Details finden Sie hier: <a
+			href="https://www.activecampaign.com/legal/newscc"
+			target="_blank"
+			rel="noopener noreferrer">https://www.activecampaign.com/legal/newscc</a
+		>
+		und
+		<a
+			href="https://www.activecampaign.com/de/legal/gdpr-updates/privacy-shield"
+			target="_blank"
+			rel="noopener noreferrer"
+			>https://www.activecampaign.com/de/legal/gdpr-updates/privacy-shield</a
+		>.
+	</p>
+	<h4>Speicherdauer</h4>
 	<p>
 		Die von Ihnen zum Zwecke des Newsletter-Bezugs bei uns hinterlegten Daten werden von uns bis zu
 		Ihrer Austragung aus dem Newsletter bei uns bzw. dem Newsletterdiensteanbieter gespeichert und
-		nach der Abbestellung des Newsletters oder nach Zweckfortfall aus der Newsletterverteilerliste
-		gel&ouml;scht. Wir behalten uns vor, E-Mail-Adressen aus unserem Newsletterverteiler nach
-		eigenem Ermessen im Rahmen unseres berechtigten Interesses nach Art. 6 Abs. 1 lit. f DSGVO zu
-		l&ouml;schen oder zu sperren.
+		nach der Abbestellung des Newsletters aus der Newsletterverteilerliste gel&ouml;scht. Daten, die
+		zu anderen Zwecken bei uns gespeichert wurden, bleiben hiervon unber&uuml;hrt.
 	</p>
-	<p>Daten, die zu anderen Zwecken bei uns gespeichert wurden, bleiben hiervon unber&uuml;hrt.</p>
 	<p>
 		Nach Ihrer Austragung aus der Newsletterverteilerliste wird Ihre E-Mail-Adresse bei uns bzw. dem
 		Newsletterdiensteanbieter ggf. in einer Blacklist gespeichert, sofern dies zur Verhinderung
@@ -510,5 +566,24 @@
 			>Sie k&ouml;nnen der Speicherung widersprechen, sofern Ihre Interessen unser berechtigtes
 			Interesse &uuml;berwiegen.</strong
 		>
+	</p>
+	<p>
+		Das Unternehmen verf&uuml;gt &uuml;ber eine Zertifizierung nach dem &bdquo;EU-US Data Privacy
+		Framework&ldquo; (DPF). Der DPF ist ein &Uuml;bereinkommen zwischen der Europ&auml;ischen Union
+		und den USA, der die Einhaltung europ&auml;ischer Datenschutzstandards bei Datenverarbeitungen
+		in den USA gew&auml;hrleisten soll. Jedes nach dem DPF zertifizierte Unternehmen verpflichtet
+		sich, diese Datenschutzstandards einzuhalten. Weitere Informationen hierzu erhalten Sie vom
+		Anbieter unter folgendem Link: <a
+			href="https://www.dataprivacyframework.gov/participant/4495"
+			target="_blank"
+			rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/4495</a
+		>.
+	</p>
+	<h4>Auftragsverarbeitung</h4>
+	<p>
+		Wir haben einen Vertrag &uuml;ber Auftragsverarbeitung (AVV) zur Nutzung des oben genannten
+		Dienstes geschlossen. Hierbei handelt es sich um einen datenschutzrechtlich vorgeschriebenen
+		Vertrag, der gew&auml;hrleistet, dass dieser die personenbezogenen Daten unserer Websitebesucher
+		nur nach unseren Weisungen und unter Einhaltung der DSGVO verarbeitet.
 	</p>
 </TextWrap>

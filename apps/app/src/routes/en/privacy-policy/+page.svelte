@@ -450,29 +450,84 @@
 	<h2>5. Newsletter</h2>
 	<h3>Newsletter data</h3>
 	<p>
-		If you would like to subscribe to the newsletter offered on this website, we will need from you
-		an e-mail address as well as information that allow us to verify that you are the owner of the
-		e-mail address provided and consent to the receipt of the newsletter. No further data shall be
-		collected or shall be collected only on a voluntary basis. We shall use such data only for the
-		sending of the requested information and shall not share such data with any third parties.
+		If you would like to receive the newsletter offered on the website, we require an e-mail address
+		from you as well as information that allows us to verify that you are the owner of the e-mail
+		address provided and that you agree to receive the newsletter. Further data is not collected or
+		only on a voluntary basis. For the handling of the newsletter, we use newsletter service
+		providers, which are described below.
+	</p>
+	<h3>ActiveCampaign</h3>
+	<p>
+		This website uses ActiveCampaign for sending newsletters. Provider is ActiveCampaign, Inc., 1 N
+		Dearborn, 5th Floor Chicago, Illinois 60602, United States.
 	</p>
 	<p>
-		The processing of the information entered into the newsletter subscription form shall occur
-		exclusively on the basis of your consent (Art. 6(1)(a) GDPR). You may revoke the consent you
-		have given to the archiving of data, the e-mail address, and the use of this information for the
-		sending of the newsletter at any time, for instance by clicking on the &ldquo;Unsubscribe&rdquo;
-		link in the newsletter. This shall be without prejudice to the lawfulness of any data processing
-		transactions that have taken place to date.
+		ActiveCampaign is a service with which, among other things, the dispatch of newsletters can be
+		organized and analyzed. The data you enter for the purpose of subscribing to the newsletter will
+		be stored on the servers of ActiveCampaign in the United States.
 	</p>
+	<h4>Data analysis by ActiveCampaign</h4>
+	<p>
+		With the help of ActiveCampaign we are able to analyze our newsletter campaigns. For example, we
+		can see if a newsletter message has been opened and which links have been clicked. In this way,
+		we can determine which links have been clicked particularly frequently.
+	</p>
+	<p>
+		We can also see whether certain previously defined actions were performed after opening /
+		clicking (conversion rate). For example, we can tell if you have made a purchase after clicking
+		on the newsletter.
+	</p>
+	<p>
+		ActiveCampaign also allows us to classify newsletter recipients into different categories
+		(&bdquo;clusters&rdquo;). For example, the newsletter recipients can be subdivided according to
+		age, gender, or place of residence. In this way, the newsletters can be better adapted to the
+		respective target groups. If you do not want an analysis by ActiveCampaign, you have to
+		unsubscribe from the newsletter. For this purpose, we provide a corresponding link in every
+		newsletter message. Furthermore, you can unsubscribe from the newsletter directly on the
+		website.
+	</p>
+	<p>
+		Detailed information about the functions of ActiveCampaign can be found in the following link: <a
+			href="https://www.activecampaign.com/email-marketing"
+			target="_blank"
+			rel="noopener noreferrer">https://www.activecampaign.com/email-marketing</a
+		>.
+	</p>
+	<p>
+		The privacy policy of ActiveCampaign can be found at: <a
+			href="https://www.activecampaign.com/privacy-policy"
+			target="_blank"
+			rel="noopener noreferrer">https://www.activecampaign.com/privacy-policy</a
+		>.
+	</p>
+	<h4>Legal Basis</h4>
+	<p>
+		Data processing is based on your agreement (Art. 6(1)(a) GDPR). You can revoke this agreement at
+		any time. The legality of the data processing operations that have already taken place remains
+		unaffected by the revocation.
+	</p>
+	<p>
+		Data transmission to the US is based on the Standard Contractual Clauses (SCC) of the European
+		Commission. Details can be found here: <a
+			href="https://www.activecampaign.com/legal/newscc"
+			target="_blank"
+			rel="noopener noreferrer">https://www.activecampaign.com/legal/newscc</a
+		>
+		and
+		<a
+			href="https://www.activecampaign.com/de/legal/gdpr-updates/privacy-shield"
+			target="_blank"
+			rel="noopener noreferrer"
+			>https://www.activecampaign.com/de/legal/gdpr-updates/privacy-shield</a
+		>.
+	</p>
+	<h4>Storage period</h4>
 	<p>
 		The data deposited with us for the purpose of subscribing to the newsletter will be stored by us
 		until you unsubscribe from the newsletter or the newsletter service provider and deleted from
-		the newsletter distribution list after you unsubscribe from the newsletter or after the purpose
-		has ceased to apply. We reserve the right to delete or block e-mail addresses from our
-		newsletter distribution list at our own discretion within the scope of our legitimate interest
-		in accordance with Art. 6(1)(f) GDPR.
+		the newsletter distribution list after you unsubscribe from the newsletter. Data stored for
+		other purposes with us remain unaffected.
 	</p>
-	<p>Data stored for other purposes with us remain unaffected.</p>
 	<p>
 		After you unsubscribe from the newsletter distribution list, your e-mail address may be stored
 		by us or the newsletter service provider in a blacklist, if such action is necessary to prevent
@@ -482,5 +537,22 @@
 		GDPR). The storage in the blacklist is indefinite. <strong
 			>You may object to the storage if your interests outweigh our legitimate interest.</strong
 		>
+	</p>
+	<p>
+		The company is certified in accordance with the &ldquo;EU-US Data Privacy Framework&rdquo;
+		(DPF). The DPF is an agreement between the European Union and the US, which is intended to
+		ensure compliance with European data protection standards for data processing in the US. Every
+		company certified under the DPF is obliged to comply with these data protection standards. For
+		more information, please contact the provider under the following link: <a
+			href="https://www.dataprivacyframework.gov/participant/4495"
+			target="_blank"
+			rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/4495</a
+		>.
+	</p>
+	<h4>Data processing</h4>
+	<p>
+		We have concluded a data processing agreement (DPA) for the use of the above-mentioned service.
+		This is a contract mandated by data privacy laws that guarantees that they process personal data
+		of our website visitors only based on our instructions and in compliance with the GDPR.
 	</p>
 </TextWrap>
