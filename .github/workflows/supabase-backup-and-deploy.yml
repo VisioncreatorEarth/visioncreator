@@ -13,9 +13,13 @@ jobs:
     permissions:
       contents: write
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      OLD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Install PostgreSQL client
         run: |
@@ -35,14 +39,14 @@ jobs:
 
       - name: Backup database
         run: |
-          pg_dump --no-owner --no-acl "$SUPABASE_DB_URL" -f ${{ env.BACKUP_PREFIX }}_full.sql
-          pg_dump --no-owner --no-acl --schema=public "$SUPABASE_DB_URL" -f ${{ env.BACKUP_PREFIX }}_public.sql
-          pg_dump --no-owner --no-acl --schema=auth "$SUPABASE_DB_URL" -f ${{ env.BACKUP_PREFIX }}_auth.sql
-          pg_dump --no-owner --no-acl --schema=storage "$SUPABASE_DB_URL" -f ${{ env.BACKUP_PREFIX }}_storage.sql
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_roles.sql --role-only
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_schema.sql
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_data.sql --use-copy --data-only
 
-      - name: Backup roles
+      - name: Backup migration history
         run: |
-          pg_dumpall --roles-only --no-role-passwords -f ${{ env.BACKUP_PREFIX }}_roles.sql "$SUPABASE_DB_URL"
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_history_schema.sql --schema supabase_migrations
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_history_data.sql --use-copy --data-only --schema supabase_migrations
 
       - name: Upload backups to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
