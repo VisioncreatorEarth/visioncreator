@@ -17,6 +17,7 @@ jobs:
     env:
       DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
       DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
     steps:
@@ -34,14 +35,18 @@ jobs:
       - name: Construct DB URL with encoded password
         run: |
           ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgresql://$DB_USER:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
+          DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
           echo "DB_URL=$DB_URL" >> $GITHUB_ENV
 
+      - name: Debug Connection String (Masked)
+        run: |
+          echo "Connection string: postgresql://$DB_USER.$SUPABASE_PROJECT_ID:****@$DB_HOST:5432/$DB_NAME"
+
       - name: Backup schema and roles
-        run: supabase db dump --db-url "$DB_URL" -f schema_roles_backup.sql
+        run: supabase db dump --db-url "$DB_URL" -f schema_roles_backup.sql --debug
 
       - name: Backup data
-        run: supabase db dump --db-url "$DB_URL" -f data_backup.sql --data-only --use-copy
+        run: supabase db dump --db-url "$DB_URL" -f data_backup.sql --data-only --use-copy --debug
 
       - name: Upload schema and roles backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
