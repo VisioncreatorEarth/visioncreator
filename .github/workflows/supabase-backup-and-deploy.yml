@@ -25,6 +25,11 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
+      - name: Initialize Supabase project
+        run: |
+          supabase init
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
       - name: Set backup filename
         run: |
           TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
@@ -37,9 +42,7 @@ jobs:
           echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
 
       - name: Backup entire database (including schema, roles, auth, and data)
-        run: |
-          supabase link --project-ref $SUPABASE_PROJECT_ID
-          supabase db dump --file ${{ env.BACKUP_FILENAME }}
+        run: supabase db dump --file ${{ env.BACKUP_FILENAME }}
 
       - name: Install AWS CLI
         run: |
