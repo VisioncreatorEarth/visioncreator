@@ -48,7 +48,7 @@ jobs:
 
       - name: Reset Supabase Database
         run: |
-          supabase db reset --linked --db-url "$DB_URL"
+          supabase db reset --db-url "$DB_URL"
 
       - name: Install PostgreSQL 15 client and jq
         run: |
