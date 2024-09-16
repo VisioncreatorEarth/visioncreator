@@ -13,11 +13,8 @@ jobs:
     permissions:
       contents: write
     env:
-      DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-      DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,45 +22,44 @@ jobs:
         with:
           version: latest
 
-      - name: Install PostgreSQL 15 client and jq
-        run: |
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-15 jq
-          sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/15/bin/pg_dump 1500
-          pg_dump --version
-
-      - name: Construct DB URL with encoded password
-        run: |
-          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
-          echo "DB_URL=$DB_URL" >> $GITHUB_ENV
+      - name: Supabase Login
+        run: supabase login $SUPABASE_ACCESS_TOKEN
 
       - name: Set backup filename
         run: |
           TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            BACKUP_FILENAME="${TIMESTAMP}_cronjob.dump"
+            BACKUP_FILENAME="${TIMESTAMP}_cronjob.sql"
           else
             SHORT_SHA=$(git rev-parse --short HEAD)
-            BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.dump"
+            BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.sql"
           fi
           echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
 
-      - name: Backup entire database (including auth)
+      - name: Backup entire database (including schema, roles, auth, and data)
         run: |
-          /usr/lib/postgresql/15/bin/pg_dump "$DB_URL" -F c -f ${{ env.BACKUP_FILENAME }}
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+          supabase db dump --file ${{ env.BACKUP_FILENAME }}
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
+      - name: Configure AWS CLI for DigitalOcean Spaces
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
+          aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
 
       - name: Upload full backup to DO Spaces
-        uses: BetaHuhn/do-spaces-action@v2
-        with:
-          access_key: ${{ secrets.DO_ACCESS_KEY }}
-          secret_key: ${{ secrets.DO_SECRET_KEY }}
-          space_name: ${{ secrets.DO_SPACE_NAME }}
-          space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ env.BACKUP_FILENAME }}
-          out_dir: ""
+        run: |
+          aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
+            cp ${{ env.BACKUP_FILENAME }} s3://${{ secrets.DO_SPACE_NAME }}/${{ env.BACKUP_FILENAME }}
 
       - name: Clean up local backup files
         run: rm ${{ env.BACKUP_FILENAME }}
@@ -73,8 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -89,5 +84,5 @@ jobs:
       - name: Deploy Supabase Migration
         run: |
           cd packages/supacreator/supabase
-          supabase link --project-ref $PROJECT_ID
+          supabase link --project-ref $SUPABASE_PROJECT_ID
           supabase db push
