@@ -25,9 +25,9 @@ jobs:
         with:
           version: latest
 
-      - name: Backup schema (including roles and structure)
+      - name: Backup schema and roles
         run: |
-          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema_backup.sql --role-only --schema-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema_backup.sql
 
       - name: Backup data
         run: |
