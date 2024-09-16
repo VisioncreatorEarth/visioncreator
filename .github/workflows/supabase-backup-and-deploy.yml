@@ -1,4 +1,4 @@
-name: Supabase Backup and Deploy
+name: Supabase Full Backup
 
 on:
   push:
@@ -31,6 +31,7 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get install -y postgresql-client-15 jq
+          sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/15/bin/pg_dump 1500
           pg_dump --version
 
       - name: Construct DB URL with encoded password
@@ -52,7 +53,7 @@ jobs:
 
       - name: Backup entire database (including auth)
         run: |
-          pg_dump "$DB_URL" -F c -f full_backup.dump
+          /usr/lib/postgresql/15/bin/pg_dump "$DB_URL" -F c -f full_backup.dump
 
       - name: Upload full backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
