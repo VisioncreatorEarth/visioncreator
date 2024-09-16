@@ -1,27 +1,58 @@
-name: Upload Random Text File to DO Spaces
+name: Supabase Full Backup
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # Runs every day at midnight
 
 jobs:
-  upload:
+  run_db_backup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
 
-      - name: Generate Random Text File
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Backup schema (including roles and structure)
         run: |
-          echo "This is a random text file: $(date)" > random_file.txt
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema_backup.sql --role-only --schema-only
 
-      - name: Upload to DO Spaces
+      - name: Backup data
+        run: |
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f data_backup.sql --data-only --use-copy
+
+      - name: Upload schema backup to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: random_file.txt
-          out_dir: random_files
+          source: schema_backup.sql
+          out_dir: supabase_backups/$(date +%Y-%m-%d)
+
+      - name: Upload data backup to DO Spaces
+        uses: BetaHuhn/do-spaces-action@v2
+        with:
+          access_key: ${{ secrets.DO_ACCESS_KEY }}
+          secret_key: ${{ secrets.DO_SECRET_KEY }}
+          space_name: ${{ secrets.DO_SPACE_NAME }}
+          space_region: ${{ secrets.DO_SPACE_REGION }}
+          source: data_backup.sql
+          out_dir: supabase_backups/$(date +%Y-%m-%d)
+
+      - name: Clean up local backup files
+        run: |
+          rm schema_backup.sql data_backup.sql
