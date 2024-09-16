@@ -24,24 +24,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client and jq
+      - name: Install PostgreSQL client, jq, and AWS CLI
         run: |
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-15 jq
+          sudo apt-get install -y postgresql-client-15 jq awscli
           sudo update-alternatives --install /usr/bin/pg_restore pg_restore /usr/lib/postgresql/15/bin/pg_restore 1500
           pg_restore --version
+          aws --version
 
-      - name: Get specified backup file
-        uses: BetaHuhn/do-spaces-action@v2
-        with:
-          access_key: ${{ secrets.DO_ACCESS_KEY }}
-          secret_key: ${{ secrets.DO_SECRET_KEY }}
-          space_name: ${{ secrets.DO_SPACE_NAME }}
-          space_region: ${{ secrets.DO_SPACE_REGION }}
-          file: ${{ github.event.inputs.backup_filename }}.dump
-          output: backup_to_restore.dump
+      - name: Configure AWS CLI for DigitalOcean Spaces
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
+          aws configure set default.s3.endpoint https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
+
+      - name: Download specified backup file
+        run: |
+          aws s3 cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }}.dump ./backup_to_restore.dump
 
       - name: Construct DB URL with encoded password
         run: |
