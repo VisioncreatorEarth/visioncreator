@@ -55,12 +55,26 @@ jobs:
 
       - name: Restore database
         run: |
+          # Reset the database
           supabase db reset
-          supabase db push --ignore-migration-history
-          psql $(supabase db get-connection-string) -f ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_roles.sql
-          psql $(supabase db get-connection-string) -f ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_schema.sql
-          psql $(supabase db get-connection-string) -f ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_data.sql
-          psql $(supabase db get-connection-string) -f ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_migrations.sql
+
+          # Get the connection string
+          DB_URL=$(supabase db get-connection-string)
+
+          # Restore in the correct order
+          psql "$DB_URL" \
+            --single-transaction \
+            --variable ON_ERROR_STOP=1 \
+            --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_roles.sql \
+            --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_schema.sql \
+            --command 'SET session_replication_role = replica' \
+            --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_data.sql
+
+          # Restore migration history
+          psql "$DB_URL" \
+            --single-transaction \
+            --variable ON_ERROR_STOP=1 \
+            --file ./${{ github.event.inputs.backup_folder }}/${{ github.event.inputs.backup_folder }}_migrations.sql
 
       - name: Cleanup
         run: rm -rf ${{ github.event.inputs.backup_folder }}
