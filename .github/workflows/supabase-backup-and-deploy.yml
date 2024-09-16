@@ -8,83 +8,82 @@ on:
     - cron: "0 0 * * *" # Runs every day at midnight
 
 jobs:
-  jobs:
-    backup:
-      runs-on: ubuntu-latest
-      permissions:
-        contents: write
-      env:
-        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-        SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      steps:
-        - uses: actions/checkout@v4
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
 
-        - uses: supabase/setup-cli@v1
-          with:
-            version: latest
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
-        - name: Supabase Login
-          run: supabase login $SUPABASE_ACCESS_TOKEN
+      - name: Supabase Login
+        run: supabase login $SUPABASE_ACCESS_TOKEN
 
-        - name: Initialize Supabase project
-          run: |
-            supabase init
-            supabase link --project-ref $SUPABASE_PROJECT_ID
+      - name: Initialize Supabase project
+        run: |
+          supabase init
+          supabase link --project-ref $SUPABASE_PROJECT_ID
 
-        - name: Set backup filename
-          run: |
-            TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
-            if [[ "${{ github.event_name }}" == "schedule" ]]; then
-              BACKUP_FILENAME="${TIMESTAMP}_cronjob.sql"
-            else
-              SHORT_SHA=$(git rev-parse --short HEAD)
-              BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.sql"
-            fi
-            echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
+      - name: Set backup filename
+        run: |
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            BACKUP_FILENAME="${TIMESTAMP}_cronjob.sql"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.sql"
+          fi
+          echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
 
-        - name: Get database connection string
-          run: |
-            CONNECTION_STRING=$(supabase db get-connection-string)
-            echo "CONNECTION_STRING=$CONNECTION_STRING" >> $GITHUB_ENV
+      - name: Get database connection string
+        run: |
+          CONNECTION_STRING=$(supabase db get-connection-string)
+          echo "CONNECTION_STRING=$CONNECTION_STRING" >> $GITHUB_ENV
 
-        - name: Install PostgreSQL client
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
 
-        - name: Backup entire database (including all schemas, roles, auth, and data)
-          run: |
-            PGPASSWORD=$SUPABASE_DB_PASSWORD pg_dumpall \
-              --dbname="$CONNECTION_STRING" \
-              --clean \
-              --if-exists \
-              --no-owner \
-              --no-privileges \
-              > ${{ env.BACKUP_FILENAME }}
+      - name: Backup entire database (including all schemas, roles, auth, and data)
+        run: |
+          PGPASSWORD=$SUPABASE_DB_PASSWORD pg_dumpall \
+            --dbname="$CONNECTION_STRING" \
+            --clean \
+            --if-exists \
+            --no-owner \
+            --no-privileges \
+            > ${{ env.BACKUP_FILENAME }}
 
-        - name: Install AWS CLI
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y awscli
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
 
-        - name: Configure AWS CLI for DigitalOcean Spaces
-          env:
-            AWS_ACCESS_KEY_ID: ${{ secrets.DO_ACCESS_KEY }}
-            AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
-          run: |
-            aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-            aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-            aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
-            aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
+      - name: Configure AWS CLI for DigitalOcean Spaces
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.DO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SECRET_KEY }}
+        run: |
+          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+          aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
+          aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
 
-        - name: Upload full backup to DO Spaces
-          run: |
-            aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
-              cp ${{ env.BACKUP_FILENAME }} s3://${{ secrets.DO_SPACE_NAME }}/${{ env.BACKUP_FILENAME }}
+      - name: Upload full backup to DO Spaces
+        run: |
+          aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
+            cp ${{ env.BACKUP_FILENAME }} s3://${{ secrets.DO_SPACE_NAME }}/${{ env.BACKUP_FILENAME }}
 
-        - name: Clean up local backup files
-          run: rm ${{ env.BACKUP_FILENAME }}
+      - name: Clean up local backup files
+        run: rm ${{ env.BACKUP_FILENAME }}
 
   deploy:
     needs: backup
