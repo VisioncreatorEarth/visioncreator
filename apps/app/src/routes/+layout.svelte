@@ -57,17 +57,26 @@
 						class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 					>
 						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">
-							{$authAction === 'signup' ? 'Visionletter' : 'Welcome Back!'}
+							{$authAction === 'signup' ? 'Subscribe Our Visionletter' : 'Welcome Back!'}
 						</div>
-						<p class="max-w-2xl text-md @3xl:text-lg">
-							{#if $authAction === 'signup'}
-								Join our journey! Get weekly insider updates and watch your waitlist position climb.
-								Be part of something extraordinary – are you ready?
-							{:else}
+						{#if $authAction === 'signup'}
+							<p class="max-w-2xl text-md @3xl:text-lg">
+								Join our journey! Get weekly insider updates. Be part of something extraordinary –
+								are you ready?
+							</p>
+							<p class="text-2xs mt-2 leading-snug">
+								* By signing up now, you consent to receive our weekly newsletter (email, optional
+								first name) and accept our <a
+									href="https://visioncreator.earth/en/privacy-policy"
+									class="underline">Privacy Policy</a
+								>. Unsubscribe anytime via the link in each email or when logged in.
+							</p>
+						{:else}
+							<p class="max-w-2xl text-md @3xl:text-lg">
 								Great to see you again! Ready to continue our journey together? Let's make some
 								vision magic happen!
-							{/if}
-						</p>
+							</p>
+						{/if}
 					</div>
 					{#if $authReady}
 						<Auth
