@@ -7,7 +7,7 @@ on:
         description: 'Type "CONFIRM" to proceed with database restore'
         required: true
       backup_filename:
-        description: "Enter the backup filename to restore (without .dump extension)"
+        description: "Enter the backup filename to restore (without .sql extension)"
         required: true
 
 jobs:
@@ -15,24 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.confirm == 'CONFIRM'
     env:
-      DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-      DB_USER: ${{ secrets.SUPABASE_DB_USER }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client, jq, and AWS CLI
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install AWS CLI
         run: |
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-15 jq awscli
-          sudo update-alternatives --install /usr/bin/pg_restore pg_restore /usr/lib/postgresql/15/bin/pg_restore 1500
-          pg_restore --version
-          aws --version
+          sudo apt-get install -y awscli
 
       - name: Configure AWS CLI for DigitalOcean Spaces
         env:
@@ -46,22 +43,22 @@ jobs:
 
       - name: Download specified backup file
         run: |
-          aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }}.dump ./backup_to_restore.dump
+          aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
+            cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }}.sql ./backup_to_restore.sql
 
-      - name: Construct DB URL with encoded password
-        run: |
-          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
-          echo "DB_URL=$DB_URL" >> $GITHUB_ENV
+      - name: Supabase Login
+        run: supabase login $SUPABASE_ACCESS_TOKEN
 
       - name: Restore database
         run: |
-          pg_restore --clean --if-exists --no-owner --no-privileges --no-comments --dbname="$DB_URL" backup_to_restore.dump
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+          supabase db reset --linked
+          supabase db push ./backup_to_restore.sql
 
       - name: Cleanup
-        run: rm backup_to_restore.dump
+        run: rm backup_to_restore.sql
 
       - name: Restoration complete
         run: |
-          echo "Database restore completed from backup: ${{ github.event.inputs.backup_filename }}.dump"
+          echo "Database restore completed from backup: ${{ github.event.inputs.backup_filename }}.sql"
           echo "Please verify your database to ensure the restoration was successful."
