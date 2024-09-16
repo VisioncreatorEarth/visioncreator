@@ -26,9 +26,13 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Link to Supabase project
+      - name: Create minimal Supabase config
         run: |
-          supabase link --project-ref $SUPABASE_PROJECT_ID --password $SUPABASE_DB_PASSWORD
+          mkdir -p supabase
+          echo "project_id = \"$SUPABASE_PROJECT_ID\"" > supabase/config.toml
+
+      - name: Link to Supabase project
+        run: supabase link --project-ref $SUPABASE_PROJECT_ID
 
       - name: Set backup prefix
         run: |
