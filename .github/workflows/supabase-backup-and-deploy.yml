@@ -1,36 +1,75 @@
-name: Supabase Full Database Restore
+name: Supabase Full Backup and Deploy
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Type "CONFIRM" to proceed with database restore'
-        required: true
-      backup_filename:
-        description: "Enter the backup filename to restore (without .sql extension)"
-        required: true
+  schedule:
+    - cron: "0 0 * * *" # Runs every day at midnight
 
 jobs:
-  restore:
+  backup:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm == 'CONFIRM'
+    permissions:
+      contents: write
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Install AWS CLI, PostgreSQL client, and jq
+      - name: Supabase Login
+        run: supabase login $SUPABASE_ACCESS_TOKEN
+
+      - name: Initialize Supabase project
+        run: |
+          supabase init
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+
+      - name: Set backup filename
+        run: |
+          TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            BACKUP_FILENAME="${TIMESTAMP}_cronjob.sql"
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.sql"
+          fi
+          echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
+
+      - name: Get database connection info
+        run: |
+          DB_INFO=$(supabase status --output json | jq -r '.db_url')
+          DB_HOST=$(echo $DB_INFO | awk -F[@:] '{print $4}')
+          DB_PORT=$(echo $DB_INFO | awk -F[@:] '{print $5}')
+          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
+          echo "DB_PORT=$DB_PORT" >> $GITHUB_ENV
+
+      - name: Install PostgreSQL client
         run: |
           sudo apt-get update
-          sudo apt-get install -y awscli postgresql-client jq
+          sudo apt-get install -y postgresql-client
+
+      - name: Backup entire database (including all schemas, roles, auth, and data)
+        run: |
+          PGPASSWORD=$SUPABASE_DB_PASSWORD pg_dumpall \
+            -h $DB_HOST \
+            -U postgres \
+            --clean \
+            --if-exists \
+            --no-owner \
+            --no-privileges \
+            > ${{ env.BACKUP_FILENAME }}
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
 
       - name: Configure AWS CLI for DigitalOcean Spaces
         env:
@@ -42,47 +81,33 @@ jobs:
           aws configure set default.region ${{ secrets.DO_SPACE_REGION }}
           aws configure set s3.endpoint_url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com
 
-      - name: Download specified backup file
+      - name: Upload full backup to DO Spaces
         run: |
           aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
-            cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }}.sql ./backup_to_restore.sql
+            cp ${{ env.BACKUP_FILENAME }} s3://${{ secrets.DO_SPACE_NAME }}/${{ env.BACKUP_FILENAME }}
+
+      - name: Clean up local backup files
+        run: rm ${{ env.BACKUP_FILENAME }}
+
+  deploy:
+    needs: backup
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
-      - name: Link to Supabase project
-        run: supabase link --project-ref $SUPABASE_PROJECT_ID
-
-      - name: Get database connection info
+      - name: Deploy Supabase Migration
         run: |
-          DB_INFO=$(supabase status --output json | jq -r '.db_url')
-          DB_HOST=$(echo $DB_INFO | awk -F[@:] '{print $4}')
-          DB_PORT=$(echo $DB_INFO | awk -F[@:] '{print $5}')
-          echo "DB_HOST=$DB_HOST" >> $GITHUB_ENV
-          echo "DB_PORT=$DB_PORT" >> $GITHUB_ENV
-
-      - name: Restore full database
-        run: |
-          # Terminate all connections to the database
-          PGPASSWORD=$SUPABASE_DB_PASSWORD psql \
-            -h $DB_HOST \
-            -p $DB_PORT \
-            -U postgres \
-            -d postgres \
-            -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'postgres' AND pid <> pg_backend_pid();"
-
-          # Restore the full backup
-          PGPASSWORD=$SUPABASE_DB_PASSWORD psql \
-            -h $DB_HOST \
-            -p $DB_PORT \
-            -U postgres \
-            -d postgres \
-            -f ./backup_to_restore.sql
-
-      - name: Cleanup
-        run: rm backup_to_restore.sql
-
-      - name: Restoration complete
-        run: |
-          echo "Full database restore completed from backup: ${{ github.event.inputs.backup_filename }}.sql"
-          echo "Please verify your database to ensure the restoration was successful."
+          cd packages/supacreator/supabase
+          supabase link --project-ref $SUPABASE_PROJECT_ID
+          supabase db push

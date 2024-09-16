@@ -7,7 +7,7 @@ on:
         description: 'Type "CONFIRM" to proceed with database restore'
         required: true
       backup_filename:
-        description: "Enter the backup filename to restore (without .sql extension)"
+        description: "Enter the backup filename to restore (with .sql extension)"
         required: true
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
       - name: Download specified backup file
         run: |
           aws s3 --endpoint-url https://${{ secrets.DO_SPACE_REGION }}.digitaloceanspaces.com \
-            cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }}.sql ./backup_to_restore.sql
+            cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }} ./backup_to_restore.sql
 
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
@@ -79,5 +79,5 @@ jobs:
 
       - name: Restoration complete
         run: |
-          echo "Full database restore completed from backup: ${{ github.event.inputs.backup_filename }}.sql"
+          echo "Full database restore completed from backup: ${{ github.event.inputs.backup_filename }}"
           echo "Please verify your database to ensure the restoration was successful."
