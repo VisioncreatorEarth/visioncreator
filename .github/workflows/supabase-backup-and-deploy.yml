@@ -1,4 +1,4 @@
-name: Supabase Full Backup and Deploy
+name: Supabase Backup and Deploy
 
 on:
   push:
@@ -13,11 +13,7 @@ jobs:
     permissions:
       contents: write
     env:
-      DB_HOST: ${{ secrets.SUPABASE_DB_HOST }}
-      DB_USER: ${{ secrets.SUPABASE_DB_USER }}
-      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-      DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      DB_NAME: ${{ secrets.SUPABASE_DB_NAME }}
+      OLD_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,48 +21,45 @@ jobs:
         with:
           version: latest
 
-      - name: Install PostgreSQL 15 client and jq
+      - name: Install PostgreSQL client
         run: |
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get install -y postgresql-client-15 jq
-          sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/15/bin/pg_dump 1500
-          pg_dump --version
-
-      - name: Construct DB URL with encoded password
-        run: |
-          ENCODED_PASSWORD=$(echo -n "$DB_PASSWORD" | jq -sRr @uri)
-          DB_URL="postgresql://$DB_USER.$SUPABASE_PROJECT_ID:$ENCODED_PASSWORD@$DB_HOST:5432/$DB_NAME"
-          echo "DB_URL=$DB_URL" >> $GITHUB_ENV
+          sudo apt-get install -y postgresql-client
 
       - name: Set backup filename
         run: |
           TIMESTAMP=$(date +'%Y-%m-%d_%H-%M-%S')
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            BACKUP_FILENAME="${TIMESTAMP}_cronjob.dump"
+            BACKUP_PREFIX="${TIMESTAMP}_cronjob"
           else
             SHORT_SHA=$(git rev-parse --short HEAD)
-            BACKUP_FILENAME="${TIMESTAMP}_${SHORT_SHA}_commit.dump"
+            BACKUP_PREFIX="${TIMESTAMP}_${SHORT_SHA}_commit"
           fi
-          echo "BACKUP_FILENAME=$BACKUP_FILENAME" >> $GITHUB_ENV
+          echo "BACKUP_PREFIX=$BACKUP_PREFIX" >> $GITHUB_ENV
 
-      - name: Backup entire database (including auth)
+      - name: Backup database
         run: |
-          /usr/lib/postgresql/15/bin/pg_dump "$DB_URL" -F c -f ${{ env.BACKUP_FILENAME }}
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_roles.sql --role-only
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_schema.sql
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_data.sql --use-copy --data-only
 
-      - name: Upload full backup to DO Spaces
+      - name: Backup migration history
+        run: |
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_history_schema.sql --schema supabase_migrations
+          supabase db dump --db-url "$OLD_DB_URL" -f ${{ env.BACKUP_PREFIX }}_history_data.sql --use-copy --data-only --schema supabase_migrations
+
+      - name: Upload backups to DO Spaces
         uses: BetaHuhn/do-spaces-action@v2
         with:
           access_key: ${{ secrets.DO_ACCESS_KEY }}
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          source: ${{ env.BACKUP_FILENAME }}
-          out_dir: ""
+          source: ${{ env.BACKUP_PREFIX }}*
+          out_dir: backups
 
       - name: Clean up local backup files
-        run: rm ${{ env.BACKUP_FILENAME }}
+        run: rm ${{ env.BACKUP_PREFIX }}*
 
   deploy:
     needs: backup
