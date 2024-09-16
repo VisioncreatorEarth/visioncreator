@@ -40,8 +40,8 @@ jobs:
           secret_key: ${{ secrets.DO_SECRET_KEY }}
           space_name: ${{ secrets.DO_SPACE_NAME }}
           space_region: ${{ secrets.DO_SPACE_REGION }}
-          command: |
-            aws s3 cp s3://${{ secrets.DO_SPACE_NAME }}/${{ github.event.inputs.backup_filename }}.dump ./backup_to_restore.dump
+          file: ${{ github.event.inputs.backup_filename }}.dump
+          output: backup_to_restore.dump
 
       - name: Construct DB URL with encoded password
         run: |
