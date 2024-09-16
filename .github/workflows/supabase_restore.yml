@@ -29,6 +29,11 @@ jobs:
       - name: Supabase Login
         run: supabase login $SUPABASE_ACCESS_TOKEN
 
+      - name: Create minimal Supabase config
+        run: |
+          mkdir -p supabase
+          echo "project_id = \"$SUPABASE_PROJECT_ID\"" > supabase/config.toml
+
       - name: Link to Supabase project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID
 
