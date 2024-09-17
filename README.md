@@ -163,4 +163,3 @@ for db backup dumps to digital ocean
 
 
 ## Backup & Recovery Process
-1. Setup

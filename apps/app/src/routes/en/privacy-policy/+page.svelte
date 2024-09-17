@@ -4,7 +4,7 @@
 		<a href="/de/datenschutz">Deutsch</a>
 	</svelte:fragment>
 
-	<div class="image-container mb-10">
+	<div class="image-container mb-10 w-28">
 		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
 	</div>
 
