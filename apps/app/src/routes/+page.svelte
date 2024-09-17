@@ -6,11 +6,11 @@
 
 	const drawerStore = getDrawerStore();
 
-	const labels = {
-		nameInput: {
-			placeholder: "What's your name?"
-		}
-	};
+	// const labels = {
+	// 	nameInput: {
+	// 		placeholder: "What's your name?"
+	// 	}
+	// };
 
 	let videoElement: HTMLVideoElement;
 
@@ -95,12 +95,12 @@
 					</div> -->
 				</div>
 
-				<!-- <button
+				<button
 					on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
 					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 				>
 					Visionletter Sign Up
-				</button> -->
+				</button>
 			</div>
 		</div>
 	</div>
@@ -147,12 +147,12 @@
 		justify-content: space-between;
 	}
 
-	input::placeholder {
+	/* input::placeholder {
 		color: #d1d5db;
 	}
 
 	input:focus {
 		outline: none;
 		box-shadow: 0 0 0 1px theme('colors.primary.500');
-	}
+	} */
 </style>

@@ -66,7 +66,7 @@
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
 				{$query.data.invites}
 			</p>
-			<p class="text-tertiary-600 text-sm @3xl:text-lg">VCs inspired</p>
+			<p class="text-tertiary-600 text-sm @3xl:text-lg">Pioneers inspired</p>
 		</div>
 		<!-- <div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">

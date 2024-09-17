@@ -64,12 +64,13 @@
 								Join our journey! Get weekly insider updates and be part of something extraordinary.
 							</p>
 							<p class="text-2xs mt-2 leading-snug">
-								*By signing up, you consent that we use your data: E-mail address and optionally
-								your first name, to send you our weekly newsletter. Here you can find our <a
-									href="https://visioncreator.earth/en/privacy-policy"
-									class="underline">Privacy Policy</a
-								>. You can revoke this consent at any time by clicking on the unsubscribe link in
-								our newsletter mails or via the dashboard, when you are logged in.
+								*By signing up, you consent that we use your data (email address and optionally your
+								first name), to send you our weekly newsletter. You can revoke this consent at any
+								time by clicking on the unsubscribe link in our newsletter mails or via the
+								dashboard, when you are logged in. <br />Here you can find our
+								<a href="https://visioncreator.earth/en/privacy-policy" class="underline"
+									>Privacy Policy</a
+								>.
 							</p>
 						{:else}
 							<p class="max-w-2xl text-md @3xl:text-lg">
