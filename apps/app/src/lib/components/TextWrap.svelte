@@ -2,11 +2,13 @@
 	export let className = '';
 </script>
 
-<div class="h-screen w-screen overflow-y-auto">
-	<div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 pb-20 {className} text-wrap-content">
-		<slot />
+<div class="flex flex-col h-screen w-full overflow-hidden">
+	<div class="flex-grow overflow-y-auto overflow-x-hidden">
+		<div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 pb-20 {className} text-wrap-content">
+			<slot />
+		</div>
 	</div>
-	<div class="fixed bottom-0 left-0 w-full bg-surface-100-800-token z-10 p-2">
+	<div class="bg-surface-100-800-token z-10 p-2">
 		<div class="max-w-4xl mx-auto text-xs">
 			<nav class="custom-tabs">
 				<ul class="flex justify-center items-center space-x-4">
@@ -21,6 +23,11 @@
 <style>
 	:global(.text-wrap-content) {
 		padding-bottom: 5rem;
+		max-width: 100%;
+	}
+
+	:global(body) {
+		overflow: hidden;
 	}
 	:global(.text-wrap-content h1) {
 		font-size: 2.5rem;
