@@ -28,7 +28,7 @@ export default createOperation.mutation({
   input: MailPayload,
 
   handler: async ({ input, context }) => {
-    console.log("Received input in saveMail:", JSON.stringify(input, null, 2));
+    console.log("Received input in saveMail");
 
     const mailForIngest = {
       from_email: input.from.email,
@@ -44,10 +44,7 @@ export default createOperation.mutation({
       attachments: input.attachments || null,
     };
 
-    console.log(
-      "Prepared mail for Supabase ingest:",
-      JSON.stringify(mailForIngest, null, 2)
-    );
+    console.log("Prepared mail for Supabase ingest");
 
     try {
       const { data, error } = await context.supabase
@@ -60,7 +57,7 @@ export default createOperation.mutation({
         throw new Error("Failed to save mail to database");
       }
 
-      console.log("Mail saved successfully:", data);
+      console.log("Mail saved successfully");
 
       return {
         success: true,
