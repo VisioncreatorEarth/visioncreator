@@ -2,55 +2,24 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "build": {
-      "outputs": [
-        ".svelte-kit/**",
-        ".vercel/**",
-        "generated/**",
-        "composer/**"
-      ]
-    },
-    "api#dev": {
-      "dependsOn": [
-        "^supacreator#dev"
-      ]
-    },
-    "app#dev": {
-      "dependsOn": [
-        "^supacreator#dev"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": [".svelte-kit/**", ".vercel/**", "generated/**", "composer/**"]
     },
     "api#build": {
-      "outputs": [
-        "generated-wundergraph/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["generated-wundergraph/**"]
     },
     "app#build": {
-      "dependsOn": [
-        "^api#build",
-        "^composer#build"
-      ],
-      "outputs": [
-        ".svelte-kit/**",
-        "composer/**"
-      ]
-    },
-    "maizzle#dev": {
-      "dependsOn": [
-        "^app#dev"
-      ]
-    },
-    "lint": {
-      "outputs": []
+      "dependsOn": ["^build", "api#build"],
+      "outputs": [".svelte-kit/**", "composer/**"]
     },
     "dev": {
-      "cache": false
+      "cache": false,
+      "persistent": true
     },
     "start": {
       "cache": false
     }
   },
-  "globalEnv": [
-    "NODE_ENV",
-    "WG_ALLOWED_ORIGIN"
-  ]
+  "globalEnv": ["NODE_ENV", "WG_ALLOWED_ORIGIN"]
 }
