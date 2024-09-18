@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
+	import { dev } from '$app/environment';
 
 	const drawerStore = getDrawerStore();
 
@@ -95,20 +96,25 @@
 					</div> -->
 				</div>
 
-				<!-- <button
-					on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
-					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
-				>
-					Visionletter Sign Up
-				</button> -->
+				{#if dev}
+					<button
+						on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
+						class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
+					>
+						Visionletter Sign Up
+					</button>
+				{/if}
 			</div>
 		</div>
 	</div>
 
 	<footer class="fixed inset-x-0 bottom-0 p-4 text-xs text-center text-white">
-		<!-- <button on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })} class="mx-1"
-			>Login</button
-		> -->
+		{#if dev}
+			<button
+				on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
+				class="mx-1">Login</button
+			>
+		{/if}
 		<a href="/en/privacy-policy" class="mx-1">Datenschutz - Privacy Policy</a>
 		<a href="/en/imprint" class="mx-1">Impressum - Legal</a>
 	</footer>

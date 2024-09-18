@@ -4,20 +4,19 @@
 	import { createEventDispatcher } from 'svelte';
 	import { view } from '$lib/views/UpdateName';
 	import ComposeView from '$lib/components/ComposeView.svelte';
-	import { viewForm } from '$lib/views/Form';
-
-	interface ActionButtonsProps {
-		me: {
-			id: string;
-		};
-	}
-
-	export let me: ActionButtonsProps['me'];
+	import { createMutation } from '$lib/wundergraph';
 
 	let loading = false;
 	let showComposeView = false;
-	let showNewMandate = false;
+	let showContactUs = false;
 	const dispatch = createEventDispatcher();
+
+	let subject = '';
+	let body = '';
+
+	const sendMailMutation = createMutation({
+		operationName: 'sendMail'
+	});
 
 	const handleSignOut: SubmitFunction = () => {
 		loading = true;
@@ -30,12 +29,34 @@
 
 	const toggleComposeView = () => {
 		showComposeView = !showComposeView;
-		showNewMandate = false;
+		showContactUs = false;
 	};
 
-	const contactUs = () => {
-		const mailtoLink = 'mailto:hello@visioncreator.earth?subject=Hello';
-		window.location.href = mailtoLink;
+	const toggleContactUs = () => {
+		showContactUs = !showContactUs;
+		showComposeView = false;
+	};
+
+	const sendMail = async () => {
+		loading = true;
+		try {
+			const result = await $sendMailMutation.mutateAsync({
+				subject, // Use the hardcoded subject
+				body
+			});
+			if (result && result.success) {
+				console.log('Email sent successfully', result.message);
+				// You can add a success message or notification here
+			} else if (result) {
+				console.error('Failed to send email:', result.message);
+				// You can add an error message or notification here
+			}
+		} catch (error) {
+			console.error('Error sending email:', error);
+			// You can add an error message or notification here
+		} finally {
+			loading = false;
+		}
 	};
 </script>
 
@@ -44,9 +65,24 @@
 		<div class="p-4">
 			<ComposeView {view} on:close={toggleComposeView} />
 		</div>
-	{:else if showNewMandate}
+	{:else if showContactUs}
 		<div class="p-4">
-			<ComposeView view={viewForm} />
+			<h2 class="text-2xl font-bold mb-4">Contact Us</h2>
+			<textarea bind:value={body} placeholder="Message" class="textarea mb-2 w-full" rows="4" />
+			<button
+				class="btn @sm:btn-sm @lg:btn-md variant-filled-primary w-full mb-2"
+				on:click={sendMail}
+				disabled={loading || !body}
+			>
+				{loading ? 'Sending...' : 'Send Mail'}
+			</button>
+			<button
+				class="btn @sm:btn-sm @lg:btn-md variant-ghost-surface w-full"
+				on:click={toggleContactUs}
+				disabled={loading}
+			>
+				Back
+			</button>
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 @sm:grid-cols-2 @md:grid-cols-3 gap-2 mb-2">
@@ -69,7 +105,7 @@
 			</button>
 			<button
 				class="btn @sm:btn-sm @lg:btn-md variant-ghost-secondary w-full"
-				on:click={contactUs}
+				on:click={toggleContactUs}
 				disabled={loading}
 			>
 				Contact Us

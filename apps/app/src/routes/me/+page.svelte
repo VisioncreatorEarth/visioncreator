@@ -73,12 +73,4 @@
 	});
 </script>
 
-{#if $me.isLoading}
-	<p class="flex items-center justify-center w-full p-10 h-72">Loading view...</p>
-{:else if $me.isError}
-	<p class="flex items-center justify-center w-full p-10 h-72 text-error-500">
-		Error: {$me.error?.message}
-	</p>
-{:else}
-	<ComposeView view={meView} />
-{/if}
+<ComposeView view={meView} />

@@ -21,7 +21,8 @@
 		"graphql": "^16.3.0",
 		"ipfs-only-hash": "^4.0.0",
 		"multiformats": "^13.2.1",
-		"node-fetch": "^3.3.2"
+		"node-fetch": "^3.3.2",
+		"postmark": "^4.0.5"
 	},
 	"devDependencies": {
 		"@types/node": "^17.0.15",

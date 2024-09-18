@@ -14,6 +14,7 @@ export type OperationErrors = {
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMe: QueryMeErrors;
 	queryUserStats: QueryUserStatsErrors;
+	sendMail: SendMailErrors;
 	updateMe: UpdateMeErrors;
 };
 
@@ -28,4 +29,5 @@ export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
+export type SendMailErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
