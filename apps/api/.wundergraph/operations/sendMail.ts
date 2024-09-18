@@ -5,6 +5,10 @@ export default createOperation.mutation({
     subject: z.string(),
     body: z.string(),
   }),
+  requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["authenticated"],
+  },
   handler: async ({ user, input, context }) => {
     if (!user || !user.email) {
       return {
@@ -19,7 +23,7 @@ export default createOperation.mutation({
     try {
       const response = await context.postmark.sendEmail({
         From: senderAddress,
-        To: "hello@visioncreator.earth",
+        To: "2d68b05f290aa42c71b83326c13cf6e2@inbound.postmarkapp.com",
         Subject: input.subject,
         TextBody: input.body,
         HtmlBody: `<html><body><h1>${input.subject}</h1><p>${input.body}</p></body></html>`,

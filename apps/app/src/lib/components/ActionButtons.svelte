@@ -41,7 +41,7 @@
 		loading = true;
 		try {
 			const result = await $sendMailMutation.mutateAsync({
-				subject, // Use the hardcoded subject
+				subject: 'Hello',
 				body
 			});
 			if (result && result.success) {

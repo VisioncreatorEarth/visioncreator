@@ -58,6 +58,11 @@ export default configureWunderGraphServer(() => ({
       },
     },
   },
+  webhooks: {
+    // mailNotification: {
+    //   // You can add a verifier here if needed
+    // },
+  },
   context: {
     request: {
       create: async () => {
