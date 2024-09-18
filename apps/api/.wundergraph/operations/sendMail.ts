@@ -23,7 +23,7 @@ export default createOperation.mutation({
     try {
       const response = await context.postmark.sendEmail({
         From: senderAddress,
-        To: "2d68b05f290aa42c71b83326c13cf6e2@inbound.postmarkapp.com",
+        To: process.env.POSTMARK_INBOUND_MAIL,
         Subject: input.subject,
         TextBody: input.body,
         HtmlBody: `<html><body><h1>${input.subject}</h1><p>${input.body}</p></body></html>`,

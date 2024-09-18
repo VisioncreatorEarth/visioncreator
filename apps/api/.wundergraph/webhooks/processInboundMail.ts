@@ -1,5 +1,8 @@
 import { createWebhook } from "../generated/wundergraph.webhooks";
 
+const WEBHOOK_USERNAME = process.env.POSTMARK_WEBHOOK_USERNAME;
+const WEBHOOK_PASSWORD = process.env.POSTMARK_WEBHOOK_PASSWORD;
+
 interface PostmarkPayload {
   FromFull: {
     Email: string;
@@ -35,6 +38,42 @@ interface PostmarkPayload {
 
 export default createWebhook({
   handler: async (event, context) => {
+    console.log("Received webhook request");
+
+    // Basic authentication check
+    const authHeader =
+      event.headers["authorization"] || event.headers["Authorization"];
+    if (!authHeader) {
+      console.log("Authorization header is missing");
+      return {
+        statusCode: 401,
+        body: { message: "Unauthorized: Authorization header is missing" },
+      };
+    }
+
+    const [authType, authValue] = authHeader.split(" ");
+    if (authType.toLowerCase() !== "basic") {
+      console.log("Authorization type is not Basic");
+      return {
+        statusCode: 401,
+        body: { message: "Unauthorized: Authorization type must be Basic" },
+      };
+    }
+
+    const [username, password] = Buffer.from(authValue, "base64")
+      .toString()
+      .split(":");
+    if (username !== WEBHOOK_USERNAME || password !== WEBHOOK_PASSWORD) {
+      console.log("Invalid credentials");
+      return {
+        statusCode: 401,
+        body: { message: "Unauthorized: Invalid credentials" },
+      };
+    }
+
+    console.log("Authentication successful");
+
+    // If authentication passes, proceed with processing the payload
     const payload = event.body as PostmarkPayload;
 
     console.log("Received inbound email:");
