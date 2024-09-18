@@ -1,44 +1,40 @@
 import { createWebhook } from "../generated/wundergraph.webhooks";
 
-// Hardcoded credentials (replace these with secure values in production)
-const WEBHOOK_USERNAME = "postmark";
-const WEBHOOK_PASSWORD = "your_secure_password_here";
-
 interface PostmarkPayload {
-  // ... (keep the existing interface)
+  FromFull: {
+    Email: string;
+    Name: string;
+  };
+  ToFull: Array<{
+    Email: string;
+    Name: string;
+    MailboxHash: string;
+  }>;
+  CcFull?: Array<{
+    Email: string;
+    Name: string;
+    MailboxHash: string;
+  }>;
+  BccFull?: Array<{
+    Email: string;
+    Name: string;
+    MailboxHash: string;
+  }>;
+  Subject: string;
+  MessageID: string;
+  Date: string;
+  TextBody: string;
+  HtmlBody: string;
+  Attachments?: Array<{
+    Name: string;
+    Content: string;
+    ContentType: string;
+    ContentLength: number;
+  }>;
 }
 
 export default createWebhook({
   handler: async (event, context) => {
-    // Basic authentication check
-    const authHeader =
-      event.headers["authorization"] || event.headers["Authorization"];
-    if (!authHeader) {
-      return {
-        statusCode: 401,
-        body: { message: "Authorization header is missing" },
-      };
-    }
-
-    const [authType, authValue] = authHeader.split(" ");
-    if (authType.toLowerCase() !== "basic") {
-      return {
-        statusCode: 401,
-        body: { message: "Authorization type must be Basic" },
-      };
-    }
-
-    const [username, password] = Buffer.from(authValue, "base64")
-      .toString()
-      .split(":");
-    if (username !== WEBHOOK_USERNAME || password !== WEBHOOK_PASSWORD) {
-      return {
-        statusCode: 401,
-        body: { message: "Invalid credentials" },
-      };
-    }
-
-    // If authentication passes, proceed with the existing logic
     const payload = event.body as PostmarkPayload;
 
     console.log("Received inbound email:");
@@ -46,7 +42,34 @@ export default createWebhook({
     console.log("Subject:", payload.Subject);
     console.log("Text Body:", payload.TextBody);
 
-    // ... (keep the rest of the existing code)
+    const input = {
+      from: {
+        email: payload.FromFull.Email,
+        name: payload.FromFull.Name,
+      },
+      to: payload.ToFull.map((recipient) => ({
+        email: recipient.Email,
+        name: recipient.Name,
+      })),
+      cc: payload.CcFull?.map((recipient) => ({
+        email: recipient.Email,
+        name: recipient.Name,
+      })),
+      bcc: payload.BccFull?.map((recipient) => ({
+        email: recipient.Email,
+        name: recipient.Name,
+      })),
+      subject: payload.Subject,
+      textBody: payload.TextBody,
+      htmlBody: payload.HtmlBody,
+      date: payload.Date,
+      messageId: payload.MessageID,
+      attachments: payload.Attachments?.map((att) => ({
+        name: att.Name,
+        contentType: att.ContentType,
+        contentLength: att.ContentLength,
+      })),
+    };
 
     try {
       const result = await context.operations.mutate({
