@@ -41,6 +41,9 @@
         width: 100% !important;
       }
     }
+    .hover-underline:hover {
+      text-decoration: underline !important;
+    }
     @media (max-width: 600px) {
       .sm-inline {
         display: inline !important;
@@ -239,11 +242,11 @@
                 <td class="sm-p-6" style="border-radius: 24px; background-color: #10153d; padding: 48px; font-size: 16px; color: #f0ede5; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)">
                   <div style="margin-left: auto; margin-right: auto; width: 100%">
                     <h1 class="sm-text-xl sm-leading-6" style="margin: 0 0 24px; font-size: 24px; font-weight: 600; color: #f0ede5">
-                      Your Visionletter
+                      Welcome to the journey
                     </h1>
                     <p class="sm-text-sm" style="margin: 0 0 24px; line-height: 24px">
-                      Great to have you here! <br class="sm-inline" style="display: none">Please confirm your
-                      email address to subscribe to our newsletter.
+                      Great to have you here! <br class="sm-inline" style="display: none"><br>Please
+                      confirm your email address to signup to our waitinglist.
                     </p>
                     <div>
                       <a href="{{ .ConfirmationURL }}" style="margin-bottom: 32px; display: inline-block; width: auto; border-radius: 9999px; background-color: #eab308; padding: 16px 24px; font-size: 16px; font-weight: 600; line-height: 1; color: #141a4d; text-decoration: none">
@@ -277,10 +280,17 @@
                   <p style="margin: 0 0 8px;">
                     Visioncreator GmbH - Reifenstuelstr. 6 - 80469 München
                   </p>
-                  <p style="margin: 0 0 8px;">hello@visioncreator.earth</p>
                   <p style="margin: 0 0 8px;">
-                    District Court: Munich Germany - HRB 292608<br>
-                    Managing Directors: Yvonne Müller - Samuel Andert
+                    <a href="mailto:hello@visioncreator.earth" class="hover-underline" style="color: #c6c8d9">hello@visioncreator.earth</a>
+                  </p>
+                  <p style="margin: 0 0 8px;">
+                    Local Court: Munich Germany - HRB 292608<br>
+                    CEO: Yvonne Müller - Samuel Andert
+                    <br>
+                    VAT-ID: DE368356417
+                  </p>
+                  <p style="margin: 16px 0 0">
+                    <a href="https://visioncreator.earth/en/privacy-policy" class="hover-underline" style="color: #c6c8d9;">Privacy Policy</a>
                   </p>
                 </td>
               </tr>

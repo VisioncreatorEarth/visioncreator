@@ -10,12 +10,11 @@ npm run dev will launch all apps and packages in our turbo monorepo. The supacre
 Now the following services are running:
 - Frontend: http://127.0.0.1:3000
 - API: http://127.0.0.1:9991
-- Maizzle Email Template Preview: http://127.0.0.1:3001
+- Maizzle Email Template Preview: http://127.0.0.1:3002
 - Supabase API Url: http://127.0.0.1:54321
 - Supabase Studio: http://127.0.0.1:54323
 - Inbucket (Email Inbox Simulation): http://127.0.0.1:54324
 - Nango: https://127.0.0.1:3003
-
 
 ## After inital launch set env vars
 
@@ -39,6 +38,10 @@ SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_ROLE="copy-me-from-supacreator-package-terminal"
 NANGO_SECRET_KEY="copy-from-nango-dev-dashboard"
 NANGO_HOST=https://127.0.0.1:3003
+POSTMARK_SERVER_TOKEN="copy-from-postmark-dashboard"
+POSTMARK_WEBHOOK_USERNAME="set-inbound-webhook-in-postmark-dashboard"
+POSTMARK_WEBHOOK_PASSWORD="set-inbound-webhook-in-postmark-dashboard"
+POSTMARK_INBOUND_MAIL="copy-from-postmark-dashboard"
 ```
 
 Also go to the nango dashboard 127.0.0.1:3003 and setup your listmonk (listmonk-vc) and coda (codavc) credentials.
@@ -148,6 +151,11 @@ for db backup dumps to digital ocean
 - `SUPABASE_SERVICE_ROLE`,
 - `NANGO_SECRET_KEY`,
 - `NANGO_HOST`
+- `POSTMARK_SERVER_TOKEN`="copy-from-postmark-dashboard"
+- `POSTMARK_WEBHOOK_USERNAME`="set-inbound-webhook-in-postmark-dashboard"
+- `POSTMARK_WEBHOOK_PASSWORD`="set-inbound-webhook-in-postmark-dashboard"
+- `POSTMARK_INBOUND_MAIL`="copy-from-postmark-dashboard"
+
 
 ### Frontend
 1. Go to vercel, connect your repo and deploy the svelte frontend apps/app.
