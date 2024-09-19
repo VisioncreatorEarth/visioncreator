@@ -46,7 +46,6 @@
 	function toggleModal(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			modalOpen.update((n) => !n);
-			log('info', `Modal ${$modalOpen ? 'opened' : 'closed'}`);
 		}
 	}
 </script>

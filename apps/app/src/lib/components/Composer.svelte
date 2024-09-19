@@ -33,6 +33,7 @@
 	}
 
 	export let composer: IComposer;
+	export let session: any | undefined = undefined; // Make session optional
 	let queryClient;
 
 	let layoutStyle = '';
@@ -81,6 +82,7 @@
 			...storeValue,
 			id: component.id,
 			authID: currentUserId,
+			session, // Add session, which may be undefined
 			do: {
 				core: coreServices,
 				emit: (event: string, ...args: any[]) => eventBus.emit(event, component.id, ...args)
@@ -179,7 +181,7 @@
 									ChildComponent={child.component}
 								/>
 								{#if child.children && child.children.length}
-									<Composer composer={child} />
+									<Composer composer={child} {session} />
 								{/if}
 							{/if}
 						{/await}

@@ -83,17 +83,22 @@
 						</h2>
 					</div>
 					<Countdown large={true} />
-					<!-- <p class="text-lg @md:text-xl text-white">
-						Sign up for our weekly Visionletter. Join our journey and share it for a chance to
-						receive 1 of 21 exclusive, once-in-a-lifetime pioneer suprises.
-					</p> -->
-					<!-- <div class="w-full">
-						<input
-							bind:value={$futureMe.name}
-							placeholder="Your first name"
-							class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
-						/>
-					</div> -->
+					{#if dev}
+						<p class="text-lg @md:text-xl text-white">
+							Sign up to our waitinglist and join our exciting journey from 0 to 1 billion
+							visioncreators
+							<!-- and share it for a chance to
+						receive 1 of 21 exclusive, once-in-a-lifetime pioneer suprises. -->
+						</p>
+
+						<div class="w-full">
+							<input
+								bind:value={$futureMe.name}
+								placeholder="Enter your name future visioncreator"
+								class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+							/>
+						</div>
+					{/if}
 				</div>
 
 				{#if dev}
@@ -101,7 +106,7 @@
 						on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
 						class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 					>
-						Visionletter Sign Up
+						Sign Up Now
 					</button>
 				{/if}
 			</div>
@@ -153,12 +158,12 @@
 		justify-content: space-between;
 	}
 
-	/* input::placeholder {
+	input::placeholder {
 		color: #d1d5db;
 	}
 
 	input:focus {
 		outline: none;
 		box-shadow: 0 0 0 1px theme('colors.primary.500');
-	} */
+	}
 </style>

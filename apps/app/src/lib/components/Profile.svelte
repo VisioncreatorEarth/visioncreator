@@ -2,7 +2,6 @@
 	import Avatar from './Avatar.svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { eventBus } from '$lib/composables/eventBus';
-	import { createMutation } from '$lib/wundergraph';
 
 	export let me;
 	const query = $me.query;
@@ -48,7 +47,7 @@
 					}}
 				/>
 				<h1 class="text-2xl @3xl:text-5xl font-bold h1">
-					Hey {$query.data.title}
+					Hey {$query.data.title ?? 'You'}
 				</h1>
 				<p class="text-md @3xl:text-2xl">{$query.data.description}</p>
 			</div>

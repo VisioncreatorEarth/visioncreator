@@ -31,7 +31,9 @@
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
 	<div class="text-lg p-4 rounded-lg">
-		<h3 class="text-2xl font-bold text-primary-300">Your Chance to Shine!</h3>
+		<h3 class="text-2xl font-bold text-primary-300">
+			Rank yourself up to be one of the 1st to get invited
+		</h3>
 		<!-- 	<ul class="space-y-2">
 			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
 			<li>+1 free ticket to our inaugural event</li>
@@ -42,8 +44,9 @@
 		-->
 	</div>
 	<!-- <Countdown /> -->
-	<p class="mb-6">
-		Lead the way, be a pioneer into a new world and inspire your friends to follow our journey.
+	<p class="">
+		Lead the way, be a pioneer into a new world. <br />The more fellow pioneers you inspire to
+		signup to our waitinglist the higher you rank, the faster you get access.
 		<!-- to stay in the top 21! -->
 	</p>
 
@@ -59,7 +62,7 @@
 			logoPadding="4"
 		/>
 	{/if}
-	<div class="flex flex-row items-center space-x-2">
+	<div class="pt-4 flex flex-row items-center space-x-2">
 		<button
 			type="button"
 			class="btn btn-sm @3xl:btn-lg variant-filled-primary"
