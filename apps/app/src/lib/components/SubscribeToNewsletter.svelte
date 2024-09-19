@@ -85,7 +85,9 @@
 		class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-secondary-800 flex flex-col items-center justify-center space-y-4 transition-all duration-300 ease-in-out"
 	>
 		<div class="text-lg rounded-lg flex flex-col items-center">
-			<h3 class="text-2xl font-bold text-primary-300">See next video one week before the public</h3>
+			<h3 class="text-2xl font-bold text-primary-300">
+				Watch next video one week before the public
+			</h3>
 			<p class="mt-2">
 				Subscribe to our weekly newsletter, to get early access to our video updates 1 week before
 				the public and follow along our journey from 0 to 1 billion visioncreators.
