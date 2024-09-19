@@ -13,6 +13,10 @@ export default createOperation.query({
     limit: z.number().optional().default(50),
     offset: z.number().optional().default(0),
   }),
+  requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["admin"],
+  },
   handler: async ({ input, context }) => {
     const { data, error } = await context.supabase
       .from("mails")

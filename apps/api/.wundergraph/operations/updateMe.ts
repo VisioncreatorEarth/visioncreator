@@ -18,6 +18,14 @@ export default createOperation.mutation({
       throw new AuthorizationError({ message: "User ID does not match." });
     }
 
+    // Check if the user is the admin user
+    if (input.id === "00000000-0000-0000-0000-000000000001") {
+      return {
+        success: false,
+        message: "Admin user cannot be updated.",
+      };
+    }
+
     // Generate a random name if no name was provided, if it's less than 4 characters, or if it's more than 20 characters
     if (!input.name || input.name.length < 3 || input.name.length > 20) {
       const adjectives = [

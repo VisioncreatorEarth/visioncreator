@@ -26,7 +26,6 @@ const MailPayload = z.object({
 
 export default createOperation.mutation({
   input: MailPayload,
-
   handler: async ({ input, context }) => {
     console.log("Received input in saveMail");
 
