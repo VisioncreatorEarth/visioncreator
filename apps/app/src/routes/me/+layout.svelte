@@ -2,9 +2,7 @@
 	import { writable } from 'svelte/store';
 	import { Me, eventStream } from '$lib/stores';
 	import { onMount } from 'svelte';
-	import { log } from '$lib/stores';
 	import { fade } from 'svelte/transition';
-	import { view } from '$lib/views/Default';
 	import { eventBus } from '$lib/composables/eventBus';
 
 	export let data;
@@ -14,26 +12,24 @@
 	let { session } = data;
 	$: ({ session } = data);
 
-	function setActiveTab(tab: string) {
-		activeTab.set(tab);
-	}
+	let isFirstTime = writable(true);
 
 	onMount(() => {
+		const firstTimeStatus = localStorage.getItem('isFirstTime');
+		isFirstTime.set(firstTimeStatus === null || firstTimeStatus === 'true');
+
 		const unsubscribe = eventStream.subscribe((events) => {
 			const latestEvent = events[events.length - 1];
 			if (latestEvent && latestEvent.type === 'updateMe') {
 				setTimeout(() => {
 					modalOpen.set(false);
-					log('info', 'Modal closed after update');
 				}, 1000);
 			}
 		});
 
-		// Listen for toggleModal event
 		eventBus.on('toggleModal', () => {
 			setTimeout(() => {
 				modalOpen.set(false);
-				log('info', 'Modal closed by toggleModal event');
 			}, 1000);
 		});
 
@@ -46,7 +42,15 @@
 	function toggleModal(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			modalOpen.update((n) => !n);
+			if ($isFirstTime) {
+				isFirstTime.set(false);
+				localStorage.setItem('isFirstTime', 'false');
+			}
 		}
+	}
+
+	function setActiveTab(tab: string) {
+		activeTab.set(tab);
 	}
 </script>
 
@@ -57,14 +61,42 @@
 	<slot />
 </div>
 
-<button
-	class="fixed z-40 flex items-center justify-center text-4xl rounded-full text-primary-900 bg-primary-500 w-14 h-14"
-	class:hidden={$modalOpen}
-	style="bottom: 1rem; left: calc(50% - 1.75rem);"
-	on:click={toggleModal}
->
-	+
-</button>
+<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center">
+	<div class="relative flex items-center">
+		{#if $isFirstTime}
+			<div
+				class="absolute right-full mr-4 whitespace-nowrap flex items-center space-x-2 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-full"
+			>
+				<span class="text-sm font-semibold text-tertiary-200">This is your menu</span>
+				<div class="animate-pulse">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6 text-tertiary-200"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M13 7l5 5m0 0l-5 5m5-5H6"
+						/>
+					</svg>
+				</div>
+			</div>
+		{/if}
+		<button
+			class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 {$isFirstTime
+				? 'animate-pulse-smooth'
+				: ''}"
+			class:hidden={$modalOpen}
+			on:click={toggleModal}
+		>
+			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		</button>
+	</div>
+</div>
 
 {#if $modalOpen}
 	<div
@@ -164,3 +196,19 @@
 		{/if}
 	</div>
 {/if}
+
+<style>
+	@keyframes pulse-smooth {
+		0%,
+		100% {
+			transform: scale(1);
+		}
+		50% {
+			transform: scale(1.05);
+		}
+	}
+
+	.animate-pulse-smooth {
+		animation: pulse-smooth 2s infinite;
+	}
+</style>
