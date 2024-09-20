@@ -15,13 +15,13 @@ export const view = {
 	children: [
 		{
 			id: 'SubscribeToNewsletter',
-			slot: 'row1',
+			slot: 'row2',
 			component: 'SubscribeToNewsletter'
 		},
 		{
 			id: 'Profile',
 			component: 'Profile',
-			slot: 'row2',
+			slot: 'row1',
 			map: {
 				name: 'Profile',
 				title: {

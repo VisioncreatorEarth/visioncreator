@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	let view = {
 		id: 'TestLayout',
 		layout: {
@@ -10,17 +10,6 @@
 			overflow: 'hidden'
 		},
 		children: [
-			// {
-			// 	id: 'Schemas',
-			// 	component: 'Schemas',
-			// 	slot: 'left',
-			// 	map: {
-			// 		schemas: {
-			// 			query: 'querySchemas',
-			// 			prop: 'schemas'
-			// 		}
-			// 	}
-			// },
 			{
 				id: 'HominioDB',
 				component: 'HominioDB',
@@ -39,4 +28,4 @@
 	};
 </script>
 
-<ComposeView {view} />
+<ComposeView {view} /> -->

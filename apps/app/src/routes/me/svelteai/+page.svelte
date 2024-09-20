@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import SvelteMarkdown from 'svelte-markdown';
 	import Preview from '$lib/Preview.svelte';
 	import { onMount } from 'svelte';
@@ -188,4 +188,4 @@
 			<Preview />
 		</div>
 	</div>
-</main>
+</main> -->

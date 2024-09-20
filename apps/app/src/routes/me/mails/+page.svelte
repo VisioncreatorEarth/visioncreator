@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { createQuery } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
 
@@ -72,7 +72,6 @@
 </script>
 
 <div class="flex h-screen bg-surface-900 text-tertiary-300">
-	<!-- Thin Sidebar -->
 	<div class="w-16 bg-surface-800 overflow-y-auto flex flex-col items-center py-4">
 		{#each Object.keys(groupedMails) as email, index}
 			<button
@@ -88,9 +87,7 @@
 		{/each}
 	</div>
 
-	<!-- Subject list and Chat area -->
 	<div class="flex-1 flex overflow-hidden">
-		<!-- Subject list -->
 		<div class="w-64 bg-surface-800 overflow-y-auto">
 			{#if selectedEmail}
 				<h2 class="text-lg font-bold p-4 text-tertiary-300">{selectedEmail}</h2>
@@ -111,7 +108,6 @@
 			{/if}
 		</div>
 
-		<!-- Chat area -->
 		<div class="flex-1 overflow-y-auto p-4">
 			{#if selectedEmail && selectedSubject && groupedMails[selectedEmail][selectedSubject]}
 				<h2 class="text-2xl font-bold mb-4 text-tertiary-300">{selectedSubject}</h2>
@@ -130,4 +126,4 @@
 			{/if}
 		</div>
 	</div>
-</div>
+</div> -->

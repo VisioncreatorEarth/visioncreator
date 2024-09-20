@@ -13,6 +13,7 @@
 
 	let subject = '';
 	let body = '';
+	let successMessage = '';
 
 	const sendMailMutation = createMutation({
 		operationName: 'sendMail'
@@ -35,25 +36,32 @@
 	const toggleContactUs = () => {
 		showContactUs = !showContactUs;
 		showComposeView = false;
+		successMessage = '';
 	};
 
 	const sendMail = async () => {
 		loading = true;
 		try {
 			const result = await $sendMailMutation.mutateAsync({
-				subject: 'Hello',
+				subject,
 				body
 			});
 			if (result && result.success) {
 				console.log('Email sent successfully', result.message);
-				// You can add a success message or notification here
+				successMessage = 'Email sent successfully!';
+				subject = '';
+				body = '';
+				setTimeout(() => {
+					successMessage = '';
+					toggleContactUs(); // Go back after 3 seconds
+				}, 3000);
 			} else if (result) {
 				console.error('Failed to send email:', result.message);
-				// You can add an error message or notification here
+				successMessage = `Failed to send email: ${result.message}`;
 			}
 		} catch (error) {
 			console.error('Error sending email:', error);
-			// You can add an error message or notification here
+			successMessage = `Error sending email: ${error.message || 'Unknown error'}`;
 		} finally {
 			loading = false;
 		}
@@ -68,14 +76,19 @@
 	{:else if showContactUs}
 		<div class="p-4">
 			<h2 class="text-2xl font-bold mb-4">Contact Us</h2>
-			<textarea bind:value={body} placeholder="Message" class="textarea mb-2 w-full" rows="4" />
-			<button
-				class="btn @sm:btn-sm @lg:btn-md variant-filled-primary w-full mb-2"
-				on:click={sendMail}
-				disabled={loading || !body}
-			>
-				{loading ? 'Sending...' : 'Send Mail'}
-			</button>
+			{#if successMessage}
+				<div class="alert variant-filled-success mb-4">{successMessage}</div>
+			{:else}
+				<input type="text" bind:value={subject} placeholder="Subject" class="input mb-2 w-full" />
+				<textarea bind:value={body} placeholder="Message" class="textarea mb-2 w-full" rows="4" />
+				<button
+					class="btn @sm:btn-sm @lg:btn-md variant-filled-primary w-full mb-2"
+					on:click={sendMail}
+					disabled={loading || !subject || !body}
+				>
+					{loading ? 'Sending...' : 'Send Mail'}
+				</button>
+			{/if}
 			<button
 				class="btn @sm:btn-sm @lg:btn-md variant-ghost-surface w-full"
 				on:click={toggleContactUs}

@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { writable } from 'svelte/store';
 
 	let currentLevel = writable(2);
@@ -126,4 +126,4 @@
 			{/each}
 		</div>
 	</div>
-</div>
+</div> -->

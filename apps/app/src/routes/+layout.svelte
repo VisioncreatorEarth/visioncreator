@@ -57,7 +57,7 @@
 						class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 					>
 						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">
-							{$authAction === 'signup' ? 'Put me on the Waitinglist' : 'Welcome Back!'}
+							{$authAction === 'signup' ? 'Put me on the waitlist' : 'Welcome Back!'}
 						</div>
 						{#if $authAction === 'signup'}
 							<p class="max-w-2xl text-md @3xl:text-lg">

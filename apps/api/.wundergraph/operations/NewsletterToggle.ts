@@ -14,13 +14,11 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, input, user }) => {
-    console.log("Newsletter toggle initiated for user:", input.id);
-    if (input.id !== user?.customClaims?.id) {
-      console.error("Authorization Error: User ID does not match.");
-      throw new AuthorizationError({ message: "User ID does not match." });
-    }
-    console.log("Authorization passed. Fetching user profile...");
-
+    // if (input.id !== user?.customClaims?.id) {
+    //   console.error("Authorization Error: User ID does not match.");
+    //   throw new AuthorizationError({ message: "User ID does not match." });
+    // }
+    //
     // Fetch user's name from Supabase
     const { data: profile, error: profileError } = await context.supabase
       .from("profiles")

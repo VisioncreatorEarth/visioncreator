@@ -78,23 +78,24 @@
 					<div
 						class="glassmorphism-card text-center p-6 @md:p-8 rounded-xl shadow-2xl backdrop-blur-sm"
 					>
-						<h2 class="text-white text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2">
-							Coming Soon.
+						<h2 class=" uppercase text-white text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2">
+							Coming Soon
 						</h2>
 					</div>
 					<Countdown large={true} />
 					{#if dev}
 						<p class="text-lg @md:text-xl text-white">
-							Sign up to our waitinglist and join our exciting journey from 0 to 1 billion
+							sign up to our waitlist and join our exciting journey
+							<!-- from 0 to 1 billion
 							visioncreators
-							<!-- and share it for a chance to
+						 and share it for a chance to
 						receive 1 of 21 exclusive, once-in-a-lifetime pioneer suprises. -->
 						</p>
 
 						<div class="w-full">
 							<input
 								bind:value={$futureMe.name}
-								placeholder="Enter your name future visioncreator"
+								placeholder="Enter your first name future visioncreator"
 								class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
 							/>
 						</div>

@@ -15,8 +15,9 @@ export type OperationErrors = {
 	queryMails: QueryMailsErrors;
 	queryMe: QueryMeErrors;
 	queryUserStats: QueryUserStatsErrors;
-	saveMail: SaveMailErrors;
+	saveMailWIP: SaveMailWIPErrors;
 	sendMail: SendMailErrors;
+	sendMailWIP: SendMailWIPErrors;
 	updateMe: UpdateMeErrors;
 };
 
@@ -32,6 +33,7 @@ export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
-export type SaveMailErrors = ClientOperationErrors;
+export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
+export type SendMailWIPErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
