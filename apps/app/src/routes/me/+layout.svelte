@@ -123,7 +123,7 @@
 								Privacy Policy
 							</a>
 							<a href="/en/imprint" class="btn hover:variant-filled-surface variant-ghost-surface">
-								Imprint
+								Site Notice
 							</a>
 						</div>
 					{/if}
