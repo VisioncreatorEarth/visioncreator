@@ -13,13 +13,13 @@
 
 {#if state === 'completed'}
 	<div
-		class="bg-success-500/30 flex flex-col justify-center items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg"
+		class="variant-ghost-success flex flex-col justify-center items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg"
 	>
 		<span class="text-3xl font-bold text-surface-50">{milestone.value.toLocaleString()}</span>
 	</div>
 {:else if state === 'in-progress'}
 	<div
-		class="card bg-warning-500 flex flex-col justify-between items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg"
+		class="variant-ghost-primary flex flex-col justify-between items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg"
 	>
 		<div
 			class="w-full h-full absolute top-0 left-0 bg-success-500/30 rounded-lg transition-all duration-300 ease-in-out animate-pulse"
@@ -36,13 +36,13 @@
 			<span class="text-xs text-center mt-1 text-surface-200">
 				earn <span class="text-success-500"
 					>+{formatCurrency((milestone.vcPool || 0) / milestone.value)}/m</span
-				> <br />per invite
+				> <br />per inspiration
 			</span>
 		</div>
 	</div>
 {:else}
 	<div
-		class="card bg-surface-700/30 flex flex-col justify-center items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg cursor-pointer"
+		class="variant-ghost-surface flex flex-col justify-center items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg cursor-pointer"
 		on:click={() => (showDetails = !showDetails)}
 		on:keydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -58,7 +58,7 @@
 				<Icon icon="mdi:lock" class="text-4xl mb-2 text-surface-400" />
 				<span class="text-2xl font-bold text-surface-400">{milestone.value.toLocaleString()}</span>
 				<span class="text-xs text-center mt-1 text-surface-400">
-					earn {formatCurrency((milestone.vcPool || 0) / milestone.value)}/m <br />per invite
+					earn {formatCurrency((milestone.vcPool || 0) / milestone.value)}/m <br />per inspiration
 				</span>
 			</div>
 		{:else}

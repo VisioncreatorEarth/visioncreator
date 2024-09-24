@@ -1,10 +1,16 @@
 <script lang="ts">
 	import { writable } from 'svelte/store';
 	import type { Milestone, User } from '$lib/milestone';
-	import { fibonacciSequence, randomUsers } from '$lib/milestone';
+	import { fibonacciSequence, randomUsers, formatCurrency } from '$lib/milestone';
+	import MilestoneGrid from '$lib/components/MilestoneGrid.svelte';
+	import MilestoneTable from '$lib/components/MilestoneTable.svelte';
+	import PersonalCampaign from '$lib/components/PersonalCampaign.svelte';
+	import MilestoneRecentUsers from '$lib/components/MilestoneRecentUsers.svelte';
 
 	let gridColumns = 6;
 	let visioncreators = writable(0);
+	let personalVCs = writable(0);
+	let personalEarnings = writable(0);
 	let currentView = writable('grid');
 
 	const startProvision = 70;
@@ -48,6 +54,7 @@
 
 	let recentUsers: User[] = [];
 	let userCounter = 0;
+	let personalInspirationsCount = 0;
 
 	function addRandomUser() {
 		const randomIndex = Math.floor(Math.random() * randomUsers.length);
@@ -58,31 +65,75 @@
 			earnings: Math.floor(Math.random() * 100) + 1
 		};
 		userCounter++;
-		recentUsers = [newUser, ...recentUsers].slice(0, 20);
+		recentUsers = [newUser, ...recentUsers.slice(0, 18)];
 	}
 
-	function removeRandomUser() {
-		if (recentUsers.length > 0) {
-			const randomIndex = Math.floor(Math.random() * recentUsers.length);
-			recentUsers = recentUsers.filter((_, index) => index !== randomIndex);
-		}
-	}
-
-	function handleVCChange(change: number) {
-		visioncreators.update((value) => Math.max(0, value + change));
-		if (change > 0) {
+	function handleGlobalVCChange() {
+		const newInvites = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
+		visioncreators.update((value) => value + newInvites);
+		for (let i = 0; i < newInvites; i++) {
 			addRandomUser();
-		} else if (change < 0 && recentUsers.length > 0) {
-			removeRandomUser();
 		}
 	}
+
+	function resetGlobalVC() {
+		visioncreators.set(0);
+		personalVCs.set(0);
+		personalEarnings.set(0);
+		recentUsers = [];
+		personalInspirationsCount = 0;
+	}
+
+	function handlePersonalSimulation() {
+		visioncreators.update((value) => value + 1);
+		personalVCs.update((value) => value + 1);
+		updatePersonalEarnings();
+
+		// Add "myself" to recent users with a unique identifier
+		personalInspirationsCount++;
+		recentUsers = [
+			{
+				name: 'Myself',
+				identifier: `myself_${personalInspirationsCount}`,
+				timestamp: new Date(),
+				earnings: $personalEarnings
+			},
+			...recentUsers.slice(0, 18)
+		];
+	}
+
+	function updatePersonalEarnings() {
+		const currentMilestoneIndex = fibonacciMilestones.findIndex((m) => m.value > $visioncreators);
+		const currentMilestone =
+			fibonacciMilestones[currentMilestoneIndex - 1] || fibonacciMilestones[0];
+		const earnPerInvite = currentMilestone ? currentMilestone.vcPool / currentMilestone.value : 0;
+		personalEarnings.set(earnPerInvite * $personalVCs);
+	}
+
+	$: {
+		updatePersonalEarnings();
+	}
+
+	$: currentEarnPerInspiration = (() => {
+		const currentMilestoneIndex = fibonacciMilestones.findIndex((m) => m.value > $visioncreators);
+		const nextMilestone =
+			fibonacciMilestones[currentMilestoneIndex] || fibonacciMilestones[currentMilestoneIndex];
+		return nextMilestone ? nextMilestone.vcPool / nextMilestone.value : 0;
+	})();
 </script>
 
 <main class="flex w-screen h-screen bg-surface-900 text-surface-50 overflow-hidden">
 	<div class="flex-grow overflow-auto p-4">
+		<PersonalCampaign
+			personalVCs={$personalVCs}
+			personalEarnings={$personalEarnings}
+			{currentEarnPerInspiration}
+			on:simulate={() => handlePersonalSimulation()}
+		/>
+
 		<div class="mb-4">
 			<button
-				class="btn variant-filled-primary"
+				class="btn btn-sm variant-ghost-secondary"
 				on:click={() => currentView.update((v) => (v === 'grid' ? 'table' : 'grid'))}
 			>
 				Switch to {$currentView === 'grid' ? 'Table' : 'Grid'} View
@@ -104,20 +155,10 @@
 		<MilestoneRecentUsers {recentUsers} />
 		<div class="mt-4">
 			<div class="grid grid-cols-2 gap-2 w-full">
-				{#each [1] as value}
-					<button
-						on:click={() => handleVCChange(-value)}
-						class="btn variant-filled-surface text-sm py-1"
-					>
-						-{value}
-					</button>
-					<button
-						on:click={() => handleVCChange(value)}
-						class="btn variant-filled-surface text-sm py-1"
-					>
-						+{value}
-					</button>
-				{/each}
+				<button on:click={resetGlobalVC} class="btn btn-sm variant-ghost-error"> Reset </button>
+				<button on:click={handleGlobalVCChange} class="btn btn-sm variant-ghost-primary">
+					+Random
+				</button>
 			</div>
 		</div>
 	</aside>

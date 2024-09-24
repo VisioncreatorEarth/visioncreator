@@ -11,11 +11,18 @@
 	<h3 class="text-lg font-semibold mb-4">Recent VisionCreators</h3>
 	<ul class="space-y-2">
 		{#each recentUsers as user (user.identifier)}
-			<li class="flex items-center justify-between rounded-xl bg-surface-700 p-2" transition:fade>
+			<li
+				class="flex items-center justify-between rounded-xl p-2 {user.identifier.startsWith(
+					'myself'
+				)
+					? 'bg-secondary-500/30'
+					: 'bg-surface-700'}"
+				transition:fade
+			>
 				<Avatar
 					me={{
 						data: { seed: user.identifier },
-						design: { highlight: false },
+						design: { highlight: user.identifier.startsWith('myself') },
 						size: 'sm'
 					}}
 				/>
