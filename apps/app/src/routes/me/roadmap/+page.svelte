@@ -84,13 +84,14 @@
 		personalInspirationsCount = 0;
 	}
 
-	function handlePersonalSimulation() {
-		visioncreators.update((value) => value + 1);
-		personalVCs.update((value) => value + 1);
+	function handlePersonalSimulation({ detail }) {
+		const { amount } = detail;
+		visioncreators.update((value) => value + amount);
+		personalVCs.update((value) => value + amount);
 		updatePersonalEarnings();
 
 		// Add "myself" to recent users with a unique identifier
-		personalInspirationsCount++;
+		personalInspirationsCount += amount;
 		recentUsers = [
 			{
 				name: 'Myself',
@@ -128,7 +129,7 @@
 			personalVCs={$personalVCs}
 			personalEarnings={$personalEarnings}
 			{currentEarnPerInspiration}
-			on:simulate={() => handlePersonalSimulation()}
+			on:simulate={handlePersonalSimulation}
 		/>
 
 		<div class="mb-4">
