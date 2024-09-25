@@ -5,9 +5,8 @@
 	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
 	import { view as meView } from '$lib/views/Me';
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { futureMe, Me } from '$lib/stores';
+	import { futureMe, Me, onboardingState, OnboardingState } from '$lib/stores';
 	import { fade } from 'svelte/transition';
-	import { writable } from 'svelte/store';
 
 	export let data;
 
@@ -15,11 +14,6 @@
 	$: ({ session } = data);
 
 	let isLoading = true;
-
-	let unsubscribe: () => void;
-
-	// Create local onboardingState store
-	const onboardingState = writable('Welcome');
 
 	const updateNameMutation = createMutation({
 		operationName: 'updateMe'
@@ -38,18 +32,15 @@
 		enabled: !!session?.user?.id && !!session?.user?.email
 	});
 
-	let welcomeMessage = 'Phenomenal';
-	let welcomeSubtitle = 'You are now a Visioncreator';
-
 	function nextState() {
 		onboardingState.update((current) => {
 			switch (current) {
-				case 'Welcome':
-					return 'SeenVideo';
-				case 'SeenVideo':
-					return 'CheckedNewsletter';
-				case 'CheckedNewsletter':
-					return 'FinishedOnboarding';
+				case OnboardingState.Welcome:
+					return OnboardingState.SeenVideo;
+				case OnboardingState.SeenVideo:
+					return OnboardingState.CheckedNewsletter;
+				case OnboardingState.CheckedNewsletter:
+					return OnboardingState.FinishedOnboarding;
 				default:
 					return current;
 			}
@@ -87,28 +78,13 @@
 					// Wait for a short time to ensure the updates have propagated
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 
-					// Now set up the subscription to Me store
-					unsubscribe = Me.subscribe(async (meValue) => {
-						if (meValue.id && session?.user?.email) {
-							await $newsletterStatusQuery.refetch();
-							if ($newsletterStatusQuery.data) {
-								onboardingState.set('FinishedOnboarding');
-							}
-						}
-					});
+					await $newsletterStatusQuery.refetch();
 				} catch (error) {
 					console.error('Error during signup process:', error);
 				}
 			} else {
-				// For existing users, set up the subscription immediately
-				unsubscribe = Me.subscribe(async (meValue) => {
-					if (meValue.id && session?.user?.email) {
-						await $newsletterStatusQuery.refetch();
-						if ($newsletterStatusQuery.data) {
-							onboardingState.set('FinishedOnboarding');
-						}
-					}
-				});
+				// For existing users, check newsletter status
+				await $newsletterStatusQuery.refetch();
 			}
 
 			isLoading = false;
@@ -129,16 +105,18 @@
 			</section>
 		</div>
 	</div>
-{:else if $onboardingState === 'Welcome'}
+{:else if $onboardingState === OnboardingState.Welcome}
 	<div
 		in:fade={{ duration: 300 }}
 		class="flex items-center justify-center min-h-screen bg-surface-900"
 	>
 		<div class="p-6 w-full max-w-7xl flex flex-col items-center justify-center text-center">
 			<h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-primary-300">
-				{welcomeMessage}
+				Welcome, {$Me.name}!
 			</h1>
-			<p class="text-lg md:text-xl lg:text-2xl mb-8 text-tertiary-300">{welcomeSubtitle}</p>
+			<p class="text-lg md:text-xl lg:text-2xl mb-8 text-tertiary-300">
+				You are now a Visioncreator
+			</p>
 			<div data-testid="video-player" class="w-full aspect-w-16 aspect-h-9 mb-6">
 				{#await import('$lib/components/VideoPlayer.svelte') then { default: VideoPlayer }}
 					<svelte:component this={VideoPlayer} on:videoEnded={handleVideoEnded} />
@@ -147,7 +125,7 @@
 			<button on:click={nextState} class="btn btn-sm variant-ghost-secondary"> Skip Video </button>
 		</div>
 	</div>
-{:else if $onboardingState === 'SeenVideo'}
+{:else if $onboardingState === OnboardingState.SeenVideo}
 	<div
 		in:fade={{ duration: 300 }}
 		class="flex items-center justify-center min-h-screen bg-surface-900"
