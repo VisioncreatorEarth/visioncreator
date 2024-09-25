@@ -5,6 +5,9 @@
   "main": "client.ts",
   "types": "client.ts",
   "license": "MIT",
+  "scripts": {
+    "build": "echo 'No build step required'"
+  },
   "dependencies": {
     "api": "*"
   }

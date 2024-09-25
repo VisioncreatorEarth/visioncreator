@@ -9,8 +9,12 @@
       "dependsOn": ["^build"],
       "outputs": ["generated-wundergraph/**"]
     },
+    "generated-wundergraph#build": {
+      "dependsOn": ["api#build"],
+      "outputs": ["**/*"]
+    },
     "app#build": {
-      "dependsOn": ["^build", "api#build"],
+      "dependsOn": ["^build", "generated-wundergraph#build"],
       "outputs": [".svelte-kit/**", "composer/**"]
     },
     "dev": {
