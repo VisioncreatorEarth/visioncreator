@@ -1,32 +1,21 @@
 <script lang="ts">
-	import { writable } from 'svelte/store';
-	import { Me, eventStream } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { eventBus } from '$lib/composables/eventBus';
+	import ActionButtons from '$lib/components/ActionButtons.svelte';
+	import Newsletter from '$lib/components/Newsletter.svelte';
+	import { Me } from '$lib/stores';
+	import { persist, createLocalStorage } from '@macfja/svelte-persistent-store';
+	import { writable } from 'svelte/store';
 
 	export let data;
 
-	let modalOpen = writable(false);
-	let activeTab = writable('actions');
+	let modalOpen = persist(writable(false), createLocalStorage(), 'modalOpen');
+	let activeTab = persist(writable('actions'), createLocalStorage(), 'activeTab');
 	let { session } = data;
 	$: ({ session } = data);
 
-	let isFirstTime = writable(true);
-
 	onMount(() => {
-		const firstTimeStatus = localStorage.getItem('isFirstTime');
-		isFirstTime.set(firstTimeStatus === null || firstTimeStatus === 'true');
-
-		const unsubscribe = eventStream.subscribe((events) => {
-			const latestEvent = events[events.length - 1];
-			if (latestEvent && latestEvent.type === 'updateMe') {
-				setTimeout(() => {
-					modalOpen.set(false);
-				}, 1000);
-			}
-		});
-
 		eventBus.on('toggleModal', () => {
 			setTimeout(() => {
 				modalOpen.set(false);
@@ -34,23 +23,24 @@
 		});
 
 		return () => {
-			unsubscribe();
-			eventBus.off('toggleModal');
+			eventBus.off('toggleModal', () => {});
 		};
 	});
 
 	function toggleModal(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			modalOpen.update((n) => !n);
-			if ($isFirstTime) {
-				isFirstTime.set(false);
-				localStorage.setItem('isFirstTime', 'false');
-			}
 		}
 	}
 
 	function setActiveTab(tab: string) {
 		activeTab.set(tab);
+	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			modalOpen.set(false);
+		}
 	}
 </script>
 
@@ -61,35 +51,36 @@
 	<slot />
 </div>
 
-<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center">
-	<div class="relative flex items-center">
-		{#if $isFirstTime}
+<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2">
+	<div class="relative flex flex-col items-center">
+		<div
+			class="absolute bottom-full mb-4 whitespace-nowrap flex flex-col items-center animate-pulse-smooth"
+		>
 			<div
-				class="absolute right-full mr-4 whitespace-nowrap flex items-center space-x-2 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-full"
+				class="flex items-center space-x-2 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-full"
 			>
 				<span class="text-sm font-semibold text-tertiary-200">This is your menu</span>
-				<div class="animate-pulse">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6 text-tertiary-200"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M13 7l5 5m0 0l-5 5m5-5H6"
-						/>
-					</svg>
-				</div>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-6 w-6 text-tertiary-200"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 13l-7 7-7-7m14-8l-7 7-7-7"
+					/>
+				</svg>
 			</div>
-		{/if}
+			<div
+				class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-surface-300/30"
+			/>
+		</div>
 		<button
-			class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 {$isFirstTime
-				? 'animate-pulse-smooth'
-				: ''}"
+			class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 animate-pulse-smooth"
 			class:hidden={$modalOpen}
 			on:click={toggleModal}
 		>
@@ -102,18 +93,23 @@
 	<div
 		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6"
 		on:click={toggleModal}
+		on:keydown={handleKeyDown}
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
 		transition:fade
 	>
 		{#if $Me}
 			<div
 				class="w-full max-w-6xl bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
-				on:click|stopPropagation
+				on:click|stopPropagation={() => {}}
+				role="document"
 			>
 				<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 					{#if $activeTab === 'actions'}
-						<ActionButtons me={{ id: session.user.id }} />
+						<ActionButtons me={{ id: session?.user?.id || '' }} />
 					{:else if $activeTab === 'settings'}
-						<Newsletter me={{ email: session.user.email, id: session.user.id }} />
+						<Newsletter me={{ email: session?.user?.email || '', id: session?.user?.id || '' }} />
 					{:else if $activeTab === 'legalinfo'}
 						<div class="flex space-x-4 rounded-lg">
 							<a
@@ -132,49 +128,45 @@
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
 					<ul class="flex flex-wrap text-sm font-medium text-center">
 						<li class="mr-2">
-							<a
-								href="#"
+							<button
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'actions'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('actions')}
+								on:click={() => setActiveTab('actions')}
 							>
 								Actions
-							</a>
+							</button>
 						</li>
 						<li class="mr-2">
-							<a
-								href="#"
+							<button
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'settings'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('settings')}
+								on:click={() => setActiveTab('settings')}
 							>
 								Settings
-							</a>
+							</button>
 						</li>
-
 						<li class="mr-2">
-							<a
-								href="#"
+							<button
 								class={`inline-block p-4 rounded-t-lg ${
-									$activeTab === 'logs'
+									$activeTab === 'legalinfo'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('legalinfo')}
+								on:click={() => setActiveTab('legalinfo')}
 							>
 								Legal Info
-							</a>
+							</button>
 						</li>
 					</ul>
 					<button
 						class="p-2 text-tertiary-400 hover:text-tertiary-300"
-						on:click={() => toggleModal()}
+						on:click={() => modalOpen.set(false)}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"

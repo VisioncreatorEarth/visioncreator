@@ -45,8 +45,8 @@
 	</div>
 	<!-- <Countdown /> -->
 	<p class="">
-		Lead the way, be a pioneer into a new world. <br />The more fellow pioneers you inspire to
-		signup to our waitinglist the higher you rank, the faster you get access.
+		Lead the way, be a pioneer into a new world. <br />The more fellow pioneers you inspire to join
+		the higher you rank and the faster you get access.
 		<!-- to stay in the top 21! -->
 	</p>
 
@@ -62,7 +62,14 @@
 			logoPadding="4"
 		/>
 	{/if}
-	<div class="pt-4 flex flex-row items-center space-x-2">
+	<div class="p-4 flex flex-row items-center space-x-2">
+		<button
+			type="button"
+			class="btn btn-sm @3xl:btn-lg variant-ghost-primary"
+			on:click={toggleQRCode}
+		>
+			{$showQRCode ? 'Hide QR Code' : 'Show QR Code'}
+		</button>
 		<button
 			type="button"
 			class="btn btn-sm @3xl:btn-lg variant-filled-primary"
@@ -70,13 +77,6 @@
 			disabled={$linkCopied}
 		>
 			{$linkCopied ? 'Link Copied!' : 'Copy Invite Link'}
-		</button>
-		<button
-			type="button"
-			class="btn btn-sm @3xl:btn-lg variant-ghost-primary"
-			on:click={toggleQRCode}
-		>
-			{$showQRCode ? 'Hide QR Code' : 'Show QR Code'}
 		</button>
 	</div>
 </div>

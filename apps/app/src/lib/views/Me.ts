@@ -5,19 +5,13 @@ export const view = {
             "row1"
             "row2"
             "row3"
-            "row4"
         `,
-		rows: 'auto auto auto 1fr',
+		rows: 'auto auto 1fr',
 		gap: '1rem',
 		overflow: 'auto',
 		style: 'p-4 max-w-6xl mx-auto'
 	},
 	children: [
-		{
-			id: 'SubscribeToNewsletter',
-			slot: 'row2',
-			component: 'SubscribeToNewsletter'
-		},
 		{
 			id: 'Profile',
 			component: 'Profile',
@@ -44,13 +38,13 @@ export const view = {
 		},
 		{
 			id: 'InviteCard',
-			slot: 'row3',
+			slot: 'row2',
 			component: 'InviteCard'
 		},
 		{
 			id: 'Leaderboard',
 			component: 'Leaderboard',
-			slot: 'row4',
+			slot: 'row3',
 			map: {
 				list: {
 					query: 'queryLeaderboard',
