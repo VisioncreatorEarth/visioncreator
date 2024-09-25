@@ -2,7 +2,6 @@
 	import { createEventDispatcher } from 'svelte';
 	import { formatCurrency } from '$lib/milestone';
 	import Icon from '@iconify/svelte';
-	import VisionCreatorLevels from './VisionCreatorLevels.svelte';
 
 	export let personalVCs: number;
 	export let personalEarnings: number;
