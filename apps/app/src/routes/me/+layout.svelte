@@ -11,6 +11,7 @@
 	export let data;
 
 	let modalOpen = persist(writable(false), createLocalStorage(), 'modalOpen');
+
 	let activeTab = persist(writable('actions'), createLocalStorage(), 'activeTab');
 	let { session } = data;
 	$: ({ session } = data);

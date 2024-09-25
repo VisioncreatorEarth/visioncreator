@@ -6,35 +6,24 @@
 	export let me;
 	const query = $me.query;
 
-	let selfEntry;
+	let selfEntry = null;
 	let otherEntries = [];
 	let peopleAhead = 0;
 
 	$: if ($query.data && $query.data.list) {
 		selfEntry = $query.data.list.find((entry) => entry.identifier === $me.authID);
 		otherEntries = $query.data.list.filter((entry) => entry.identifier !== $me.authID);
-		peopleAhead = otherEntries.filter(
-			(entry) => entry.numericValue > selfEntry.numericValue
-		).length;
+		peopleAhead = selfEntry
+			? otherEntries.filter((entry) => entry.numericValue > selfEntry.numericValue).length
+			: 0;
 	}
 
 	function getLevel(invites) {
+		invites = Number(invites) || 0;
 		if (invites >= 3) return 3;
 		if (invites >= 2) return 2;
 		if (invites >= 1) return 1;
 		return 0;
-	}
-
-	function getLevelStatus(level, currentInvites) {
-		if (currentInvites >= level) return 'completed';
-		if (currentInvites === level - 1) return 'in-progress';
-		return 'open';
-	}
-
-	function getProgressPercentage(currentInvites, level) {
-		if (currentInvites >= level) return 100;
-		if (currentInvites < level - 1) return 0;
-		return ((currentInvites - (level - 1)) / 1) * 100;
 	}
 
 	async function handleUpdateMe() {
