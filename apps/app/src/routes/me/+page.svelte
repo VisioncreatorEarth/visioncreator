@@ -38,8 +38,6 @@
 				case OnboardingState.Welcome:
 					return OnboardingState.SeenVideo;
 				case OnboardingState.SeenVideo:
-					return OnboardingState.CheckedNewsletter;
-				case OnboardingState.CheckedNewsletter:
 					return OnboardingState.FinishedOnboarding;
 				default:
 					return current;
@@ -120,9 +118,7 @@
 		class="flex items-center justify-center min-h-screen bg-surface-900"
 	>
 		<div class="p-6 w-full max-w-7xl flex flex-col items-center justify-center text-center">
-			<h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-primary-300">
-				Welcome, {$Me.name}!
-			</h1>
+			<h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-primary-300">Phenomenal</h1>
 			<p class="text-lg md:text-xl lg:text-2xl mb-8 text-tertiary-300">
 				You are now a Visioncreator
 			</p>
@@ -131,7 +127,7 @@
 					<svelte:component this={VideoPlayer} on:videoEnded={handleVideoEnded} />
 				{/await}
 			</div>
-			<button on:click={nextState} class="btn btn-sm variant-ghost-secondary"> Skip Video </button>
+			<button on:click={nextState} class="btn btn-sm variant-ghost-secondary">Skip Video</button>
 		</div>
 	</div>
 {:else if $onboardingState === OnboardingState.SeenVideo}

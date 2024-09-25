@@ -4,7 +4,6 @@
 ```
 npm i
 npm run dev
-npx turbo run test:watch
 ```
 npm run dev will launch all apps and packages in our turbo monorepo. The supacreator package is our supabase postgres service. It has an external dependency to docker, which needs to be installed on the system in order for 'npx supabase start' to be able to launch the supabase services.
 

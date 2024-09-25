@@ -5,10 +5,7 @@
 	"scripts": {
 		"dev": "vite dev --port 3000",
 		"build": "vite build",
-		"preview": "vite preview",
-		"test": "vitest run",
-		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"preview": "vite preview"
 	},
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.24.3",

@@ -8,10 +8,7 @@
   "scripts": {
     "build": "npx turbo run build",
     "dev": "npx turbo run dev --parallel",
-    "generate": "npx turbo run generate",
-    "test": "npx turbo run test",
-    "test:watch": "npx turbo run test:watch",
-    "test:coverage": "npx turbo run test:coverage"
+    "generate": "npx turbo run generate"
   },
   "devDependencies": {
     "turbo": "^2.1.2"

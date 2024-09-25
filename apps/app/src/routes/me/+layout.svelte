@@ -11,22 +11,18 @@
 	export let data;
 
 	let modalOpen = persist(writable(false), createLocalStorage(), 'modalOpen');
-
 	let activeTab = persist(writable('actions'), createLocalStorage(), 'activeTab');
 	let { session } = data;
 	$: ({ session } = data);
 
-	let showTooltip = true;
-
 	onMount(() => {
+		modalOpen.set(false);
+
 		eventBus.on('toggleModal', () => {
 			setTimeout(() => {
 				modalOpen.set(false);
 			}, 1000);
 		});
-
-		// Set the default active tab to 'actions'
-		activeTab.set('actions');
 
 		return () => {
 			eventBus.off('toggleModal', () => {});
@@ -36,13 +32,6 @@
 	function toggleModal(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			modalOpen.update((n) => !n);
-			if ($onboardingState === OnboardingState.CheckedNewsletter) {
-				onboardingState.set(OnboardingState.FinishedOnboarding);
-			}
-			showTooltip = false;
-
-			// Reset the active tab to 'actions' whenever the modal is opened
-			activeTab.set('actions');
 		}
 	}
 
@@ -55,6 +44,8 @@
 			modalOpen.set(false);
 		}
 	}
+
+	$: isOnboardingComplete = $onboardingState === OnboardingState.FinishedOnboarding;
 </script>
 
 <div
@@ -64,40 +55,11 @@
 	<slot />
 </div>
 
-{#if $onboardingState === OnboardingState.CheckedNewsletter || $onboardingState === OnboardingState.FinishedOnboarding}
+{#if isOnboardingComplete}
 	<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2">
 		<div class="relative flex flex-col items-center">
-			{#if showTooltip && $onboardingState === OnboardingState.CheckedNewsletter}
-				<div
-					class="absolute bottom-full mb-4 whitespace-nowrap flex flex-col items-center animate-pulse"
-				>
-					<div
-						class="flex items-center space-x-2 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-full"
-					>
-						<span class="text-sm font-semibold text-tertiary-200">This is your menu</span>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 text-tertiary-200"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M19 13l-7 7-7-7m14-8l-7 7-7-7"
-							/>
-						</svg>
-					</div>
-					<div
-						class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-surface-300/30"
-					/>
-				</div>
-			{/if}
 			<button
 				class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-				class:animate-pulse={$onboardingState === OnboardingState.CheckedNewsletter}
 				class:hidden={$modalOpen}
 				on:click={toggleModal}
 			>
@@ -123,6 +85,7 @@
 				on:click|stopPropagation={() => {}}
 				role="document"
 			>
+				<!-- Modal content -->
 				<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 					{#if $activeTab === 'actions'}
 						<ActionButtons me={{ id: session?.user?.id || '' }} />
@@ -143,7 +106,9 @@
 					{/if}
 				</div>
 
+				<!-- Modal footer -->
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
+					<!-- Tab buttons -->
 					<ul class="flex flex-wrap text-sm font-medium text-center">
 						<li class="mr-2">
 							<button
@@ -182,6 +147,7 @@
 							</button>
 						</li>
 					</ul>
+					<!-- Close button -->
 					<button
 						class="p-2 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => modalOpen.set(false)}
