@@ -117,25 +117,31 @@
 		in:fade={{ duration: 300 }}
 		class="flex items-center justify-center min-h-screen bg-surface-900"
 	>
-		<div class="p-6 w-full max-w-7xl flex flex-col items-center justify-center text-center">
-			<h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-primary-300">Phenomenal</h1>
-			<p class="text-lg md:text-xl lg:text-2xl mb-8 text-tertiary-300">
+		<div class="p-4 sm:p-6 w-full max-w-7xl flex flex-col items-center justify-center text-center">
+			<h1
+				class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 sm:mb-4 text-primary-300"
+			>
+				Phenomenal
+			</h1>
+			<p class="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-8 text-tertiary-300">
 				You are now a Visioncreator
 			</p>
-			<div data-testid="video-player" class="w-full aspect-w-16 aspect-h-9 mb-6">
+			<div data-testid="video-player" class="w-full aspect-w-16 aspect-h-9 mb-4 sm:mb-6">
 				{#await import('$lib/components/VideoPlayer.svelte') then { default: VideoPlayer }}
 					<svelte:component this={VideoPlayer} on:videoEnded={handleVideoEnded} />
 				{/await}
 			</div>
-			<button on:click={nextState} class="btn btn-sm variant-ghost-secondary">Skip Video</button>
+			<button on:click={nextState} class="btn btn-sm sm:btn-md variant-ghost-secondary"
+				>Skip Video</button
+			>
 		</div>
 	</div>
 {:else if $onboardingState === OnboardingState.SeenVideo}
 	<div
 		in:fade={{ duration: 300 }}
-		class="flex items-center justify-center min-h-screen bg-surface-900"
+		class="flex items-center justify-center min-h-screen bg-surface-900 p-2 sm:p-4"
 	>
-		<div class="newsletter-container p-6 w-full max-w-7xl flex items-center justify-center">
+		<div class="newsletter-container w-full max-w-7xl flex items-center justify-center">
 			<SubscribeToNewsletter
 				userId={$Me.id}
 				userEmail={session?.user?.email ?? ''}
@@ -149,8 +155,15 @@
 
 <style>
 	.newsletter-container {
-		min-height: calc(100vw * 9 / 16); /* 16:9 aspect ratio */
+		min-height: 100%;
+		height: 100%;
 		max-height: 100vh;
-		height: auto;
+		overflow-y: auto;
+	}
+
+	@media (max-height: 500px) {
+		.newsletter-container {
+			padding: 1rem;
+		}
 	}
 </style>

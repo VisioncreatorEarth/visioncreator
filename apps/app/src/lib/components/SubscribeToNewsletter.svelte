@@ -64,7 +64,7 @@
 	}
 </script>
 
-<div class="newsletter-content w-full h-full flex items-center justify-center">
+<div class="newsletter-content w-full h-full flex items-center justify-center p-2 sm:p-4">
 	{#if $newsletterStatus.isLoading}
 		<p class="text-base sm:text-lg md:text-xl lg:text-2xl">Loading...</p>
 	{:else if showMessage}
@@ -73,15 +73,17 @@
 				? 'success'
 				: 'secondary'} w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10"
 		>
-			<h3 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-4">
+			<h3 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-4">
 				{messageType === 'success' ? 'Looking forward to next week' : 'Thank you'}
 			</h3>
-			<p class="text-sm sm:text-base md:text-lg lg:text-xl mb-6 text-center">
+			<p class="text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6 text-center">
 				{message}
 			</p>
 			<button
 				on:click={handleNext}
-				class="btn variant-ghost-{messageType === 'success' ? 'success' : 'secondary'}"
+				class="btn btn-sm sm:btn-md variant-ghost-{messageType === 'success'
+					? 'success'
+					: 'secondary'}"
 			>
 				Continue
 			</button>
@@ -90,19 +92,25 @@
 		<div
 			class="w-full h-full flex flex-col items-center justify-center text-center p-4 sm:p-6 md:p-8 lg:p-10 bg-secondary-800 rounded-3xl"
 		>
-			<h3 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-primary-300 mb-4">
+			<h3
+				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
+			>
 				Watch next video one week before the public
 			</h3>
-			<p class="mt-2 text-sm sm:text-base md:text-lg lg:text-xl mb-6">
+			<p class="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
 				Subscribe to our weekly newsletter to get early access to our video updates 1 week before
 				the public and follow along our journey from 0 to 1 billion visioncreators.
 			</p>
-			<div class="flex flex-row space-x-2 sm:space-x-4 mb-6">
-				<button class="btn variant-ghost-secondary" on:click={handleNoThanks}> No, thanks </button>
-				<button class="btn variant-filled-primary" on:click={handleSubscribe}> Subscribe </button>
+			<div class="flex flex-row space-x-2 sm:space-x-4 mb-4 sm:mb-6">
+				<button class="btn btn-sm sm:btn-md variant-ghost-secondary" on:click={handleNoThanks}>
+					No, thanks
+				</button>
+				<button class="btn btn-sm sm:btn-md variant-filled-primary" on:click={handleSubscribe}>
+					Subscribe
+				</button>
 			</div>
 			<p
-				class="text-2xs sm:text-xs md:text-sm lg:text-base text-tertiary-300 max-w-xl leading-tight sm:leading-snug"
+				class="text-3xs sm:text-2xs md:text-xs lg:text-sm text-tertiary-300 max-w-xl leading-tight sm:leading-snug"
 			>
 				*By pressing the subscribe button, you consent that we send you our weekly newsletter. You
 				can revoke this consent at any time by clicking on the unsubscribe link in our newsletter
@@ -124,5 +132,11 @@
 
 	.card {
 		border-radius: 1.5rem;
+	}
+
+	@media (max-height: 500px) {
+		.newsletter-content {
+			padding: 0.5rem;
+		}
 	}
 </style>
