@@ -23,13 +23,13 @@
 		operationName: 'createInvite'
 	});
 
-	const newsletterStatusQuery = createQuery({
+	$: newsletterStatusQuery = createQuery({
 		operationName: 'MyNewsletterStatus',
 		input: {
 			id: $Me.id,
 			email: session?.user?.email || ''
 		},
-		enabled: !!session?.user?.id && !!session?.user?.email
+		enabled: !!$Me.id && !!session?.user?.email
 	});
 
 	function nextState() {
@@ -49,6 +49,15 @@
 
 	function handleVideoEnded() {
 		nextState();
+	}
+
+	async function checkNewsletterStatus() {
+		if ($Me.id && session?.user?.email) {
+			await $newsletterStatusQuery.refetch();
+			if ($newsletterStatusQuery.data) {
+				onboardingState.set(OnboardingState.FinishedOnboarding);
+			}
+		}
 	}
 
 	onMount(async () => {
@@ -77,19 +86,19 @@
 
 					// Wait for a short time to ensure the updates have propagated
 					await new Promise((resolve) => setTimeout(resolve, 1000));
-
-					await $newsletterStatusQuery.refetch();
 				} catch (error) {
 					console.error('Error during signup process:', error);
 				}
-			} else {
-				// For existing users, check newsletter status
-				await $newsletterStatusQuery.refetch();
 			}
 
+			await checkNewsletterStatus();
 			isLoading = false;
 		}
 	});
+
+	$: if ($Me.id && session?.user?.email) {
+		checkNewsletterStatus();
+	}
 </script>
 
 {#if isLoading}
