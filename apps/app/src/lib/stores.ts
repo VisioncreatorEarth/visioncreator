@@ -122,3 +122,16 @@ const createLogger = (): LogFunction => {
 };
 
 export const log = createLogger();
+
+export enum OnboardingState {
+	Welcome = 'Welcome',
+	SeenVideo = 'SeenVideo',
+	CheckedNewsletter = 'CheckedNewsletter',
+	FinishedOnboarding = 'FinishedOnboarding'
+}
+
+export const onboardingState = persist(
+	writable<OnboardingState>(OnboardingState.Welcome),
+	createLocalStorage(),
+	'onboardingState'
+);

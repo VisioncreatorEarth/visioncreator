@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	export let userId: string;
 	export let userEmail: string;
@@ -24,11 +24,23 @@
 	let message = '';
 	let messageType: 'success' | 'info' = 'info';
 
+	onMount(() => {
+		if ($newsletterStatus.data) {
+			// If the user is already subscribed, automatically continue to the next step
+			dispatch('next');
+		}
+	});
+
+	$: if ($newsletterStatus.data && !showMessage) {
+		// This reactive statement will catch any changes to the subscription status
+		dispatch('next');
+	}
+
 	async function handleSubscribe() {
 		showMessage = true;
 		messageType = 'success';
 		message =
-			"Welcome to the Visioncreator Family! You're now part of something extraordinary. Together, we'll shape the future and inspire millions. Get ready for an incredible journey!";
+			"You're now part of something extraordinary. Together, we'll shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!";
 
 		try {
 			await $toggleNewsletterMutation.mutateAsync({
@@ -47,7 +59,7 @@
 		message = 'No problem! You can always subscribe later if you change your mind.';
 	}
 
-	function handleContinue() {
+	function handleNext() {
 		dispatch('next');
 	}
 </script>
@@ -55,20 +67,20 @@
 <div class="newsletter-content w-full h-full flex items-center justify-center">
 	{#if $newsletterStatus.isLoading}
 		<p class="text-base sm:text-lg md:text-xl lg:text-2xl">Loading...</p>
-	{:else if $newsletterStatus.data || showMessage}
+	{:else if showMessage}
 		<div
 			class="card variant-ghost-{messageType === 'success'
 				? 'success'
 				: 'secondary'} w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10"
 		>
 			<h3 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-4">
-				{messageType === 'success' ? 'Welcome aboard!' : 'Thank you'}
+				{messageType === 'success' ? 'Looking forward to next week' : 'Thank you'}
 			</h3>
-			<p class="text-sm sm:text-base md:text-lg lg:text-xl mb-6">
+			<p class="text-sm sm:text-base md:text-lg lg:text-xl mb-6 text-center">
 				{message}
 			</p>
 			<button
-				on:click={handleContinue}
+				on:click={handleNext}
 				class="btn variant-ghost-{messageType === 'success' ? 'success' : 'secondary'}"
 			>
 				Continue
