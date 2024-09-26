@@ -105,12 +105,17 @@
 	<div
 		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6"
 		on:click={toggleModal}
+		on:keydown={(e) => e.key === 'Enter' && toggleModal()}
+		role="dialog"
+		aria-modal="true"
+		tabindex="0"
 		transition:fade
 	>
 		{#if $Me}
 			<div
 				class="w-full max-w-6xl bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
 				on:click|stopPropagation
+				role="document"
 			>
 				<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 					{#if $activeTab === 'actions'}
@@ -135,44 +140,40 @@
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
 					<ul class="flex flex-wrap text-sm font-medium text-center">
 						<li class="mr-2">
-							<a
-								href="#"
+							<button
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'actions'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('actions')}
+								on:click={() => setActiveTab('actions')}
 							>
 								Actions
-							</a>
+							</button>
 						</li>
 						<li class="mr-2">
-							<a
-								href="#"
+							<button
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'settings'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('settings')}
+								on:click={() => setActiveTab('settings')}
 							>
 								Settings
-							</a>
+							</button>
 						</li>
-
 						<li class="mr-2">
-							<a
-								href="#"
+							<button
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'logs'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click|preventDefault={() => setActiveTab('legalinfo')}
+								on:click={() => setActiveTab('legalinfo')}
 							>
 								Legal Info
-							</a>
+							</button>
 						</li>
 					</ul>
 					<button
