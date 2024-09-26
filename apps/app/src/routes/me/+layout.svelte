@@ -1,79 +1,31 @@
 <script lang="ts">
-	import { onMount, afterUpdate } from 'svelte';
+	import { writable } from 'svelte/store';
+	import { Me, eventStream } from '$lib/stores';
+	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { eventBus } from '$lib/composables/eventBus';
-	import ActionButtons from '$lib/components/ActionButtons.svelte';
-	import Newsletter from '$lib/components/Newsletter.svelte';
-	import { Me, onboardingMachine, OnboardingState } from '$lib/stores';
-	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { persist, createLocalStorage } from '@macfja/svelte-persistent-store';
-	import { writable, get } from 'svelte/store';
 
 	export let data;
 
-	let modalOpen = persist(writable(false), createLocalStorage(), 'modalOpen');
-	let activeTab = persist(writable('actions'), createLocalStorage(), 'activeTab');
+	let modalOpen = writable(false);
+	let activeTab = writable('actions');
 	let { session } = data;
 	$: ({ session } = data);
 
-	let showTooltip = false;
-
-	const toggleOnboardedMutation = createMutation({
-		operationName: 'toggleOnboarded'
-	});
-
-	const queryMe = createQuery({
-		operationName: 'queryMe',
-		input: { id: $Me.id },
-		enabled: !!$Me.id
-	});
-
-	let isInitialized = false;
-
-	$: if ($queryMe.data && !isInitialized) {
-		console.log('Layout: queryMe data received', $queryMe.data);
-		updateOnboardingState($queryMe.data.onboarded);
-		isInitialized = true;
-	}
-
-	function updateOnboardingState(remoteOnboarded: boolean) {
-		console.log('Layout: Updating onboarding state, remoteOnboarded:', remoteOnboarded);
-		if (remoteOnboarded) {
-			onboardingMachine.setRemoteOnboarded(true);
-			console.log('Layout: Onboarding State set to Finished based on database');
-		} else {
-			const currentState = get(onboardingMachine);
-			console.log('Layout: Current onboarding state:', currentState.state);
-			if (!currentState || currentState.state === OnboardingState.Welcome) {
-				onboardingMachine.transition('RESET');
-				console.log('Layout: Onboarding State set or kept as Welcome');
-			}
-		}
-	}
-
-	$: {
-		showTooltip = get(onboardingMachine).state === OnboardingState.Dashboard;
-		console.log('Layout: Current onboarding state:', get(onboardingMachine).state);
-	}
-
-	function handleModalButtonClick() {
-		if (showTooltip) {
-			onboardingMachine.transition('TOOLTIP_CLICKED');
-			if (!$queryMe.data?.onboarded) {
-				$toggleOnboardedMutation.mutate({ id: $Me.id });
-				console.log('Layout: Updating onboarded status in database');
-			}
-		}
-		toggleModal();
-		console.log(
-			'Layout: Modal button clicked, new onboarding state:',
-			get(onboardingMachine).state
-		);
-	}
+	let isFirstTime = writable(true);
 
 	onMount(() => {
-		console.log('Layout: Component mounted');
-		modalOpen.set(false);
+		const firstTimeStatus = localStorage.getItem('isFirstTime');
+		isFirstTime.set(firstTimeStatus === null || firstTimeStatus === 'true');
+
+		const unsubscribe = eventStream.subscribe((events) => {
+			const latestEvent = events[events.length - 1];
+			if (latestEvent && latestEvent.type === 'updateMe') {
+				setTimeout(() => {
+					modalOpen.set(false);
+				}, 1000);
+			}
+		});
 
 		eventBus.on('toggleModal', () => {
 			setTimeout(() => {
@@ -82,37 +34,23 @@
 		});
 
 		return () => {
-			eventBus.off('toggleModal', () => {});
+			unsubscribe();
+			eventBus.off('toggleModal');
 		};
-	});
-
-	afterUpdate(() => {
-		console.log(
-			'Layout: After update, current state:',
-			get(onboardingMachine).state,
-			'queryMe data:',
-			$queryMe.data
-		);
-		if ($queryMe.data?.onboarded && get(onboardingMachine).state !== OnboardingState.Finished) {
-			console.log('Layout: Forcing state to Finished due to remote onboarded flag');
-			onboardingMachine.setRemoteOnboarded(true);
-		}
 	});
 
 	function toggleModal(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			modalOpen.update((n) => !n);
+			if ($isFirstTime) {
+				isFirstTime.set(false);
+				localStorage.setItem('isFirstTime', 'false');
+			}
 		}
 	}
 
 	function setActiveTab(tab: string) {
 		activeTab.set(tab);
-	}
-
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
-			modalOpen.set(false);
-		}
 	}
 </script>
 
@@ -123,54 +61,59 @@
 	<slot />
 </div>
 
-{#if get(onboardingMachine).state === OnboardingState.Dashboard || get(onboardingMachine).state === OnboardingState.Finished}
-	<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2">
-		<div class="relative flex flex-col items-center">
-			{#if showTooltip}
-				<div
-					class="absolute bottom-full mb-2 variant-ghost-secondary rounded-lg animate-pulse"
-					in:fade={{ duration: 300 }}
-					style="z-index: 50; width: max-content; left: 50%; transform: translateX(-50%);"
-				>
-					<div class="flex items-center px-4 py-2 whitespace-nowrap">
-						<span>Open menu here</span>
-					</div>
-					<div class="arrow-down text-secondary-500" />
-				</div>
-			{/if}
-			<button
-				class="flex items-center justify-center rounded-full bg-secondary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-				class:hidden={$modalOpen}
-				on:click={handleModalButtonClick}
+<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center">
+	<div class="relative flex items-center">
+		{#if $isFirstTime}
+			<div
+				class="absolute right-full mr-4 whitespace-nowrap flex items-center space-x-2 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-full"
 			>
-				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-			</button>
-		</div>
+				<span class="text-sm font-semibold text-tertiary-200">This is your menu</span>
+				<div class="animate-pulse">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6 text-tertiary-200"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M13 7l5 5m0 0l-5 5m5-5H6"
+						/>
+					</svg>
+				</div>
+			</div>
+		{/if}
+		<button
+			class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 {$isFirstTime
+				? 'animate-pulse-smooth'
+				: ''}"
+			class:hidden={$modalOpen}
+			on:click={toggleModal}
+		>
+			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		</button>
 	</div>
-{/if}
+</div>
 
 {#if $modalOpen}
 	<div
 		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6"
 		on:click={toggleModal}
-		on:keydown={handleKeyDown}
-		role="dialog"
-		aria-modal="true"
-		tabindex="-1"
 		transition:fade
 	>
 		{#if $Me}
 			<div
 				class="w-full max-w-6xl bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
-				on:click|stopPropagation={() => {}}
-				role="document"
+				on:click|stopPropagation
 			>
-				<!-- Modal content -->
 				<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 					{#if $activeTab === 'actions'}
-						<ActionButtons me={{ id: session?.user?.id || '' }} />
+						<ActionButtons me={{ id: session.user.id }} />
 					{:else if $activeTab === 'settings'}
-						<Newsletter me={{ email: session?.user?.email || '', id: session?.user?.id || '' }} />
+						<Newsletter me={{ email: session.user.email, id: session.user.id }} />
 					{:else if $activeTab === 'legalinfo'}
 						<div class="flex space-x-4 rounded-lg">
 							<a
@@ -186,51 +129,52 @@
 					{/if}
 				</div>
 
-				<!-- Modal footer -->
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
-					<!-- Tab buttons -->
 					<ul class="flex flex-wrap text-sm font-medium text-center">
 						<li class="mr-2">
-							<button
+							<a
+								href="#"
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'actions'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click={() => setActiveTab('actions')}
+								on:click|preventDefault={() => setActiveTab('actions')}
 							>
 								Actions
-							</button>
+							</a>
 						</li>
 						<li class="mr-2">
-							<button
+							<a
+								href="#"
 								class={`inline-block p-4 rounded-t-lg ${
 									$activeTab === 'settings'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click={() => setActiveTab('settings')}
+								on:click|preventDefault={() => setActiveTab('settings')}
 							>
 								Settings
-							</button>
+							</a>
 						</li>
+
 						<li class="mr-2">
-							<button
+							<a
+								href="#"
 								class={`inline-block p-4 rounded-t-lg ${
-									$activeTab === 'legalinfo'
+									$activeTab === 'logs'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
 								}`}
-								on:click={() => setActiveTab('legalinfo')}
+								on:click|preventDefault={() => setActiveTab('legalinfo')}
 							>
 								Legal Info
-							</button>
+							</a>
 						</li>
 					</ul>
-					<!-- Close button -->
 					<button
 						class="p-2 text-tertiary-400 hover:text-tertiary-300"
-						on:click={() => modalOpen.set(false)}
+						on:click={() => toggleModal()}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -254,29 +198,17 @@
 {/if}
 
 <style>
-	@keyframes pulse {
+	@keyframes pulse-smooth {
 		0%,
 		100% {
-			opacity: 1;
+			transform: scale(1);
 		}
 		50% {
-			opacity: 0.7;
+			transform: scale(1.05);
 		}
 	}
 
-	.animate-pulse {
-		animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	}
-
-	.arrow-down {
-		width: 0;
-		height: 0;
-		border-left: 8px solid transparent;
-		border-right: 8px solid transparent;
-		border-top: 8px solid var(--color-secondary-500);
-		position: absolute;
-		bottom: -8px;
-		left: 50%;
-		transform: translateX(-50%);
+	.animate-pulse-smooth {
+		animation: pulse-smooth 2s infinite;
 	}
 </style>

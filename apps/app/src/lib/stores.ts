@@ -11,12 +11,11 @@ interface FutureMe {
 
 interface Me {
 	id: string;
-	name?: string;
 }
 
 interface Event {
 	type: EventType;
-	payload: unknown;
+	payload: any;
 }
 
 export function emitEvent(event: Event) {
@@ -42,11 +41,11 @@ interface LogEntry {
 	message: string;
 	date: string;
 	file: string;
-	json?: unknown;
+	json?: any; // Add this line
 }
 
 interface LogFunction {
-	(type: LogType, message: string, json?: unknown): void;
+	(type: LogType, message: string, json?: any): void; // Update this line
 	subscribe: (run: (value: LogEntry[]) => void) => () => void;
 	clear: () => void;
 }
@@ -64,6 +63,7 @@ function getFilePath(): string {
 					const basePathIndex = fullPath.indexOf(import.meta.env.BASE_PATH);
 					if (basePathIndex !== -1) {
 						let path = fullPath.slice(basePathIndex + import.meta.env.BASE_PATH.length);
+						// Remove ?t= and everything after it
 						const queryIndex = path.indexOf('?t=');
 						if (queryIndex !== -1) {
 							path = path.slice(0, queryIndex);
@@ -75,6 +75,7 @@ function getFilePath(): string {
 		}
 	}
 
+	// Fallback for production or if stack trace is unavailable
 	try {
 		throw new Error();
 	} catch (error) {
@@ -97,7 +98,7 @@ function getFilePath(): string {
 const createLogger = (): LogFunction => {
 	const { subscribe, update } = writable<LogEntry[]>([]);
 
-	const logFunction = (type: LogType, message: string, json?: unknown) => {
+	const logFunction = (type: LogType, message: string, json?: any) => {
 		const file = getFilePath();
 		update((logs) => {
 			const newLogs = [
@@ -121,92 +122,3 @@ const createLogger = (): LogFunction => {
 };
 
 export const log = createLogger();
-
-export enum OnboardingState {
-	Welcome = 'Welcome',
-	VideoView = 'VideoView',
-	Newsletter = 'Newsletter',
-	Dashboard = 'Dashboard',
-	Finished = 'Finished'
-}
-
-interface OnboardingMachine {
-	state: OnboardingState;
-	context: {
-		remoteOnboarded: boolean;
-		newsletterSubscribed: boolean;
-	};
-}
-
-export enum OnboardingState {
-	Welcome = 'Welcome',
-	VideoView = 'VideoView',
-	Newsletter = 'Newsletter',
-	Dashboard = 'Dashboard',
-	Finished = 'Finished'
-}
-
-function createOnboardingMachine() {
-	const { subscribe, update } = persist(
-		writable<OnboardingMachine>({
-			state: OnboardingState.Welcome,
-			context: {
-				remoteOnboarded: false,
-				newsletterSubscribed: false
-			}
-		}),
-		createLocalStorage(),
-		'onboardingMachine'
-	);
-
-	return {
-		subscribe,
-		transition: (event: string) => {
-			update((machine: OnboardingMachine) => {
-				console.log(`Transition event: ${event}, Current state: ${machine.state}`);
-				let newState = machine.state;
-				switch (machine.state) {
-					case OnboardingState.Welcome:
-						if (event === 'VIDEO_VIEWED') {
-							newState = OnboardingState.VideoView;
-						}
-						break;
-					case OnboardingState.VideoView:
-						if (event === 'INVITE_MUTATED') {
-							newState = OnboardingState.Newsletter;
-						}
-						break;
-					case OnboardingState.Newsletter:
-						if (event === 'NEWSLETTER_COMPLETED') {
-							newState = OnboardingState.Dashboard;
-						}
-						break;
-					case OnboardingState.Dashboard:
-						if (event === 'TOOLTIP_CLICKED') {
-							newState = OnboardingState.Finished;
-						}
-						break;
-				}
-				console.log(`New state after transition: ${newState}`);
-				return { ...machine, state: newState };
-			});
-		},
-		setRemoteOnboarded: (value: boolean) => {
-			update((machine: OnboardingMachine) => ({
-				...machine,
-				context: { ...machine.context, remoteOnboarded: value },
-				state: value ? OnboardingState.Finished : machine.state
-			}));
-		},
-		setNewsletterSubscribed: (value: boolean) => {
-			update((machine: OnboardingMachine) => ({
-				...machine,
-				context: { ...machine.context, newsletterSubscribed: value }
-			}));
-		}
-	};
-}
-
-export const onboardingMachine = createOnboardingMachine();
-
-export const isOnboarded = writable(false);
