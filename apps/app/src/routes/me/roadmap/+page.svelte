@@ -1,11 +1,7 @@
 <script lang="ts">
 	import { writable } from 'svelte/store';
 	import type { Milestone, User } from '$lib/milestone';
-	import { fibonacciSequence, randomUsers, formatCurrency } from '$lib/milestone';
-	import MilestoneGrid from '$lib/components/MilestoneGrid.svelte';
-	import MilestoneTable from '$lib/components/MilestoneTable.svelte';
-	import PersonalCampaign from '$lib/components/PersonalCampaign.svelte';
-	import MilestoneRecentUsers from '$lib/components/MilestoneRecentUsers.svelte';
+	import { fibonacciSequence, randomUsers } from '$lib/milestone';
 
 	let gridColumns = 6;
 	let visioncreators = writable(0);

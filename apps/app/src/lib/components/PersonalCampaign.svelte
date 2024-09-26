@@ -48,7 +48,7 @@
 
 	<div class="mt-6">
 		<h3 class="text-xl font-semibold mb-4 text-center">VisionCreator Levels</h3>
-		<VisionCreatorLevels {personalVCs} />
+		<VisioncreatorLevels {personalVCs} />
 	</div>
 
 	<div class="mt-6 text-center">
