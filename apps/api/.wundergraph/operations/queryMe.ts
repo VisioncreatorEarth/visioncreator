@@ -19,7 +19,7 @@ export default createOperation.query({
     }
     const { data: profiles, error } = await context.supabase
       .from("profiles")
-      .select("id, name")
+      .select("id, name, onboarded")
       .eq("id", input.id)
       .single();
 
@@ -31,6 +31,7 @@ export default createOperation.query({
     return {
       id: profiles.id,
       name: profiles.name,
+      onboarded: profiles.onboarded,
     };
   },
 });

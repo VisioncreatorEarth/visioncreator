@@ -5,8 +5,9 @@
 	import ActionButtons from '$lib/components/ActionButtons.svelte';
 	import Newsletter from '$lib/components/Newsletter.svelte';
 	import { Me, onboardingState, OnboardingState } from '$lib/stores';
+	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { persist, createLocalStorage } from '@macfja/svelte-persistent-store';
-	import { writable } from 'svelte/store';
+	import { writable, get } from 'svelte/store';
 
 	export let data;
 
@@ -16,11 +17,50 @@
 	$: ({ session } = data);
 
 	let showTooltip = false;
+	let isInitialized = false;
+
+	const toggleOnboardedMutation = createMutation('toggleOnboarded');
+
+	const queryMe = createQuery({
+		operationName: 'queryMe',
+		input: { id: $Me.id },
+		enabled: !!$Me.id
+	});
+
+	$: if ($queryMe.data && !isInitialized) {
+		updateOnboardingState($queryMe.data.onboarded);
+		isInitialized = true;
+	}
+
+	function updateOnboardingState(remoteOnboarded: boolean) {
+		if (remoteOnboarded) {
+			onboardingState.set(OnboardingState.FinishedOnboarding);
+			console.log('Onboarding State set to FinishedOnboarding based on database');
+		} else {
+			const currentState = get(onboardingState);
+			if (!currentState || currentState === OnboardingState.Welcome) {
+				onboardingState.set(OnboardingState.Welcome);
+				console.log('Onboarding State set or kept as Welcome');
+			}
+		}
+	}
 
 	$: {
 		showTooltip = $onboardingState === OnboardingState.ShowTooltip;
-		console.log('Onboarding State:', $onboardingState);
-		console.log('Show Tooltip:', showTooltip);
+		console.log('Current onboarding state:', $onboardingState);
+	}
+
+	function handleModalButtonClick() {
+		if (showTooltip) {
+			onboardingState.set(OnboardingState.FinishedOnboarding);
+			showTooltip = false;
+			if (!$queryMe.data?.onboarded) {
+				$toggleOnboardedMutation.mutate({ id: $Me.id });
+				console.log('Updating onboarded status in database');
+			}
+		}
+		toggleModal();
+		console.log('Modal button clicked, new onboarding state:', $onboardingState);
 	}
 
 	onMount(() => {
@@ -41,15 +81,6 @@
 		if (!event || event.target === event.currentTarget) {
 			modalOpen.update((n) => !n);
 		}
-	}
-
-	function handleModalButtonClick() {
-		if (showTooltip) {
-			onboardingState.set(OnboardingState.FinishedOnboarding);
-			showTooltip = false;
-		}
-		toggleModal();
-		console.log('Modal button clicked, new onboarding state:', $onboardingState);
 	}
 
 	function setActiveTab(tab: string) {
