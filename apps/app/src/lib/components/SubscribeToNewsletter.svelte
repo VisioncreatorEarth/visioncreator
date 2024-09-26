@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { createEventDispatcher } from 'svelte';
-	import { onboardingMachine } from '$lib/stores';
+	import { Me } from '$lib/stores';
 
 	export let userId: string;
 	export let userEmail: string;
@@ -10,10 +10,7 @@
 
 	const newsletterStatus = createQuery({
 		operationName: 'MyNewsletterStatus',
-		input: {
-			id: userId,
-			email: userEmail
-		},
+		input: { id: userId, email: userEmail },
 		liveQuery: true
 	});
 
@@ -32,11 +29,8 @@
 			"You're now part of something extraordinary. Together, we'll shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!";
 
 		try {
-			await $toggleNewsletterMutation.mutateAsync({
-				id: userId,
-				email: userEmail
-			});
-			onboardingMachine.setNewsletterSubscribed(true);
+			await $toggleNewsletterMutation.mutateAsync({ id: userId, email: userEmail });
+			Me.update((store) => ({ ...store, newsletter: true }));
 		} catch (error) {
 			console.error('Error during newsletter subscription:', error);
 		}
@@ -46,11 +40,10 @@
 		showMessage = true;
 		messageType = 'info';
 		message = 'No problem! You can always subscribe later if you change your mind.';
-		onboardingMachine.setNewsletterSubscribed(false);
+		Me.update((store) => ({ ...store, newsletter: false }));
 	}
 
 	function handleNext() {
-		onboardingMachine.transition('NEWSLETTER_COMPLETED');
 		dispatch('next');
 	}
 </script>
