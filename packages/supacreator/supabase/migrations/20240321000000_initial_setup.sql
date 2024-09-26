@@ -85,8 +85,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "suminvites" integer DEFAULT 0,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "country_code" "text",
-    "active" boolean DEFAULT false NOT NULL,
-    "newsletter" boolean DEFAULT true NOT NULL
+    "active" boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE "public"."profiles" OWNER TO "postgres";

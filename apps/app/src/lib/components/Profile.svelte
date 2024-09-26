@@ -14,6 +14,9 @@
 		return 0;
 	}
 
+	$: console.log('Query data:', $query.data);
+	$: console.log('Title:', $query.data?.title);
+
 	async function handleUpdateMe() {
 		await $query.refetch();
 	}
