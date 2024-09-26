@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, afterUpdate } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { eventBus } from '$lib/composables/eventBus';
 	import ActionButtons from '$lib/components/ActionButtons.svelte';
@@ -17,7 +17,6 @@
 	$: ({ session } = data);
 
 	let showTooltip = false;
-	let isInitialized = false;
 
 	const toggleOnboardedMutation = createMutation({
 		operationName: 'toggleOnboarded'
@@ -29,27 +28,29 @@
 		enabled: !!$Me.id
 	});
 
-	$: if ($queryMe.data && !isInitialized) {
+	$: if ($queryMe.data) {
+		console.log('Layout: queryMe data received', $queryMe.data);
 		updateOnboardingState($queryMe.data.onboarded);
-		isInitialized = true;
 	}
 
 	function updateOnboardingState(remoteOnboarded: boolean) {
+		console.log('Layout: Updating onboarding state, remoteOnboarded:', remoteOnboarded);
 		if (remoteOnboarded) {
 			onboardingMachine.setRemoteOnboarded(true);
-			console.log('Onboarding State set to Finished based on database');
+			console.log('Layout: Onboarding State set to Finished based on database');
 		} else {
 			const currentState = get(onboardingMachine);
+			console.log('Layout: Current onboarding state:', currentState);
 			if (!currentState || currentState.state === OnboardingState.Welcome) {
 				onboardingMachine.transition('RESET');
-				console.log('Onboarding State set or kept as Welcome');
+				console.log('Layout: Onboarding State set or kept as Welcome');
 			}
 		}
 	}
 
 	$: {
 		showTooltip = $onboardingMachine.state === OnboardingState.Dashboard;
-		console.log('Current onboarding state:', $onboardingMachine.state);
+		console.log('Layout: Current onboarding state:', $onboardingMachine.state);
 	}
 
 	function handleModalButtonClick() {
@@ -57,14 +58,15 @@
 			onboardingMachine.transition('TOOLTIP_CLICKED');
 			if (!$queryMe.data?.onboarded) {
 				$toggleOnboardedMutation.mutate({ id: $Me.id });
-				console.log('Updating onboarded status in database');
+				console.log('Layout: Updating onboarded status in database');
 			}
 		}
 		toggleModal();
-		console.log('Modal button clicked, new onboarding state:', $onboardingMachine.state);
+		console.log('Layout: Modal button clicked, new onboarding state:', $onboardingMachine.state);
 	}
 
 	onMount(() => {
+		console.log('Layout: Component mounted');
 		modalOpen.set(false);
 
 		eventBus.on('toggleModal', () => {
@@ -76,6 +78,19 @@
 		return () => {
 			eventBus.off('toggleModal', () => {});
 		};
+	});
+
+	afterUpdate(() => {
+		console.log(
+			'Layout: After update, current state:',
+			$onboardingMachine.state,
+			'queryMe data:',
+			$queryMe.data
+		);
+		if ($queryMe.data?.onboarded && $onboardingMachine.state !== OnboardingState.Finished) {
+			console.log('Layout: Forcing state to Finished due to remote onboarded flag');
+			onboardingMachine.setRemoteOnboarded(true);
+		}
 	});
 
 	function toggleModal(event?: MouseEvent) {
