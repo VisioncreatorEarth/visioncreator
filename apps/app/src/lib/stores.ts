@@ -208,3 +208,5 @@ function createOnboardingMachine() {
 }
 
 export const onboardingMachine = createOnboardingMachine();
+
+export const isOnboarded = writable(false);

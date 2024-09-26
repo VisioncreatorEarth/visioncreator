@@ -6,7 +6,7 @@
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 	import { view as meView } from '$lib/views/Me';
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { futureMe, Me, onboardingMachine, OnboardingState } from '$lib/stores';
+	import { futureMe, Me, onboardingMachine, OnboardingState, isOnboarded } from '$lib/stores';
 	import { fade } from 'svelte/transition';
 
 	export let data;
@@ -24,27 +24,22 @@
 		operationName: 'createInvite'
 	});
 
-	const toggleOnboardedMutation = createMutation({
-		operationName: 'toggleOnboarded'
-	});
-
 	const queryMe = createQuery({
 		operationName: 'queryMe',
 		input: { id: $Me.id },
 		enabled: !!$Me.id
 	});
 
+	$: if ($queryMe.data) {
+		isOnboarded.set($queryMe.data.onboarded);
+		isLoading = false;
+	}
+
 	onMount(async () => {
 		if (browser) {
 			console.log('onMount: Initial state', $onboardingMachine.state);
 			const supabaseMe = await supabase.auth.getUser();
 			Me.update((store) => ({ ...store, id: supabaseMe.data.user?.id || '' }));
-
-			if ($queryMe.data && 'onboarded' in $queryMe.data) {
-				console.log('queryMe data received', $queryMe.data);
-				onboardingMachine.setRemoteOnboarded($queryMe.data.onboarded);
-				console.log('After setRemoteOnboarded', $onboardingMachine.state);
-			}
 
 			if (
 				!supabaseMe.data.user?.user_metadata.inviter &&
@@ -66,9 +61,7 @@
 						inviter: $futureMe.visionid
 					});
 
-					console.log('Before INVITE_MUTATED transition', $onboardingMachine.state);
 					onboardingMachine.transition('INVITE_MUTATED');
-					console.log('After INVITE_MUTATED transition', $onboardingMachine.state);
 
 					await new Promise((resolve) => setTimeout(resolve, 1000));
 				} catch (error) {
@@ -76,35 +69,22 @@
 				}
 			}
 
-			isLoading = false;
 			console.log('onMount: Final state', $onboardingMachine.state);
 		}
 	});
 
 	function handleVideoEnded() {
-		console.log('Video ended, current state:', $onboardingMachine.state);
 		onboardingMachine.transition('VIDEO_VIEWED');
-		console.log('After VIDEO_VIEWED transition:', $onboardingMachine.state);
-		// Immediately transition to Newsletter state
 		onboardingMachine.transition('INVITE_MUTATED');
 	}
 
 	function handleSkipVideo() {
-		console.log('Video skipped, current state:', $onboardingMachine.state);
 		onboardingMachine.transition('VIDEO_VIEWED');
-		console.log('After VIDEO_VIEWED transition:', $onboardingMachine.state);
-		// Immediately transition to Newsletter state
 		onboardingMachine.transition('INVITE_MUTATED');
 	}
 
 	function handleNewsletterComplete() {
-		console.log('Newsletter completed, current state:', $onboardingMachine.state);
 		onboardingMachine.transition('NEWSLETTER_COMPLETED');
-		console.log('After NEWSLETTER_COMPLETED transition:', $onboardingMachine.state);
-	}
-
-	$: {
-		console.log('State changed:', $onboardingMachine.state);
 	}
 </script>
 
@@ -121,6 +101,8 @@
 			</section>
 		</div>
 	</div>
+{:else if $isOnboarded}
+	<ComposeView view={meView} {session} />
 {:else if $onboardingMachine.state === OnboardingState.Welcome}
 	<div
 		in:fade={{ duration: 300 }}

@@ -28,9 +28,12 @@
 		enabled: !!$Me.id
 	});
 
-	$: if ($queryMe.data) {
+	let isInitialized = false;
+
+	$: if ($queryMe.data && !isInitialized) {
 		console.log('Layout: queryMe data received', $queryMe.data);
 		updateOnboardingState($queryMe.data.onboarded);
+		isInitialized = true;
 	}
 
 	function updateOnboardingState(remoteOnboarded: boolean) {
@@ -40,7 +43,7 @@
 			console.log('Layout: Onboarding State set to Finished based on database');
 		} else {
 			const currentState = get(onboardingMachine);
-			console.log('Layout: Current onboarding state:', currentState);
+			console.log('Layout: Current onboarding state:', currentState.state);
 			if (!currentState || currentState.state === OnboardingState.Welcome) {
 				onboardingMachine.transition('RESET');
 				console.log('Layout: Onboarding State set or kept as Welcome');
@@ -49,8 +52,8 @@
 	}
 
 	$: {
-		showTooltip = $onboardingMachine.state === OnboardingState.Dashboard;
-		console.log('Layout: Current onboarding state:', $onboardingMachine.state);
+		showTooltip = get(onboardingMachine).state === OnboardingState.Dashboard;
+		console.log('Layout: Current onboarding state:', get(onboardingMachine).state);
 	}
 
 	function handleModalButtonClick() {
@@ -62,7 +65,10 @@
 			}
 		}
 		toggleModal();
-		console.log('Layout: Modal button clicked, new onboarding state:', $onboardingMachine.state);
+		console.log(
+			'Layout: Modal button clicked, new onboarding state:',
+			get(onboardingMachine).state
+		);
 	}
 
 	onMount(() => {
@@ -83,11 +89,11 @@
 	afterUpdate(() => {
 		console.log(
 			'Layout: After update, current state:',
-			$onboardingMachine.state,
+			get(onboardingMachine).state,
 			'queryMe data:',
 			$queryMe.data
 		);
-		if ($queryMe.data?.onboarded && $onboardingMachine.state !== OnboardingState.Finished) {
+		if ($queryMe.data?.onboarded && get(onboardingMachine).state !== OnboardingState.Finished) {
 			console.log('Layout: Forcing state to Finished due to remote onboarded flag');
 			onboardingMachine.setRemoteOnboarded(true);
 		}
@@ -117,7 +123,7 @@
 	<slot />
 </div>
 
-{#if $onboardingMachine.state === OnboardingState.Dashboard || $onboardingMachine.state === OnboardingState.Finished}
+{#if get(onboardingMachine).state === OnboardingState.Dashboard || get(onboardingMachine).state === OnboardingState.Finished}
 	<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2">
 		<div class="relative flex flex-col items-center">
 			{#if showTooltip}
