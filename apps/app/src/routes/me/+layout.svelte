@@ -4,7 +4,7 @@
 	import { eventBus } from '$lib/composables/eventBus';
 	import ActionButtons from '$lib/components/ActionButtons.svelte';
 	import Newsletter from '$lib/components/Newsletter.svelte';
-	import { Me, onboardingState, OnboardingState } from '$lib/stores';
+	import { Me, onboardingMachine, OnboardingState } from '$lib/stores';
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { persist, createLocalStorage } from '@macfja/svelte-persistent-store';
 	import { writable, get } from 'svelte/store';
@@ -19,7 +19,9 @@
 	let showTooltip = false;
 	let isInitialized = false;
 
-	const toggleOnboardedMutation = createMutation('toggleOnboarded');
+	const toggleOnboardedMutation = createMutation({
+		operationName: 'toggleOnboarded'
+	});
 
 	const queryMe = createQuery({
 		operationName: 'queryMe',
@@ -34,33 +36,32 @@
 
 	function updateOnboardingState(remoteOnboarded: boolean) {
 		if (remoteOnboarded) {
-			onboardingState.set(OnboardingState.FinishedOnboarding);
-			console.log('Onboarding State set to FinishedOnboarding based on database');
+			onboardingMachine.setRemoteOnboarded(true);
+			console.log('Onboarding State set to Finished based on database');
 		} else {
-			const currentState = get(onboardingState);
-			if (!currentState || currentState === OnboardingState.Welcome) {
-				onboardingState.set(OnboardingState.Welcome);
+			const currentState = get(onboardingMachine);
+			if (!currentState || currentState.state === OnboardingState.Welcome) {
+				onboardingMachine.transition('RESET');
 				console.log('Onboarding State set or kept as Welcome');
 			}
 		}
 	}
 
 	$: {
-		showTooltip = $onboardingState === OnboardingState.ShowTooltip;
-		console.log('Current onboarding state:', $onboardingState);
+		showTooltip = $onboardingMachine.state === OnboardingState.Dashboard;
+		console.log('Current onboarding state:', $onboardingMachine.state);
 	}
 
 	function handleModalButtonClick() {
 		if (showTooltip) {
-			onboardingState.set(OnboardingState.FinishedOnboarding);
-			showTooltip = false;
+			onboardingMachine.transition('TOOLTIP_CLICKED');
 			if (!$queryMe.data?.onboarded) {
 				$toggleOnboardedMutation.mutate({ id: $Me.id });
 				console.log('Updating onboarded status in database');
 			}
 		}
 		toggleModal();
-		console.log('Modal button clicked, new onboarding state:', $onboardingState);
+		console.log('Modal button clicked, new onboarding state:', $onboardingMachine.state);
 	}
 
 	onMount(() => {
@@ -101,7 +102,7 @@
 	<slot />
 </div>
 
-{#if $onboardingState === OnboardingState.ShowTooltip || $onboardingState === OnboardingState.FinishedOnboarding}
+{#if $onboardingMachine.state === OnboardingState.Dashboard || $onboardingMachine.state === OnboardingState.Finished}
 	<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2">
 		<div class="relative flex flex-col items-center">
 			{#if showTooltip}

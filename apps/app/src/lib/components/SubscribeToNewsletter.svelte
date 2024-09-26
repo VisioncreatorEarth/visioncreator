@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
-	import { createEventDispatcher, onMount } from 'svelte';
-	import { onboardingState, OnboardingState } from '$lib/stores';
+	import { createEventDispatcher } from 'svelte';
+	import { onboardingMachine } from '$lib/stores';
 
 	export let userId: string;
 	export let userEmail: string;
@@ -36,9 +36,9 @@
 				id: userId,
 				email: userEmail
 			});
+			onboardingMachine.setNewsletterSubscribed(true);
 		} catch (error) {
 			console.error('Error during newsletter subscription:', error);
-			// If there's an error, we'll keep the success message for UX, but log the error
 		}
 	}
 
@@ -46,10 +46,11 @@
 		showMessage = true;
 		messageType = 'info';
 		message = 'No problem! You can always subscribe later if you change your mind.';
+		onboardingMachine.setNewsletterSubscribed(false);
 	}
 
 	function handleNext() {
-		onboardingState.set(OnboardingState.ShowTooltip);
+		onboardingMachine.transition('NEWSLETTER_COMPLETED');
 		dispatch('next');
 	}
 </script>
