@@ -15,6 +15,14 @@
 	let { session } = data;
 	$: ({ session } = data);
 
+	let showTooltip = false;
+
+	$: {
+		showTooltip = $onboardingState === OnboardingState.ShowTooltip;
+		console.log('Onboarding State:', $onboardingState);
+		console.log('Show Tooltip:', showTooltip);
+	}
+
 	onMount(() => {
 		modalOpen.set(false);
 
@@ -35,6 +43,15 @@
 		}
 	}
 
+	function handleModalButtonClick() {
+		if (showTooltip) {
+			onboardingState.set(OnboardingState.FinishedOnboarding);
+			showTooltip = false;
+		}
+		toggleModal();
+		console.log('Modal button clicked, new onboarding state:', $onboardingState);
+	}
+
 	function setActiveTab(tab: string) {
 		activeTab.set(tab);
 	}
@@ -44,8 +61,6 @@
 			modalOpen.set(false);
 		}
 	}
-
-	$: isOnboardingComplete = $onboardingState === OnboardingState.FinishedOnboarding;
 </script>
 
 <div
@@ -55,13 +70,25 @@
 	<slot />
 </div>
 
-{#if isOnboardingComplete}
+{#if $onboardingState === OnboardingState.ShowTooltip || $onboardingState === OnboardingState.FinishedOnboarding}
 	<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2">
 		<div class="relative flex flex-col items-center">
+			{#if showTooltip}
+				<div
+					class="absolute bottom-full mb-2 variant-ghost-secondary rounded-lg animate-pulse"
+					in:fade={{ duration: 300 }}
+					style="z-index: 50; width: max-content; left: 50%; transform: translateX(-50%);"
+				>
+					<div class="flex items-center px-4 py-2 whitespace-nowrap">
+						<span>Open menu here</span>
+					</div>
+					<div class="arrow-down text-secondary-500" />
+				</div>
+			{/if}
 			<button
-				class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+				class="flex items-center justify-center rounded-full bg-secondary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
 				class:hidden={$modalOpen}
-				on:click={toggleModal}
+				on:click={handleModalButtonClick}
 			>
 				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
 			</button>
@@ -180,11 +207,23 @@
 			opacity: 1;
 		}
 		50% {
-			opacity: 0.5;
+			opacity: 0.7;
 		}
 	}
 
 	.animate-pulse {
 		animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	.arrow-down {
+		width: 0;
+		height: 0;
+		border-left: 8px solid transparent;
+		border-right: 8px solid transparent;
+		border-top: 8px solid var(--color-secondary-500);
+		position: absolute;
+		bottom: -8px;
+		left: 50%;
+		transform: translateX(-50%);
 	}
 </style>

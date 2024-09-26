@@ -126,7 +126,7 @@ export const log = createLogger();
 export enum OnboardingState {
 	Welcome = 'Welcome',
 	SeenVideo = 'SeenVideo',
-	CheckedNewsletter = 'CheckedNewsletter',
+	ShowTooltip = 'ShowTooltip',
 	FinishedOnboarding = 'FinishedOnboarding'
 }
 

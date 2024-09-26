@@ -38,6 +38,8 @@
 				case OnboardingState.Welcome:
 					return OnboardingState.SeenVideo;
 				case OnboardingState.SeenVideo:
+					return OnboardingState.ShowTooltip;
+				case OnboardingState.ShowTooltip:
 					return OnboardingState.FinishedOnboarding;
 				default:
 					return current;
