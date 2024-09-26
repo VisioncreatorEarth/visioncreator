@@ -46,6 +46,9 @@
 				isFirstTime.set(false);
 				localStorage.setItem('isFirstTime', 'false');
 			}
+			if (!$modalOpen) {
+				activeTab.set('actions');
+			}
 		}
 	}
 
