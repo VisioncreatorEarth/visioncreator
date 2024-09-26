@@ -4,6 +4,8 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { eventBus } from '$lib/composables/eventBus';
+	import ActionButtons from '$lib/components/ActionButtons.svelte';
+	import Newsletter from '$lib/components/Newsletter.svelte';
 
 	export let data;
 
@@ -15,6 +17,7 @@
 	let isFirstTime = writable(true);
 
 	onMount(() => {
+		console.log('me', $Me);
 		const firstTimeStatus = localStorage.getItem('isFirstTime');
 		isFirstTime.set(firstTimeStatus === null || firstTimeStatus === 'true');
 
@@ -27,15 +30,17 @@
 			}
 		});
 
-		eventBus.on('toggleModal', () => {
+		const handleToggleModal = () => {
 			setTimeout(() => {
 				modalOpen.set(false);
 			}, 1000);
-		});
+		};
+
+		eventBus.on('toggleModal', handleToggleModal);
 
 		return () => {
 			unsubscribe();
-			eventBus.off('toggleModal');
+			eventBus.off('toggleModal', handleToggleModal);
 		};
 	});
 
@@ -63,41 +68,31 @@
 >
 	<slot />
 </div>
-
 <div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center">
 	<div class="relative flex items-center">
-		{#if $isFirstTime}
+		{#if $isFirstTime && $Me.onboarded}
 			<div
-				class="absolute right-full mr-4 whitespace-nowrap flex items-center space-x-2 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-full"
+				class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 whitespace-nowrap flex flex-col items-center animate-pulse-smooth"
 			>
-				<span class="text-sm font-semibold text-tertiary-200">This is your menu</span>
-				<div class="animate-pulse">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6 text-tertiary-200"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M13 7l5 5m0 0l-5 5m5-5H6"
-						/>
-					</svg>
-				</div>
+				<span
+					class="text-sm font-semibold text-tertiary-200 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-lg"
+					>Open menu here</span
+				>
+				<!-- Arrow pointing down -->
+				<div
+					class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-surface-300/30 mt-1"
+				/>
 			</div>
 		{/if}
-		<button
-			class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 {$isFirstTime
-				? 'animate-pulse-smooth'
-				: ''}"
-			class:hidden={$modalOpen}
-			on:click={toggleModal}
-		>
-			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-		</button>
+		{#if $Me.onboarded}
+			<button
+				class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+				class:hidden={$modalOpen}
+				on:click={toggleModal}
+			>
+				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+			</button>
+		{/if}
 	</div>
 </div>
 
@@ -108,14 +103,12 @@
 		on:keydown={(e) => e.key === 'Enter' && toggleModal()}
 		role="dialog"
 		aria-modal="true"
-		tabindex="0"
 		transition:fade
 	>
 		{#if $Me}
 			<div
 				class="w-full max-w-6xl bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
 				on:click|stopPropagation
-				role="document"
 			>
 				<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 					{#if $activeTab === 'actions'}
@@ -205,10 +198,12 @@
 	@keyframes pulse-smooth {
 		0%,
 		100% {
-			transform: scale(1);
+			opacity: 1;
+			transform: scale(1) translateX(-50%);
 		}
 		50% {
-			transform: scale(1.05);
+			opacity: 0.8;
+			transform: scale(1.05) translateX(-48%);
 		}
 	}
 
