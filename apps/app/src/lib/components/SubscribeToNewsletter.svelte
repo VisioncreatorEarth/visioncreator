@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { onboardingState, OnboardingState } from '$lib/stores';
 
 	export let userId: string;
 	export let userEmail: string;
@@ -23,18 +24,6 @@
 	let showMessage = false;
 	let message = '';
 	let messageType: 'success' | 'info' = 'info';
-
-	onMount(() => {
-		if ($newsletterStatus.data) {
-			// If the user is already subscribed, automatically continue to the next step
-			dispatch('next');
-		}
-	});
-
-	$: if ($newsletterStatus.data && !showMessage) {
-		// This reactive statement will catch any changes to the subscription status
-		dispatch('next');
-	}
 
 	async function handleSubscribe() {
 		showMessage = true;
@@ -60,13 +49,27 @@
 	}
 
 	function handleNext() {
+		onboardingState.set(OnboardingState.ShowTooltip);
 		dispatch('next');
 	}
 </script>
 
 <div class="newsletter-content w-full h-full flex items-center justify-center p-2 sm:p-4">
 	{#if $newsletterStatus.isLoading}
-		<p class="text-base sm:text-lg md:text-xl lg:text-2xl">Loading...</p>
+		<div class="card p-4 w-full max-w-3xl bg-surface-700">
+			<header class="card-header">
+				<div class="placeholder animate-pulse w-2/3 h-8 mb-4" />
+			</header>
+			<section class="p-4 space-y-4">
+				<div class="placeholder animate-pulse w-full h-4" />
+				<div class="placeholder animate-pulse w-5/6 h-4" />
+				<div class="placeholder animate-pulse w-4/6 h-4" />
+			</section>
+			<footer class="card-footer flex justify-end space-x-2">
+				<div class="placeholder animate-pulse w-24 h-10" />
+				<div class="placeholder animate-pulse w-24 h-10" />
+			</footer>
+		</div>
 	{:else if showMessage}
 		<div
 			class="card variant-ghost-{messageType === 'success'

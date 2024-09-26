@@ -51,13 +51,9 @@
 		nextState();
 	}
 
-	async function checkNewsletterStatus() {
-		if ($Me.id && session?.user?.email) {
-			await $newsletterStatusQuery.refetch();
-			if ($newsletterStatusQuery.data) {
-				onboardingState.set(OnboardingState.FinishedOnboarding);
-			}
-		}
+	function handleNewsletterComplete() {
+		// Do not automatically move to the next state
+		// The user will need to press "Continue" in the SubscribeToNewsletter component
 	}
 
 	onMount(async () => {
@@ -91,14 +87,9 @@
 				}
 			}
 
-			await checkNewsletterStatus();
 			isLoading = false;
 		}
 	});
-
-	$: if ($Me.id && session?.user?.email) {
-		checkNewsletterStatus();
-	}
 </script>
 
 {#if isLoading}
@@ -147,7 +138,7 @@
 			<SubscribeToNewsletter
 				userId={$Me.id}
 				userEmail={session?.user?.email ?? ''}
-				on:next={nextState}
+				on:next={handleNewsletterComplete}
 			/>
 		</div>
 	</div>

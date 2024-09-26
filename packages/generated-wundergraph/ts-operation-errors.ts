@@ -18,6 +18,7 @@ export type OperationErrors = {
 	saveMailWIP: SaveMailWIPErrors;
 	sendMail: SendMailErrors;
 	sendMailWIP: SendMailWIPErrors;
+	toggleOnboarded: ToggleOnboardedErrors;
 	updateMe: UpdateMeErrors;
 };
 
@@ -36,4 +37,5 @@ export type QueryUserStatsErrors = ClientOperationErrors;
 export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
+export type ToggleOnboardedErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
