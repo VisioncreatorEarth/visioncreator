@@ -39,7 +39,7 @@
 	function handleNoThanks() {
 		showMessage = true;
 		messageType = 'info';
-		message = 'No problem! You can always subscribe later if you change your mind.';
+		message = 'No worries! You can always subscribe later if you change your mind.';
 		Me.update((store) => ({ ...store, newsletter: false }));
 	}
 
@@ -71,7 +71,7 @@
 				: 'secondary'} w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10"
 		>
 			<h3 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-4">
-				{messageType === 'success' ? 'Looking forward to next week' : 'Thank you'}
+				{messageType === 'success' ? "Next week's video is gonna sparkle!" : 'Maybe next time.'}
 			</h3>
 			<p class="text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6 text-center">
 				{message}
@@ -92,11 +92,11 @@
 			<h3
 				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
 			>
-				Watch next video one week before the public
+				Subcribe to watch next video
 			</h3>
 			<p class="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
-				Subscribe to our weekly newsletter to get early access to our video updates 1 week before
-				the public and follow along our journey from 0 to 1 billion visioncreators.
+				Subscribe to our weekly Visionletter to get early access to our video updates 1 week before
+				the public. <br /> Follow along our journey from 0 to 1 billion Visioncreators.
 			</p>
 			<div class="flex flex-row space-x-2 sm:space-x-4 mb-4 sm:mb-6">
 				<button class="btn btn-sm sm:btn-md variant-ghost-secondary" on:click={handleNoThanks}>
@@ -111,7 +111,7 @@
 			>
 				*By pressing the subscribe button, you consent that we send you our weekly newsletter. You
 				can revoke this consent at any time by clicking on the unsubscribe link in our newsletter
-				emails or via this dashboard, when you are logged in. Here you can find our
+				emails or via dashboard, when you are logged in. <br />Here you can find our
 				<a
 					href="https://visioncreator.earth/en/privacy-policy"
 					class="underline hover:text-primary-300 transition-colors duration-200">Privacy Policy</a

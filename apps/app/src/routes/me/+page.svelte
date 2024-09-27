@@ -101,7 +101,7 @@
 	{#if !showNewsletter}
 		<div class="flex flex-col items-center justify-center h-screen text-center">
 			<h1 class="text-4xl font-bold mb-2">Phenomenal</h1>
-			<p class="text-xl mb-4">You are now a visioncreator</p>
+			<p class="text-xl mb-4">Your are now a pioneer, peaking into the future</p>
 			<div class="w-full max-w-3xl mb-4">
 				<VideoPlayer on:videoEnded={handleVideoEnded} />
 			</div>

@@ -31,8 +31,11 @@
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
 	<div class="text-lg p-4 rounded-lg">
-		<h3 class="text-2xl font-bold text-primary-300">
-			Rank yourself up to be one of the 1st to get invited
+		<h3 class="  text-primary-300">
+			<span class="h1 text-4xl font-bold">
+				Inspire & Rise <br />
+			</span>
+			<p class="text-xl font-medium">Be one of the 1st pioneers to unlock early access</p>
 		</h3>
 		<!-- 	<ul class="space-y-2">
 			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
@@ -45,8 +48,8 @@
 	</div>
 	<!-- <Countdown /> -->
 	<p class="">
-		Lead the way, be a pioneer into a new world. <br />The more fellow pioneers you inspire to join
-		the higher you rank and the faster you get access.
+		Lead the way into a new world. <br />The more fellows you inspire, the higher you rise in your
+		rank and the faster you get invited.
 		<!-- to stay in the top 21! -->
 	</p>
 
@@ -76,7 +79,7 @@
 			on:click={copyInvitationLink}
 			disabled={$linkCopied}
 		>
-			{$linkCopied ? 'Link Copied!' : 'Copy Invite Link'}
+			{$linkCopied ? 'Link Copied!' : 'Copy Inspire Link'}
 		</button>
 	</div>
 </div>

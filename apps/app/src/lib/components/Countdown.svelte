@@ -32,6 +32,6 @@
 			large ? 'text-4xl sm:text-6xl md:text-8xl' : 'text-2xl sm:text-3xl md:text-4xl'
 		} font-bold text-center text-white tracking-wider opacity-75`}
 	>
-		you are amazing
+		your life is about to change
 	</div>
 {/if}
