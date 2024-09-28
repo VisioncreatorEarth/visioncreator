@@ -121,8 +121,8 @@
 				class="mx-1">Login</button
 			>
 		{/if}
-		<a href="/en/privacy-policy" class="mx-1">Datenschutz - Privacy Policy</a>
-		<a href="/en/imprint" class="mx-1">Impressum - Site Notice</a>
+		<a href="/en/privacy-policy" class="mx-1">Privacy Policy- Datenschutz</a>
+		<a href="/en/imprint" class="mx-1">Site Notice - Impressum</a>
 	</footer>
 </div>
 

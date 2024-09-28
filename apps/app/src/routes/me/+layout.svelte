@@ -68,33 +68,6 @@
 >
 	<slot />
 </div>
-<div class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center">
-	<div class="relative flex items-center">
-		{#if $isFirstTime && $Me.onboarded}
-			<div
-				class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 whitespace-nowrap flex flex-col items-center animate-pulse"
-			>
-				<span
-					class="btn variant-filled-tertiary text-xs font-semibold px-3 py-1 rounded-lg shadow-lg bg-secondary-500/95"
-					>this is your menu</span
-				>
-				<!-- Arrow pointing down, directly touching the tooltip -->
-				<div
-					class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-tertiary-500 -mt-[1px]"
-				/>
-			</div>
-		{/if}
-		{#if $Me.onboarded}
-			<button
-				class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-				class:hidden={$modalOpen}
-				on:click={toggleModal}
-			>
-				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-			</button>
-		{/if}
-	</div>
-</div>
 
 {#if $modalOpen}
 	<div
@@ -194,7 +167,67 @@
 	</div>
 {/if}
 
+<!-- Fading glassmorphism effect -->
+<div class="fixed bottom-0 left-0 right-0 h-24 pointer-events-none">
+	<div
+		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
+	/>
+</div>
+
+<!-- Button container -->
+<div
+	class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center z-10"
+>
+	<div class="relative flex items-center">
+		{#if $isFirstTime && $Me.onboarded}
+			<div
+				class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 whitespace-nowrap flex flex-col items-center animate-pulse"
+			>
+				<span
+					class="btn variant-filled-tertiary text-xs font-semibold px-3 py-1 rounded-lg shadow-lg bg-secondary-500/95"
+					>this is your menu</span
+				>
+				<div
+					class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-tertiary-500 -mt-[1px]"
+				/>
+			</div>
+		{/if}
+		{#if $Me.onboarded}
+			<button
+				class="flex items-center justify-center rounded-full bg-primary-500 w-14 h-14 border border-tertiary-400 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+				class:hidden={$modalOpen}
+				on:click={toggleModal}
+			>
+				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+			</button>
+		{/if}
+	</div>
+</div>
+
 <style>
+	.blur-wrapper {
+		position: relative;
+		width: 70px;
+		height: 70px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.blur-wrapper::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 100%;
+		height: 100%;
+		background-color: rgb(var(--color-surface-700) / 0.5);
+		filter: blur(12px);
+		border-radius: 50%;
+		z-index: -1;
+	}
+
 	@keyframes pulse {
 		0%,
 		100% {

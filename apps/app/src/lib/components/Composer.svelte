@@ -198,7 +198,7 @@
 
 <style>
 	.composer-spacer {
-		height: 50px;
+		height: 40px;
 		grid-column: 1 / -1;
 	}
 </style>
