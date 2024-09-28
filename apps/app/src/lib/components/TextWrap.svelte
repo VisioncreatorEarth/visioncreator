@@ -3,15 +3,18 @@
 </script>
 
 <div class="flex flex-col min-h-screen overflow-hidden">
-	<main class="flex-grow overflow-y-auto overflow-x-hidden">
-		<div class="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-20 {className} text-wrap-content">
-			<slot />
+	<main class="flex-grow overflow-y-auto overflow-x-hidden w-full">
+		<div class="mx-auto w-full px-4 sm:px-6 lg:px-8" style="max-width: 64rem;">
+			<div class="w-full pb-20 {className} text-wrap-content">
+				<slot />
+			</div>
+			<div class="min-h-16" />
 		</div>
 	</main>
 	<footer class="bg-surface-100-800-token fixed bottom-0 left-0 right-0 z-10">
-		<div class="max-w-4xl w-full mx-auto p-2 text-xs">
-			<nav class="custom-tabs">
-				<ul class="flex justify-center items-center space-x-4">
+		<div class="mx-auto w-full px-4 sm:px-6 lg:px-8" style="max-width: 64rem;">
+			<nav class="custom-tabs py-2">
+				<ul class="flex justify-center items-center space-x-4 text-xs">
 					<li><a href="/" class="tab-link">Home</a></li>
 					<slot name="custom-links" />
 				</ul>
@@ -30,14 +33,11 @@
 
 	main {
 		height: 100vh;
-		width: 100%;
-		max-width: 100vw;
 		padding-bottom: env(safe-area-inset-bottom, 16px);
 	}
 
 	:global(.text-wrap-content) {
 		width: 100%;
-		max-width: 100%;
 		overflow-wrap: break-word;
 		word-wrap: break-word;
 		word-break: break-word;
