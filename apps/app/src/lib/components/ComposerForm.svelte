@@ -4,26 +4,38 @@
 	import { log } from '$lib/stores';
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { eventBus } from '$lib/composables/eventBus';
+	import type { SuperForm } from 'sveltekit-superforms/client';
+	import Stepper from '$lib/components/Stepper.svelte';
+	import TextInput from '$lib/components/TextInput.svelte';
+	import TextAreaInput from '$lib/components/TextAreaInput.svelte';
+	import SelectInput from '$lib/components/SelectInput.svelte';
+	import SliderInput from '$lib/components/SliderInput.svelte';
+	import ToggleInput from '$lib/components/ToggleInput.svelte';
+	import NumberInput from '$lib/components/NumberInput.svelte';
+	import CardSelectInput from '$lib/components/CardSelectInput.svelte';
+	import DateRangeInput from '$lib/components/DateRangeInput.svelte';
 
-	export let me;
+	export let me: any;
 
-	let formData;
-	let fields = [];
-	let validators = {};
+	let formData: any;
+	let fields: any[] = [];
+	let validators: Record<string, any> = {};
 	let submitAction = '';
-	let form;
-	let errors;
-	let validate;
-	let constraints;
-	let componentId;
+	let form: SuperForm<any>;
+	let errors: any;
+	let validate: any;
+	let constraints: any;
+	let componentId: string;
+
+	let isLoading = false;
 
 	$: if (me) {
-		me.subscribe((value) => {
+		me.subscribe((value: any) => {
 			formData = value.data?.form || { fields: [], validators: {}, submitAction: '' };
 			fields = formData.fields;
 			validators = formData.validators;
 			submitAction = formData.submitAction;
-			componentId = value.id; // Store the component ID
+			componentId = value.id;
 
 			log('info', 'Current me data context', {
 				formData,
@@ -44,13 +56,13 @@
 	$: initialFormData = fields.reduce((acc, field) => {
 		acc[field.name] = field.placeholder || '';
 		return acc;
-	}, {});
+	}, {} as Record<string, string>);
 
 	$: formConfig = {
 		validators: validators,
 		warnings: { noValidationAndConstraints: false },
-		validationMethod: 'oninput',
-		clearOnSubmit: 'errors-and-message'
+		validationMethod: 'oninput' as const,
+		clearOnSubmit: 'errors-and-message' as const
 	};
 
 	$: if (initialFormData && Object.keys(initialFormData).length > 0) {
@@ -71,12 +83,11 @@
 
 		if (validationResult && !validationResult.valid) {
 			log('error', `Validation failed for field: ${currentFieldName}`, {
-				errors: $errors[currentFieldName]
+				errors: $errors?.[currentFieldName]
 			});
 			return;
 		}
 
-		// Log the entire form data
 		const formData = get(form);
 		log('info', 'Current form data', {
 			currentField: $currentField,
@@ -97,6 +108,7 @@
 	}
 
 	async function handleSubmit() {
+		isLoading = true;
 		try {
 			const formData = get(form);
 			log('info', 'Submitting form', { formData });
@@ -104,7 +116,7 @@
 			const input = fields.reduce((acc, field) => {
 				acc[field.name] = formData[field.name];
 				return acc;
-			}, {});
+			}, {} as Record<string, any>);
 
 			log('info', 'Prepared input for submission', { input, submitAction });
 
@@ -119,17 +131,44 @@
 				submissionResult.set({ success: true, message: result.message });
 				log('success', 'Form submitted successfully', result);
 				eventBus.emit(submitAction, componentId);
+				clearFormData();
 			} else {
 				throw new Error(result.message);
 			}
-		} catch (error) {
+		} catch (error: any) {
 			const errorMessage = error.message || 'An error occurred while submitting the form.';
 			submissionResult.set({ success: false, message: errorMessage });
 			log('error', 'Form submission failed', { error: errorMessage });
+		} finally {
+			isLoading = false;
 		}
 	}
 
-	function handleKeyDown(event) {
+	function clearFormData() {
+		// Reset the form to its initial state
+		if (form) {
+			Object.keys(get(form)).forEach((key) => {
+				form.update(($form) => {
+					$form[key] = '';
+					return $form;
+				});
+			});
+		}
+		// Reset the current field to the first one
+		currentField.set(0);
+	}
+
+	function handleGoAgain() {
+		if ($submissionResult.success) {
+			// If it was a successful submission, form data is already cleared
+			submissionResult.set({ success: false, message: '' });
+		} else {
+			// If it was an error, just clear the error message
+			submissionResult.set({ success: false, message: '' });
+		}
+	}
+
+	function handleKeyDown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			event.preventDefault();
 			handleNext();
@@ -151,7 +190,7 @@
 		$form &&
 		fields[$currentField]?.name in $form &&
 		$form[fields[$currentField]?.name] !== '' &&
-		!$errors[fields[$currentField]?.name];
+		!$errors?.[fields[$currentField]?.name];
 
 	$: isFormValid =
 		$form && Object.keys($form).length > 0 && Object.values($form).every((value) => value !== '');
@@ -164,94 +203,90 @@
 				<h2 class="mb-2 text-lg font-semibold text-center md:text-4xl text-tertiary-500">
 					{fields[$currentField].title}
 				</h2>
-				{#if $errors[fields[$currentField].name]}
-					<p class="text-sm text-center lg:text-2xl text-warning-500">
-						{$errors[fields[$currentField].name]}
-					</p>
-				{:else}
-					<p class="text-sm text-center lg:text-2xl text-tertiary-700">
-						{fields[$currentField].description}
-					</p>
-				{/if}
+				<p class="text-sm text-center lg:text-2xl text-tertiary-700">
+					{fields[$currentField].description}
+				</p>
 			</div>
-			{#if !isOnlyOneField}
-				<div class="py-2">
-					<Stepper {stepperState} stepStateName={fields[$currentField]?.name || ''} />
+
+			{#if isLoading}
+				<div class="flex flex-col items-center justify-center p-8">
+					<Icon icon="eos-icons:loading" class="w-12 h-12 text-tertiary-500 animate-spin" />
 				</div>
+			{:else if $submissionResult.success || $submissionResult.message}
+				<div
+					class="w-full px-6 py-4 my-4 text-base font-medium text-center rounded-lg card variant-ghost-{$submissionResult.success
+						? 'success'
+						: 'error'}"
+				>
+					{$submissionResult.message}
+				</div>
+			{:else}
+				{#if !isOnlyOneField}
+					<div class="py-2">
+						<Stepper {stepperState} stepStateName={fields[$currentField]?.name || ''} />
+					</div>
+				{/if}
+
+				{#key $currentField}
+					{#if fields[$currentField].type === 'text'}
+						<TextInput {childInput} />
+					{:else if fields[$currentField].type === 'email'}
+						<TextInput {childInput} />
+					{:else if fields[$currentField].type === 'textarea'}
+						<TextAreaInput {childInput} />
+					{:else if fields[$currentField].type === 'select'}
+						<SelectInput {childInput} />
+					{:else if fields[$currentField].type === 'slider'}
+						<SliderInput {childInput} />
+					{:else if fields[$currentField].type === 'toggle'}
+						<ToggleInput {childInput} />
+					{:else if fields[$currentField].type === 'number'}
+						<NumberInput {childInput} />
+					{:else if fields[$currentField].type === 'cardSelect'}
+						<CardSelectInput {childInput} />
+					{:else if fields[$currentField].type === 'dateRange'}
+						<DateRangeInput {childInput} />
+					{/if}
+				{/key}
 			{/if}
 
-			{#key $currentField}
-				{#if fields[$currentField].type === 'text'}
-					<TextInput {childInput} />
-				{:else if fields[$currentField].type === 'email'}
-					<TextInput {childInput} />
-				{:else if fields[$currentField].type === 'textarea'}
-					<TextAreaInput {childInput} />
-				{:else if fields[$currentField].type === 'select'}
-					<SelectInput {childInput} />
-				{:else if fields[$currentField].type === 'slider'}
-					<SliderInput {childInput} />
-				{:else if fields[$currentField].type === 'toggle'}
-					<ToggleInput {childInput} />
-				{:else if fields[$currentField].type === 'number'}
-					<NumberInput {childInput} />
-				{:else if fields[$currentField].type === 'cardSelect'}
-					<CardSelectInput {childInput} />
-				{:else if fields[$currentField].type === 'dateRange'}
-					<DateRangeInput {childInput} />
-				{/if}
-			{/key}
-		</div>
-
-		{#if $submissionResult.success}
-			<div
-				class="w-full px-6 py-4 mb-4 text-base font-medium text-center text-success-600 dark:text-success-400 rounded-lg bg-success-200 dark:bg-success-800 bg-opacity-50 dark:bg-opacity-50"
-			>
-				{$submissionResult.message}
-			</div>
-		{:else if $submissionResult.message}
-			<div
-				class="w-full px-6 py-4 mb-4 text-base font-medium text-center text-error-600 dark:text-error-400 rounded-lg bg-error-200 dark:bg-error-800 bg-opacity-50 dark:bg-opacity-50"
-			>
-				{$submissionResult.message}
-				<div class="flex justify-center mt-4">
+			<div class="flex justify-center mt-4">
+				{#if $submissionResult.success || $submissionResult.message}
 					<button
 						type="button"
-						on:click={() => {
-							currentField.set(0);
-							submissionResult.set({ success: false, message: '' });
-						}}
-						class="px-4 py-2 text-sm font-medium text-error-600 dark:text-error-400 bg-error-200 dark:bg-error-800 border border-error-400 dark:border-error-600 rounded-md hover:bg-error-300 dark:hover:bg-error-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-error-400 dark:focus:ring-error-500"
+						on:click={handleGoAgain}
+						class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
 					>
-						Try Again
+						Go Again
 					</button>
-				</div>
-			</div>
-		{/if}
-
-		<div class="flex justify-between mt-1 md:mt-4">
-			<div>
-				{#if !isOnlyOneField && !isFirstField}
-					<button
-						type="button"
-						on:click={handlePrev}
-						class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
-					>
-						<span>
-							<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
-						</span>
-					</button>
+				{:else}
+					<div class="flex justify-between w-full">
+						<div>
+							{#if !isOnlyOneField && !isFirstField}
+								<button
+									type="button"
+									on:click={handlePrev}
+									class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
+									disabled={isLoading}
+								>
+									<span>
+										<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
+									</span>
+								</button>
+							{/if}
+						</div>
+						<div>
+							<button
+								type="button"
+								on:click={handleNext}
+								class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
+								disabled={!isFieldValid || (isLastStep && !isFormValid) || isLoading}
+							>
+								{isLastStep ? 'Submit' : 'Next'}
+							</button>
+						</div>
+					</div>
 				{/if}
-			</div>
-			<div>
-				<button
-					type="button"
-					on:click={handleNext}
-					class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
-					disabled={!isFieldValid || (isLastStep && !isFormValid)}
-				>
-					{isLastStep ? 'Submit' : 'Next'}
-				</button>
 			</div>
 		</div>
 	</form>
