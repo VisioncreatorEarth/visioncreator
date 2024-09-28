@@ -1,15 +1,43 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	export let className = '';
+
+	let contentArea: HTMLElement;
+	let footerHeight = 0;
+
+	onMount(() => {
+		const resizeObserver = new ResizeObserver((entries) => {
+			for (let entry of entries) {
+				if (entry.target.tagName.toLowerCase() === 'footer') {
+					footerHeight = entry.contentRect.height;
+					if (contentArea) {
+						contentArea.style.paddingBottom = `${footerHeight}px`;
+					}
+				}
+			}
+		});
+
+		const footer = document.querySelector('footer');
+		if (footer) {
+			resizeObserver.observe(footer);
+		}
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	});
 </script>
 
-<div class="grid-container">
-	<main class="content-area">
-		<div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 {className} text-wrap-content">
-			<slot />
+<div class="flex flex-col h-screen overflow-hidden">
+	<main bind:this={contentArea} class="flex-grow overflow-y-auto">
+		<div class="content-wrapper">
+			<div class="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 {className} text-wrap-content">
+				<slot />
+			</div>
 		</div>
 	</main>
-	<footer class="bg-surface-100-800-token z-10 p-2">
-		<div class="max-w-4xl mx-auto text-xs">
+	<footer class="bg-surface-100-800-token z-10 p-2 w-full">
+		<div class="max-w-4xl w-full mx-auto text-xs">
 			<nav class="custom-tabs">
 				<ul class="flex justify-center items-center space-x-4">
 					<li><a href="/" class="tab-link">Home</a></li>
@@ -28,6 +56,17 @@
 		overflow: hidden;
 	}
 
+	.content-wrapper {
+		display: flex;
+		justify-content: center;
+		width: 100%;
+		min-height: 100%;
+	}
+
+	:global(.text-wrap-content) {
+		width: 100%;
+		max-width: 100%;
+	}
 	.grid-container {
 		display: grid;
 		grid-template-rows: 1fr auto;
@@ -39,13 +78,9 @@
 	.content-area {
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
+		width: 100%;
 	}
 
-	:global(.text-wrap-content) {
-		max-width: 100%;
-	}
-
-	/* Rest of the styles remain the same */
 	:global(.text-wrap-content h1) {
 		font-size: 2.5rem;
 		font-weight: bold;
