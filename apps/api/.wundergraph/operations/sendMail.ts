@@ -1,18 +1,29 @@
-import { createOperation, z } from "../generated/wundergraph.factory";
+import {
+  createOperation,
+  z,
+  AuthorizationError,
+} from "../generated/wundergraph.factory";
 
 export default createOperation.mutation({
   input: z.object({
-    subject: z.string(),
-    body: z.string(),
+    id: z.string(),
+    subject: z.string().min(1).max(40),
+    body: z.string().min(1).max(10000),
   }),
-  handler: async ({ user, input, context }) => {
+  requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["authenticated"],
+  },
+  handler: async ({ context, input, user }) => {
+    if (input.id !== user?.customClaims?.id) {
+      throw new AuthorizationError({ message: "User ID does not match." });
+    }
     if (!user || !user.email) {
       return {
         success: false,
         message: "User not authenticated or email not available",
       };
     }
-
     try {
       const response = await context.postmark.sendEmail({
         From: "hello@visioncreator.earth",

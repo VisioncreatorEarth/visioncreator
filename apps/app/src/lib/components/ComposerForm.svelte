@@ -106,15 +106,18 @@
 				return acc;
 			}, {});
 
+			log('info', 'Prepared input for submission', { input, submitAction });
+
 			const result = await submitForm({
 				operation: submitAction,
 				input: input
 			});
 
+			log('info', 'Form submission result', { result });
+
 			if (result.success) {
 				submissionResult.set({ success: true, message: result.message });
 				log('success', 'Form submitted successfully', result);
-				// Use eventBus to emit the event with the component ID
 				eventBus.emit(submitAction, componentId);
 			} else {
 				throw new Error(result.message);

@@ -1,51 +1,64 @@
-// apps/app/src/lib/composables/flowOperations.ts
 import { client } from '$lib/wundergraph';
 import { get } from 'svelte/store';
 import { Me } from '$lib/stores';
 import { eventBus } from '$lib/composables/eventBus';
 
 interface SubmitFormParams {
-    operation: string;
-    input: Record<string, any>;
+	operation: string;
+	input: Record<string, unknown>;
 }
 
 export async function submitForm({ operation, input }: SubmitFormParams) {
-    try {
-        // Get the current user ID from the Me store
-        const currentUser = get(Me);
-        const userId = currentUser.id;
+	console.log(`Submitting form for operation: ${operation}`, input);
+	try {
+		let fullInput = { ...input };
 
-        if (!userId) {
-            throw new Error('User ID not found. Please ensure you are logged in.');
-        }
+		// Get the current user ID from the Me store only if 'id' is not provided in the input
+		if (!('id' in fullInput)) {
+			const currentUser = get(Me);
+			console.log('Current user:', currentUser);
+			if (typeof currentUser === 'object' && currentUser && 'id' in currentUser) {
+				const userId = currentUser.id;
+				if (userId) {
+					fullInput.id = userId;
+					console.log('Added user ID to input:', userId);
+				}
+			}
+		}
 
-        // Merge the user ID with the input
-        const fullInput = {
-            ...input,
-            id: userId
-        };
+		console.log('Full input before mutation:', fullInput);
 
-        const result = await client.mutate({
-            operationName: operation,
-            input: fullInput
-        });
+		const result = await client.mutate({
+			operationName: operation,
+			input: fullInput
+		});
 
-        if (!result.data || !result.data.success) {
-            throw new Error(result.data?.message || `An error occurred during ${operation}`);
-        }
+		console.log('Mutation result:', result);
 
-        eventBus.emit(operation);
+		if (!result.data || !result.data.success) {
+			throw new Error(result.data?.message || `An error occurred during ${operation}`);
+		}
 
-        return {
-            success: true,
-            message: result.data.message || `${operation} completed successfully`,
-            data: result.data
-        };
-    } catch (error) {
-        return {
-            success: false,
-            message: error.message || `An error occurred during ${operation}`,
-            error: error
-        };
-    }
+		eventBus.emit(operation);
+
+		return {
+			success: true,
+			message: result.data.message || `${operation} completed successfully`,
+			data: result.data
+		};
+	} catch (error) {
+		console.error(`Error in submitForm for operation ${operation}:`, error);
+		if (error instanceof Error) {
+			return {
+				success: false,
+				message: error.message || `An error occurred during ${operation}`,
+				error: error
+			};
+		}
+		return {
+			success: false,
+			message: `An unknown error occurred during ${operation}`,
+			error: new Error('Unknown error')
+		};
+	}
 }
