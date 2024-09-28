@@ -3,32 +3,32 @@
 	import lodash from 'lodash';
 	const { isEqual } = lodash;
 	export let view: any;
-	export let session: any; // Add this line
+	export let session: any;
+	export let showSpacer: boolean;
 
 	let composerInstance;
 	let previousView;
 
-	async function compose(element: HTMLElement, view: any, session: any) {
-		// Update this line
+	async function compose(element: HTMLElement, view: any, session: any, showSpacer: boolean) {
 		if (composerInstance) {
 			composerInstance.$destroy();
 		}
 		const module = await import(`./Composer.svelte`);
 		composerInstance = new module.default({
 			target: element,
-			props: { composer: view, session }
+			props: { composer: view, session, showSpacer }
 		});
 	}
 
 	function composeAction(element: HTMLElement, view: any) {
 		if (!isEqual(previousView, view)) {
-			compose(element, view, session); // Update this line
+			compose(element, view, session, showSpacer);
 			previousView = { ...view };
 		}
 		return {
 			update(view: any) {
 				if (!isEqual(previousView, view)) {
-					compose(element, view, session); // Update this line
+					compose(element, view, session, showSpacer);
 					previousView = { ...view };
 				}
 			}

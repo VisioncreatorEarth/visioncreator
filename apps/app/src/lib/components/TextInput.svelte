@@ -18,7 +18,7 @@
 	name={field.name}
 	bind:this={inputElement}
 	type="text"
-	class="input w-full h-12 md:h-24 px-3 py-2 text-secondary-500 text-2xl md:text-6xl border-primary-500 bg-gray-100 rounded-md border-1 ring-0 ring-white focus:outline-none focus:ring-2 focus:ring-primary-500 {$errors[
+	class="input w-full h-10 md:h-20 px-3 py-2 text-secondary-500 text-xl md:text-4xl border-primary-500 bg-gray-100 rounded-md border-1 ring-0 ring-white focus:outline-none focus:ring-2 focus:ring-primary-500 {$errors[
 		field.name
 	]
 		? 'input-warning'

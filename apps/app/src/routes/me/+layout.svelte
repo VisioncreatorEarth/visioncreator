@@ -78,7 +78,6 @@
 	<div
 		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6 z-50"
 		on:click={toggleModal}
-		on:keydown={(e) => e.key === 'Enter' && toggleModal()}
 		role="dialog"
 		aria-modal="true"
 		transition:fade

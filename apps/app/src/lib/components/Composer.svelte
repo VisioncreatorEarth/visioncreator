@@ -34,6 +34,8 @@
 
 	export let composer: IComposer;
 	export let session: any | undefined = undefined; // Make session optional
+	export let showSpacer = true;
+
 	let queryClient;
 
 	let spacerHeight = '100px'; // You can make this a prop if you want to customize it
@@ -192,7 +194,9 @@
 				</div>
 			{/each}
 		{/if}
-		<div class="composer-spacer" />
+		{#if showSpacer}
+			<div class="composer-spacer" />
+		{/if}
 	</div>
 </QueryClientProvider>
 

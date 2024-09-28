@@ -175,7 +175,7 @@
 				{/if}
 			</div>
 			{#if !isOnlyOneField}
-				<div class="py-4">
+				<div class="py-2">
 					<Stepper {stepperState} stepStateName={fields[$currentField]?.name || ''} />
 				</div>
 			{/if}
@@ -235,7 +235,7 @@
 					<button
 						type="button"
 						on:click={handlePrev}
-						class="font-semibold btn btn-sm md:btn-base variant-filled-secondary"
+						class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
 					>
 						<span>
 							<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
@@ -247,7 +247,7 @@
 				<button
 					type="button"
 					on:click={handleNext}
-					class="font-semibold btn variant-filled-secondary btn-sm md:btn-base"
+					class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
 					disabled={!isFieldValid || (isLastStep && !isFormValid)}
 				>
 					{isLastStep ? 'Submit' : 'Next'}

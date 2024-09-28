@@ -3,12 +3,12 @@ import { z } from 'zod';
 const EmailSchema = z.object({
 	subject: z
 		.string()
-		.min(1, 'Subject is required')
-		.max(40, 'Subject must not exceed 40 characters'),
+		.min(3, 'Please share a topic for your message')
+		.max(40, "Let's keep the subject concise, max 40 characters"),
 	body: z
 		.string()
-		.min(1, 'Message body is required')
-		.max(10000, 'Message body must not exceed 10,000 characters')
+		.min(20, 'Your message is important to us, min 20 characters')
+		.max(2000, "We appreciate your detailed thoughts, but let's keep it a bit shorter")
 });
 
 export const view = {
@@ -30,14 +30,14 @@ export const view = {
 						{
 							name: 'subject',
 							type: 'text',
-							title: 'Subject',
-							description: 'Enter the email subject (max 40 characters)'
+							title: "What's on your mind?",
+							description: 'Share the spark that brought you here today'
 						},
 						{
 							name: 'body',
 							type: 'textarea',
-							title: 'Message',
-							description: 'Enter your message (max 10,000 characters)'
+							title: 'Your message',
+							description: 'Paint us a picture with your words'
 						}
 					],
 					validators: EmailSchema,

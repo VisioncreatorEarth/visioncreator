@@ -36,12 +36,16 @@
 
 <div class="@container">
 	{#if showComposeView}
-		<div class="p-4">
-			<ComposeView view={currentView} on:close={() => (showComposeView = false)} />
+		<div class="px-4">
+			<ComposeView
+				view={currentView}
+				on:close={() => (showComposeView = false)}
+				showSpacer={false}
+			/>
 		</div>
 	{:else if showContactUs}
-		<div class="p-4">
-			<ComposeView view={sendMailView} on:close={toggleContactUs} />
+		<div class="px-4">
+			<ComposeView view={sendMailView} on:close={toggleContactUs} showSpacer={false} />
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 @sm:grid-cols-2 @md:grid-cols-3 gap-2 mb-2">
