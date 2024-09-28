@@ -36,6 +36,9 @@
 	export let session: any | undefined = undefined; // Make session optional
 	let queryClient;
 
+	let spacerHeight = '100px'; // You can make this a prop if you want to customize it
+	let isTopLevel = !composer.slot;
+
 	let layoutStyle = '';
 	let unsubscribers = [];
 
@@ -189,5 +192,13 @@
 				</div>
 			{/each}
 		{/if}
+		<div class="composer-spacer" />
 	</div>
 </QueryClientProvider>
+
+<style>
+	.composer-spacer {
+		height: 50px;
+		grid-column: 1 / -1;
+	}
+</style>
