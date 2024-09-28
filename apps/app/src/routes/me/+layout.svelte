@@ -4,8 +4,8 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { eventBus } from '$lib/composables/eventBus';
-	import ActionButtons from '$lib/components/ActionButtons.svelte';
-	import Newsletter from '$lib/components/Newsletter.svelte';
+	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
+	import { goto } from '$app/navigation';
 
 	export let data;
 
@@ -15,6 +15,11 @@
 	$: ({ session } = data);
 
 	let isFirstTime = writable(true);
+
+	function handleLinkClick(event: Event, href: string) {
+		event.preventDefault();
+		goto(href);
+	}
 
 	onMount(() => {
 		console.log('me', $Me);
@@ -89,57 +94,48 @@
 					{:else if $activeTab === 'settings'}
 						<Newsletter me={{ email: session.user.email, id: session.user.id }} />
 					{:else if $activeTab === 'legalinfo'}
-						<div class="flex space-x-4 rounded-lg">
-							<a
-								href="/en/privacy-policy"
-								class="btn hover:variant-filled-surface variant-ghost-surface"
-							>
-								Privacy Policy
-							</a>
-							<a href="/en/imprint" class="btn hover:variant-filled-surface variant-ghost-surface">
-								Site Notice
-							</a>
+						<div class="flex flex-col items-start justify-center h-full w-full">
+							<ListBox class="w-full max-w-sm">
+								<ListBoxItem
+									value="privacy"
+									on:click={(e) => handleLinkClick(e, '/en/privacy-policy')}
+								>
+									<svelte:fragment slot="lead">
+										<Icon icon="mdi:shield-check" class="w-6 h-6" />
+									</svelte:fragment>
+									Privacy Policy
+								</ListBoxItem>
+								<ListBoxItem value="imprint" on:click={(e) => handleLinkClick(e, '/en/imprint')}>
+									<svelte:fragment slot="lead">
+										<Icon icon="mdi:information" class="w-6 h-6" />
+									</svelte:fragment>
+									Site Notice
+								</ListBoxItem>
+							</ListBox>
 						</div>
 					{/if}
 				</div>
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
-					<ul class="flex flex-wrap text-sm font-medium text-center">
-						<li>
-							<button
-								class={`inline-block px-3 py-2 rounded-t-lg ${
-									$activeTab === 'actions'
-										? 'text-primary-500 border-b-2 border-primary-500'
-										: 'text-tertiary-400 hover:text-tertiary-300'
-								}`}
-								on:click={() => setActiveTab('actions')}
-							>
-								Actions
-							</button>
-						</li>
-						<li>
-							<button
-								class={`inline-block px-3 py-2 rounded-t-lg ${
-									$activeTab === 'settings'
-										? 'text-primary-500 border-b-2 border-primary-500'
-										: 'text-tertiary-400 hover:text-tertiary-300'
-								}`}
-								on:click={() => setActiveTab('settings')}
-							>
-								Settings
-							</button>
-						</li>
-						<li>
-							<button
-								class={`inline-block px-3 py-2 rounded-t-lg ${
-									$activeTab === 'logs'
-										? 'text-primary-500 border-b-2 border-primary-500'
-										: 'text-tertiary-400 hover:text-tertiary-300'
-								}`}
-								on:click={() => setActiveTab('legalinfo')}
-							>
-								Legal Info
-							</button>
-						</li>
+					<ul class="flex flex-wrap text-sm sm:text-md font-medium text-center">
+						{#each ['actions', 'settings', 'legalinfo'] as tab}
+							<li class="relative px-0.5 sm:px-1">
+								<button
+									class={`inline-block px-2 py-2 sm:px-3 rounded-lg transition-colors duration-200 ${
+										$activeTab === tab
+											? 'text-primary-500'
+											: 'text-tertiary-400 hover:text-tertiary-300'
+									}`}
+									on:click={() => setActiveTab(tab)}
+								>
+									{tab.charAt(0).toUpperCase() + tab.slice(1)}
+								</button>
+								{#if $activeTab === tab}
+									<div
+										class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1/4 h-0.5 bg-primary-500 rounded-full"
+									/>
+								{/if}
+							</li>
+						{/each}
 					</ul>
 					<button
 						class="p-2 text-tertiary-400 hover:text-tertiary-300"
