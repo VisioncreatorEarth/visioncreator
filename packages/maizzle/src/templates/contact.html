@@ -1,0 +1,54 @@
+<x-main>
+  <table class="w-full font-sans">
+    <tr>
+      <td align="left">
+        <table class="w-full">
+          <tr>
+            <td class="text-left">
+              <!-- Header -->
+              <table class="w-full">
+                <tr>
+                  <td class="pb-6">
+                    <h1 class="m-0 text-xl font-bold text-tertiary-200">
+                      Great to hear from you!
+                    </h1>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Intro -->
+              <p class="m-0 mb-8 text-sm text-tertiary-400">
+                Your message is important to us. We'll do our best to get back
+                to you within the next 2 working days. Thank you for your
+                patience.
+              </p>
+              <p
+                class="m-0 mb-4 uppercase font-semibold text-sm text-tertiary-600"
+              >
+                Your Message
+              </p>
+
+              <!-- Content -->
+              <table class="w-full">
+                <tr>
+                  <td class="pb-4">
+                    <p class="m-0 text-lg text-tertiary-300">
+                      {{{ "${input.subject}" }}}
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="pb-8">
+                    <p class="m-0 text-sm text-tertiary-300">
+                      {{{ "${input.body}" }}}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</x-main>
