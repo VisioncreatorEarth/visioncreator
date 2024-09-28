@@ -105,12 +105,7 @@
 			<div class="w-full max-w-3xl mb-4">
 				<VideoPlayer on:videoEnded={handleVideoEnded} />
 			</div>
-			<button
-				on:click={handleSkip}
-				class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition duration-200"
-			>
-				Skip
-			</button>
+			<button on:click={handleSkip} class="btn btn-sm variant-ghost-secondary"> Skip </button>
 		</div>
 	{:else if !showComposeView}
 		<div class="w-full px-4 sm:px-6 md:px-8 flex justify-center items-center min-h-screen">

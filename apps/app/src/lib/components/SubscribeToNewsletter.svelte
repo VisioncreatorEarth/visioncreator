@@ -26,7 +26,7 @@
 		showMessage = true;
 		messageType = 'success';
 		message =
-			"You're now part of something extraordinary. Together, we'll shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!";
+			"You subscribed something extraordinary. Together, we'll shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!";
 
 		try {
 			await $toggleNewsletterMutation.mutateAsync({ id: userId, email: userEmail });
@@ -66,22 +66,19 @@
 		</div>
 	{:else if showMessage}
 		<div
-			class="card variant-ghost-{messageType === 'success'
-				? 'success'
-				: 'secondary'} w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10"
+			class="card variant-ghost-secondary w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 lg:p-10 bg-secondary-800 rounded-3xl"
 		>
-			<h3 class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-4">
+			<h3
+				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
+			>
 				{messageType === 'success' ? "Next week's video is gonna sparkle!" : 'Maybe next time.'}
 			</h3>
-			<p class="text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6 text-center">
+			<p
+				class="text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6 text-center text-tertiary-300"
+			>
 				{message}
 			</p>
-			<button
-				on:click={handleNext}
-				class="btn btn-sm sm:btn-md variant-ghost-{messageType === 'success'
-					? 'success'
-					: 'secondary'}"
-			>
+			<button on:click={handleNext} class="btn btn-sm sm:btn-md variant-ghost-secondary">
 				Continue
 			</button>
 		</div>
@@ -107,11 +104,11 @@
 				</button>
 			</div>
 			<p
-				class="text-3xs sm:text-2xs md:text-xs lg:text-sm text-tertiary-300 max-w-xl leading-tight sm:leading-snug"
+				class="text-3xs sm:text-2xs md:text-xs text-tertiary-300 max-w-xl leading-tight sm:leading-snug"
 			>
 				*By pressing the subscribe button, you consent that we send you our weekly newsletter. You
 				can revoke this consent at any time by clicking on the unsubscribe link in our newsletter
-				emails or via dashboard, when you are logged in. <br />Here you can find our
+				emails or via dashboard, when you are logged in. Here you can find our
 				<a
 					href="https://visioncreator.earth/en/privacy-policy"
 					class="underline hover:text-primary-300 transition-colors duration-200">Privacy Policy</a
