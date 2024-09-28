@@ -4,11 +4,11 @@
 
 <div class="flex flex-col min-h-screen overflow-hidden">
 	<main class="flex-grow overflow-y-auto overflow-x-hidden w-full">
-		<div class="mx-auto w-full px-4 sm:px-6 lg:px-8" style="max-width: 64rem;">
+		<div class="mx-auto w-full pt-4 px-4 sm:px-6 lg:px-8" style="max-width: 64rem;">
 			<div class="w-full pb-20 {className} text-wrap-content">
 				<slot />
 			</div>
-			<div class="min-h-16" />
+			<div class="min-h-12" />
 		</div>
 	</main>
 	<footer class="bg-surface-100-800-token fixed bottom-0 left-0 right-0 z-10">
