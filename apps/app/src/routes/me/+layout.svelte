@@ -71,7 +71,7 @@
 
 {#if $modalOpen}
 	<div
-		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6"
+		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6 z-50"
 		on:click={toggleModal}
 		on:keydown={(e) => e.key === 'Enter' && toggleModal()}
 		role="dialog"
@@ -102,12 +102,11 @@
 						</div>
 					{/if}
 				</div>
-
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
 					<ul class="flex flex-wrap text-sm font-medium text-center">
-						<li class="mr-2">
+						<li>
 							<button
-								class={`inline-block p-4 rounded-t-lg ${
+								class={`inline-block px-3 py-2 rounded-t-lg ${
 									$activeTab === 'actions'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
@@ -117,9 +116,9 @@
 								Actions
 							</button>
 						</li>
-						<li class="mr-2">
+						<li>
 							<button
-								class={`inline-block p-4 rounded-t-lg ${
+								class={`inline-block px-3 py-2 rounded-t-lg ${
 									$activeTab === 'settings'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
@@ -129,9 +128,9 @@
 								Settings
 							</button>
 						</li>
-						<li class="mr-2">
+						<li>
 							<button
-								class={`inline-block p-4 rounded-t-lg ${
+								class={`inline-block px-3 py-2 rounded-t-lg ${
 									$activeTab === 'logs'
 										? 'text-primary-500 border-b-2 border-primary-500'
 										: 'text-tertiary-400 hover:text-tertiary-300'
@@ -168,7 +167,7 @@
 {/if}
 
 <!-- Fading glassmorphism effect -->
-<div class="fixed bottom-0 left-0 right-0 h-24 pointer-events-none">
+<div class="fixed bottom-0 left-0 right-0 h-24 pointer-events-none z-40">
 	<div
 		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
 	/>
@@ -176,7 +175,7 @@
 
 <!-- Button container -->
 <div
-	class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center z-10"
+	class="fixed bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center z-50"
 >
 	<div class="relative flex items-center">
 		{#if $isFirstTime && $Me.onboarded}
