@@ -72,15 +72,15 @@
 	<div class="relative flex items-center">
 		{#if $isFirstTime && $Me.onboarded}
 			<div
-				class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 whitespace-nowrap flex flex-col items-center animate-pulse-smooth"
+				class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 whitespace-nowrap flex flex-col items-center animate-pulse"
 			>
 				<span
-					class="text-sm font-semibold text-tertiary-200 px-4 py-2 bg-surface-300/30 backdrop-blur-sm rounded-lg"
-					>Open menu here</span
+					class="btn variant-filled-tertiary text-xs font-semibold px-3 py-1 rounded-lg shadow-lg bg-secondary-500/95"
+					>this is your menu</span
 				>
-				<!-- Arrow pointing down -->
+				<!-- Arrow pointing down, directly touching the tooltip -->
 				<div
-					class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-surface-300/30 mt-1"
+					class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-tertiary-500 -mt-[1px]"
 				/>
 			</div>
 		{/if}
@@ -195,7 +195,7 @@
 {/if}
 
 <style>
-	@keyframes pulse-smooth {
+	@keyframes pulse {
 		0%,
 		100% {
 			opacity: 1;
@@ -207,7 +207,7 @@
 		}
 	}
 
-	.animate-pulse-smooth {
-		animation: pulse-smooth 2s infinite;
+	.animate-pulse {
+		animation: pulse 2s infinite;
 	}
 </style>
