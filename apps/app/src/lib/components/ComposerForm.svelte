@@ -6,14 +6,7 @@
 	import { eventBus } from '$lib/composables/eventBus';
 	import type { SuperForm } from 'sveltekit-superforms/client';
 	import Stepper from '$lib/components/Stepper.svelte';
-	import TextInput from '$lib/components/TextInput.svelte';
-	import TextAreaInput from '$lib/components/TextAreaInput.svelte';
-	import SelectInput from '$lib/components/SelectInput.svelte';
-	import SliderInput from '$lib/components/SliderInput.svelte';
-	import ToggleInput from '$lib/components/ToggleInput.svelte';
-	import NumberInput from '$lib/components/NumberInput.svelte';
-	import CardSelectInput from '$lib/components/CardSelectInput.svelte';
-	import DateRangeInput from '$lib/components/DateRangeInput.svelte';
+	import { eventConfig } from '$lib/composables/eventConfig';
 
 	export let me: any;
 
@@ -130,7 +123,10 @@
 			if (result.success) {
 				submissionResult.set({ success: true, message: result.message });
 				log('success', 'Form submitted successfully', result);
-				eventBus.emit(submitAction, componentId);
+
+				// Emit the toggleModal event for both updateMe and sendMail actions
+				eventBus.emit('toggleModal', componentId);
+
 				clearFormData();
 			} else {
 				throw new Error(result.message);
