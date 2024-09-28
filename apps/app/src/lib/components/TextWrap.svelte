@@ -1,43 +1,15 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	export let className = '';
-
-	let contentArea: HTMLElement;
-	let footerHeight = 0;
-
-	onMount(() => {
-		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
-				if (entry.target.tagName.toLowerCase() === 'footer') {
-					footerHeight = entry.contentRect.height;
-					if (contentArea) {
-						contentArea.style.paddingBottom = `${footerHeight}px`;
-					}
-				}
-			}
-		});
-
-		const footer = document.querySelector('footer');
-		if (footer) {
-			resizeObserver.observe(footer);
-		}
-
-		return () => {
-			resizeObserver.disconnect();
-		};
-	});
 </script>
 
-<div class="flex flex-col h-screen overflow-hidden">
-	<main bind:this={contentArea} class="flex-grow overflow-y-auto">
-		<div class="content-wrapper">
-			<div class="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 {className} text-wrap-content">
-				<slot />
-			</div>
+<div class="flex flex-col min-h-screen overflow-hidden">
+	<main class="flex-grow overflow-y-auto overflow-x-hidden">
+		<div class="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 pb-20 {className} text-wrap-content">
+			<slot />
 		</div>
 	</main>
-	<footer class="bg-surface-100-800-token z-10 p-2 w-full">
-		<div class="max-w-4xl w-full mx-auto text-xs">
+	<footer class="bg-surface-100-800-token fixed bottom-0 left-0 right-0 z-10">
+		<div class="max-w-4xl w-full mx-auto p-2 text-xs">
 			<nav class="custom-tabs">
 				<ul class="flex justify-center items-center space-x-4">
 					<li><a href="/" class="tab-link">Home</a></li>
@@ -56,29 +28,19 @@
 		overflow: hidden;
 	}
 
-	.content-wrapper {
-		display: flex;
-		justify-content: center;
+	main {
+		height: 100vh;
 		width: 100%;
-		min-height: 100%;
+		max-width: 100vw;
+		padding-bottom: env(safe-area-inset-bottom, 16px);
 	}
 
 	:global(.text-wrap-content) {
 		width: 100%;
 		max-width: 100%;
-	}
-	.grid-container {
-		display: grid;
-		grid-template-rows: 1fr auto;
-		height: 100vh;
-		width: 100%;
-		overflow: hidden;
-	}
-
-	.content-area {
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch;
-		width: 100%;
+		overflow-wrap: break-word;
+		word-wrap: break-word;
+		word-break: break-word;
 	}
 
 	:global(.text-wrap-content h1) {
