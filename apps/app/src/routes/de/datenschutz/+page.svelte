@@ -7,7 +7,6 @@
 	<div class="image-container mb-10 w-28">
 		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
 	</div>
-
 	<h1>Datenschutz&shy;erkl&auml;rung</h1>
 	<h2>1. Datenschutz auf einen Blick</h2>
 	<h3>Allgemeine Hinweise</h3>
@@ -115,36 +114,25 @@
 	<p>
 		Supabase Pte Ltd, 65 Chulia Street #38-02/03 OCBC Centre, Singapore 049513; support@supabase.io<br
 		/>
+		https://supabase.com/privacy<br />
 		<br />
-		DMCA Agent Fly.io, Inc., 2261 Market Street #4990 San Francisco, CA 94114; support@fly.io<br />
-		DMCA Agent Fly.io, Inc. ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data
-		Privacy Framework.<br />
+		Fly.io, Inc., 2261 Market Street #4990 San Francisco, CA 94114; support@fly.io<br />
+		https://fly.io/legal/privacy-policy/<br />
+		https://fly.io/legal/data-privacy-framework/<br />
 		<br />
-		Vercel Inc., 440 N Barranca Avenue #4133 Covina, CA 91723 United States; privacy@vercel.com<br
+		Vercel Inc., 440 N Barranca Ave #4133 Covina, CA 91723; privacy@vercel.com<br />
+		https://vercel.com/legal/privacy-policy<br />
+		https://vercel.com/changelog/vercel-is-now-certified-under-the-eu-us-data-privacy-framework-dpf<br
 		/>
-		Vercel Inc. ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data Privacy
-		Framework.<br />
-		GDPR representative* EU:<br />
-		European Data Protection Office, Avenue Huart Hamoir 71, 1030 Brussels, Belgium; privacy@edpo.com<br
-		/>
-		GDPR representative* UK:<br />
-		EDPO UK Ltd, 8 Northumberland Avenue, London WC2N 5BY, United Kingdom; privacy@edpo.com<br />
 		<br />
-		AC PM LLC, 1 N Dearborn Street, Suite 500, Chicago, IL 60602; privacy@activecampaign.com<br />
-		AC PM LLC ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data Privacy Framework.<br
-		/>
-		GDPR representative* EU:<br />
-		EU-REP.Global GmbH, Attn: ActiveCampaign, Hopfenstr. 1d, 24114 Kiel, Germany; activecampaign@eu-rep.global<br
-		/>
-		GDPR representative* UK:<br />
-		DP Data Protection Services UK Ltd., Attn: ActiveCampaign, 16 Great Queen Street, Covent Garden,
-		London, WC2B 5AH, United Kingdom; activecampaign@eu-rep.global<br />
+		AC PM LLC, 1 N Dearborn St FL 5, Chicago, IL 60602; privacy@activecampaign.com<br />
+		https://www.activecampaign.com/legal/privacy-policy<br />
+		https://www.activecampaign.com/legal/gdpr-updates/privacy-framework<br />
 		<br />
-		DigitalOcean, LLC, 101 6th Ave New York, NY 10013, ATTN: Legal; privacy@digitalocean.com<br />
-		DigitalOcean, LLC ist zertifiziert gem&auml;&szlig; dem / is certified according to EU-US Data Privacy
-		Framework.<br />
-		<br />
-		*GDPR representative = DSGVO Vertreter
+		DigitalOcean, LLC, 101 Avenue of the Americas FL 10, New York, NY 10013, ATTN: Legal; privacy@digitalocean.com<br
+		/>
+		https://www.digitalocean.com/legal/privacy-policy<br />
+		https://www.digitalocean.com/trust/privacy-shield
 	</p>
 	<h4>Auftragsverarbeitung</h4>
 	<p>
