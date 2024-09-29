@@ -7,8 +7,8 @@ import {
 export default createOperation.mutation({
   input: z.object({
     id: z.string(),
-    subject: z.string().min(1).max(40),
-    body: z.string().min(1).max(2000),
+    subject: z.string().min(3).max(40),
+    body: z.string().min(10).max(2000),
   }),
   requireAuthentication: true,
   rbac: {
@@ -24,6 +24,21 @@ export default createOperation.mutation({
         message: "User not authenticated or email not available",
       };
     }
+
+    // Query the username from Supabase profiles table
+    const { data: profile, error } = await context.supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.customClaims.id)
+      .single();
+
+    let name = "Visioncreator";
+    if (error) {
+      console.error("Error fetching user profile:", error);
+    } else {
+      name = profile.name || "Visioncreator";
+    }
+
     try {
       const response = await context.postmark.sendEmail({
         From: "hello@visioncreator.earth",
@@ -31,7 +46,8 @@ export default createOperation.mutation({
         Cc: "hello@visioncreator.earth",
         Subject: input.subject,
         TextBody: input.body,
-        HtmlBody: `<!DOCTYPE html>
+        HtmlBody: `
+        <!DOCTYPE html>
         <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml">
         <head>
           <meta charset="utf-8">
@@ -118,7 +134,7 @@ export default createOperation.mutation({
                                         <tr>
                                           <td style="padding-bottom: 24px">
                                             <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #f6f4ef">
-                                              Great to hear from you!
+                                              Great to hear from you, ${name}!
                                             </h1>
                                           </td>
                                         </tr>
@@ -186,7 +202,8 @@ export default createOperation.mutation({
             </div>
           </div>
         </body>
-        </html>`,
+        </html>
+        `,
       });
 
       return {

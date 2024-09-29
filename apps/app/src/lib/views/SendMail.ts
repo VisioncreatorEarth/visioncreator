@@ -3,12 +3,15 @@ import { z } from 'zod';
 const EmailSchema = z.object({
 	subject: z
 		.string()
-		.min(3, 'Please share a topic for your message')
+		.min(3, 'Please share a topic for your message, min 3 characters')
 		.max(40, "Let's keep the subject concise, max 40 characters"),
 	body: z
 		.string()
-		.min(20, 'Your message is important to us, min 20 characters')
-		.max(2000, "We appreciate your detailed thoughts, but let's keep it a bit shorter")
+		.min(10, 'Your message is important to us, min 10 characters')
+		.max(
+			2000,
+			"We appreciate your detailed thoughts, but let's keep it a bit shorter, max 2000 characters"
+		)
 });
 
 export const view = {

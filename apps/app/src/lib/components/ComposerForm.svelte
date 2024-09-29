@@ -4,6 +4,7 @@
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { eventBus } from '$lib/composables/eventBus';
 	import type { SuperForm } from 'sveltekit-superforms/client';
+	import { eventConfig } from '$lib/composables/eventConfig';
 
 	export let me: any;
 
@@ -102,6 +103,8 @@
 			if (result.success) {
 				submissionResult.set({ success: true, message: result.message });
 				eventBus.emit(submitAction, componentId);
+				// Add this line to emit the toggleModal event
+				eventBus.emit('toggleModal', componentId);
 				isSubmitted = true;
 			} else {
 				throw new Error(result.message);
