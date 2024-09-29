@@ -90,7 +90,7 @@
 						/>
 					{/if}
 				</div>
-			{/if}}
+			{/if}
 			{#if dev}
 				<div class="fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2">
 					<a

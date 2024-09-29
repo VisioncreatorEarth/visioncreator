@@ -75,9 +75,7 @@
 		<div class="@container h-full">
 			<div class="flex flex-col items-center justify-center w-full h-full">
 				<div class="w-full max-w-3xl mb-12 p-4 text-center flex flex-col space-y-8">
-					<div
-						class="glassmorphism-card text-center p-6 @md:p-8 rounded-xl shadow-2xl backdrop-blur-sm"
-					>
+					<div class="text-center p-6 @md:p-8 rounded-xl">
 						<h2 class=" uppercase text-white text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2">
 							Coming Soon
 						</h2>
