@@ -111,13 +111,19 @@
 			</div>
 		</div>
 	</div>
-
-	<footer class="fixed inset-x-0 bottom-0 p-4 text-xs text-center text-white">
-		<button on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })} class="mx-1"
-			>Login</button
-		>
-		<a href="/en/privacy-policy" class="mx-1">Privacy Policy - Datenschutz</a>
-		<a href="/en/imprint" class="mx-1">Site Notice - Impressum</a>
+	<footer class="fixed inset-x-0 bottom-0 py-2 @sm:py-4 text-white">
+		<div class="flex justify-between @sm:justify-center items-center px-2 @sm:px-0">
+			<div class="flex space-x-2 @sm:space-x-4 pl-2">
+				<a href="/en/privacy-policy" class="text-2xs @sm:text-xs">Privacy Policy - Datenschutz</a>
+				<a href="/en/imprint" class="text-2xs @sm:text-xs">Site Notice - Impressum</a>
+			</div>
+			<button
+				class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4"
+				on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
+			>
+				Login
+			</button>
+		</div>
 	</footer>
 </div>
 
