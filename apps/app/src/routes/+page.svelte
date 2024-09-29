@@ -76,13 +76,15 @@
 			<div class="flex flex-col items-center justify-center w-full h-full">
 				<div class="w-full max-w-3xl mb-12 p-4 text-center flex flex-col space-y-8">
 					<div class="text-center p-6 @md:p-8 rounded-xl">
-						<h2 class=" uppercase text-white text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2">
+						<h2
+							class=" uppercase text-tertiary-300 text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2"
+						>
 							Coming Soon
 						</h2>
 					</div>
 					<Countdown large={true} />
 					{#if dev}
-						<p class="text-lg @md:text-xl text-white">
+						<p class="text-lg @md:text-xl text-tertiary-200">
 							sign up to our waitlist and join our exciting journey
 							<!-- from 0 to 1 billion
 							visioncreators
@@ -115,12 +117,18 @@
 				<a href="/en/privacy-policy" class="text-2xs @sm:text-xs">Privacy Policy - Datenschutz</a>
 				<a href="/en/imprint" class="text-2xs @sm:text-xs">Site Notice - Impressum</a>
 			</div>
-			<button
-				class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4"
-				on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
-			>
-				Login
-			</button>
+			<div class="relative">
+				<button
+					class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4 absolute bottom-0 right-0"
+					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
+				>
+					Login
+				</button>
+				<div
+					class="p-4 -mb-2 -mr-2"
+					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
+				/>
+			</div>
 		</div>
 	</footer>
 </div>
