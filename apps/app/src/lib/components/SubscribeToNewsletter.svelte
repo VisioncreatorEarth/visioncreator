@@ -26,7 +26,7 @@
 		showMessage = true;
 		messageType = 'success';
 		message =
-			"You subscribed something extraordinary. Together, we'll shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!";
+			'You subscribed something extraordinary. Together we will shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!';
 
 		try {
 			await $toggleNewsletterMutation.mutateAsync({ id: userId, email: userEmail });
@@ -39,7 +39,7 @@
 	function handleNoThanks() {
 		showMessage = true;
 		messageType = 'info';
-		message = 'No worries! You can always subscribe later if you change your mind.';
+		message = 'No worries! You can always subscribe later, if you change your mind.';
 		Me.update((store) => ({ ...store, newsletter: false }));
 	}
 
@@ -89,7 +89,7 @@
 			<h3
 				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
 			>
-				Subcribe to watch next video
+				Subscribe to watch next video
 			</h3>
 			<p class="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
 				Subscribe to our weekly Visionletter to get early access to our video updates 1 week before
@@ -108,7 +108,7 @@
 			>
 				*By pressing the subscribe button, you consent that we send you our weekly newsletter. You
 				can revoke this consent at any time by clicking on the unsubscribe link in our newsletter
-				emails or via dashboard, when you are logged in. Here you can find our
+				mails or via dashboard, when you are logged in. Here you can find our
 				<a
 					href="https://visioncreator.earth/en/privacy-policy"
 					class="underline hover:text-primary-300 transition-colors duration-200">Privacy Policy</a

@@ -92,7 +92,7 @@
 						<ActionButtons me={{ id: session.user.id }} />
 					{:else if $activeTab === 'settings'}
 						<Newsletter me={{ email: session.user.email, id: session.user.id }} />
-					{:else if $activeTab === 'legalinfo'}
+					{:else if $activeTab === 'legal'}
 						<div class="flex flex-col items-start justify-center h-full w-full">
 							<ListBox class="w-full max-w-sm">
 								<ListBoxItem
@@ -114,9 +114,10 @@
 						</div>
 					{/if}
 				</div>
+
 				<div class="flex items-center justify-between p-2 border-t border-surface-500">
 					<ul class="flex flex-wrap text-sm sm:text-md font-medium text-center">
-						{#each ['actions', 'settings', 'legalinfo'] as tab}
+						{#each ['actions', 'settings', 'legal'] as tab}
 							<li class="relative px-0.5 sm:px-1">
 								<button
 									class={`inline-block px-2 py-2 sm:px-3 rounded-lg transition-colors duration-200 ${

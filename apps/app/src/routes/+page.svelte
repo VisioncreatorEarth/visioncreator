@@ -95,7 +95,7 @@
 						<div class="w-full">
 							<input
 								bind:value={$futureMe.name}
-								placeholder="Enter your first name, future visioncreator"
+								placeholder="Enter your first name, future Visioncreator"
 								class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
 							/>
 						</div>
@@ -121,7 +121,7 @@
 				class="mx-1">Login</button
 			>
 		{/if}
-		<a href="/en/privacy-policy" class="mx-1">Privacy Policy- Datenschutz</a>
+		<a href="/en/privacy-policy" class="mx-1">Privacy Policy - Datenschutz</a>
 		<a href="/en/imprint" class="mx-1">Site Notice - Impressum</a>
 	</footer>
 </div>

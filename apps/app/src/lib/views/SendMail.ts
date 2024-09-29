@@ -30,8 +30,8 @@ export const view = {
 						{
 							name: 'subject',
 							type: 'text',
-							title: "What's on your mind?",
-							description: 'Share the spark that brought you here today'
+							title: "What's the topic?",
+							description: 'Share are short title about the topic you want to talk to us'
 						},
 						{
 							name: 'body',
