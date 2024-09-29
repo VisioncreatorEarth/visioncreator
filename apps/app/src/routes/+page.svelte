@@ -102,25 +102,20 @@
 					{/if}
 				</div>
 
-				{#if dev}
-					<button
-						on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
-						class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
-					>
-						Sign Up Now
-					</button>
-				{/if}
+				<button
+					on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
+					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
+				>
+					Sign Up Now
+				</button>
 			</div>
 		</div>
 	</div>
 
 	<footer class="fixed inset-x-0 bottom-0 p-4 text-xs text-center text-white">
-		{#if dev}
-			<button
-				on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
-				class="mx-1">Login</button
-			>
-		{/if}
+		<button on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })} class="mx-1"
+			>Login</button
+		>
 		<a href="/en/privacy-policy" class="mx-1">Privacy Policy - Datenschutz</a>
 		<a href="/en/imprint" class="mx-1">Site Notice - Impressum</a>
 	</footer>
