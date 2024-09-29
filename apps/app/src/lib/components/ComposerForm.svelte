@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms/client';
 	import { derived, writable, get } from 'svelte/store';
-	import { log } from '$lib/stores';
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { eventBus } from '$lib/composables/eventBus';
 	import type { SuperForm } from 'sveltekit-superforms/client';
-	import Stepper from '$lib/components/Stepper.svelte';
-	import { eventConfig } from '$lib/composables/eventConfig';
 
 	export let me: any;
 
@@ -21,6 +18,7 @@
 	let componentId: string;
 
 	let isLoading = false;
+	let isSubmitted = false;
 
 	$: if (me) {
 		me.subscribe((value: any) => {
@@ -29,20 +27,15 @@
 			validators = formData.validators;
 			submitAction = formData.submitAction;
 			componentId = value.id;
-
-			log('info', 'Current me data context', {
-				formData,
-				fields: fields.length,
-				validators: Object.keys(validators).length,
-				submitAction,
-				componentId
-			});
+			fieldsStore.set(fields);
 		});
 	}
 
 	let currentField = writable(0);
-	let stepperState = derived([currentField, writable(fields)], ([$currentField, $fields]) => ({
-		current: $currentField,
+	let fieldsStore = writable(fields);
+
+	let stepperState = derived([currentField, fieldsStore], ([$currentField, $fields]) => ({
+		current: $currentField + 1,
 		total: $fields.length
 	}));
 
@@ -64,8 +57,8 @@
 
 	let submissionResult = writable({ success: false, message: '' });
 
-	$: isLastStep = $currentField === fields.length - 1;
-	$: isOnlyOneField = fields.length === 1;
+	$: isLastStep = $currentField === $stepperState.total - 1;
+	$: isOnlyOneField = fields.length <= 1;
 	$: isFirstField = $currentField === 0;
 
 	async function handleNext() {
@@ -75,19 +68,10 @@
 		const validationResult = await validate(currentFieldName);
 
 		if (validationResult && !validationResult.valid) {
-			log('error', `Validation failed for field: ${currentFieldName}`, {
-				errors: $errors?.[currentFieldName]
-			});
 			return;
 		}
 
 		const formData = get(form);
-		log('info', 'Current form data', {
-			currentField: $currentField,
-			totalFields: fields.length,
-			currentFieldName: fields[$currentField]?.name,
-			allFormData: formData
-		});
 
 		if (isLastStep) {
 			await handleSubmit();
@@ -97,51 +81,46 @@
 	}
 
 	function handlePrev() {
-		currentField.update((n) => n - 1);
+		currentField.update((n) => Math.max(0, n - 1));
 	}
 
 	async function handleSubmit() {
 		isLoading = true;
 		try {
 			const formData = get(form);
-			log('info', 'Submitting form', { formData });
 
 			const input = fields.reduce((acc, field) => {
 				acc[field.name] = formData[field.name];
 				return acc;
 			}, {} as Record<string, any>);
 
-			log('info', 'Prepared input for submission', { input, submitAction });
-
 			const result = await submitForm({
 				operation: submitAction,
 				input: input
 			});
 
-			log('info', 'Form submission result', { result });
-
 			if (result.success) {
 				submissionResult.set({ success: true, message: result.message });
-				log('success', 'Form submitted successfully', result);
-
-				// Emit the toggleModal event for both updateMe and sendMail actions
-				eventBus.emit('toggleModal', componentId);
-
-				clearFormData();
+				eventBus.emit(submitAction, componentId);
+				isSubmitted = true;
 			} else {
 				throw new Error(result.message);
 			}
 		} catch (error: any) {
 			const errorMessage = error.message || 'An error occurred while submitting the form.';
 			submissionResult.set({ success: false, message: errorMessage });
-			log('error', 'Form submission failed', { error: errorMessage });
 		} finally {
 			isLoading = false;
 		}
 	}
 
+	function handleGoAgain() {
+		isSubmitted = false;
+		submissionResult.set({ success: false, message: '' });
+		clearFormData();
+	}
+
 	function clearFormData() {
-		// Reset the form to its initial state
 		if (form) {
 			Object.keys(get(form)).forEach((key) => {
 				form.update(($form) => {
@@ -150,18 +129,7 @@
 				});
 			});
 		}
-		// Reset the current field to the first one
 		currentField.set(0);
-	}
-
-	function handleGoAgain() {
-		if ($submissionResult.success) {
-			// If it was a successful submission, form data is already cleared
-			submissionResult.set({ success: false, message: '' });
-		} else {
-			// If it was an error, just clear the error message
-			submissionResult.set({ success: false, message: '' });
-		}
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -194,35 +162,46 @@
 
 {#if fields.length > 0 && childInput}
 	<form on:submit|preventDefault={handleNext} on:keydown={handleKeyDown} class="w-full">
-		<div class="mb-4">
-			<div class="p-4">
-				<h2 class="mb-2 text-lg font-semibold text-center md:text-4xl text-tertiary-500">
-					{fields[$currentField].title}
-				</h2>
-				<p class="text-sm text-center lg:text-2xl text-tertiary-700">
-					{fields[$currentField].description}
-				</p>
+		{#if isSubmitted}
+			<div
+				class="w-full px-6 py-4 my-4 text-base font-medium text-center rounded-lg card variant-ghost-success"
+			>
+				{$submissionResult.message}
 			</div>
-
-			{#if isLoading}
-				<div class="flex flex-col items-center justify-center p-8">
-					<Icon icon="eos-icons:loading" class="w-12 h-12 text-tertiary-500 animate-spin" />
-				</div>
-			{:else if $submissionResult.success || $submissionResult.message}
-				<div
-					class="w-full px-6 py-4 my-4 text-base font-medium text-center rounded-lg card variant-ghost-{$submissionResult.success
-						? 'success'
-						: 'error'}"
+			<div class="flex justify-center mt-4">
+				<button
+					type="button"
+					on:click={handleGoAgain}
+					class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
 				>
-					{$submissionResult.message}
+					Go Again
+				</button>
+			</div>
+		{:else}
+			<div class="mb-4">
+				<div class="p-4">
+					<h2 class="mb-2 text-lg font-semibold text-center md:text-4xl text-tertiary-500">
+						{fields[$currentField].title}
+					</h2>
+					{#if $errors[fields[$currentField].name]}
+						<p class="text-sm text-center lg:text-2xl text-warning-500">
+							{$errors[fields[$currentField].name]}
+						</p>
+					{:else}
+						<p class="text-sm text-center lg:text-2xl text-tertiary-700">
+							{fields[$currentField].description}
+						</p>
+					{/if}
 				</div>
-			{:else}
 				{#if !isOnlyOneField}
 					<div class="py-2">
-						<Stepper {stepperState} stepStateName={fields[$currentField]?.name || ''} />
+						<Stepper
+							{stepperState}
+							{currentField}
+							stepStateName={fields[$currentField]?.name || ''}
+						/>
 					</div>
 				{/if}
-
 				{#key $currentField}
 					{#if fields[$currentField].type === 'text'}
 						<TextInput {childInput} />
@@ -244,46 +223,36 @@
 						<DateRangeInput {childInput} />
 					{/if}
 				{/key}
-			{/if}
+			</div>
 
 			<div class="flex justify-center mt-4">
-				{#if $submissionResult.success || $submissionResult.message}
-					<button
-						type="button"
-						on:click={handleGoAgain}
-						class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
-					>
-						Go Again
-					</button>
-				{:else}
-					<div class="flex justify-between w-full">
-						<div>
-							{#if !isOnlyOneField && !isFirstField}
-								<button
-									type="button"
-									on:click={handlePrev}
-									class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
-									disabled={isLoading}
-								>
-									<span>
-										<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
-									</span>
-								</button>
-							{/if}
-						</div>
-						<div>
+				<div class="flex justify-between w-full">
+					<div>
+						{#if !isOnlyOneField && !isFirstField}
 							<button
 								type="button"
-								on:click={handleNext}
-								class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
-								disabled={!isFieldValid || (isLastStep && !isFormValid) || isLoading}
+								on:click={handlePrev}
+								class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
+								disabled={isLoading}
 							>
-								{isLastStep ? 'Submit' : 'Next'}
+								<span>
+									<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
+								</span>
 							</button>
-						</div>
+						{/if}
 					</div>
-				{/if}
+					<div>
+						<button
+							type="button"
+							on:click={handleNext}
+							class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
+							disabled={!isFieldValid || (isLastStep && !isFormValid) || isLoading}
+						>
+							{isLastStep ? 'Submit' : 'Next'}
+						</button>
+					</div>
+				</div>
 			</div>
-		</div>
+		{/if}
 	</form>
 {/if}
