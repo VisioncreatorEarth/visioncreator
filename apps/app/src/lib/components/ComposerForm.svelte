@@ -165,37 +165,42 @@
 
 {#if fields.length > 0 && childInput}
 	<form on:submit|preventDefault={handleNext} on:keydown={handleKeyDown} class="w-full">
-		{#if isSubmitted}
-			<div
-				class="w-full px-6 py-4 my-4 text-base font-medium text-center rounded-lg card variant-ghost-success"
-			>
-				{$submissionResult.message}
+		<div class="mb-4">
+			<div class="p-4">
+				<h2 class="mb-2 text-lg font-semibold text-center md:text-4xl text-tertiary-500">
+					{fields[$currentField].title}
+				</h2>
+				{#if $errors[fields[$currentField].name]}
+					<p class="text-sm text-center lg:text-2xl text-warning-500">
+						{$errors[fields[$currentField].name]}
+					</p>
+				{:else}
+					<p class="text-sm text-center lg:text-2xl text-tertiary-700">
+						{fields[$currentField].description}
+					</p>
+				{/if}
 			</div>
-			<div class="flex justify-center mt-4">
-				<button
-					type="button"
-					on:click={handleGoAgain}
-					class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
-				>
-					Go Again
-				</button>
-			</div>
-		{:else}
-			<div class="mb-4">
-				<div class="p-4">
-					<h2 class="mb-2 text-lg font-semibold text-center md:text-4xl text-tertiary-500">
-						{fields[$currentField].title}
-					</h2>
-					{#if $errors[fields[$currentField].name]}
-						<p class="text-sm text-center lg:text-2xl text-warning-500">
-							{$errors[fields[$currentField].name]}
-						</p>
-					{:else}
-						<p class="text-sm text-center lg:text-2xl text-tertiary-700">
-							{fields[$currentField].description}
-						</p>
-					{/if}
+
+			{#if isLoading}
+				<div class="flex flex-col items-center justify-center p-8">
+					<Icon icon="eos-icons:loading" class="w-12 h-12 text-tertiary-500 animate-spin" />
 				</div>
+			{:else if isSubmitted}
+				<div
+					class="w-full px-6 py-4 my-4 text-base font-medium text-center rounded-lg card variant-ghost-success"
+				>
+					{$submissionResult.message}
+				</div>
+				<div class="flex justify-center mt-4">
+					<button
+						type="button"
+						on:click={handleGoAgain}
+						class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
+					>
+						Go Again
+					</button>
+				</div>
+			{:else}
 				{#if !isOnlyOneField}
 					<div class="py-2">
 						<Stepper
@@ -226,36 +231,36 @@
 						<DateRangeInput {childInput} />
 					{/if}
 				{/key}
-			</div>
 
-			<div class="flex justify-center mt-4">
-				<div class="flex justify-between w-full">
-					<div>
-						{#if !isOnlyOneField && !isFirstField}
+				<div class="flex justify-center mt-4">
+					<div class="flex justify-between w-full">
+						<div>
+							{#if !isOnlyOneField && !isFirstField}
+								<button
+									type="button"
+									on:click={handlePrev}
+									class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
+									disabled={isLoading}
+								>
+									<span>
+										<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
+									</span>
+								</button>
+							{/if}
+						</div>
+						<div>
 							<button
 								type="button"
-								on:click={handlePrev}
-								class="font-semibold btn btn-sm md:btn-base variant-ghost-secondary"
-								disabled={isLoading}
+								on:click={handleNext}
+								class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
+								disabled={!isFieldValid || (isLastStep && !isFormValid) || isLoading}
 							>
-								<span>
-									<Icon icon="solar:alt-arrow-left-bold" class="h-5 text-white" />
-								</span>
+								{isLastStep ? 'Submit' : 'Next'}
 							</button>
-						{/if}
-					</div>
-					<div>
-						<button
-							type="button"
-							on:click={handleNext}
-							class="font-semibold btn variant-ghost-secondary btn-sm md:btn-base"
-							disabled={!isFieldValid || (isLastStep && !isFormValid) || isLoading}
-						>
-							{isLastStep ? 'Submit' : 'Next'}
-						</button>
+						</div>
 					</div>
 				</div>
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</form>
 {/if}

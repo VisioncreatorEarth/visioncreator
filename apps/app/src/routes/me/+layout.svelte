@@ -38,7 +38,7 @@
 		const handleToggleModal = () => {
 			setTimeout(() => {
 				modalOpen.set(false);
-			}, 1000);
+			}, 2000);
 		};
 
 		eventBus.on('toggleModal', handleToggleModal);
