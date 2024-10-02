@@ -20,7 +20,7 @@
 	<div
 		class={`h1 text-tertiary-400 ${
 			large ? 'text-4xl sm:text-6xl md:text-8xl' : 'text-2xl sm:text-3xl md:text-4xl'
-		} font-bold text-white tracking-wider opacity-75`}
+		} font-bold text-white tracking-wide opacity-75`}
 	>
 		{Math.floor($countdown / 86400)}d {Math.floor(($countdown % 86400) / 3600)}h {Math.floor(
 			($countdown % 3600) / 60
@@ -29,8 +29,8 @@
 {:else}
 	<div
 		class={`h1 text-tertiary-400 ${
-			large ? 'text-4xl sm:text-6xl md:text-8xl' : 'text-2xl sm:text-3xl md:text-4xl'
-		} font-bold text-center text-white tracking-wider opacity-75`}
+			large ? 'text-5xl sm:text-6xl md:text-8xl' : 'text-3xl sm:text-4xl md:text-5xl'
+		} font-bold text-center text-white tracking-wide opacity-75`}
 	>
 		your life is about to change
 	</div>

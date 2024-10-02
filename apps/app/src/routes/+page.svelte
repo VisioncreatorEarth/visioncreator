@@ -73,11 +73,16 @@
 
 	<div class="h-full overlay">
 		<div class="@container h-full">
-			<div class="flex flex-col items-center justify-center w-full h-full">
-				<div class="w-full max-w-3xl mb-12 p-4 text-center flex flex-col space-y-8">
+			<div class="flex flex-col items-center justify-center w-full h-full pb-16">
+				<div class="w-full max-w-3xl p-4 text-center flex flex-col space-y-4">
 					<div class="text-center p-6 @md:p-8 rounded-xl">
+						<img
+							src="/logo.png"
+							alt="Visioncreator logo"
+							class="w-20 @3xl:w-32 mx-auto mb-6 opacity-70"
+						/>
 						<h2
-							class=" uppercase text-tertiary-300 text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2"
+							class="lowercase text-tertiary-300 text-2xl @md:text-3xl @lg:text-4xl font-bold mb-2"
 						>
 							Coming Soon
 						</h2>
@@ -86,28 +91,22 @@
 					{#if dev}
 						<p class="text-lg @md:text-xl text-tertiary-200">
 							sign up to our waitlist and join our exciting journey
-							<!-- from 0 to 1 billion
-							visioncreators
-						 and share it for a chance to
-						receive 1 of 21 exclusive, once-in-a-lifetime pioneer suprises. -->
 						</p>
-
-						<div class="w-full">
+						<div class="w-full space-y-4">
 							<input
 								bind:value={$futureMe.name}
 								placeholder="Enter your first name, future Visioncreator"
-								class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+								class="max-w-xl w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
 							/>
+							<button
+								on:click={() => drawerStore.open({ position: 'bottom' })}
+								class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
+							>
+								Sign Up Now
+							</button>
 						</div>
 					{/if}
 				</div>
-
-				<button
-					on:click={() => drawerStore.open({ position: 'bottom', action: 'signup' })}
-					class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
-				>
-					Sign Up Now
-				</button>
 			</div>
 		</div>
 	</div>
