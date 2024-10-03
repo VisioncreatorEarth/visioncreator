@@ -100,8 +100,8 @@
 {:else if $meQuery.data && !$meQuery.data.onboarded}
 	{#if !showNewsletter}
 		<div class="flex flex-col items-center justify-center h-screen text-center">
-			<h1 class="text-4xl font-bold mb-2">Phenomenal</h1>
-			<p class="text-xl mb-4">Your are now a pioneer, peaking into the future</p>
+			<h1 class="text-4xl font-bold mb-2">Welcome</h1>
+			<p class="text-xl mb-4">to the most exciting journey of our time</p>
 			<div class="w-full max-w-3xl mb-4">
 				<VideoPlayer on:videoEnded={handleVideoEnded} />
 			</div>

@@ -30,7 +30,7 @@
 	<div
 		class={`h1 text-tertiary-400 ${
 			large ? 'text-5xl sm:text-6xl md:text-8xl' : 'text-3xl sm:text-4xl md:text-5xl'
-		} font-bold text-center text-white tracking-wide opacity-75`}
+		} font-extrabold text-center text-white tracking-wide opacity-75`}
 	>
 		your life is about to change
 	</div>

@@ -117,12 +117,14 @@
 				<a href="/en/imprint" class="text-2xs @sm:text-xs">Site Notice - Impressum</a>
 			</div>
 			<div class="relative">
-				<button
-					class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4 absolute bottom-0 right-0"
-					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
-				>
-					Login
-				</button>
+				{#if dev}
+					<button
+						class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4 absolute bottom-0 right-0"
+						on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
+					>
+						Login
+					</button>
+				{/if}
 				<div
 					class="p-4 -mb-2 -mr-2"
 					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}

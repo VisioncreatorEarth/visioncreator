@@ -92,8 +92,7 @@
 				Subscribe to watch next video
 			</h3>
 			<p class="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
-				Subscribe to our weekly Visionletter to get early access to our video updates 1 week before
-				the public. <br /> Follow along our journey from 0 to 1 billion Visioncreators.
+				Subscribe to our weekly Visionletter to follow along our journey.
 			</p>
 			<div class="flex flex-row space-x-2 sm:space-x-4 mb-4 sm:mb-6">
 				<button class="btn btn-sm sm:btn-md variant-ghost-secondary" on:click={handleNoThanks}>
