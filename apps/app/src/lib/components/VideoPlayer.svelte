@@ -36,7 +36,7 @@
 </script>
 
 <div class="video-container">
-	<media-player title="Welcome" src="intro.mp4" poster="intro_poster_frame.png">
+	<media-player title="Welcome" src="https://youtu.be/_kUV-SWIAMQ" poster="intro_poster_frame.png">
 		<media-provider />
 		<media-plyr-layout />
 	</media-player>
