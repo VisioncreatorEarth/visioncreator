@@ -36,9 +36,9 @@
 </script>
 
 <div class="video-container">
-	<media-player title="Welcome" src="intro.mp4">
+	<media-player title="Welcome" src="intro.mp4" poster="intro_poster_frame.png">
 		<media-provider />
-		<media-plyr-layout thumbnails="wald-first-frame.jpg" />
+		<media-plyr-layout />
 	</media-player>
 </div>
 
