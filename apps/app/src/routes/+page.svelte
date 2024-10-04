@@ -88,24 +88,22 @@
 						</h2>
 					</div>
 					<Countdown large={true} />
-					{#if dev}
-						<p class="text-lg @md:text-xl text-tertiary-200">
-							sign up to our waitlist and join our exciting journey
-						</p>
-						<div class="w-full space-y-4">
-							<input
-								bind:value={$futureMe.name}
-								placeholder="Enter your first name, future Visioncreator"
-								class="max-w-xl w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
-							/>
-							<button
-								on:click={() => drawerStore.open({ position: 'bottom' })}
-								class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
-							>
-								Sign Up Now
-							</button>
-						</div>
-					{/if}
+					<p class="text-lg @md:text-xl text-tertiary-200">
+						sign up to our waitlist and join our exciting journey
+					</p>
+					<div class="w-full space-y-4">
+						<input
+							bind:value={$futureMe.name}
+							placeholder="Enter your first name, future Visioncreator"
+							class="max-w-xl w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border-2 rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+						/>
+						<button
+							on:click={() => drawerStore.open({ position: 'bottom' })}
+							class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
+						>
+							Sign Up Now
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -117,14 +115,12 @@
 				<a href="/en/imprint" class="text-2xs @sm:text-xs">Site Notice - Impressum</a>
 			</div>
 			<div class="relative">
-				{#if dev}
-					<button
-						class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4 absolute bottom-0 right-0"
-						on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
-					>
-						Login
-					</button>
-				{/if}
+				<button
+					class="badge variant-ghost-tertiary text-2xs @sm:text-xs ml-2 @sm:ml-4 absolute bottom-0 right-0"
+					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
+				>
+					Login
+				</button>
 				<div
 					class="p-4 -mb-2 -mr-2"
 					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
