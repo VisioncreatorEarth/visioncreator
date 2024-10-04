@@ -49,6 +49,9 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		border-radius: 36px;
+		overflow: hidden; /* This ensures the video doesn't overflow the rounded corners */
+		border: 20px solid theme('colors.surface.700'); /* Adjust the color as needed */
 	}
 
 	:global(media-player) {
