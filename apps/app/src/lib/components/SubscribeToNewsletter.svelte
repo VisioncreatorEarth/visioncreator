@@ -88,10 +88,10 @@
 			<h3
 				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
 			>
-				Receive weekly video updates
+				Receive weekly Visionletter
 			</h3>
 			<p class="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
-				Subscribe to our weekly Visionletter to follow along our journey.
+				Subscribe to our weekly video updates to follow along our journey.
 			</p>
 			<div class="flex flex-row space-x-2 sm:space-x-4 mb-4 sm:mb-6">
 				<button class="btn btn-sm sm:btn-md variant-ghost-secondary" on:click={handleNoThanks}>
