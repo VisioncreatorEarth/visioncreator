@@ -57,12 +57,12 @@
 						class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 					>
 						<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">
-							{$authAction === 'signup' ? 'Put me on the waitlist' : 'Welcome Back!'}
+							{$authAction === 'signup' ? 'Put me on the waitlist' : 'Welcome Back'}
 						</div>
 						{#if $authAction === 'signup'}
 							<p class="max-w-2xl text-md @3xl:text-lg">
-								Join our journey and be part of something extraordinary. Grab your chance to be one
-								of the first humans on earth to receive your exclusive early pioneer invite.
+								Grab your chance to be one of the first humans on earth to receive your exclusive
+								early pioneer invite.
 							</p>
 							<p class="text-xs mt-2 leading-snug">
 								*by signing up to our waitlist, you consent to our
@@ -72,8 +72,8 @@
 							</p>
 						{:else}
 							<p class="max-w-2xl text-md @3xl:text-lg">
-								Great to see you again! Ready to continue our journey together? Let's make some
-								vision magic happen!
+								Great to see you again. Ready to continue our journey together? Let's make some
+								vision magic happen.
 							</p>
 						{/if}
 					</div>

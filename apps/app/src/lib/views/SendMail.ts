@@ -34,7 +34,7 @@ export const view = {
 							name: 'subject',
 							type: 'text',
 							title: "What's the topic?",
-							description: 'Share are short title about the topic you want to talk to us'
+							description: 'Share a short title about what you want to talk to us'
 						},
 						{
 							name: 'body',

@@ -25,7 +25,7 @@
 	async function handleSubscribe() {
 		showMessage = true;
 		messageType = 'success';
-		message = 'You subscribed something extraordinary. Get ready for an incredible ride!';
+		message = "Next video is gonna sparkle. You've subscribed to something extraordinary. ";
 
 		try {
 			await $toggleNewsletterMutation.mutateAsync({ id: userId, email: userEmail });
@@ -70,7 +70,7 @@
 			<h3
 				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
 			>
-				{messageType === 'success' ? "Next week's video is gonna sparkle!" : 'Maybe next time.'}
+				{messageType === 'success' ? 'Get ready for an incredible ride!' : 'Maybe next time.'}
 			</h3>
 			<p
 				class="text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6 text-center text-tertiary-300"

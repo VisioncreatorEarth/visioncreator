@@ -20,7 +20,7 @@ export const view = {
 							name: 'name',
 							type: 'text',
 							title: 'What is your name?',
-							description: 'Please enter your full name'
+							description: 'Please enter your first name'
 						}
 					],
 					validators: UserSchema,
