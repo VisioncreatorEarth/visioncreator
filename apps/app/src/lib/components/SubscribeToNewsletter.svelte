@@ -25,8 +25,7 @@
 	async function handleSubscribe() {
 		showMessage = true;
 		messageType = 'success';
-		message =
-			'You subscribed something extraordinary. Together we will shape the future and inspire 1 billion Visioncreators. Get ready for an incredible journey!';
+		message = 'You subscribed something extraordinary. Get ready for an incredible ride!';
 
 		try {
 			await $toggleNewsletterMutation.mutateAsync({ id: userId, email: userEmail });
@@ -89,7 +88,7 @@
 			<h3
 				class="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-primary-300 mb-2 sm:mb-4"
 			>
-				Subscribe to watch next video
+				Receive weekly video updates
 			</h3>
 			<p class="mt-1 sm:mt-2 text-xs sm:text-sm md:text-base lg:text-lg mb-4 sm:mb-6">
 				Subscribe to our weekly Visionletter to follow along our journey.
