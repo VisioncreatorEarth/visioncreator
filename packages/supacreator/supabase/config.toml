@@ -103,9 +103,13 @@ enable_confirmations = true
 max_frequency = "1s"
 
 # Uncomment to customize email template
-# [auth.email.template.magic_link]
-# subject = "Magic Link"
-# content_path = "./mail-templates/signInLink.html"
+[auth.email.template.magic_link]
+subject = "Magic Link"
+content_path = "./supabase/email/otp.html"
+
+[auth.email.template.confirmation]
+subject = "Confirmation v2"
+content_path = "./supabase/email/otp.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
