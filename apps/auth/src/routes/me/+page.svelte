@@ -19,6 +19,11 @@
   };
 </script>
 
+<div>
+  <h3>Session Data:</h3>
+  <pre>{JSON.stringify(session, null, 2)}</pre>
+</div>
+
 <div class="form-widget">
   <div>
     <label for="email">Email</label>
