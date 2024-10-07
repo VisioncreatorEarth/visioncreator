@@ -1,13 +1,16 @@
-name: Deploy API to Fly.io
+name: LIVE - api deploy to fly.io
 
 on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
-    name: Deploy app
+    name: Deploy app (Production)
     runs-on: ubuntu-latest
+    environment: Production
+
     steps:
       - uses: actions/checkout@v3
 
@@ -20,29 +23,23 @@ jobs:
           echo "WG_SECURE_COOKIE_HASH_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "WG_SECURE_COOKIE_BLOCK_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
 
-      - name: Deploy to Fly
+      - name: Deploy to Fly (Production)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd apps/api
 
-          # Check if the app exists
-          if ! flyctl apps list | grep -q "api-visioncreator-earth"; then
-            echo "App does not exist. Creating new app..."
-            flyctl apps create api-visioncreator-earth
-          else
-            echo "App already exists. Proceeding with deployment..."
-          fi
-
-          # Set secrets
+          # Set secrets (including the new TEST_PROD secret)
           flyctl secrets set \
+            --app api-visioncreator-earth \
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
             WG_SECURE_COOKIE_HASH_KEY="${{ env.WG_SECURE_COOKIE_HASH_KEY }}" \
             WG_SECURE_COOKIE_BLOCK_KEY="${{ env.WG_SECURE_COOKIE_BLOCK_KEY }}" \
             SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
             SUPABASE_SERVICE_ROLE="${{ secrets.SUPABASE_SERVICE_ROLE }}" \
             NANGO_SECRET_KEY="${{ secrets.NANGO_SECRET_KEY }}" \
-            NANGO_HOST="${{ secrets.NANGO_HOST }}"
+            NANGO_HOST="${{ secrets.NANGO_HOST }}" \
+            TEST_PROD="${{ secrets.TEST_PROD }}"
 
           # Deploy the app
-          flyctl deploy --remote-only
+          flyctl deploy --app api-visioncreator-earth --remote-only
