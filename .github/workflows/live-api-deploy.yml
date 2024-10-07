@@ -1,4 +1,4 @@
-name: LIVE - api deploy to fly.io
+name: production-api-deploy
 
 on:
   push:
@@ -30,16 +30,16 @@ jobs:
           cd apps/api
 
           # Check if the app exists
-            if ! flyctl apps list | grep -q "api-visioncreator-earth"; then
-              echo "App does not exist. Creating new app..."
-              flyctl apps create api-visioncreator-earth
-            else
-              echo "App already exists. Proceeding with deployment..."
-            fi
+          if ! flyctl apps list | grep -q "api-visioncreator-earth"; then
+            echo "App does not exist. Creating new app..."
+            flyctl apps create api-visioncreator-earth
+          else
+            echo "App already exists. Proceeding with deployment..."
+          fi
 
           # Set secrets
           flyctl secrets set \
-            --app api-visioncreator-earth \
+            --config fly.production.toml \
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
             WG_SECURE_COOKIE_HASH_KEY="${{ env.WG_SECURE_COOKIE_HASH_KEY }}" \
             WG_SECURE_COOKIE_BLOCK_KEY="${{ env.WG_SECURE_COOKIE_BLOCK_KEY }}" \
@@ -50,4 +50,4 @@ jobs:
             POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}"
 
           # Deploy the app
-          flyctl deploy --app api-visioncreator-earth --remote-only
+          flyctl deploy --config fly.production.toml --remote-only
