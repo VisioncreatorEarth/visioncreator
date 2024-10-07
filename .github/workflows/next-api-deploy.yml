@@ -47,6 +47,8 @@ jobs:
             POSTMARK_INBOUND_MAIL="${{ secrets.POSTMARK_INBOUND_MAIL }}" \
             POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}"
 
+          # Using the next environment fly.toml
+          cp fly.next.toml fly.toml
 
           # Deploy the app
           flyctl deploy --remote-only
