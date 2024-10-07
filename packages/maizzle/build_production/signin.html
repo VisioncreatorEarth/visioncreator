@@ -249,7 +249,7 @@
                       <br class="sm-inline" style="display: none">Please confirm your mail address to login.
                     </p>
                     <div>
-                      <a href="{{ .ConfirmationURL }}" style="margin-bottom: 32px; display: inline-block; width: auto; border-radius: 9999px; background-color: #eab308; padding: 16px 24px; font-size: 16px; font-weight: 600; line-height: 1; color: #141a4d; text-decoration: none">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email" style="margin-bottom: 32px; display: inline-block; width: auto; border-radius: 9999px; background-color: #eab308; padding: 16px 24px; font-size: 16px; font-weight: 600; line-height: 1; color: #141a4d; text-decoration: none">
                         <!--[if mso]>
       <i style="mso-font-width: 150%; mso-text-raise: 30px" hidden>&emsp;</i>
     <![endif]-->
@@ -273,7 +273,7 @@
               <tr>
                 <td>
                 </td>
-              </tr>
+            </table>tr>
               <tr>
                 <td style="padding: 16px 24px; text-align: center; font-size: 12px; color: #a3a7c2">
                   <p style="margin: 0 0 8px; font-weight: 700; text-transform: uppercase">Powered by</p>
