@@ -24,6 +24,14 @@ jobs:
       - name: Deploy to Fly
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Set test secret
+        run: |
+          cd apps/api
+          flyctl secrets set TEST_SECRET="This is a test"
+          flyctl secrets list
+
+      - name: Deploy to Fly
         run: |
           cd apps/api
 
