@@ -8,7 +8,7 @@ jobs:
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
-    environment: next
+    environment: Next
     steps:
       - uses: actions/checkout@v3
 
