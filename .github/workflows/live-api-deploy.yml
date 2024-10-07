@@ -29,7 +29,15 @@ jobs:
         run: |
           cd apps/api
 
-          # Set secrets (including the new TEST_PROD secret)
+          # Check if the app exists
+            if ! flyctl apps list | grep -q "api-visioncreator-earth"; then
+              echo "App does not exist. Creating new app..."
+              flyctl apps create api-visioncreator-earth
+            else
+              echo "App already exists. Proceeding with deployment..."
+            fi
+
+          # Set secrets
           flyctl secrets set \
             --app api-visioncreator-earth \
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
@@ -39,7 +47,7 @@ jobs:
             SUPABASE_SERVICE_ROLE="${{ secrets.SUPABASE_SERVICE_ROLE }}" \
             NANGO_SECRET_KEY="${{ secrets.NANGO_SECRET_KEY }}" \
             NANGO_HOST="${{ secrets.NANGO_HOST }}" \
-            TEST_PROD="${{ secrets.TEST_PROD }}"
+            POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}"
 
           # Deploy the app
           flyctl deploy --app api-visioncreator-earth --remote-only
