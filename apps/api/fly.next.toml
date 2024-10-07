@@ -1,6 +1,9 @@
 app = 'api-next-visioncreator-earth'
 primary_region = "fra"
 
+[env]
+ENV = "next"
+
 [build]
 
 [http_service]

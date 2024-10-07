@@ -1,12 +1,13 @@
 import {
   configureWunderGraphApplication,
   cors,
-  EnvironmentVariable,
-  introspect,
   templates,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
+import { getEnvironment } from "./environments.config";
+
+const env = getEnvironment();
 
 configureWunderGraphApplication({
   apis: [],
@@ -24,31 +25,22 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint:
-            process.env.NODE_ENV === "production"
-              ? "https://visioncreator.earth/auth/userinfo"
-              : "http://127.0.0.1:3000/auth/userinfo",
+          userInfoEndpoint: `${env.domain}/auth/userinfo`,
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins:
-      process.env.NODE_ENV === "production"
-        ? ["https://visioncreator.earth"]
-        : [
-            "http://127.0.0.1:3000",
-            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-          ],
+    allowedOrigins: env.allowedOrigins,
   },
   options: {
-    publicNodeUrl:
-      process.env.NODE_ENV === "production"
-        ? "https://api-visioncreator-earth.fly.dev"
-        : "http://127.0.0.1:9991",
+    publicNodeUrl: env.apiDomain,
   },
   authorization: {
     roles: ["admin", "authenticated"],
+  },
+  security: {
+    enableGraphQLEndpoint: env.name !== "production",
   },
 });

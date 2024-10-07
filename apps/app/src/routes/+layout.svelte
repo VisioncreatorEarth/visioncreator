@@ -158,8 +158,9 @@
 							>
 								<p>{message}</p>
 							</div>
-							<button on:click={resetForm} class="btn variant-filled mt-4 rounded-full"
-								>Try Again</button
+							<button
+								on:click={resetForm}
+								class="btn btn-sm variant-ghost-tertiary mt-4 rounded-full">Try Again</button
 							>
 						</div>
 					{/if}
