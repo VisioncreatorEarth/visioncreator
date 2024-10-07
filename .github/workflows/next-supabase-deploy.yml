@@ -1,4 +1,4 @@
-name: Deploy Supabase Changes (Next)
+name: next-supabase-deploy
 
 on:
   push:

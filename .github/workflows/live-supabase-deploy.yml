@@ -1,4 +1,4 @@
-name: Deploy Supabase Changes (Production)
+name: production-supabase-deploy
 
 on:
   push:
