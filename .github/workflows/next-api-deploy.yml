@@ -1,15 +1,15 @@
-name: production-api-deploy
+name: next-api-deploy
 
 on:
   push:
     branches:
-      - main
+      - next
 
 jobs:
   deploy:
-    name: Deploy app (Production)
+    name: Deploy app (Next)
     runs-on: ubuntu-latest
-    environment: Production
+    environment: Next
 
     steps:
       - uses: actions/checkout@v3
@@ -23,23 +23,23 @@ jobs:
           echo "WG_SECURE_COOKIE_HASH_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "WG_SECURE_COOKIE_BLOCK_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
 
-      - name: Deploy to Fly (Production)
+      - name: Deploy to Fly (Next)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: |
           cd apps/api
 
           # Check if the app exists
-          if ! flyctl apps list | grep -q "api-visioncreator-earth"; then
-            echo "App does not exist. Creating new app..."
-            flyctl apps create api-visioncreator-earth
+          if ! flyctl apps list | grep -q "api-next-visioncreator-earth"; then
+            echo "Next app does not exist. Creating new app..."
+            flyctl apps create api-next-visioncreator-earth
           else
-            echo "App already exists. Proceeding with deployment..."
+            echo "Next app already exists. Proceeding with deployment..."
           fi
 
           # Set secrets
           flyctl secrets set \
-            --config fly.production.toml \
+            --config fly.next.toml \
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
             WG_SECURE_COOKIE_HASH_KEY="${{ env.WG_SECURE_COOKIE_HASH_KEY }}" \
             WG_SECURE_COOKIE_BLOCK_KEY="${{ env.WG_SECURE_COOKIE_BLOCK_KEY }}" \
@@ -50,4 +50,4 @@ jobs:
             POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}"
 
           # Deploy the app
-          flyctl deploy --config fly.production.toml --remote-only
+          flyctl deploy --config fly.next.toml --remote-only

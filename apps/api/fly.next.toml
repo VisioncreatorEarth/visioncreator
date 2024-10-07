@@ -1,0 +1,21 @@
+app = 'api-next-visioncreator-earth'
+primary_region = "fra"
+
+[build]
+
+[http_service]
+internal_port = 9991
+force_https = true
+auto_stop_machines = true
+auto_start_machines = true
+processes = ['app']
+
+[[services]]
+protocol = ''
+internal_port = 9991
+ports = []
+
+[[vm]]
+memory = '1gb'
+cpu_kind = 'shared'
+cpus = 1
