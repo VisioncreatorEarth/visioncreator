@@ -1,10 +1,6 @@
 app = 'api-next-visioncreator-earth'
 primary_region = "fra"
 
-[env]
-NODE_ENV = "preview"
-FLYTOML_ENV = "preview"
-
 [build]
 
 [http_service]

@@ -7,26 +7,6 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
-console.log("-----process.env.FLYTOML_ENV--------", process.env.FLYTOML_ENV);
-console.log(
-  "-----process.env.GITHUB_WORKFLOW_ENV--------",
-  process.env.GITHUB_WORKFLOW_ENV
-);
-
-console.log(
-  "----- EnvironmentVariable FLYTOML_ENV--------",
-  new EnvironmentVariable("FLYTOML_ENV")
-);
-console.log(
-  "----- EnvironmentVariable GITHUB_WORKFLOW_ENV--------",
-  new EnvironmentVariable("GITHUB_WORKFLOW_ENV")
-);
-
-const isPreview =
-  process.env.VERCEL_ENV === "preview" || process.env.FLYTOML_ENV === "preview";
-
-console.log("----------isPreview:--------", isPreview);
-
 configureWunderGraphApplication({
   apis: [],
   server,
@@ -43,23 +23,17 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: isPreview
-            ? "https://next.visioncreator.earth/auth/userinfo"
-            : "http://127.0.0.1:3000/auth/userinfo",
+          userInfoEndpoint: new EnvironmentVariable("WG_USER_INFO_ENDPOINT"),
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins: isPreview
-      ? ["https://next.visioncreator.earth"]
-      : ["http://127.0.0.1:3000", new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
+    allowedOrigins: [new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
   },
   options: {
-    publicNodeUrl: isPreview
-      ? "https://api-next-visioncreator-earth.fly.dev"
-      : "http://127.0.0.1:9991",
+    publicNodeUrl: new EnvironmentVariable("WG_PUBLIC_NODE_URL"),
   },
   authorization: {
     roles: ["admin", "authenticated"],
