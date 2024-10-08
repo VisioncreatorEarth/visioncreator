@@ -1,3 +1,5 @@
+import { EnvironmentVariable } from "@wundergraph/sdk";
+
 type Environment = {
   name: string;
   domain: string;

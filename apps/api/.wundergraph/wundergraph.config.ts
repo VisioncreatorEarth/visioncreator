@@ -26,10 +26,7 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: new EnvironmentVariable(
-            "WG_AUTH_USER_INFO_ENDPOINT",
-            `${env.domain}/auth/userinfo`
-          ),
+          userInfoEndpoint: `${env.domain}/auth/userinfo`,
         },
       ],
     },
@@ -39,7 +36,7 @@ configureWunderGraphApplication({
     allowedOrigins: env.allowedOrigins,
   },
   options: {
-    publicNodeUrl: new EnvironmentVariable("WG_PUBLIC_NODE_URL", env.apiDomain),
+    publicNodeUrl: env.apiDomain,
   },
   authorization: {
     roles: ["admin", "authenticated"],
