@@ -7,11 +7,20 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
-const vercelEnv = new EnvironmentVariable("VERCEL_ENV", "");
-const isPreview = vercelEnv.toString() === "preview";
+console.log(
+  "--------process.env.VERCEL_ENV-----------",
+  process.env.VERCEL_ENV
+);
+console.log(
+  "-----_--EnvironmentVariable-----------",
+  new EnvironmentVariable("VERCEL_ENV", "preview")
+);
 
-console.log("VERCEL_ENV:", vercelEnv.toString());
-console.log("isPreview:", isPreview);
+const isPreview =
+  process.env.VERCEL_ENV === "preview" ||
+  new EnvironmentVariable("VERCEL_ENV", "preview").toString() === "preview";
+
+console.log("----------isPreview:--------", isPreview);
 
 configureWunderGraphApplication({
   apis: [],
@@ -39,10 +48,7 @@ configureWunderGraphApplication({
   cors: {
     ...cors.allowAll,
     allowedOrigins: isPreview
-      ? [
-          "https://next.visioncreator.earth",
-          new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-        ]
+      ? ["https://next.visioncreator.earth"]
       : ["http://127.0.0.1:3000", new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
   },
   options: {
