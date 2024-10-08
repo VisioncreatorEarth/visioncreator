@@ -11,10 +11,7 @@ console.log(
   "--------process.env.VERCEL_ENV-----------",
   process.env.VERCEL_ENV
 );
-console.log(
-  "-----_--EnvironmentVariable-----------",
-  new EnvironmentVariable("VERCEL_ENV", "preview")
-);
+console.log("-----_--process.env.NODE_ENV-----------", process.env.NODE_ENV);
 
 const isPreview =
   process.env.VERCEL_ENV === "preview" ||
