@@ -23,7 +23,7 @@ jobs:
           echo "WG_SECURE_COOKIE_HASH_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "WG_SECURE_COOKIE_BLOCK_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "WG_USER_INFO_ENDPOINT=https://next.visioncreator.earth/auth/userinfo" >> $GITHUB_ENV
-          echo "WG_PUBLIC_NODE_URL=https://api-next-visioncreator-earth.fly.dev" >> $GITHUB_ENV
+          echo "PUBLIC_WG_API_URL=https://api-next-visioncreator-earth.fly.dev" >> $GITHUB_ENV
           echo "WG_ALLOWED_ORIGIN=https://next.visioncreator.earth" >> $GITHUB_ENV
 
       - name: Deploy to Fly (Next)
