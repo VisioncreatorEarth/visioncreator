@@ -23,17 +23,25 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: new EnvironmentVariable("WG_USER_INFO_ENDPOINT"),
+          userInfoEndpoint: process.env.WG_USER_INFO_ENDPOINT
+            ? process.env.WG_USER_INFO_ENDPOINT
+            : new EnvironmentVariable("WG_USER_INFO_ENDPOINT"),
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins: [new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
+    allowedOrigins: [
+      process.env.WG_ALLOWED_ORIGIN
+        ? process.env.WG_ALLOWED_ORIGIN
+        : new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
+    ],
   },
   options: {
-    publicNodeUrl: new EnvironmentVariable("WG_PUBLIC_NODE_URL"),
+    publicNodeUrl: process.env.WG_PUBLIC_NODE_URL
+      ? process.env.WG_PUBLIC_NODE_URL
+      : new EnvironmentVariable("WG_PUBLIC_NODE_URL"),
   },
   authorization: {
     roles: ["admin", "authenticated"],
