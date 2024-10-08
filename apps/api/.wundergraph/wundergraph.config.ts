@@ -2,40 +2,11 @@ import {
   configureWunderGraphApplication,
   cors,
   EnvironmentVariable,
+  introspect,
   templates,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
-
-const isProduction = process.env.NODE_ENV === "production";
-const isPreview = process.env.NODE_ENV === "preview";
-
-const getConfig = () => {
-  if (isProduction) {
-    return {
-      userInfoEndpoint: "https://visioncreator.earth/auth/userinfo",
-      allowedOrigins: ["https://visioncreator.earth"],
-      publicNodeUrl: "https://api-visioncreator-earth.fly.dev",
-    };
-  } else if (isPreview) {
-    return {
-      userInfoEndpoint: "https://next.visioncreator.earth/auth/userinfo",
-      allowedOrigins: ["https://next.visioncreator.earth"],
-      publicNodeUrl: "https://api-next-visioncreator-earth.fly.dev",
-    };
-  } else {
-    return {
-      userInfoEndpoint: "http://127.0.0.1:3000/auth/userinfo",
-      allowedOrigins: [
-        "http://127.0.0.1:3000",
-        new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-      ],
-      publicNodeUrl: "http://127.0.0.1:9991",
-    };
-  }
-};
-
-const config = getConfig();
 
 configureWunderGraphApplication({
   apis: [],
@@ -53,17 +24,29 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: config.userInfoEndpoint,
+          userInfoEndpoint:
+            process.env.NODE_ENV === "next"
+              ? "https://next.visioncreator.earth/auth/userinfo"
+              : "http://127.0.0.1:3000/auth/userinfo",
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins: config.allowedOrigins,
+    allowedOrigins:
+      process.env.NODE_ENV === "next"
+        ? ["https://next.visioncreator.earth"]
+        : [
+            "http://127.0.0.1:3000",
+            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
+          ],
   },
   options: {
-    publicNodeUrl: config.publicNodeUrl,
+    publicNodeUrl:
+      process.env.NODE_ENV === "next"
+        ? "https://api-next-visioncreator-earth.fly.dev"
+        : "http://127.0.0.1:9991",
   },
   authorization: {
     roles: ["admin", "authenticated"],
