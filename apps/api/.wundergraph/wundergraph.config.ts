@@ -7,6 +7,9 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
+const isPreview =
+  new EnvironmentVariable("VERCEL_ENV", "development").toString() === "preview";
+
 configureWunderGraphApplication({
   apis: [],
   server,
@@ -23,29 +26,34 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint:
-            process.env.VERCEL_ENV === "preview"
+          userInfoEndpoint: new EnvironmentVariable(
+            "WG_USER_INFO_ENDPOINT",
+            isPreview
               ? "https://next.visioncreator.earth/auth/userinfo"
-              : "http://127.0.0.1:3000/auth/userinfo",
+              : "http://127.0.0.1:3000/auth/userinfo"
+          ),
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins:
-      process.env.VERCEL_ENV === "preview"
-        ? ["https://next.visioncreator.earth"]
-        : [
-            "http://127.0.0.1:3000",
-            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-          ],
+    allowedOrigins: isPreview
+      ? [
+          new EnvironmentVariable(
+            "WG_ALLOWED_ORIGIN",
+            "https://next.visioncreator.earth"
+          ),
+        ]
+      : ["http://127.0.0.1:3000", new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
   },
   options: {
-    publicNodeUrl:
-      process.env.VERCEL_ENV === "preview"
+    publicNodeUrl: new EnvironmentVariable(
+      "WG_PUBLIC_NODE_URL",
+      isPreview
         ? "https://api-next-visioncreator-earth.fly.dev"
-        : "http://127.0.0.1:9991",
+        : "http://127.0.0.1:9991"
+    ),
   },
   authorization: {
     roles: ["admin", "authenticated"],
