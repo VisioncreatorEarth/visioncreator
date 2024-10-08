@@ -10,8 +10,7 @@ import operations from "./wundergraph.operations";
 console.log("-----process.env.NODE_ENV--------", process.env.NODE_ENV);
 
 const isPreview =
-  process.env.VERCEL_ENV === "preview" ||
-  new EnvironmentVariable("NODE_ENV", "preview").toString() === "preview";
+  process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "preview";
 
 console.log("----------isPreview:--------", isPreview);
 
