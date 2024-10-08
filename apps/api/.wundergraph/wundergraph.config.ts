@@ -13,6 +13,15 @@ console.log(
   process.env.GITHUB_WORKFLOW_ENV
 );
 
+console.log(
+  "----- EnvironmentVariable FLYTOML_ENV--------",
+  new EnvironmentVariable("FLYTOML_ENV")
+);
+console.log(
+  "----- EnvironmentVariable GITHUB_WORKFLOW_ENV--------",
+  new EnvironmentVariable("GITHUB_WORKFLOW_ENV")
+);
+
 const isPreview =
   process.env.VERCEL_ENV === "preview" || process.env.FLYTOML_ENV === "preview";
 
