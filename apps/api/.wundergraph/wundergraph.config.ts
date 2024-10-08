@@ -2,7 +2,6 @@ import {
   configureWunderGraphApplication,
   cors,
   templates,
-  EnvironmentVariable,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";

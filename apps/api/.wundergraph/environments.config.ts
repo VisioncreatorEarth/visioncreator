@@ -8,20 +8,20 @@ type Environment = {
 };
 
 const environments: Record<string, Environment> = {
-  production: {
-    name: "production",
+  Production: {
+    name: "Production",
     domain: "https://visioncreator.earth",
     apiDomain: "https://api-visioncreator-earth.fly.dev",
     allowedOrigins: ["https://visioncreator.earth"],
   },
-  next: {
-    name: "next",
+  Next: {
+    name: "Next",
     domain: "https://next.visioncreator.earth",
     apiDomain: "https://api-next-visioncreator-earth.fly.dev",
     allowedOrigins: ["https://next.visioncreator.earth"],
   },
-  development: {
-    name: "development",
+  Development: {
+    name: "Development",
     domain: "http://127.0.0.1:3000",
     apiDomain: "http://127.0.0.1:9991",
     allowedOrigins: ["http://127.0.0.1:3000"],
@@ -29,6 +29,6 @@ const environments: Record<string, Environment> = {
 };
 
 export const getEnvironment = (): Environment => {
-  const envName = new EnvironmentVariable("ENV", "development").toString();
-  return environments[envName] || environments.development;
+  const envName = new EnvironmentVariable("ENV", "Development").toString();
+  return environments[envName] || environments.Development;
 };
