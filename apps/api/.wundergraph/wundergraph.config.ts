@@ -9,7 +9,7 @@ import operations from "./wundergraph.operations";
 
 const isPreview =
   process.env.VERCEL_ENV === "preview" ||
-  new EnvironmentVariable("VERCEL_ENV", "").toString() === "preview";
+  new EnvironmentVariable("VERCEL_ENV").get() === "preview";
 console.log("VERCEL_ENV:", process.env.VERCEL_ENV);
 console.log("isPreview:", isPreview);
 
@@ -39,7 +39,10 @@ configureWunderGraphApplication({
   cors: {
     ...cors.allowAll,
     allowedOrigins: isPreview
-      ? ["https://next.visioncreator.earth"]
+      ? [
+          "https://next.visioncreator.earth",
+          new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
+        ]
       : ["http://127.0.0.1:3000", new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
   },
   options: {
