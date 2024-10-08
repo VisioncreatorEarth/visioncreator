@@ -2,7 +2,7 @@ app = 'api-next-visioncreator-earth'
 primary_region = "fra"
 
 [env]
-ENV = "next"
+NODE_ENV = "preview"
 
 [build]
 
