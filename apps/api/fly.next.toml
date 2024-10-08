@@ -3,6 +3,7 @@ primary_region = "fra"
 
 [env]
 NODE_ENV = "preview"
+FLYTOML_ENV = "preview"
 
 [build]
 

@@ -7,10 +7,14 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
-console.log("-----process.env.NODE_ENV--------", process.env.NODE_ENV);
+console.log("-----process.env.FLYTOML_ENV--------", process.env.FLYTOML_ENV);
+console.log(
+  "-----process.env.GITHUB_WORKFLOW_ENV--------",
+  process.env.GITHUB_WORKFLOW_ENV
+);
 
 const isPreview =
-  process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "preview";
+  process.env.VERCEL_ENV === "preview" || process.env.FLYTOML_ENV === "preview";
 
 console.log("----------isPreview:--------", isPreview);
 
