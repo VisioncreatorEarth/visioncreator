@@ -7,8 +7,8 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
-const isProduction = process.env.ENV === "Production";
-const isNext = process.env.ENV === "Next";
+const isProduction = process.env.NODE_ENV === "production";
+const isPreview = process.env.NODE_ENV === "preview";
 
 const getConfig = () => {
   if (isProduction) {
@@ -17,7 +17,7 @@ const getConfig = () => {
       allowedOrigins: ["https://visioncreator.earth"],
       publicNodeUrl: "https://api-visioncreator-earth.fly.dev",
     };
-  } else if (isNext) {
+  } else if (isPreview) {
     return {
       userInfoEndpoint: "https://next.visioncreator.earth/auth/userinfo",
       allowedOrigins: ["https://next.visioncreator.earth"],

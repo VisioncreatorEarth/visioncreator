@@ -40,7 +40,7 @@ jobs:
           # Set secrets
           flyctl secrets set \
             --config fly.next.toml \
-            ENV="Next" \
+            NODE_ENV="preview" \
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
             WG_SECURE_COOKIE_HASH_KEY="${{ env.WG_SECURE_COOKIE_HASH_KEY }}" \
             WG_SECURE_COOKIE_BLOCK_KEY="${{ env.WG_SECURE_COOKIE_BLOCK_KEY }}" \
