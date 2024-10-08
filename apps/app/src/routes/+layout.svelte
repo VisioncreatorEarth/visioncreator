@@ -5,7 +5,7 @@
 	import type { LayoutData } from './$types';
 	import { invalidate } from '$app/navigation';
 	import { client } from '$lib/wundergraph';
-	import { onMount } from 'svelte';
+	import { onMount, afterUpdate } from 'svelte';
 	import { browser } from '$app/environment';
 	import { writable } from 'svelte/store';
 	import { dev } from '$app/environment';
@@ -32,6 +32,8 @@
 	}
 
 	onMount(() => {
+		console.log('Initial session:', session);
+
 		drawerStore.subscribe((state) => {
 			if (state.open && browser) {
 				setTimeout(() => {
@@ -52,8 +54,15 @@
 		return () => authData.subscription.unsubscribe();
 	});
 
+	afterUpdate(() => {
+		console.log('Updated session:', session);
+	});
+
 	$: if (session?.access_token) {
+		console.log('Setting authorization token:', session.access_token);
 		client.setAuthorizationToken(session.access_token);
+	} else {
+		console.log('No access token available');
 	}
 
 	async function handleSignUp() {
