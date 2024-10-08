@@ -7,10 +7,10 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
-const isPreview =
-  process.env.VERCEL_ENV === "preview" ||
-  new EnvironmentVariable("VERCEL_ENV").get() === "preview";
-console.log("VERCEL_ENV:", process.env.VERCEL_ENV);
+const vercelEnv = new EnvironmentVariable("VERCEL_ENV", "");
+const isPreview = vercelEnv.toString() === "preview";
+
+console.log("VERCEL_ENV:", vercelEnv.toString());
 console.log("isPreview:", isPreview);
 
 configureWunderGraphApplication({
