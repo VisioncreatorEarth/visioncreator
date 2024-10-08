@@ -54,10 +54,6 @@
 		return () => authData.subscription.unsubscribe();
 	});
 
-	afterUpdate(() => {
-		console.log('Updated session:', session);
-	});
-
 	$: if (session?.access_token) {
 		console.log('Setting authorization token:', session.access_token);
 		client.setAuthorizationToken(session.access_token);

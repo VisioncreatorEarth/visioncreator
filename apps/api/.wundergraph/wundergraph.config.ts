@@ -10,6 +10,8 @@ import operations from "./wundergraph.operations";
 const isPreview =
   process.env.VERCEL_ENV === "preview" ||
   new EnvironmentVariable("VERCEL_ENV", "").toString() === "preview";
+console.log("VERCEL_ENV:", process.env.VERCEL_ENV);
+console.log("isPreview:", isPreview);
 
 configureWunderGraphApplication({
   apis: [],
