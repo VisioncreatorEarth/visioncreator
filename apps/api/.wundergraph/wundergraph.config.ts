@@ -2,6 +2,7 @@ import {
   configureWunderGraphApplication,
   cors,
   templates,
+  EnvironmentVariable,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
@@ -25,7 +26,10 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: `${env.domain}/auth/userinfo`,
+          userInfoEndpoint: new EnvironmentVariable(
+            "WG_AUTH_USER_INFO_ENDPOINT",
+            `${env.domain}/auth/userinfo`
+          ),
         },
       ],
     },
@@ -35,12 +39,12 @@ configureWunderGraphApplication({
     allowedOrigins: env.allowedOrigins,
   },
   options: {
-    publicNodeUrl: env.apiDomain,
+    publicNodeUrl: new EnvironmentVariable("WG_PUBLIC_NODE_URL", env.apiDomain),
   },
   authorization: {
     roles: ["admin", "authenticated"],
   },
   security: {
-    enableGraphQLEndpoint: env.name !== "production",
+    enableGraphQLEndpoint: false,
   },
 });

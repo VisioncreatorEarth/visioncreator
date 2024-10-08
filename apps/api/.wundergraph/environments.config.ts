@@ -1,5 +1,3 @@
-import { EnvironmentVariable } from "@wundergraph/sdk";
-
 type Environment = {
   name: string;
   domain: string;
@@ -24,14 +22,11 @@ const environments: Record<string, Environment> = {
     name: "development",
     domain: "http://127.0.0.1:3000",
     apiDomain: "http://127.0.0.1:9991",
-    allowedOrigins: [
-      "http://127.0.0.1:3000",
-      new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-    ],
+    allowedOrigins: ["http://127.0.0.1:3000"],
   },
 };
 
 export const getEnvironment = (): Environment => {
-  const envName = process.env.ENV || "development";
+  const envName = new EnvironmentVariable("ENV", "development").toString();
   return environments[envName] || environments.development;
 };
