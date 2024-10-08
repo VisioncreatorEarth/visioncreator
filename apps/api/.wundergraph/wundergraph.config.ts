@@ -8,6 +8,9 @@ import {
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
 
+const isProduction = process.env.NODE_ENV === "production";
+const isNext = process.env.NEXT_PUBLIC_VERCEL_ENV === "preview";
+
 configureWunderGraphApplication({
   apis: [],
   server,
@@ -24,29 +27,29 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint:
-            process.env.NODE_ENV === "next"
-              ? "https://next.visioncreator.earth/auth/userinfo"
-              : "http://127.0.0.1:3000/auth/userinfo",
+          userInfoEndpoint: isProduction
+            ? "https://visioncreator.earth/auth/userinfo"
+            : isNext
+            ? "https://next.visioncreator.earth/auth/userinfo"
+            : "http://127.0.0.1:3000/auth/userinfo",
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins:
-      process.env.NODE_ENV === "next"
-        ? ["https://next.visioncreator.earth"]
-        : [
-            "http://127.0.0.1:3000",
-            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-          ],
+    allowedOrigins: isProduction
+      ? ["https://visioncreator.earth"]
+      : isNext
+      ? ["https://next.visioncreator.earth"]
+      : ["http://127.0.0.1:3000", new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
   },
   options: {
-    publicNodeUrl:
-      process.env.NODE_ENV === "next"
-        ? "https://api-next-visioncreator-earth.fly.dev"
-        : "http://127.0.0.1:9991",
+    publicNodeUrl: isProduction
+      ? "https://api-visioncreator-earth.fly.dev"
+      : isNext
+      ? "https://api-next-visioncreator-earth.fly.dev"
+      : "http://127.0.0.1:9991",
   },
   authorization: {
     roles: ["admin", "authenticated"],
