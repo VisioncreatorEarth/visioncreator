@@ -35,7 +35,7 @@ configureWunderGraphApplication({
   cors: {
     ...cors.allowAll,
     allowedOrigins:
-      process.env.ENV === "Production"
+      process.env.ENV === "Next"
         ? ["https://next.visioncreator.earth"]
         : [
             "http://127.0.0.1:3000",
@@ -44,7 +44,7 @@ configureWunderGraphApplication({
   },
   options: {
     publicNodeUrl:
-      process.env.ENV === "Production"
+      process.env.ENV === "Next"
         ? "https://api-next-visioncreator-earth.fly.dev"
         : "http://127.0.0.1:9991",
   },
