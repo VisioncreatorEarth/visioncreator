@@ -2,29 +2,56 @@ import { EnvironmentVariable } from "@wundergraph/sdk";
 
 type Environment = {
   name: string;
-  domain: string;
-  apiDomain: string;
-  allowedOrigins: string[];
+  domain: EnvironmentVariable;
+  apiDomain: EnvironmentVariable;
+  allowedOrigins: EnvironmentVariable[];
 };
 
 const environments: Record<string, Environment> = {
   Production: {
     name: "Production",
-    domain: "https://visioncreator.earth",
-    apiDomain: "https://api-visioncreator-earth.fly.dev",
-    allowedOrigins: ["https://visioncreator.earth"],
+    domain: new EnvironmentVariable(
+      "WG_PUBLIC_URL",
+      "https://visioncreator.earth"
+    ),
+    apiDomain: new EnvironmentVariable(
+      "WG_PUBLIC_NODE_URL",
+      "https://api-visioncreator-earth.fly.dev"
+    ),
+    allowedOrigins: [
+      new EnvironmentVariable(
+        "WG_ALLOWED_ORIGIN",
+        "https://visioncreator.earth"
+      ),
+    ],
   },
   Next: {
     name: "Next",
-    domain: "https://next.visioncreator.earth",
-    apiDomain: "https://api-next-visioncreator-earth.fly.dev",
-    allowedOrigins: ["https://next.visioncreator.earth"],
+    domain: new EnvironmentVariable(
+      "WG_PUBLIC_URL",
+      "https://next.visioncreator.earth"
+    ),
+    apiDomain: new EnvironmentVariable(
+      "WG_PUBLIC_NODE_URL",
+      "https://api-next-visioncreator-earth.fly.dev"
+    ),
+    allowedOrigins: [
+      new EnvironmentVariable(
+        "WG_ALLOWED_ORIGIN",
+        "https://next.visioncreator.earth"
+      ),
+    ],
   },
   Development: {
     name: "Development",
-    domain: "http://127.0.0.1:3000",
-    apiDomain: "http://127.0.0.1:9991",
-    allowedOrigins: ["http://127.0.0.1:3000"],
+    domain: new EnvironmentVariable("WG_PUBLIC_URL", "http://localhost:3000"),
+    apiDomain: new EnvironmentVariable(
+      "WG_PUBLIC_NODE_URL",
+      "http://localhost:9991"
+    ),
+    allowedOrigins: [
+      new EnvironmentVariable("WG_ALLOWED_ORIGIN", "http://localhost:3000"),
+    ],
   },
 };
 

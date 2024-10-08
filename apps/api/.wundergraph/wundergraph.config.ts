@@ -2,6 +2,7 @@ import {
   configureWunderGraphApplication,
   cors,
   templates,
+  EnvironmentVariable,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
@@ -25,7 +26,10 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: `${env.domain}/auth/userinfo`,
+          userInfoEndpoint: new EnvironmentVariable(
+            "WG_AUTH_USER_INFO_ENDPOINT",
+            `${env.domain}/auth/userinfo`
+          ),
         },
       ],
     },
