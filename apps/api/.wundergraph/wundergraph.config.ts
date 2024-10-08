@@ -36,6 +36,7 @@ configureWunderGraphApplication({
   },
   options: {
     publicNodeUrl: env.apiDomain,
+    defaultHttpProxyUrl: env.apiDomain,
   },
   authorization: {
     roles: ["admin", "authenticated"],
