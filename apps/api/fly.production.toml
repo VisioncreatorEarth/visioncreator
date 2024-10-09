@@ -1,9 +1,6 @@
 app = 'api-visioncreator-earth'
 primary_region = "fra"
 
-[env]
-ENV = "production"
-
 [build]
 
 [http_service]
