@@ -26,7 +26,7 @@ configureWunderGraphApplication({
         {
           userInfoEndpoint:
             process.env.NODE_ENV === "production"
-              ? "https://next.visioncreator.earth/auth/userinfo"
+              ? new EnvironmentVariable("PUBLIC_WG_AUTH_INFO")
               : "http://127.0.0.1:3000/auth/userinfo",
         },
       ],
@@ -36,7 +36,7 @@ configureWunderGraphApplication({
     ...cors.allowAll,
     allowedOrigins:
       process.env.NODE_ENV === "production"
-        ? ["https://next.visioncreator.earth"]
+        ? [new EnvironmentVariable("PUBLIC_WG_ALLOW_CORS")]
         : [
             "http://127.0.0.1:3000",
             new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
@@ -45,7 +45,7 @@ configureWunderGraphApplication({
   options: {
     publicNodeUrl:
       process.env.NODE_ENV === "production"
-        ? "https://api-next-visioncreator-earth.fly.dev"
+        ? new EnvironmentVariable("PUBLIC_WG_API")
         : "http://127.0.0.1:9991",
   },
   authorization: {
