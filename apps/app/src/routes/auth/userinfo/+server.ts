@@ -1,40 +1,55 @@
 import { env } from '$env/dynamic/private';
-import { error } from '@sveltejs/kit';
 import jwt from 'jsonwebtoken';
+import type { RequestEvent } from '@sveltejs/kit';
+
 const { verify } = jwt;
 
-export async function GET({ request }) {
+export async function GET({ request }: RequestEvent) {
 	const authHeader = request.headers.get('Authorization');
 	if (!authHeader) {
-		throw error(401, 'No Authorization header provided.');
+		console.error('No Authorization header provided');
+		return new Response(JSON.stringify({ error: 'No Authorization header provided' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 
 	const token = authHeader.split(' ')[1];
 	if (!token) {
-		throw error(401, 'No JWT provided.');
+		console.error('No JWT provided');
+		return new Response(JSON.stringify({ error: 'No JWT provided' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 
 	try {
-		const decoded = verify(token, env.SECRET_SUPABASE_JWT_SECRET);
+		const decoded = verify(token, env.SECRET_SUPABASE_JWT_SECRET) as jwt.JwtPayload;
 
 		if (!decoded.sub) {
-			throw error(401, 'Invalid JWT: Subject missing');
+			console.error('Invalid JWT: Subject missing');
+			return new Response(JSON.stringify({ error: 'Invalid JWT: Subject missing' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
 		}
+
 		// Initialize roles array from the token
-		const roles = decoded.role ? [decoded.role] : [];
+		const roles = decoded.role ? [decoded.role as string] : [];
 
 		// Check if the subject is one of the hardcoded admin IDs
-		if (['00000000-0000-0000-0000-000000000001'].includes(decoded.sub)) {
+		if (decoded.sub === '00000000-0000-0000-0000-000000000001') {
 			roles.push('admin');
 		}
+
 		const user = {
 			id: decoded.sub,
-			name: decoded.name || 'Unknown',
-			email: decoded.email,
+			name: (decoded.name as string) || 'Unknown',
+			email: decoded.email as string,
 			roles
 		};
 
-		console.log(user);
+		console.log('User info:', user);
 
 		return new Response(JSON.stringify(user), {
 			status: 200,
@@ -42,6 +57,9 @@ export async function GET({ request }) {
 		});
 	} catch (err) {
 		console.error('JWT verification error:', err);
-		throw error(401, 'Invalid JWT');
+		return new Response(JSON.stringify({ error: 'Invalid JWT' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 }

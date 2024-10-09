@@ -3,16 +3,8 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
-	import { dev } from '$app/environment';
 
 	const drawerStore = getDrawerStore();
-
-	// const labels = {
-	// 	nameInput: {
-	// 		placeholder: "What's your name?"
-	// 	}
-	// };
-
 	let videoElement: HTMLVideoElement;
 
 	onMount(() => {
@@ -50,10 +42,6 @@
 		if (event.key === 'Enter') {
 			drawerStore.open({ position: 'bottom' });
 		}
-	}
-
-	function openDrawer(isLogin: boolean) {
-		drawerStore.open({ position: 'bottom', meta: { isLogin } });
 	}
 </script>
 

@@ -1,8 +1,8 @@
 ---
 title: "My Magic Login Link"
 preheader: "Please confirm your email address"
-confirmURL: "{{ .ConfirmationURL }}"
 buttonText: "Log in now"
+link: "@{{ .SiteURL }}/auth/confirm?token_hash=@{{ .TokenHash }}&type=email"
 ---
 
 <x-main>
@@ -18,7 +18,7 @@ buttonText: "Log in now"
       <br class="hidden sm:inline" />Please confirm your mail address to login.
     </p>
 
-    <x-button href="{{ page.confirmURL }}" class="w-auto mb-8">
+    <x-button href="{{{ page.link }}}" class="w-auto mb-8">
       {{page.buttonText}} &rarr;
     </x-button>
 

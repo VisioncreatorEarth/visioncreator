@@ -1,4 +1,4 @@
-name: Deploy Supabase Changes
+name: production-supabase-deploy
 
 on:
   push:
@@ -9,11 +9,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: Production
 
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
 
     steps:
       - uses: actions/checkout@v3
@@ -29,5 +30,5 @@ jobs:
       - name: Deploy Supabase Migration
         run: |
           cd packages/supacreator/supabase
-          supabase link --project-ref $PROJECT_ID
+          supabase link --project-ref $SUPABASE_PROJECT_ID
           supabase db push

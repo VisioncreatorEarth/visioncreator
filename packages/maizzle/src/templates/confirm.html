@@ -1,8 +1,8 @@
 ---
 title: "Signup for Visionletter"
 preheader: "Please confirm your email address to subscribe to our newsletter"
-confirmURL: "{{ .ConfirmationURL }}"
 buttonText: "Sign Up Now"
+link: "@{{ .SiteURL }}/auth/confirm?token_hash=@{{ .TokenHash }}&type=email"
 ---
 
 <x-main>
@@ -18,8 +18,8 @@ buttonText: "Sign Up Now"
       confirm your mail address to sign up to our waitlist.
     </p>
 
-    <x-button href="{{ page.confirmURL }}" class="w-auto mb-8">
-      {{page.buttonText}} &rarr;
+    <x-button href="{{{ page.link }}}" class="w-auto mb-8">
+      {{ page.buttonText }} &rarr;
     </x-button>
 
     <x-divider space-y="24px" class="bg-surface-400" />
