@@ -22,9 +22,6 @@ jobs:
           echo "WG_CSRF_TOKEN_SECRET=$(openssl rand -hex 6)" >> $GITHUB_ENV
           echo "WG_SECURE_COOKIE_HASH_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "WG_SECURE_COOKIE_BLOCK_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
-          echo "WG_USER_INFO_ENDPOINT=https://next.visioncreator.earth/auth/userinfo" >> $GITHUB_ENV
-          echo "PUBLIC_WG_API_URL=https://api-next-visioncreator-earth.fly.dev" >> $GITHUB_ENV
-          echo "WG_ALLOWED_ORIGIN=https://next.visioncreator.earth" >> $GITHUB_ENV
 
       - name: Deploy to Fly (Next)
         env:
@@ -46,9 +43,6 @@ jobs:
             WG_CSRF_TOKEN_SECRET="${{ env.WG_CSRF_TOKEN_SECRET }}" \
             WG_SECURE_COOKIE_HASH_KEY="${{ env.WG_SECURE_COOKIE_HASH_KEY }}" \
             WG_SECURE_COOKIE_BLOCK_KEY="${{ env.WG_SECURE_COOKIE_BLOCK_KEY }}" \
-            WG_USER_INFO_ENDPOINT="${{ env.WG_USER_INFO_ENDPOINT }}" \
-            WG_PUBLIC_NODE_URL="${{ env.WG_PUBLIC_NODE_URL }}" \
-            WG_ALLOWED_ORIGIN="${{ env.WG_ALLOWED_ORIGIN }}" \
             SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
             SUPABASE_SERVICE_ROLE="${{ secrets.SUPABASE_SERVICE_ROLE }}" \
             NANGO_SECRET_KEY="${{ secrets.NANGO_SECRET_KEY }}" \

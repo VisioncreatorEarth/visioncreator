@@ -1,5 +1,4 @@
 import { env } from '$env/dynamic/private';
-import { error } from '@sveltejs/kit';
 import jwt from 'jsonwebtoken';
 import type { RequestEvent } from '@sveltejs/kit';
 
