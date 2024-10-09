@@ -47,7 +47,7 @@ jobs:
             SUPABASE_SERVICE_ROLE="${{ secrets.SUPABASE_SERVICE_ROLE }}" \
             NANGO_SECRET_KEY="${{ secrets.NANGO_SECRET_KEY }}" \
             NANGO_HOST="${{ secrets.NANGO_HOST }}" \
-            POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}"
+            POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}" \
             NEXT_PUBLIC_WG_API="${{ secrets.NEXT_PUBLIC_WG_API }}" \
             NEXT_PUBLIC_WG_ALLOW_CORS="${{ secrets.NEXT_PUBLIC_WG_ALLOW_CORS }}" \
             NEXT_PUBLIC_WG_AUTH_INFO="${{ secrets.NEXT_PUBLIC_WG_AUTH_INFO }}"

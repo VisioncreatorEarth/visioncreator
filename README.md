@@ -155,7 +155,9 @@ for db backup dumps to digital ocean
 - `POSTMARK_WEBHOOK_USERNAME`="set-inbound-webhook-in-postmark-dashboard"
 - `POSTMARK_WEBHOOK_PASSWORD`="set-inbound-webhook-in-postmark-dashboard"
 - `POSTMARK_INBOUND_MAIL`="copy-from-postmark-dashboard"
-
+- `NEXT_PUBLIC_WG_API`="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
+- `NEXT_PUBLIC_WG_ALLOW_CORS`="frontend app domain f.e. https://xyz.com (vercel hosted)"
+- `NEXT_PUBLIC_WG_AUTH_INFO`="frontend app domain https://xyz.com/auth/userinfo"
 
 ### Frontend
 1. Go to vercel, connect your repo and deploy the svelte frontend apps/app.
@@ -164,10 +166,7 @@ for db backup dumps to digital ocean
 - PUBLIC_SUPABASE_URL
 - SECRET_SUPABASE_JWT_SECRET
 - SECRET_SUPABASE_SERVICE_ROLE
-- PUBLIC_BASE_URL (https://{domain the frontend app is deployed to})
+- NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
 3. Connect your domain.
-
-
-## Backup & Recovery Process
