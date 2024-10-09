@@ -2,6 +2,7 @@ import {
   configureWunderGraphApplication,
   cors,
   EnvironmentVariable,
+  introspect,
   templates,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
@@ -23,17 +24,29 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint: new EnvironmentVariable("WG_USER_INFO_ENDPOINT"),
+          userInfoEndpoint:
+            process.env.NODE_ENV === "production"
+              ? "https://next.visioncreator.earth/auth/userinfo"
+              : "http://127.0.0.1:3000/auth/userinfo",
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins: [new EnvironmentVariable("WG_ALLOWED_ORIGIN")],
+    allowedOrigins:
+      process.env.NODE_ENV === "production"
+        ? ["https://next.visioncreator.earth"]
+        : [
+            "http://127.0.0.1:3000",
+            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
+          ],
   },
   options: {
-    publicNodeUrl: new EnvironmentVariable("PUBLIC_WG_API_URL"),
+    publicNodeUrl:
+      process.env.NODE_ENV === "production"
+        ? "https://api-next-visioncreator-earth.fly.dev"
+        : "http://127.0.0.1:9991",
   },
   authorization: {
     roles: ["admin", "authenticated"],
