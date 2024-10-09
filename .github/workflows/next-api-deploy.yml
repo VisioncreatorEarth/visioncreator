@@ -23,6 +23,13 @@ jobs:
           echo "WG_SECURE_COOKIE_HASH_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
           echo "WG_SECURE_COOKIE_BLOCK_KEY=$(openssl rand -hex 32)" >> $GITHUB_ENV
 
+      - name: Update domain config
+        run: |
+          cd apps/api/.wundergraph
+          sed -i 's|http://127.0.0.1:3000/auth/userinfo|https://next.visioncreator.earth/auth/userinfo|g' domain.config.ts
+          sed -i 's|"http://127.0.0.1:3000"|"https://next.visioncreator.earth"|g' domain.config.ts
+          sed -i 's|http://127.0.0.1:9991|https://api-next-visioncreator-earth.fly.dev|g' domain.config.ts
+
       - name: Deploy to Fly (Next)
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

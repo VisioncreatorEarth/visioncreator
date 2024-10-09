@@ -1,12 +1,11 @@
 import {
   configureWunderGraphApplication,
   cors,
-  EnvironmentVariable,
-  introspect,
   templates,
 } from "@wundergraph/sdk";
 import server from "./wundergraph.server";
 import operations from "./wundergraph.operations";
+import { domainConfig } from "./domain.config";
 
 configureWunderGraphApplication({
   apis: [],
@@ -24,29 +23,17 @@ configureWunderGraphApplication({
     tokenBased: {
       providers: [
         {
-          userInfoEndpoint:
-            process.env.NODE_ENV === "production"
-              ? new EnvironmentVariable("PUBLIC_WG_AUTH_INFO")
-              : "http://127.0.0.1:3000/auth/userinfo",
+          userInfoEndpoint: domainConfig.userInfoEndpoint,
         },
       ],
     },
   },
   cors: {
     ...cors.allowAll,
-    allowedOrigins:
-      process.env.NODE_ENV === "production"
-        ? [new EnvironmentVariable("PUBLIC_WG_ALLOW_CORS")]
-        : [
-            "http://127.0.0.1:3000",
-            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-          ],
+    allowedOrigins: domainConfig.allowedOrigins,
   },
   options: {
-    publicNodeUrl:
-      process.env.NODE_ENV === "production"
-        ? new EnvironmentVariable("PUBLIC_WG_API")
-        : "http://127.0.0.1:9991",
+    publicNodeUrl: domainConfig.publicNodeUrl,
   },
   authorization: {
     roles: ["admin", "authenticated"],
