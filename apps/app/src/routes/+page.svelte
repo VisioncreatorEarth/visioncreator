@@ -54,6 +54,9 @@
 	function openSignUpDrawer() {
 		drawerStore.open({ position: 'bottom', action: 'signup' });
 	}
+
+	const introVideoUrl = 'https://youtu.be/rRtBklL49gM';
+	const introPosterFrame = 'introposter.jpg';
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -80,7 +83,7 @@
 				/>
 
 				<div class="w-full max-w-3xl video-wrapper">
-					<VideoPlayer />
+					<VideoPlayer youtubeUrl={introVideoUrl} posterFrame={introPosterFrame} />
 				</div>
 				<p class="@sm:text-lg text-xl text-tertiary-200">
 					Follow along our journey and join our waitlist now

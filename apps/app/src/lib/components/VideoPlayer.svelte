@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
 
+	export let youtubeUrl: string;
+	export let posterFrame: string;
+
 	const dispatch = createEventDispatcher();
 
-	let playerElement: any = null;
+	let playerElement: HTMLElement | null = null;
 
 	onMount(() => {
 		import('vidstack/bundle')
@@ -16,15 +19,15 @@
 
 					// Ensure highest quality is selected
 					playerElement.addEventListener('can-play', () => {
-						const qualities = playerElement.qualities;
+						const qualities = (playerElement as any).qualities;
 						if (qualities && qualities.length > 0) {
 							const highestQuality = qualities[qualities.length - 1];
-							playerElement.quality = highestQuality.value;
+							(playerElement as any).quality = highestQuality.value;
 						}
 					});
 				}
 			})
-			.catch((error) => console.error('Failed to load vidstack:', error));
+			.catch((error: Error) => console.error('Failed to load vidstack:', error));
 
 		return () => {
 			if (playerElement) {
@@ -35,14 +38,14 @@
 	});
 
 	function handlePlaybackStarted() {
-		playerElement?.enterFullscreen?.().catch((error: Error) => {
+		(playerElement as any)?.enterFullscreen?.().catch((error: Error) => {
 			console.error('Failed to enter fullscreen:', error);
 		});
 	}
 
 	function handlePlaybackEnded() {
 		if (playerElement) {
-			playerElement.exitFullscreen?.().catch((error: Error) => {
+			(playerElement as any).exitFullscreen?.().catch((error: Error) => {
 				console.error('Failed to exit fullscreen:', error);
 			});
 		}
@@ -51,7 +54,7 @@
 </script>
 
 <div class="video-container">
-	<media-player src="https://youtu.be/rRtBklL49gM" poster="introposter.jpg" crossorigin playsinline>
+	<media-player src={youtubeUrl} poster={posterFrame} crossorigin playsinline>
 		<media-provider>
 			<media-video-quality default-quality="1080p" />
 		</media-provider>
