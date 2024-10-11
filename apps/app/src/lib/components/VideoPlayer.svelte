@@ -37,7 +37,9 @@
 
 <div class="video-container">
 	<media-player title="Welcome" src="https://youtu.be/_kUV-SWIAMQ" poster="intro_poster_frame.png">
-		<media-provider />
+		<media-provider>
+			<media-video-quality default-quality="1080p" />
+		</media-provider>
 		<media-plyr-layout />
 	</media-player>
 </div>

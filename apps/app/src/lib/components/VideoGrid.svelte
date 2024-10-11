@@ -2,6 +2,7 @@
 	import { writable, type Writable } from 'svelte/store';
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
+	import InstagramShare from './InstagramShare.svelte';
 
 	interface Video {
 		id: number;
@@ -12,8 +13,10 @@
 		watched: boolean;
 	}
 
+	let showShareScreen = false;
+
 	function getRandomImageUrl(): string {
-		return `https://random.imagecdn.app/1080/600?${Math.random()}`;
+		return `https://random.imagecdn.app/1080/600?${Math.random().toString()}`;
 	}
 
 	const allVideos: Video[] = [
@@ -56,62 +59,23 @@
 			description: "A crucial decision must be made that will affect everyone's fate.",
 			image: getRandomImageUrl(),
 			watched: false
-		},
-		{
-			id: 6,
-			title: 'Episode 5',
-			hookTitle: 'A Shocking Discovery',
-			description: 'An unexpected find leads to new challenges and opportunities.',
-			image: getRandomImageUrl(),
-			watched: false
-		},
-		{
-			id: 7,
-			title: 'Episode 6',
-			hookTitle: 'The Hidden Truth',
-			description: 'Long-buried secrets surface, threatening to unravel everything.',
-			image: getRandomImageUrl(),
-			watched: false
-		},
-		{
-			id: 8,
-			title: 'Episode 7',
-			hookTitle: 'An Unforeseen Alliance',
-			description: 'Unlikely partnerships form in the face of growing adversity.',
-			image: getRandomImageUrl(),
-			watched: false
-		},
-		{
-			id: 9,
-			title: 'Episode 8',
-			hookTitle: 'The Final Countdown',
-			description: 'Time is running out as the climax of the journey approaches.',
-			image: getRandomImageUrl(),
-			watched: false
-		},
-		{
-			id: 10,
-			title: 'Finale',
-			hookTitle: 'The Ultimate Challenge',
-			description: 'Everything comes to a head in this thrilling conclusion.',
-			image: getRandomImageUrl(),
-			watched: false
 		}
 	];
 
 	const videos: Writable<Video[]> = writable(allVideos);
 
-	let selectedVideo: Video = $videos[0];
+	let selectedVideo: Video = $videos[0] ?? allVideos[0];
 	let playerElement: HTMLElement | null = null;
 	let isPlaying: boolean = false;
 
 	onMount(() => {
-		import('vidstack/bundle');
-		playerElement = document.querySelector('media-player');
+		import('vidstack/bundle').catch(console.error).then(() => {
+			playerElement = document.querySelector('media-player') as HTMLElement;
 
-		if (playerElement) {
-			playerElement.addEventListener('ended', handlePlaybackEnded);
-		}
+			if (playerElement) {
+				playerElement.addEventListener('ended', handlePlaybackEnded);
+			}
+		});
 
 		return () => {
 			if (playerElement) {
@@ -123,12 +87,18 @@
 	function handlePlaybackEnded() {
 		isPlaying = false;
 		markAsWatched(selectedVideo);
+		moveToNextVideo();
+		// showShareScreen = true; // Commented out Instagram share step
+	}
+
+	function moveToNextVideo() {
 		const currentIndex = $videos.findIndex((v) => v.id === selectedVideo.id);
 		if (currentIndex < $videos.length - 1) {
 			selectedVideo = $videos[currentIndex + 1];
 		} else {
 			selectedVideo = $videos[0];
 		}
+		showShareScreen = false;
 	}
 
 	function selectVideo(video: Video) {
@@ -140,7 +110,7 @@
 		isPlaying = true;
 		setTimeout(() => {
 			if (playerElement) {
-				(playerElement as any).play();
+				(playerElement as HTMLMediaElement).play();
 			}
 		}, 100);
 	}
@@ -148,12 +118,32 @@
 	function markAsWatched(video: Video) {
 		videos.update((vs) => vs.map((v) => (v.id === video.id ? { ...v, watched: true } : v)));
 	}
+
+	// function handleShareComplete() {
+	//     showShareScreen = false;
+	//     moveToNextVideo();
+	// }
 </script>
 
 <div class="video-grid flex bg-surface-800 text-surface-50 p-4">
 	<div class="main-view w-2/3 pr-4">
 		<h2 class="text-2xl font-bold mb-4 text-primary-400">Now Playing</h2>
 		<div class="aspect-w-16 aspect-h-9 bg-surface-600 rounded-lg overflow-hidden relative">
+			<!-- {#if showShareScreen}
+                <div class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 p-4">
+                    <h1 class="h1 text-primary-300 mb-8 text-center px-4">Spread the movement</h1>
+                    <InstagramShare
+                        title={selectedVideo.title}
+                        hookTitle={selectedVideo.hookTitle}
+                        shareableImageUrl={selectedVideo.image}
+                        episodeNumber={selectedVideo.id}
+                        on:shareComplete={handleShareComplete}
+                    />
+                    <button class="mt-12 btn btn-sm variant-ghost-secondary" on:click={moveToNextVideo}>
+                        <Icon icon="mdi:skip-next" class="mr-2 text-2xl" /> Skip -> Watch Next
+                    </button>
+                </div>
+            {:else if !isPlaying} -->
 			{#if !isPlaying}
 				<img
 					src={selectedVideo.image}
@@ -164,7 +154,7 @@
 					class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50"
 				>
 					<h1 class="h1 text-primary-300 mb-8 text-center px-4">
-						{selectedVideo.title}: {selectedVideo.hookTitle}
+						{selectedVideo.title} - {selectedVideo.hookTitle}
 					</h1>
 					<button
 						class="bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-full flex items-center"
