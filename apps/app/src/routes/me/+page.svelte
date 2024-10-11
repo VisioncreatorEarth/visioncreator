@@ -3,13 +3,14 @@
 	import { futureMe, Me } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { view as meView } from '$lib/views/Me';
+	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
+	import ComposeView from '$lib/components/ComposeView.svelte';
 
 	export let data;
 
 	let { session, supabase } = data;
 	$: ({ session } = data);
 
-	let showNewsletter = false;
 	let showComposeView = false;
 
 	const updateNameMutation = createMutation({
@@ -35,6 +36,8 @@
 		input: { id: session?.user?.id || '' },
 		enabled: !!session?.user?.id
 	});
+
+	$: meData = $meQuery.data as MeQueryResult | null;
 
 	onMount(async () => {
 		const supabaseMe = await supabase.auth.getUser();
@@ -63,21 +66,13 @@
 		}
 	});
 
-	$: if ($meQuery.data) {
+	$: if (meData) {
 		Me.update((store) => ({
 			...store,
-			id: $meQuery.data.id,
-			name: $meQuery.data.name,
-			onboarded: $meQuery.data.onboarded
+			id: meData.id,
+			name: meData.name,
+			onboarded: meData.onboarded
 		}));
-	}
-
-	function handleSkip() {
-		showNewsletter = true;
-	}
-
-	function handleVideoEnded() {
-		handleSkip();
 	}
 
 	async function handleNewsletterCompleted() {
@@ -97,17 +92,8 @@
 
 {#if $meQuery.isLoading}
 	<div class="flex items-center justify-center h-screen">Loading...</div>
-{:else if $meQuery.data && !$meQuery.data.onboarded}
-	{#if !showNewsletter}
-		<div class="flex flex-col items-center justify-center h-screen text-center">
-			<h1 class="text-4xl font-bold mb-2">Welcome</h1>
-			<p class="text-xl mb-4">to the most exciting journey of our time</p>
-			<div class="w-full max-w-3xl mb-4">
-				<VideoPlayer on:videoEnded={handleVideoEnded} />
-			</div>
-			<button on:click={handleSkip} class="btn btn-sm variant-ghost-secondary"> Skip </button>
-		</div>
-	{:else if !showComposeView}
+{:else if meData && !meData.onboarded}
+	{#if !showComposeView}
 		<div class="w-full px-4 sm:px-6 md:px-8 flex justify-center items-center min-h-screen">
 			<div class="w-full max-w-3xl">
 				<SubscribeToNewsletter
@@ -120,7 +106,7 @@
 	{:else}
 		<ComposeView view={meView} {session} />
 	{/if}
-{:else if $meQuery.data}
+{:else if meData}
 	<ComposeView view={meView} {session} />
 {:else}
 	<div class="flex items-center justify-center h-screen text-red-500">Error loading user data</div>

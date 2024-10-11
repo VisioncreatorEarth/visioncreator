@@ -4,17 +4,19 @@
 
 	const dispatch = createEventDispatcher();
 
-	let playerElement: MediaPlayerElement | null = null;
+	let playerElement: any = null; // Using 'any' to bypass TypeScript errors
 
 	onMount(() => {
-		import('vidstack/bundle').then(() => {
-			playerElement = document.querySelector('media-player');
+		import('vidstack/bundle')
+			.then(() => {
+				playerElement = document.querySelector('media-player');
 
-			if (playerElement) {
-				playerElement.addEventListener('play', handlePlaybackStarted);
-				playerElement.addEventListener('ended', handlePlaybackEnded);
-			}
-		});
+				if (playerElement) {
+					playerElement.addEventListener('play', handlePlaybackStarted);
+					playerElement.addEventListener('ended', handlePlaybackEnded);
+				}
+			})
+			.catch((error) => console.error('Failed to load vidstack:', error));
 
 		return () => {
 			if (playerElement) {
@@ -25,18 +27,24 @@
 	});
 
 	function handlePlaybackStarted() {
-		playerElement?.enterFullscreen().catch((error) => {
+		playerElement?.enterFullscreen?.().catch((error: Error) => {
 			console.error('Failed to enter fullscreen:', error);
 		});
 	}
 
 	function handlePlaybackEnded() {
+		if (playerElement) {
+			playerElement.exitFullscreen?.().catch((error: Error) => {
+				console.error('Failed to exit fullscreen:', error);
+			});
+			// We're not resetting the currentTime or pausing the video
+		}
 		dispatch('videoEnded');
 	}
 </script>
 
 <div class="video-container">
-	<media-player title="Welcome" src="https://youtu.be/_kUV-SWIAMQ" poster="intro_poster_frame.png">
+	<media-player src="https://youtu.be/rRtBklL49gM" poster="introposter.jpg" crossorigin>
 		<media-provider>
 			<media-video-quality default-quality="1080p" />
 		</media-provider>
@@ -51,9 +59,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 36px;
 		overflow: hidden;
-		border: 20px solid theme('colors.surface.700');
 	}
 
 	:global(media-player) {
