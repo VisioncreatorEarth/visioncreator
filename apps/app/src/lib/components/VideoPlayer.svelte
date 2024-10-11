@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
-	import type { MediaPlayerElement } from 'vidstack/elements';
 
 	const dispatch = createEventDispatcher();
 
-	let playerElement: any = null; // Using 'any' to bypass TypeScript errors
+	let playerElement: any = null;
 
 	onMount(() => {
 		import('vidstack/bundle')
@@ -14,6 +13,15 @@
 				if (playerElement) {
 					playerElement.addEventListener('play', handlePlaybackStarted);
 					playerElement.addEventListener('ended', handlePlaybackEnded);
+
+					// Ensure highest quality is selected
+					playerElement.addEventListener('can-play', () => {
+						const qualities = playerElement.qualities;
+						if (qualities && qualities.length > 0) {
+							const highestQuality = qualities[qualities.length - 1];
+							playerElement.quality = highestQuality.value;
+						}
+					});
 				}
 			})
 			.catch((error) => console.error('Failed to load vidstack:', error));
@@ -37,14 +45,13 @@
 			playerElement.exitFullscreen?.().catch((error: Error) => {
 				console.error('Failed to exit fullscreen:', error);
 			});
-			// We're not resetting the currentTime or pausing the video
 		}
 		dispatch('videoEnded');
 	}
 </script>
 
 <div class="video-container">
-	<media-player src="https://youtu.be/rRtBklL49gM" poster="introposter.jpg" crossorigin>
+	<media-player src="https://youtu.be/rRtBklL49gM" poster="introposter.jpg" crossorigin playsinline>
 		<media-provider>
 			<media-video-quality default-quality="1080p" />
 		</media-provider>

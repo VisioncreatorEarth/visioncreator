@@ -3,8 +3,6 @@
 	import { futureMe, Me } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { view as meView } from '$lib/views/Me';
-	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
-	import ComposeView from '$lib/components/ComposeView.svelte';
 
 	export let data;
 
