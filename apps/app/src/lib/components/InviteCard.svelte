@@ -25,9 +25,6 @@
 	function toggleQRCode() {
 		showQRCode.update((n) => !n);
 	}
-
-	const dashboardVideoUrl = 'https://youtu.be/K8iiYmb0r10';
-	const dashboardPosterFrame = '001_poster.png';
 </script>
 
 <div
@@ -52,7 +49,7 @@
 	</div>
 
 	<div class="w-full max-w-3xl video-wrapper pb-4">
-		<VideoPlayer youtubeId="K8iiYmb0r10" posterFrame={dashboardPosterFrame} />
+		<VideoPlayer youtubeId="K8iiYmb0r10" posterFrame="/images/001_poster.png" />
 	</div>
 	<!-- <Countdown /> -->
 	<div class="">
