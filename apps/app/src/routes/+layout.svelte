@@ -159,7 +159,7 @@
 								bind:this={nameInput}
 								use:focusOnInit
 								on:keydown={handleKeydown}
-								placeholder="First name"
+								placeholder="First name (optional)"
 								class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50"
 							/>
 						{/if}

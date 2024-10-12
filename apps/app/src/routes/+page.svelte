@@ -83,7 +83,7 @@
 				/>
 
 				<div class="w-full max-w-3xl video-wrapper">
-					<VideoPlayer youtubeUrl={introVideoUrl} posterFrame={introPosterFrame} />
+					<VideoPlayer youtubeId="rRtBklL49gM" posterFrame={introPosterFrame} />
 				</div>
 				<p class="@sm:text-lg text-xl text-tertiary-200">
 					Follow along our journey and join our waitlist now

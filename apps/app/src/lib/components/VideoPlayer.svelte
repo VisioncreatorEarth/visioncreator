@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
 
-	export let youtubeUrl: string;
+	export let youtubeId: string;
 	export let posterFrame: string;
 
 	const dispatch = createEventDispatcher();
+	const baseUrl = 'https://www.youtube-nocookie.com/watch?v=';
 
 	let playerElement: HTMLElement | null = null;
 
@@ -63,7 +64,7 @@
 </script>
 
 <div class="video-container">
-	<media-player src={youtubeUrl} poster={posterFrame} crossorigin playsinline>
+	<media-player src={`${baseUrl}${youtubeId}`} poster={posterFrame} crossorigin playsinline>
 		<media-provider>
 			<media-video-quality default-quality="1080p" />
 		</media-provider>

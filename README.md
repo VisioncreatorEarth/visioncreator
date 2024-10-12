@@ -177,7 +177,8 @@ for db backup dumps to digital ocean
 - PUBLIC_SUPABASE_URL
 - SECRET_SUPABASE_JWT_SECRET
 - SECRET_SUPABASE_SERVICE_ROLE
-- NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
+- NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
+
 3. Connect your domain.

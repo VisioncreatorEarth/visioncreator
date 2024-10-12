@@ -52,7 +52,7 @@
 	</div>
 
 	<div class="w-full max-w-3xl video-wrapper pb-4">
-		<VideoPlayer youtubeUrl={dashboardVideoUrl} posterFrame={dashboardPosterFrame} />
+		<VideoPlayer youtubeId="K8iiYmb0r10" posterFrame={dashboardPosterFrame} />
 	</div>
 	<!-- <Countdown /> -->
 	<div class="">
