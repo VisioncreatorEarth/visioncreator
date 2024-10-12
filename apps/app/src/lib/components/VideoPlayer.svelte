@@ -19,10 +19,19 @@
 
 					// Ensure highest quality is selected
 					playerElement.addEventListener('can-play', () => {
-						const qualities = (playerElement as any).qualities;
-						if (qualities && qualities.length > 0) {
-							const highestQuality = qualities[qualities.length - 1];
-							(playerElement as any).quality = highestQuality.value;
+						const player = playerElement as any;
+						if (player.qualities && player.qualities.length > 0) {
+							const highestQuality = player.qualities[player.qualities.length - 1];
+							player.quality = highestQuality.value;
+						}
+					});
+
+					// Additional listener for quality change
+					playerElement.addEventListener('quality-change', () => {
+						const player = playerElement as any;
+						if (player.qualities && player.qualities.length > 0) {
+							const highestQuality = player.qualities[player.qualities.length - 1];
+							player.quality = highestQuality.value;
 						}
 					});
 				}
