@@ -7,7 +7,7 @@
 	const dispatch = createEventDispatcher();
 	const baseUrl = 'https://www.youtube-nocookie.com/watch?v=';
 
-	let playerElement: HTMLElement | null = null;
+	let playerElement: any = null;
 
 	onMount(() => {
 		import('vidstack/bundle')
@@ -20,19 +20,17 @@
 
 					// Ensure highest quality is selected
 					playerElement.addEventListener('can-play', () => {
-						const player = playerElement as any;
-						if (player.qualities && player.qualities.length > 0) {
-							const highestQuality = player.qualities[player.qualities.length - 1];
-							player.quality = highestQuality.value;
+						if (playerElement.qualities && playerElement.qualities.length > 0) {
+							const highestQuality = playerElement.qualities[playerElement.qualities.length - 1];
+							playerElement.quality = highestQuality.value;
 						}
 					});
 
 					// Additional listener for quality change
 					playerElement.addEventListener('quality-change', () => {
-						const player = playerElement as any;
-						if (player.qualities && player.qualities.length > 0) {
-							const highestQuality = player.qualities[player.qualities.length - 1];
-							player.quality = highestQuality.value;
+						if (playerElement.qualities && playerElement.qualities.length > 0) {
+							const highestQuality = playerElement.qualities[playerElement.qualities.length - 1];
+							playerElement.quality = highestQuality.value;
 						}
 					});
 				}
@@ -48,23 +46,44 @@
 	});
 
 	function handlePlaybackStarted() {
-		(playerElement as any)?.enterFullscreen?.().catch((error: Error) => {
-			console.error('Failed to enter fullscreen:', error);
-		});
+		if (playerElement && !playerElement.fullscreen) {
+			playerElement.enterFullscreen().catch((error: Error) => {
+				console.error('Failed to enter fullscreen:', error);
+				// Fallback for iOS
+				if (document.documentElement.requestFullscreen) {
+					document.documentElement.requestFullscreen().catch(console.error);
+				}
+			});
+		}
 	}
 
 	function handlePlaybackEnded() {
 		if (playerElement) {
-			(playerElement as any).exitFullscreen?.().catch((error: Error) => {
-				console.error('Failed to exit fullscreen:', error);
-			});
+			if (playerElement.fullscreen) {
+				playerElement.exitFullscreen().catch((error: Error) => {
+					console.error('Failed to exit fullscreen:', error);
+				});
+			}
+			// Fallback for iOS and other cases
+			if (document.exitFullscreen) {
+				document.exitFullscreen().catch(console.error);
+			}
+
+			// Reset the player to show the poster frame
+			playerElement.currentTime = 0;
+			playerElement.pause();
+			playerElement.src = ''; // Clear the source
+			setTimeout(() => {
+				playerElement.src = `${baseUrl}${youtubeId}`; // Reset the source
+				playerElement.load(); // Reload the player
+			}, 100);
 		}
 		dispatch('videoEnded');
 	}
 </script>
 
 <div class="video-container">
-	<media-player src={`${baseUrl}${youtubeId}`} poster={posterFrame} crossorigin playsinline>
+	<media-player src={`${baseUrl}${youtubeId}`} poster={posterFrame} crossorigin>
 		<media-provider>
 			<media-video-quality default-quality="1080p" />
 		</media-provider>
