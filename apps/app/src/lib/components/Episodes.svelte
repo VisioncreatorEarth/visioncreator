@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { writable, type Writable } from 'svelte/store';
-	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
+	import VideoPlayer from './VideoPlayer.svelte';
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 
 	interface Video {
 		id: string;
 		title: string;
-		hookTitle: string;
 		description: string;
 		poster: string;
 		youtubeId: string;
@@ -16,46 +17,43 @@
 		{
 			id: 'intro',
 			title: 'Intro',
-			hookTitle: 'The beginning of an exciting journey',
 			description: 'The beginning of an exciting journey',
-			poster: 'introposter.jpg',
+			poster: 'images/intro_poster.jpg',
 			youtubeId: 'rRtBklL49gM'
 		},
 		{
-			id: 'episode1',
-			title: 'Episode 1',
-			hookTitle: 'The day I jumped and took action on the biggest decision of my life',
+			id: '001',
+			title: '001 - "Someday" I will do ... was yesterday',
 			description: 'The day I jumped and took action on the biggest decision of my life',
-			poster: '001_poster.png',
+			poster: 'images/001_poster.png',
 			youtubeId: 'K8iiYmb0r10'
 		}
 	];
+	const reversedVideos: Video[] = [...allVideos].reverse();
+	const videos: Writable<Video[]> = writable(reversedVideos);
 
-	const videos: Writable<Video[]> = writable(allVideos);
-
-	let selectedVideo: Video = $videos[1]; // Start with Episode 1
-	let playerElement: HTMLElement | null = null;
-	let isPlaying: boolean = false;
+	let selectedVideo: Video = reversedVideos[0];
+	let videoPlayer: VideoPlayer;
 
 	onMount(() => {
-		import('vidstack/bundle').catch(console.error).then(() => {
-			playerElement = document.querySelector('media-player');
-
-			if (playerElement) {
-				playerElement.addEventListener('ended', handlePlaybackEnded);
+		const videoId = $page.url.searchParams.get('video');
+		if (videoId) {
+			const video = $videos.find((v) => v.id === videoId);
+			if (video) {
+				selectedVideo = video;
 			}
-		});
-
-		return () => {
-			if (playerElement) {
-				playerElement.removeEventListener('ended', handlePlaybackEnded);
-			}
-		};
+		}
 	});
 
 	function handlePlaybackEnded() {
-		isPlaying = false;
+		resetVideo();
 		moveToNextVideo();
+	}
+
+	function resetVideo() {
+		if (videoPlayer) {
+			videoPlayer.reset();
+		}
 	}
 
 	function moveToNextVideo() {
@@ -65,85 +63,64 @@
 		} else {
 			selectedVideo = $videos[0];
 		}
+		updateURL(selectedVideo.id);
+		resetVideo();
 	}
 
 	function selectVideo(video: Video) {
 		selectedVideo = video;
-		isPlaying = false;
+		updateURL(video.id);
+		resetVideo();
 	}
 
-	function playVideo() {
-		isPlaying = true;
-		setTimeout(() => {
-			if (playerElement) {
-				(playerElement as any).play();
-			}
-		}, 100);
+	function updateURL(videoId: string) {
+		const url = new URL(window.location.href);
+		url.searchParams.set('video', videoId);
+		window.history.pushState({}, '', url.toString());
 	}
 </script>
 
-<div class="video-grid flex bg-surface-800 text-surface-50 p-4">
-	<div class="main-view w-2/3 pr-4">
+<div class="video-grid flex flex-col md:flex-row text-surface-50 p-4 h-full overflow-hidden">
+	<div class="main-view w-full md:w-2/3 md:pr-4 mb-8 md:mb-0 overflow-y-auto">
 		<h2 class="text-2xl font-bold mb-4 text-primary-400">Now Playing</h2>
-		<div class="aspect-w-16 aspect-h-9 bg-surface-600 rounded-lg overflow-hidden relative">
-			{#if !isPlaying}
-				<img
-					src={selectedVideo.poster}
-					alt={selectedVideo.title}
-					class="object-cover w-full h-full"
-				/>
-				<div
-					class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50"
-				>
-					<h1 class="h1 text-primary-300 mb-8 text-center px-4">
-						{selectedVideo.title} - {selectedVideo.hookTitle}
-					</h1>
-					<button
-						class="bg-primary-500 hover:bg-primary-600 text-white font-bold py-3 px-6 rounded-full flex items-center"
-						on:click={playVideo}
-					>
-						<Icon icon="mdi:play" class="mr-2 text-2xl" />
-						Play
-					</button>
-				</div>
-			{:else}
-				<div class="video-container">
-					<media-player
-						src={`https://youtu.be/${selectedVideo.youtubeId}`}
-						on:ended={handlePlaybackEnded}
-						poster={selectedVideo.poster}
-						playsinline
-						autoplay
-					>
-						<media-provider>
-							<media-video-quality default-quality="1080p" />
-						</media-provider>
-						<media-plyr-layout />
-					</media-player>
-				</div>
-			{/if}
+		<div class="aspect-w-16 aspect-h-9 bg-surface-600 rounded-lg overflow-hidden relative mb-4">
+			<VideoPlayer
+				bind:this={videoPlayer}
+				youtubeId={selectedVideo.youtubeId}
+				posterFrame={selectedVideo.poster}
+				on:videoEnded={handlePlaybackEnded}
+			/>
 		</div>
-		<h3 class="text-xl font-semibold mt-4">{selectedVideo.title}: {selectedVideo.hookTitle}</h3>
-		<p class="text-primary-300">{selectedVideo.description}</p>
+		<h1 class="h1 text-2xl md:text-3xl font-semibold mb-3 text-primary-200">
+			{selectedVideo.title}
+		</h1>
+		<p class="text-base md:text-lg text-primary-100">{selectedVideo.description}</p>
 	</div>
-
-	<div class="episode-list w-1/3 pl-4">
+	<div class="episode-list w-full md:w-1/3 md:pl-4 flex flex-col overflow-hidden">
 		<h2 class="text-2xl font-bold mb-4 text-primary-400">Episodes</h2>
-		<div class="space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
+		<div class="space-y-4 overflow-y-auto flex-grow">
 			{#each $videos as video (video.id)}
 				<button
-					class="video-card bg-surface-700 rounded-lg overflow-hidden shadow-lg flex cursor-pointer w-full text-left relative"
+					class="video-card bg-surface-700 rounded-lg overflow-hidden shadow-lg cursor-pointer w-full text-left relative flex"
 					on:click={() => selectVideo(video)}
 				>
-					<div class="w-1/3 relative">
-						<img src={video.poster} alt={video.title} class="object-cover w-full h-full" />
-						<div class="absolute inset-0 flex items-center justify-center">
-							<Icon icon="mdi:play" class="text-primary-300 text-3xl" />
+					<div class="w-2/5 md:w-1/3 relative">
+						<div class="aspect-w-16 aspect-h-9">
+							<img
+								src={video.poster}
+								alt={video.title}
+								class="absolute inset-0 object-cover w-full h-full"
+							/>
+							<div class="absolute inset-0 flex items-center justify-center">
+								<Icon icon="mdi:play" class="text-primary-300 text-3xl" />
+							</div>
 						</div>
 					</div>
-					<div class="w-2/3 p-4">
-						<h3 class="text-lg font-semibold">{video.title}</h3>
-						<p class="text-sm text-primary-300">{video.hookTitle}</p>
+					<div
+						class="w-3/5 md:w-2/3 px-4 py-2 sm:px-5 sm:py-3 flex flex-col justify-center overflow-hidden"
+					>
+						<h3 class="text-sm sm:text-base font-semibold truncate">{video.title}</h3>
+						<p class="text-xs sm:text-sm text-primary-300 line-clamp-2 mt-1">{video.description}</p>
 					</div>
 				</button>
 			{/each}
@@ -152,27 +129,20 @@
 </div>
 
 <style>
-	.video-container {
-		width: 100%;
+	:global(html, body) {
 		height: 100%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
 		overflow: hidden;
 	}
 
-	:global(media-player) {
-		width: 100%;
+	:global(#app) {
 		height: 100%;
+		overflow: hidden;
 	}
 
-	:global(media-player::part(container)) {
-		width: 100%;
-		height: 100%;
-	}
-
-	/* Hide the default play button */
-	:global(media-player .plyr__control--overlaid) {
-		display: none !important;
+	.line-clamp-2 {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 </style>
