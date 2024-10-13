@@ -110,4 +110,7 @@
 		width: 100%;
 		height: 100%;
 	}
+	:global(media-player::part(youtube)) {
+		display: none !important;
+	}
 </style>
