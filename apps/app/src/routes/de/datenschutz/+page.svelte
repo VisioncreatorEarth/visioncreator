@@ -4,9 +4,6 @@
 		<a href="/de/datenschutz">Deutsch</a>
 	</svelte:fragment>
 
-	<div class="image-container mb-10 w-28">
-		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
-	</div>
 	<h1>Datenschutz&shy;erkl&auml;rung</h1>
 	<h2>1. Datenschutz auf einen Blick</h2>
 	<h3>Allgemeine Hinweise</h3>
@@ -555,5 +552,64 @@
 		Dienstes geschlossen. Hierbei handelt es sich um einen datenschutzrechtlich vorgeschriebenen
 		Vertrag, der gew&auml;hrleistet, dass dieser die personenbezogenen Daten unserer Websitebesucher
 		nur nach unseren Weisungen und unter Einhaltung der DSGVO verarbeitet.
+	</p>
+	<h2>6. Plugins und Tools</h2>
+	<h3>YouTube mit erweitertem Datenschutz</h3>
+	<p>
+		Diese Website bindet Videos der Website YouTube ein. Betreiber der Website ist die Google
+		Ireland Limited (&bdquo;Google&rdquo;), Gordon House, Barrow Street, Dublin 4, Irland.
+	</p>
+	<p>
+		Wenn Sie eine dieser Website besuchen, auf denen YouTube eingebunden ist, wird eine Verbindung
+		zu den Servern von YouTube hergestellt. Dabei wird dem YouTube-Server mitgeteilt, welche unserer
+		Seiten Sie besucht haben. Wenn Sie in Ihrem YouTube-Account eingeloggt sind, erm&ouml;glichen
+		Sie YouTube, Ihr Surfverhalten direkt Ihrem pers&ouml;nlichen Profil zuzuordnen. Dies
+		k&ouml;nnen Sie verhindern, indem Sie sich aus Ihrem YouTube-Account ausloggen.
+	</p>
+	<p>
+		Wir nutzen YouTube im erweiterten Datenschutzmodus. Videos, die im erweiterten Datenschutzmodus
+		abgespielt werden, werden nach Aussage von YouTube nicht zur Personalisierung des Surfens auf
+		YouTube eingesetzt. Anzeigen, die im erweiterten Datenschutzmodus ausgespielt werden, sind
+		ebenfalls nicht personalisiert. Im erweiterten Datenschutzmodus werden keine Cookies gesetzt.
+		Stattdessen werden jedoch sogenannte Local Storage Elemente im Browser des Users gespeichert,
+		die &auml;hnlich wie Cookies personenbezogene Daten beinhalten und zur Wiedererkennung
+		eingesetzt werden k&ouml;nnen. Details zum erweiterten Datenschutzmodus finden Sie hier: <a
+			href="https://support.google.com/youtube/answer/171780"
+			target="_blank"
+			rel="noopener noreferrer">https://support.google.com/youtube/answer/171780</a
+		>.
+	</p>
+	<p>
+		Gegebenenfalls k&ouml;nnen nach der Aktivierung eines YouTube-Videos weitere
+		Datenverarbeitungsvorg&auml;nge ausgel&ouml;st werden, auf die wir keinen Einfluss haben.
+	</p>
+	<p>
+		Die Nutzung von YouTube erfolgt im Interesse einer ansprechenden Darstellung unserer
+		Online-Angebote. Dies stellt ein berechtigtes Interesse im Sinne von Art. 6 Abs. 1 lit. f DSGVO
+		dar. Sofern eine entsprechende Einwilligung abgefragt wurde, erfolgt die Verarbeitung
+		ausschlie&szlig;lich auf Grundlage von Art. 6 Abs. 1 lit. a DSGVO und &sect; 25 Abs. 1 TDDDG,
+		soweit die Einwilligung die Speicherung von Cookies oder den Zugriff auf Informationen im
+		Endger&auml;t des Nutzers (z.&nbsp;B. Device-Fingerprinting) im Sinne des TDDDG umfasst. Die
+		Einwilligung ist jederzeit widerrufbar.
+	</p>
+	<p>
+		Weitere Informationen &uuml;ber Datenschutz bei YouTube finden Sie in deren
+		Datenschutzerkl&auml;rung unter: <a
+			href="https://policies.google.com/privacy?hl=de"
+			target="_blank"
+			rel="noopener noreferrer">https://policies.google.com/privacy?hl=de</a
+		>.
+	</p>
+	<p>
+		Das Unternehmen verf&uuml;gt &uuml;ber eine Zertifizierung nach dem &bdquo;EU-US Data Privacy
+		Framework&ldquo; (DPF). Der DPF ist ein &Uuml;bereinkommen zwischen der Europ&auml;ischen Union
+		und den USA, der die Einhaltung europ&auml;ischer Datenschutzstandards bei Datenverarbeitungen
+		in den USA gew&auml;hrleisten soll. Jedes nach dem DPF zertifizierte Unternehmen verpflichtet
+		sich, diese Datenschutzstandards einzuhalten. Weitere Informationen hierzu erhalten Sie vom
+		Anbieter unter folgendem Link: <a
+			href="https://www.dataprivacyframework.gov/participant/5780"
+			target="_blank"
+			rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/5780</a
+		>.
 	</p>
 </TextWrap>

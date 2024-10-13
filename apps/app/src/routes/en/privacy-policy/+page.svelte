@@ -527,4 +527,59 @@
 		This is a contract mandated by data privacy laws that guarantees that they process personal data
 		of our website visitors only based on our instructions and in compliance with the GDPR.
 	</p>
+	<h2>6. Plug-ins and Tools</h2>
+	<h3>YouTube with expanded data protection integration</h3>
+	<p>
+		This website integrates videos from the YouTube website. The operator of the website is Google
+		Ireland Limited (&ldquo;Google&rdquo;), Gordon House, Barrow Street, Dublin 4, Ireland.
+	</p>
+	<p>
+		When you visit one of these websites on which YouTube is integrated, a connection to the YouTube
+		servers is established. This tells the YouTube server which of our pages you have visited. If
+		you are logged into your YouTube account, you enable YouTube to assign your surfing behavior
+		directly to your personal profile. You can prevent this by logging out of your YouTube account.
+	</p>
+	<p>
+		We use YouTube in extended data protection mode. According to YouTube, videos that are played in
+		extended data protection mode are not used to personalize browsing on YouTube. Ads that are
+		played in extended data protection mode are also not personalized. No cookies are set in
+		extended data protection mode. Instead, so-called local storage elements are stored in the
+		user's browser, which contain personal data similar to cookies and can be used for recognition.
+		Details on the extended data protection mode can be found here: <a
+			href="https://support.google.com/youtube/answer/171780"
+			target="_blank"
+			rel="noopener noreferrer">https://support.google.com/youtube/answer/171780</a
+		>.
+	</p>
+	<p>
+		After activating a YouTube video, further data processing operations may be triggered over which
+		we have no influence.
+	</p>
+	<p>
+		The use of YouTube is based on our interest in presenting our online content in an appealing
+		manner. Pursuant to Art. 6(1)(f) GDPR, this is a legitimate interest. If appropriate consent has
+		been obtained, the processing is carried out exclusively on the basis of Art. 6(1)(a) GDPR and
+		&sect; 25 (1) TDDDG, insofar the consent includes the storage of cookies or the access to
+		information in the user&rsquo;s end device (e.g., device fingerprinting) within the meaning of
+		the TDDDG. This consent can be revoked at any time.
+	</p>
+	<p>
+		For more information on how YouTube handles user data, please consult the YouTube Data Privacy
+		Policy under: <a
+			href="https://policies.google.com/privacy?hl=en"
+			target="_blank"
+			rel="noopener noreferrer">https://policies.google.com/privacy?hl=en</a
+		>.
+	</p>
+	<p>
+		The company is certified in accordance with the &ldquo;EU-US Data Privacy Framework&rdquo;
+		(DPF). The DPF is an agreement between the European Union and the US, which is intended to
+		ensure compliance with European data protection standards for data processing in the US. Every
+		company certified under the DPF is obliged to comply with these data protection standards. For
+		more information, please contact the provider under the following link: <a
+			href="https://www.dataprivacyframework.gov/participant/5780"
+			target="_blank"
+			rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/5780</a
+		>.
+	</p>
 </TextWrap>

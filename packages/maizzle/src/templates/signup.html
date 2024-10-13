@@ -1,0 +1,33 @@
+---
+title: "Signup for Visionletter"
+preheader: "Please confirm your email address to subscribe to our newsletter"
+buttonText: "Sign Up Now"
+link: "@{{ .SiteURL }}/auth/confirm?token_hash=@{{ .TokenHash }}&type=email"
+---
+
+<x-main>
+  <div class="w-full mx-auto">
+    <h1
+      class="m-0 mb-6 text-2xl font-semibold text-tertiary-300 sm:text-xl sm:leading-6"
+    >
+      Welcome to our journey
+    </h1>
+
+    <p class="m-0 mb-6 leading-6 sm:text-sm">
+      Great to have you here! <br class="hidden sm:inline" /><br />Please
+      confirm your mail address to sign up to our waitlist.
+    </p>
+
+    <x-button href="{{{ page.link }}}" class="w-auto mb-8">
+      {{ page.buttonText }} &rarr;
+    </x-button>
+
+    <x-divider space-y="24px" class="bg-surface-400" />
+
+    <p class="m-0 mt-6 text-xs">
+      If you didn't sign up for this, you can ignore this mail.
+      <br /><br />
+      Thank you. <br />Your Visioncreator Team
+    </p>
+  </div>
+</x-main>

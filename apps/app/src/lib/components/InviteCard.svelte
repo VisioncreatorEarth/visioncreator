@@ -31,11 +31,12 @@
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
 	<div class="text-lg p-4 rounded-lg">
-		<h3 class="  text-primary-300">
-			<span class="h1 text-4xl font-bold">
-				Inspire & Rise <br />
-			</span>
-			<p class="text-xl font-medium">Be one of the 1st pioneers to unlock early access</p>
+		<h3 class="text-primary-300 text-center">
+			<span class="h1 text-4xl font-bold mb-2 block"> Join the 1 billion-owner startup </span>
+			<p class="text-lg mt-4">
+				Own a piece of the world's most exciting startup, a venture that unlocks human potential, <br
+				/>redefines work and is owned by a billion humans – including you.
+			</p>
 		</h3>
 		<!-- 	<ul class="space-y-2">
 			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
@@ -46,12 +47,20 @@
 		</p>
 		-->
 	</div>
+
+	<div class="w-full max-w-3xl video-wrapper pb-4">
+		<VideoPlayer youtubeId="K8iiYmb0r10" posterFrame="/images/001_poster.png" />
+	</div>
 	<!-- <Countdown /> -->
-	<p class="">
-		Lead the way into a new world. <br />The more fellows you inspire, the higher you rise in your
-		rank and the faster you get invited.
-		<!-- to stay in the top 21! -->
-	</p>
+	<div class="">
+		<h3 class="  text-primary-300">
+			<span class="h1 text-4xl font-bold">
+				Inspire & Rise <br />
+			</span>
+			<p class="text-xl font-medium">Become one of the 1st to unlock early access</p>
+		</h3>
+		The more fellows you inspire, the higher you rise in your rank and the faster you get invited.
+	</div>
 
 	{#if $showQRCode}
 		<QRCode

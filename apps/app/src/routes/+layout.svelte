@@ -10,6 +10,7 @@
 	import { writable } from 'svelte/store';
 	import { dev } from '$app/environment';
 	import { fade } from 'svelte/transition';
+	import { futureMe } from '$lib/stores';
 
 	let authReady = writable(false);
 	let authAction = writable('signup');
@@ -21,10 +22,12 @@
 	let { supabase, session, queryClient } = data;
 	$: ({ supabase, session, queryClient } = data);
 
+	let name = '';
 	let email = '';
 	let message = '';
 	let showInput = true;
 	let messageType = '';
+	let nameInput: HTMLInputElement;
 	let emailInput: HTMLInputElement;
 
 	function focusOnInit(node: HTMLInputElement) {
@@ -36,7 +39,9 @@
 			if (state.open && browser) {
 				setTimeout(() => {
 					authReady.set(true);
-					if (emailInput) {
+					if ($authAction === 'signup' && nameInput) {
+						nameInput.focus();
+					} else if ($authAction === 'login' && emailInput) {
 						emailInput.focus();
 					}
 				}, 100);
@@ -59,8 +64,10 @@
 	}
 
 	async function handleSignUp() {
+		futureMe.update((current) => ({ ...current, name }));
 		const formData = new FormData();
 		formData.append('email', email);
+		formData.append('name', name);
 
 		try {
 			const response = await fetch('/auth/signInWithOtp', {
@@ -71,16 +78,15 @@
 			const result = await response.json();
 
 			if (!response.ok) {
-				// Handle error responses
 				message = result.errors?.email || result.message || 'An unexpected error occurred.';
 				messageType = 'error';
 			} else {
-				// Handle successful responses
 				message = result.message;
 				messageType = 'success';
 			}
 
 			showInput = false;
+			name = '';
 			email = '';
 		} catch (error) {
 			console.error('Error:', error);
@@ -92,15 +98,25 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter' && showInput) {
-			handleSignUp();
+			if ($authAction === 'signup' && name && email) {
+				handleSignUp();
+			} else if ($authAction === 'login' && email) {
+				handleSignUp();
+			} else if (name && !email && emailInput) {
+				emailInput.focus();
+			}
 		}
 	}
 
 	function resetForm() {
 		showInput = true;
 		message = '';
+		name = '';
+		email = '';
 		setTimeout(() => {
-			if (emailInput) {
+			if ($authAction === 'signup' && nameInput) {
+				nameInput.focus();
+			} else if ($authAction === 'login' && emailInput) {
 				emailInput.focus();
 			}
 		}, 0);
@@ -110,7 +126,7 @@
 <QueryClientProvider client={queryClient}>
 	<Drawer height="h-auto">
 		<div class="@container">
-			<div class="max-w-xl mx-auto @3xl:my-16 p-6 max-h-full">
+			<div class="max-w-xl mx-auto p-6 max-h-full">
 				<div
 					class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 				>
@@ -137,13 +153,22 @@
 				</div>
 				<div class="w-full space-y-4 mt-4">
 					{#if showInput}
+						{#if $authAction === 'signup'}
+							<input
+								bind:value={name}
+								bind:this={nameInput}
+								use:focusOnInit
+								on:keydown={handleKeydown}
+								placeholder="First name (optional)"
+								class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50"
+							/>
+						{/if}
 						<input
 							bind:value={email}
 							bind:this={emailInput}
-							use:focusOnInit
 							on:keydown={handleKeydown}
-							placeholder="Enter your email address"
-							class="w-full px-4 py-3 @md:px-6 @md:py-4 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50"
+							placeholder="Email address"
+							class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50"
 						/>
 						<button
 							on:click={handleSignUp}
@@ -166,20 +191,20 @@
 							>
 						</div>
 					{/if}
+					{#if dev}
+						<div class="flex justify-center mt-4">
+							<a
+								href="http://127.0.0.1:54324/monitor"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="btn btn-sm variant-ghost-secondary"
+							>
+								Open Mailbox
+							</a>
+						</div>
+					{/if}
 				</div>
 			</div>
-			{#if dev}
-				<div class="fixed z-50 transform -translate-x-1/2 bottom-4 left-1/2">
-					<a
-						href="http://127.0.0.1:54324/monitor"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="btn btn-sm variant-ghost-secondary"
-					>
-						Open Mailbox
-					</a>
-				</div>
-			{/if}
 		</div>
 	</Drawer>
 

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml">
+<head>
+  <meta charset="utf-8">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings
+            xmlns:o="urn:schemas-microsoft-com:office:office"
+          >
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+      <style>
+        td,
+        th,
+        div,
+        p,
+        a,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+          font-family: "Segoe UI", sans-serif;
+          mso-line-height-rule: exactly;
+        }
+      </style>
+    <![endif]-->
+  <title>undefined</title>
+  <style>
+    @media screen and (max-width: 600px) {
+      .mobile-width-full {
+        width: 100% !important;
+      }
+    }
+    .hover-underline:hover {
+      text-decoration: underline !important;
+    }
+    @media (max-width: 600px) {
+      .sm--mx-4 {
+        margin-left: -16px !important;
+        margin-right: -16px !important;
+      }
+      .sm--mt-4 {
+        margin-top: -16px !important;
+      }
+      .sm-w-75px {
+        width: 75px !important;
+      }
+      .sm-p-6 {
+        padding: 24px !important;
+      }
+      .sm-px-4 {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+      }
+      .sm-py-8 {
+        padding-top: 32px !important;
+        padding-bottom: 32px !important;
+      }
+      .sm-text-sm {
+        font-size: 14px !important;
+      }
+    }
+  </style>
+</head>
+<body style="margin: 0; width: 100%; background-color: #0d1132; padding: 0; -webkit-font-smoothing: antialiased; word-break: break-word">
+  <div role="article" aria-roledescription="email" aria-label="{{ .Campaign.Subject }}" lang="en">
+    <div class="sm-py-8" style="padding-top: 48px; padding-bottom: 48px; text-align: center">
+      <a href="https://visioncreator.earth">
+        <img src="https://visioncreator.earth/logo.png" width="100" alt="Visioncreator" style="vertical-align: middle; max-width: 100%; height: auto; width: 100px" class="sm-w-75px">
+      </a>
+    </div>
+    <div class="sm-px-4" style="text-align: center; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">
+      <table align="center" class="mobile-width-full" style="max-width: 600px" width="100%" cellpadding="0" cellspacing="0" role="none">
+        <tr>
+          <td>
+            <table cellpadding="0" cellspacing="0" style="width: 100%;" role="none">
+              <tr>
+                <td class="sm-p-6" style="border-radius: 24px; background-color: #10153d; padding: 48px; font-size: 16px; color: #f0ede5; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)">
+                  <div style="margin-left: auto; margin-right: auto; width: 100%">
+                    <div class="sm--mx-4 sm--mt-4" style="margin-left: -32px; margin-right: -32px; margin-top: -32px; overflow: hidden; border-top-left-radius: 24px; border-top-right-radius: 24px">
+                      <div style="max-width: 600px; margin: 0 auto; position: relative">
+                        <img src="https://visioncreator.earth/images/visionletter/001_cover.png" alt="Episode cover" style="vertical-align: middle; display: block; width: 100%; max-width: 100%; height: auto;">
+                        <div style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+          ">
+                          <table width="100%" height="100%" cellpadding="0" cellspacing="0" role="none">
+                            <tr>
+                              <td align="center" valign="middle">
+                                <div>
+                                  <a href="https://visioncreator.earth/episodes?video=001" style="margin-left: auto; margin-right: auto; display: inline-block; width: auto; border-radius: 9999px; background-color: #eab308; padding: 16px 24px; font-size: 16px; font-weight: 600; line-height: 1; color: #141a4d; text-decoration: none">
+                                    <!--[if mso]>
+      <i style="mso-font-width: 150%; mso-text-raise: 30px" hidden>&emsp;</i>
+    <![endif]-->
+                                    <span style="mso-text-raise: 16px">
+                  Watch Video &rarr;
+                </span>
+                                    <!--[if mso]>
+      <i hidden style="mso-font-width: 150%;">&emsp;&#8203;</i>
+    <![endif]-->
+                                  </a>
+                                </div>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="margin: 32px 0 0; line-height: 24px">
+                      <p class="sm-text-sm" style="margin-bottom: 16px; font-size: 16px">Hey {{ .Subscriber.Name }},</p>
+                      <div class="sm-text-sm" style="font-size: 16px">{{ template "content" . }}</div>
+                    </div>
+                    <div style="margin-top: 32px; text-align: center;">
+                      <a href="{{ UnsubscribeURL }}" style="font-size: 14px; color: #e9c96e">
+                        {{ L.T "email.unsub" }}
+                      </a>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 16px 24px; text-align: center; font-size: 12px; color: #a3a7c2">
+                  <p style="margin: 0 0 8px; font-weight: 700; text-transform: uppercase">Powered by</p>
+                  <p style="margin: 0 0 8px;">
+                    Visioncreator GmbH <br>
+                    Reifenstuelstr. 6, DE-80469 München
+                  </p>
+                  <div style="margin: 16px 0">
+                    <p style="margin: 8px 0 0">+49 89 55926086</p>
+                    <a href="mailto:hello@visioncreator.earth" class="hover-underline" style="color: #c6c8d9">hello@visioncreator.earth</a>
+                  </div>
+                  <br>
+                  <p style="margin: 0 0 8px;">
+                    Registration Court: <br>Amtsgericht München, HRB 292608<br><br>
+                    CEO: Yvonne Müller, Samuel Andert
+                    <br>
+                    VAT-ID: DE368356417
+                  </p>
+                  <p style="margin: 16px 0 0">
+                    <a href="https://visioncreator.earth/en/privacy-policy" class="hover-underline" style="color: #c6c8d9;">Privacy Policy - Datenschutz</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

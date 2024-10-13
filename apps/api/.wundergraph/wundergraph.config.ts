@@ -37,10 +37,7 @@ configureWunderGraphApplication({
     allowedOrigins:
       process.env.NODE_ENV === "production"
         ? [new EnvironmentVariable("NEXT_PUBLIC_WG_ALLOW_CORS")]
-        : [
-            "http://127.0.0.1:3000",
-            new EnvironmentVariable("WG_ALLOWED_ORIGIN"),
-          ],
+        : ["http://127.0.0.1:3000"],
   },
   options: {
     publicNodeUrl:

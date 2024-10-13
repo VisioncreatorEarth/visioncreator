@@ -1,4 +1,15 @@
 # Welcome to Visioncreator
+## Prerequisites
+
+Before getting started, ensure you have the following installed and set up:
+
+- Docker
+- Node.js
+- npm
+- Nango (hosted)
+- Postmark (hosted)
+- Supabase (hosted)
+- Listmonk (self-hosted)
 
 ## Launch Development Environment
 ```
@@ -37,7 +48,7 @@ Set them in apps/api:
 SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_ROLE="copy-me-from-supacreator-package-terminal"
 NANGO_SECRET_KEY="copy-from-nango-dev-dashboard"
-NANGO_HOST=https://127.0.0.1:3003
+NANGO_HOST=https://app.nango.dev
 POSTMARK_SERVER_TOKEN="copy-from-postmark-dashboard"
 POSTMARK_WEBHOOK_USERNAME="set-inbound-webhook-in-postmark-dashboard"
 POSTMARK_WEBHOOK_PASSWORD="set-inbound-webhook-in-postmark-dashboard"
@@ -166,7 +177,8 @@ for db backup dumps to digital ocean
 - PUBLIC_SUPABASE_URL
 - SECRET_SUPABASE_JWT_SECRET
 - SECRET_SUPABASE_SERVICE_ROLE
-- NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
+- NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
+
 3. Connect your domain.
