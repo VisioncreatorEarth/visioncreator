@@ -34,7 +34,6 @@
 
   let newItemName = '';
   let showDropdown = false;
-  let selectedIndex = -1;
 
   function addItem(name: string, icon: string = '') {
     if (name.trim()) {
@@ -43,12 +42,11 @@
         {
           id: Date.now(),
           name: name.trim(),
-          icon: icon || 'mdi:shopping' // Default icon for custom items
+          icon: icon
         }
       ]);
       newItemName = '';
       showDropdown = false;
-      selectedIndex = -1;
     }
   }
 
@@ -56,36 +54,9 @@
     shoppingList.update(items => items.filter(item => item.id !== id));
   }
 
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      if (selectedIndex === -1) {
-        addItem(newItemName);
-      } else {
-        const selectedItem = displayedItems[selectedIndex];
-        addItem(selectedItem.name, selectedItem.icon);
-      }
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      selectedIndex = (selectedIndex + 1) % displayedItems.length;
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      selectedIndex = (selectedIndex - 1 + displayedItems.length) % displayedItems.length;
-    }
-  }
-
   $: filteredItems = preselectedItems.filter(item => 
     item.name.toLowerCase().includes(newItemName.toLowerCase())
   );
-
-  $: isCustomItem = newItemName.trim() !== '' && !filteredItems.some(item => item.name.toLowerCase() === newItemName.toLowerCase());
-
-  $: displayedItems = isCustomItem 
-    ? [{ name: newItemName, icon: 'mdi:shopping' }, ...filteredItems]
-    : filteredItems;
-
-  $: if (!showDropdown) {
-    selectedIndex = -1;
-  }
 </script>
 
 <div class="w-full h-full flex flex-col bg-surface-50-900-token relative">
@@ -120,22 +91,20 @@
           bind:value={newItemName}
           on:focus={() => showDropdown = true}
           on:blur={() => setTimeout(() => showDropdown = false, 200)}
-          on:keydown={handleKeydown}
           placeholder="Neuer Artikel"
           class="input"
         />
         <button on:click={() => addItem(newItemName)} class="btn variant-filled-primary">+</button>
       </div>
-      {#if showDropdown && displayedItems.length > 0}
+      {#if showDropdown && filteredItems.length > 0}
         <div class="card absolute bottom-full left-0 right-0 z-20 w-full mb-2 max-h-64 overflow-y-auto grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 p-2 bg-surface-100-800-token">
-          {#each displayedItems as item, index}
+          {#each filteredItems as item}
             <button
-              class="aspect-square flex flex-col items-center justify-center p-2 rounded-lg transition-colors duration-200 {index === selectedIndex ? 'bg-primary-500 text-white' : 'bg-surface-200-700-token hover:bg-surface-300-600-token'}"
+              class="aspect-square flex flex-col items-center justify-center p-2 bg-surface-200-700-token rounded-lg hover:bg-surface-300-600-token transition-colors duration-200"
               on:click={() => addItem(item.name, item.icon)}
-              on:mouseenter={() => selectedIndex = index}
             >
               <Icon icon={item.icon} class="w-1/2 h-1/2 mb-1" />
-              <span class="text-xs text-center overflow-hidden text-ellipsis">{item.name}{item.name === newItemName ? ' (Custom)' : ''}</span>
+              <span class="text-xs text-center overflow-hidden text-ellipsis">{item.name}</span>
             </button>
           {/each}
         </div>

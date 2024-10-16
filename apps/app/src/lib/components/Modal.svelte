@@ -4,7 +4,6 @@
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
 	import Hominio from './Hominio.svelte';
-	import { dev } from '$app/environment';
 
 	export let isOpen: boolean;
 	export let activeTab: string;
@@ -25,32 +24,23 @@
 		event.preventDefault();
 		dispatch('navigate', href);
 	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
-			toggleModal();
-		}
-	}
-
-	const tabs = dev ? ['hominio', 'actions', 'settings', 'legal'] : ['actions', 'settings', 'legal'];
 </script>
 
 {#if isOpen}
 	<div
 		class="fixed inset-0 flex items-end justify-center p-4 sm:p-6 z-50"
 		on:click={toggleModal}
-		on:keydown={handleKeydown}
+		on:keydown={(e) => e.key === 'Escape' && toggleModal()}
 		role="dialog"
 		aria-modal="true"
 		transition:fade
 	>
 		<div
 			class="w-full max-w-6xl bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
-			on:click|stopPropagation={() => {}}
-			role="document"
+			on:click|stopPropagation
 		>
 			<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
-				{#if activeTab === 'hominio' && dev}
+				{#if activeTab === 'hominio'}
 					<Hominio />
 				{:else if activeTab === 'actions'}
 					<slot name="actions" />
@@ -82,7 +72,7 @@
 			<!-- Tab navigation -->
 			<div class="flex items-center justify-between p-2 border-t border-surface-500">
 				<ul class="flex flex-wrap text-sm sm:text-md font-medium text-center">
-					{#each tabs as tab}
+					{#each ['hominio', 'actions', 'settings', 'legal'] as tab}
 						<li class="relative px-0.5 sm:px-1">
 							<button
 								class={`inline-block px-2 py-2 sm:px-3 rounded-lg transition-colors duration-200 ${
