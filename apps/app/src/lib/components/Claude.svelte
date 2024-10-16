@@ -1,147 +1,112 @@
 <script lang="ts">
   import { writable } from 'svelte/store';
 
-  interface Expense {
+  interface ShoppingItem {
     id: number;
-    description: string;
-    amount: number;
-    paidBy: string;
-    splitWith: string[];
+    name: string;
+    icon: string;
   }
 
-  interface Balance {
-    [key: string]: number;
-  }
+  const preselectedItems = [
+    { name: 'Apfel', icon: 'mdi:fruit-apple' },
+    { name: 'Banane', icon: 'mdi:fruit-banana' },
+    { name: 'Brot', icon: 'mdi:bread-slice' },
+    { name: 'Karotte', icon: 'mdi:carrot' },
+    { name: 'Käse', icon: 'mdi:cheese' },
+    { name: 'Ei', icon: 'mdi:egg' },
+    { name: 'Fisch', icon: 'mdi:fish' },
+    { name: 'Milch', icon: 'mdi:bottle-soda' },
+    { name: 'Tomate', icon: 'mdi:fruit-tomato' },
+    { name: 'Hühnchen', icon: 'mdi:food-drumstick' },
+    { name: 'Kartoffel', icon: 'mdi:potato' },
+    { name: 'Zwiebel', icon: 'mdi:onion' },
+    { name: 'Knoblauch', icon: 'mdi:garlic' },
+    { name: 'Küchentücher', icon: 'mdi:paper-roll' },
+    { name: 'Toilettenpapier', icon: 'mdi:toilet-paper' },
+    { name: 'Shampoo', icon: 'mdi:shampoo' },
+    { name: 'Zahnpasta', icon: 'mdi:toothpaste' },
+    { name: 'Kaffeebohnen', icon: 'mdi:coffee' },
+    { name: 'Tee', icon: 'mdi:tea' },
+    { name: 'Wein', icon: 'mdi:wine' },
+  ];
 
-  const expenses = writable<Expense[]>([]);
-  const balances = writable<Balance>({});
-  const friends = writable<string[]>([]);
+  const shoppingList = writable<ShoppingItem[]>([]);
 
-  let description = '';
-  let amount = 0;
-  let paidBy = '';
-  let splitWith: string[] = [];
-  let newFriend = '';
+  let newItemName = '';
+  let showDropdown = false;
 
-  function addExpense() {
-    if (description && amount > 0 && paidBy && splitWith.length > 0) {
-      expenses.update(exp => [...exp, {
-        id: Date.now(),
-        description,
-        amount,
-        paidBy,
-        splitWith
-      }]);
-      updateBalances();
-      resetForm();
+  function addItem(name: string, icon: string = '') {
+    if (name.trim()) {
+      shoppingList.update(items => [
+        ...items,
+        {
+          id: Date.now(),
+          name: name.trim(),
+          icon: icon
+        }
+      ]);
+      newItemName = '';
+      showDropdown = false;
     }
   }
 
-  function updateBalances() {
-    expenses.subscribe(exp => {
-      const newBalances: Balance = {};
-      exp.forEach(expense => {
-        const share = expense.amount / (expense.splitWith.length + 1);
-        newBalances[expense.paidBy] = (newBalances[expense.paidBy] || 0) + expense.amount;
-        expense.splitWith.forEach(friend => {
-          newBalances[friend] = (newBalances[friend] || 0) - share;
-        });
-        newBalances[expense.paidBy] -= share;
-      });
-      balances.set(newBalances);
-    });
+  function removeItem(id: number) {
+    shoppingList.update(items => items.filter(item => item.id !== id));
   }
 
-  function resetForm() {
-    description = '';
-    amount = 0;
-    paidBy = '';
-    splitWith = [];
-  }
-
-  function addFriend() {
-    if (newFriend && !$friends.includes(newFriend)) {
-      friends.update(f => [...f, newFriend]);
-      newFriend = '';
-    }
-  }
+  $: filteredItems = preselectedItems.filter(item => 
+    item.name.toLowerCase().includes(newItemName.toLowerCase())
+  );
 </script>
 
-<div class="flex items-center justify-center w-full h-full bg-surface-800 text-gray-100">
-  <div class="p-8 bg-surface-700 rounded-lg shadow-xl w-96">
-    <h1 class="mb-4 text-2xl font-bold text-center text-blue-300">Simple Splitwise Clone</h1>
+<div class="w-full h-full flex items-center justify-center bg-surface-50-900-token">
+  <div class="card p-4 w-full h-full max-w-2xl shadow-xl flex flex-col">
+    <header class="card-header">
+      <h2 class="h2 mb-4">Einkaufsliste</h2>
+    </header>
+    
+    <section class="p-4 flex-grow overflow-y-auto">
+      <div class="relative mb-4">
+        <div class="input-group input-group-divider grid-cols-[1fr_auto]">
+          <input
+            bind:value={newItemName}
+            on:focus={() => showDropdown = true}
+            on:blur={() => setTimeout(() => showDropdown = false, 200)}
+            placeholder="Neuer Artikel"
+            class="input"
+          />
+          <button on:click={() => addItem(newItemName)} class="btn variant-filled-primary">+</button>
+        </div>
+        {#if showDropdown && filteredItems.length > 0}
+          <div class="card absolute z-10 w-full mt-1 max-h-48 overflow-y-auto">
+            {#each filteredItems as item}
+              <button
+                class="w-full p-2 text-left hover:bg-surface-hover-token flex items-center"
+                on:click={() => addItem(item.name, item.icon)}
+              >
+                <Icon icon={item.icon} class="w-5 h-5 mr-2" />
+                {item.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
 
-    <div class="mb-4">
-      <input
-        bind:value={newFriend}
-        placeholder="Add new friend"
-        class="w-3/4 p-2 mr-2 border rounded bg-surface-600 text-gray-100 border-gray-600 placeholder-gray-400"
-      />
-      <button
-        on:click={addFriend}
-        class="w-1/4 p-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-      >
-        Add
-      </button>
-    </div>
-
-    {#if $friends.length > 0}
-      <div class="mb-4">
-        <input
-          bind:value={description}
-          placeholder="Expense description"
-          class="w-full p-2 mb-2 border rounded bg-surface-600 text-gray-100 border-gray-600 placeholder-gray-400"
-        />
-        <input
-          type="number"
-          bind:value={amount}
-          placeholder="Amount"
-          class="w-full p-2 mb-2 border rounded bg-surface-600 text-gray-100 border-gray-600 placeholder-gray-400"
-        />
-        <select bind:value={paidBy} class="w-full p-2 mb-2 border rounded bg-surface-600 text-gray-100 border-gray-600">
-          <option value="">Who paid?</option>
-          {#each $friends as friend}
-            <option value={friend}>{friend}</option>
-          {/each}
-        </select>
-        <div class="mb-2">Split with:</div>
-        {#each $friends as friend}
-          <label class="block">
-            <input type="checkbox" bind:group={splitWith} value={friend} class="mr-2 bg-surface-600 border-gray-600" />
-            {friend}
-          </label>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+        {#each $shoppingList as item (item.id)}
+          <button
+            on:click={() => removeItem(item.id)}
+            class="flex flex-col items-center justify-center p-4 bg-surface-200-700-token rounded-lg hover:bg-surface-300-600-token transition-colors duration-200"
+          >
+            <Icon icon={item.icon} class="w-16 h-16 mb-2" />
+            <span class="text-sm text-center">{item.name}</span>
+          </button>
         {/each}
       </div>
 
-      <button
-        on:click={addExpense}
-        class="w-full p-2 mb-4 text-white bg-blue-600 rounded hover:bg-blue-700"
-      >
-        Add Expense
-      </button>
-
-      <h2 class="mb-2 text-xl font-bold text-blue-300">Expenses</h2>
-      {#each $expenses as expense}
-        <div class="mb-2 p-2 border rounded border-gray-600 bg-surface-600">
-          <p><strong>{expense.description}</strong> - ${expense.amount}</p>
-          <p>Paid by: {expense.paidBy}</p>
-          <p>Split with: {expense.splitWith.join(', ')}</p>
-        </div>
-      {/each}
-
-      <h2 class="mb-2 text-xl font-bold text-blue-300">Balances</h2>
-      {#each Object.entries($balances) as [friend, balance]}
-        <p>
-          {friend}: ${balance.toFixed(2)}
-          {#if balance > 0}
-            <span class="text-green-400">(to receive)</span>
-          {:else if balance < 0}
-            <span class="text-red-400">(to pay)</span>
-          {/if}
-        </p>
-      {/each}
-    {:else}
-      <p class="text-center text-gray-400">Add friends to start splitting expenses!</p>
-    {/if}
+      {#if $shoppingList.length === 0}
+        <p class="text-center text-surface-500">Ihre Einkaufsliste ist leer.</p>
+      {/if}
+    </section>
   </div>
 </div>

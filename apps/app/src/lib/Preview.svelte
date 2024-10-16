@@ -1,17 +1,29 @@
 <script lang="ts">
-	import { view as initialView } from '$lib/views/Default';
 	import { writable } from 'svelte/store';
+	import { onMount } from 'svelte';
+	import type { ComponentType } from 'svelte';
 
-	let selectedChildren = { ...initialView.children[0] };
-	let view = { ...initialView };
+	interface ViewChild {
+		id: string;
+		component: string;
+		slot: string;
+	}
 
-	let components = writable([]);
+	interface View {
+		children: ViewChild[];
+	}
+
+	let selectedChildren: ViewChild = { id: '', component: 'Claude', slot: 'default' };
+	let view: View = { children: [selectedChildren] };
+
+	let components = writable<{ name: string; value: string }[]>([]);
 
 	async function loadComponentNames() {
 		const componentFiles = import.meta.glob('$lib/components/*.svelte');
-		const componentNames = [];
+		const componentNames: { name: string; value: string }[] = [];
 		for (const path in componentFiles) {
-			const name = path.split('/').pop().replace('.svelte', '');
+			const nameParts = path.split('/');
+			const name = nameParts[nameParts.length - 1].replace('.svelte', '');
 			if (name.startsWith('o-') || name === 'Claude') {
 				componentNames.push({ name, value: name });
 			}
@@ -23,7 +35,7 @@
 		loadComponentNames();
 	});
 
-	function updateChildren(component, slot) {
+	function updateChildren(component: string, slot: string) {
 		view.children = [{ ...selectedChildren, component, slot }];
 	}
 
@@ -48,10 +60,16 @@
 			alert('Error saving component.');
 		}
 	}
+
+	let ComposeView: ComponentType;
+	onMount(async () => {
+		const module = await import('$lib/components/ComposeView.svelte');
+		ComposeView = module.default;
+	});
 </script>
 
 <div class="flex w-full h-full">
-	<div class="w-48 h-full py-10 pr-5 overflow-y-scroll bg-surface-900">
+	<div class="w-48 h-full py-10 pr-5 overflow-y-scroll bg-surface-800">
 		{#each $components as component}
 			<button
 				class="block w-full p-1 text-left hover:bg-gray-200"
@@ -68,7 +86,9 @@
 	</div>
 	<div class="w-full h-full p-4 bg-surface-900">
 		<div class="w-full h-full overflow-hidden rounded-2xl">
-			<ComposeView {view} />
+			{#if ComposeView}
+				<svelte:component this={ComposeView} {view} />
+			{/if}
 		</div>
 	</div>
 </div>
