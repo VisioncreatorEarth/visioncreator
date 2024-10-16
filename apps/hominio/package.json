@@ -27,6 +27,7 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@electric-sql/pglite": "^0.2.12"
+		"@electric-sql/pglite": "^0.2.12",
+		"@electric-sql/pglite-sync": "^0.2.13"
 	}
 }

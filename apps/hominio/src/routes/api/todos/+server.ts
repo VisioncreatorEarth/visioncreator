@@ -2,12 +2,21 @@ import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { PGlite } from "@electric-sql/pglite";
 import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 
 let db: PGlite;
 
 async function initDB() {
   if (!db) {
-    const dataDir = path.join(process.cwd(), "pgdata");
+    // Get the current file's directory
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+
+    // Create a path for the database files
+    const dataDir = path.join(__dirname, "..", "..", "..", "..", "pgdata");
+
+    // Initialize PGlite with the file system path
     db = new PGlite(dataDir);
 
     await db.exec(`
