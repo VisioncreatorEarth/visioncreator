@@ -13,6 +13,7 @@
     "@dicebear/collection": "^8.0.1",
     "@dicebear/core": "^8.0.1",
     "@nangohq/node": "^0.39.32",
+    "@polar-sh/sdk": "^0.13.1",
     "@supabase/supabase-js": "^2.43.2",
     "@wundergraph/sdk": "^0.184.2",
     "ajv": "^8.17.1",

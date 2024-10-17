@@ -9,6 +9,7 @@ export type OperationErrors = {
 	createInvite: CreateInviteErrors;
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
+	polarListProducts: PolarListProductsErrors;
 	queryComposer: QueryComposerErrors;
 	queryDB: QueryDBErrors;
 	queryLeaderboard: QueryLeaderboardErrors;
@@ -28,6 +29,7 @@ export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;
+export type PolarListProductsErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;
 export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
