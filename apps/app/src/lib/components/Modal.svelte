@@ -2,6 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import SvelteMarkdown from 'svelte-markdown';
 
 	export let isOpen: boolean;
 	export let activeTab: string;
@@ -10,20 +11,25 @@
 
 	const dispatch = createEventDispatcher();
 
+	interface Message {
+		role: 'user' | 'assistant' | 'system';
+		content: string;
+		image?: string;
+	}
+
+	let messages: Message[] = [];
 	let isRecording = false;
 	let transcript = '';
 	let processingState = '';
 	let longPressTimer: ReturnType<typeof setTimeout>;
 	let buttonElement: HTMLButtonElement;
 	let pressStartTime: number;
-
 	let lastToggleTime = 0;
 	const DEBOUNCE_DELAY = 300; // milliseconds
-
 	let isPressed = false;
-
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
+	let messageContainer: HTMLDivElement;
 
 	function setActiveTab(tab: string) {
 		dispatch('setActiveTab', tab);
@@ -36,6 +42,12 @@
 	function handleLinkClick(event: Event, href: string) {
 		event.preventDefault();
 		dispatch('navigate', href);
+	}
+
+	function scrollToBottom() {
+		if (messageContainer) {
+			messageContainer.scrollTop = messageContainer.scrollHeight;
+		}
 	}
 
 	async function handleMouseDown() {
@@ -82,15 +94,65 @@
 					console.error('Error playing audio:', error);
 				});
 
-				// Simulate transcription and AI processing
 				try {
-					// Simulating API call for transcription
-					await new Promise((resolve) => setTimeout(resolve, 2000));
-					const transcriptionResult = 'Simulated transcription result';
+					// Wait for the transcription result
+					const transcriptionResult = await new Promise((resolve, reject) => {
+						const timeoutId = setTimeout(() => {
+							reject(new Error('Transcription timeout'));
+						}, 10000); // 10 second timeout
 
-					// Simulating API call for AI code generation
-					await new Promise((resolve) => setTimeout(resolve, 3000));
-					const aiGeneratedCode = 'Simulated AI generated code';
+						mediaRecorder.onstop = async () => {
+							clearTimeout(timeoutId);
+							const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+							const formData = new FormData();
+							formData.append('audio', audioBlob, 'recording.webm');
+
+							try {
+								const response = await fetch('/api/speech-to-text', {
+									method: 'POST',
+									body: formData
+								});
+
+								if (!response.ok) {
+									throw new Error('Failed to transcribe audio');
+								}
+
+								const data = await response.json();
+								resolve(data.text);
+							} catch (error) {
+								reject(error);
+							}
+						};
+					});
+
+					console.log('Transcription result:', transcriptionResult);
+
+					// Update processing state for code generation
+					processingState = 'Programming...';
+
+					// Add user message with actual transcription result
+					messages = [...messages, { role: 'user', content: transcriptionResult }];
+
+					// Actual API call to Claude AI for code generation
+					const response = await fetch('/api/chat', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({ messages })
+					});
+
+					if (!response.ok) {
+						throw new Error('Network response was not ok');
+					}
+
+					const data = await response.json();
+					const aiGeneratedCode = data.content;
+
+					console.log('AI Generated Code:', aiGeneratedCode);
+
+					// Add assistant message
+					messages = [...messages, { role: 'assistant', content: aiGeneratedCode }];
 
 					// Process complete, play a random "done" audio file
 					const randomDoneAudio = Math.floor(Math.random() * 5) + 1;
@@ -99,19 +161,13 @@
 						console.error('Error playing done audio:', error);
 					});
 
-					// Update transcript with the result
-					transcript = `Generated code: ${aiGeneratedCode}`;
 					processingState = '';
-					setTimeout(() => {
-						transcript = '';
-					}, 5000);
+					transcript = '';
+					scrollToBottom();
 				} catch (error) {
 					console.error('Error during processing:', error);
 					transcript = 'An error occurred during processing.';
 					processingState = '';
-					setTimeout(() => {
-						transcript = '';
-					}, 3000);
 				}
 			} else if (pressDuration < 500) {
 				console.log(`Modal toggled after ${pressDuration}ms`);
@@ -156,28 +212,6 @@
 		mediaRecorder.ondataavailable = (event) => {
 			audioChunks.push(event.data);
 		};
-
-		mediaRecorder.onstop = async () => {
-			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-			const formData = new FormData();
-			formData.append('audio', audioBlob, 'recording.webm');
-
-			try {
-				const response = await fetch('/api/speech-to-text', {
-					method: 'POST',
-					body: formData
-				});
-
-				if (!response.ok) {
-					throw new Error('Failed to transcribe audio');
-				}
-
-				const data = await response.json();
-				console.log('Transcription:', data.text);
-			} catch (error) {
-				console.error('Error sending audio to server:', error);
-			}
-		};
 	}
 
 	onMount(() => {
@@ -220,7 +254,24 @@
 		>
 			<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 				{#if activeTab === 'actions'}
-					<slot name="actions" />
+					<div
+						class="flex-1 p-4 mb-2 overflow-y-auto rounded-xl bg-surface-700 text-tertiary-200"
+						bind:this={messageContainer}
+						on:DOMNodeInserted={scrollToBottom}
+					>
+						{#each messages as message (message.content)}
+							<div class="mb-2">
+								<strong>{message.role === 'user' ? 'You:' : 'Assistant:'}</strong>
+								<SvelteMarkdown source={message.content} />
+							</div>
+						{/each}
+						{#if processingState}
+							<div class="mb-2">
+								<strong>Assistant:</strong>
+								<p>{processingState}</p>
+							</div>
+						{/if}
+					</div>
 				{:else if activeTab === 'settings'}
 					<slot name="settings" />
 				{:else if activeTab === 'legal'}

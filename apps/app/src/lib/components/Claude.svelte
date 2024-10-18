@@ -17,7 +17,7 @@
     { id: 'todo', title: 'To Do', tasks: [{ id: '1', text: 'Erste Aufgabe' }] },
     { id: 'inprogress', title: 'In Progress', tasks: [] },
     { id: 'done', title: 'Erledigt', tasks: [] },
-    { id: 'always', title: 'Immer', tasks: Array(5).fill(null).map((_, index) => ({ id: `always-${index + 1}`, text: 'Ganz viel Liebhaben' })) },
+    // Die "Immer"-Spalte wurde entfernt
   ]);
 
   let draggedTask: Task | null = null;
