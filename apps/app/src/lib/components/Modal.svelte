@@ -2,7 +2,6 @@
 	import { fade } from 'svelte/transition';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import SvelteMarkdown from 'svelte-markdown';
 
 	export let isOpen: boolean;
 	export let activeTab: string;
@@ -25,7 +24,7 @@
 	let buttonElement: HTMLButtonElement;
 	let pressStartTime: number;
 	let lastToggleTime = 0;
-	const DEBOUNCE_DELAY = 300; // milliseconds
+	const DEBOUNCE_DELAY = 300;
 	let isPressed = false;
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
