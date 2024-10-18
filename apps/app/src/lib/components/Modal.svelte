@@ -31,6 +31,21 @@
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
 
+	const processingMessages = [
+		'Brewing code...',
+		'Bending pixels...',
+		'Wrangling bits...',
+		'Feeding gremlins...',
+		'Aligning stars...',
+		'Consulting oracles...',
+		'Summoning functions...',
+		'Decoding matrix...',
+		'Reticulating splines...',
+		'Charging flux capacitor...'
+	];
+
+	let processingInterval: number;
+
 	function setActiveTab(tab: string) {
 		dispatch('setActiveTab', tab);
 	}
@@ -78,14 +93,11 @@
 		const pressDuration = currentTime - pressStartTime;
 		clearTimeout(longPressTimer);
 
-		console.log(`Press duration: ${pressDuration}ms`);
-
 		if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 			if (isRecording) {
 				isRecording = false;
 				stopRecording();
-				processingState = 'Processing...';
-				console.log(`Recording stopped after ${pressDuration}ms`);
+				startProcessingMessages();
 
 				// Play a random "working on it" audio file
 				const randomAudio = Math.floor(Math.random() * 5) + 1;
@@ -125,8 +137,6 @@
 						};
 					});
 
-					console.log('Transcription result:', transcriptionResult);
-
 					// Update processing state for code generation
 					processingState = 'Programming...';
 
@@ -149,8 +159,6 @@
 					const data = await response.json();
 					const aiGeneratedCode = data.content;
 
-					console.log('AI Generated Code:', aiGeneratedCode);
-
 					// Add assistant message
 					messages = [...messages, { role: 'assistant', content: aiGeneratedCode }];
 
@@ -161,23 +169,18 @@
 						console.error('Error playing done audio:', error);
 					});
 
-					processingState = '';
+					stopProcessingMessages();
 					transcript = '';
 					scrollToBottom();
 				} catch (error) {
-					console.error('Error during processing:', error);
+					stopProcessingMessages();
 					transcript = 'An error occurred during processing.';
 					processingState = '';
 				}
 			} else if (pressDuration < 500) {
-				console.log(`Modal toggled after ${pressDuration}ms`);
 				toggleModal();
 				lastToggleTime = currentTime;
-			} else {
-				console.log(`Long press detected, but not recording. No action taken.`);
 			}
-		} else {
-			console.log(`Toggle ignored due to debounce (${currentTime - lastToggleTime}ms)`);
 		}
 	}
 
@@ -212,6 +215,20 @@
 		mediaRecorder.ondataavailable = (event) => {
 			audioChunks.push(event.data);
 		};
+	}
+
+	function startProcessingMessages() {
+		let index = 0;
+		processingState = processingMessages[index];
+		processingInterval = setInterval(() => {
+			index = (index + 1) % processingMessages.length;
+			processingState = processingMessages[index];
+		}, 3000 + Math.random() * 2000); // Random interval between 3-5 seconds
+	}
+
+	function stopProcessingMessages() {
+		clearInterval(processingInterval);
+		processingState = '';
 	}
 
 	onMount(() => {
