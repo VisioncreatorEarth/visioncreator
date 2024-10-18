@@ -22,6 +22,8 @@
 	let lastToggleTime = 0;
 	const DEBOUNCE_DELAY = 300; // milliseconds
 
+	let isPressed = false;
+
 	function setActiveTab(tab: string) {
 		dispatch('setActiveTab', tab);
 	}
@@ -36,6 +38,7 @@
 	}
 
 	function handleMouseDown() {
+		isPressed = true;
 		pressStartTime = performance.now();
 		longPressTimer = setTimeout(() => {
 			isRecording = true;
@@ -45,6 +48,7 @@
 	}
 
 	function handleMouseUp() {
+		isPressed = false;
 		const currentTime = performance.now();
 		const pressDuration = currentTime - pressStartTime;
 		clearTimeout(longPressTimer);
@@ -200,16 +204,19 @@
 			</div>
 		{/if}
 		{#if me.onboarded}
-			<button
-				bind:this={buttonElement}
-				class="flex items-center justify-center transition-all duration-300 border rounded-full shadow-lg bg-primary-500 w-14 h-14 border-tertiary-400 hover:shadow-xl hover:scale-105"
-				class:hidden={isOpen}
-				on:mousedown={handleMouseDown}
-				on:mouseup={handleMouseUp}
-				on:mouseleave={handleMouseUp}
-			>
-				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-			</button>
+			<div class="relative">
+				<button
+					bind:this={buttonElement}
+					class="flex items-center justify-center transition-all duration-300 border rounded-full shadow-lg bg-primary-500 w-14 h-14 border-tertiary-400 hover:shadow-xl hover:scale-105"
+					class:hidden={isOpen}
+					class:recording-border={isRecording || isPressed}
+					on:mousedown={handleMouseDown}
+					on:mouseup={handleMouseUp}
+					on:mouseleave={handleMouseUp}
+				>
+					<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+				</button>
+			</div>
 		{/if}
 	</div>
 </div>
@@ -229,5 +236,19 @@
 
 	.animate-pulse {
 		animation: pulse 2s infinite;
+	}
+
+	.recording-border {
+		box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
+		animation: pulse-red 0.3s infinite alternate;
+	}
+
+	@keyframes pulse-red {
+		0% {
+			box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
+		}
+		100% {
+			box-shadow: 0 0 0 2px red, 0 0 0 8px rgba(255, 0, 0, 0);
+		}
 	}
 </style>
