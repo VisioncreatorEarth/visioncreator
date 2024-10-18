@@ -47,7 +47,7 @@
 		}, 500);
 	}
 
-	function handleMouseUp() {
+	async function handleMouseUp() {
 		isPressed = false;
 		const currentTime = performance.now();
 		const pressDuration = currentTime - pressStartTime;
@@ -58,12 +58,45 @@
 		if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 			if (isRecording) {
 				isRecording = false;
-				transcript = 'Mocked transcription: Hello, how can I help you?';
-				setTimeout(() => {
-					transcript = '';
-				}, 3000);
+				transcript = 'Processing your request...';
 				console.log(`Recording stopped after ${pressDuration}ms`);
-				// Don't toggle the modal after recording
+
+				// Play a random "working on it" audio file
+				const randomAudio = Math.floor(Math.random() * 5) + 1;
+				const audio = new Audio(`/audio/workingonit${randomAudio}.mp3`);
+				audio.play().catch((error) => {
+					console.error('Error playing audio:', error);
+				});
+
+				// Simulate transcription and AI processing
+				try {
+					// Simulating API call for transcription
+					await new Promise((resolve) => setTimeout(resolve, 2000));
+					const transcriptionResult = 'Simulated transcription result';
+
+					// Simulating API call for AI code generation
+					await new Promise((resolve) => setTimeout(resolve, 3000));
+					const aiGeneratedCode = 'Simulated AI generated code';
+
+					// Process complete, play a random "done" audio file
+					const randomDoneAudio = Math.floor(Math.random() * 5) + 1;
+					const doneAudio = new Audio(`/audio/done${randomDoneAudio}.mp3`);
+					doneAudio.play().catch((error) => {
+						console.error('Error playing done audio:', error);
+					});
+
+					// Update transcript with the result
+					transcript = `Generated code: ${aiGeneratedCode}`;
+					setTimeout(() => {
+						transcript = '';
+					}, 5000);
+				} catch (error) {
+					console.error('Error during processing:', error);
+					transcript = 'An error occurred during processing.';
+					setTimeout(() => {
+						transcript = '';
+					}, 3000);
+				}
 			} else if (pressDuration < 500) {
 				console.log(`Modal toggled after ${pressDuration}ms`);
 				toggleModal();
