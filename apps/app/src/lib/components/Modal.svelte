@@ -271,24 +271,7 @@
 		>
 			<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
 				{#if activeTab === 'actions'}
-					<div
-						class="flex-1 p-4 mb-2 overflow-y-auto rounded-xl bg-surface-700 text-tertiary-200"
-						bind:this={messageContainer}
-						on:DOMNodeInserted={scrollToBottom}
-					>
-						{#each messages as message (message.content)}
-							<div class="mb-2">
-								<strong>{message.role === 'user' ? 'You:' : 'Assistant:'}</strong>
-								<SvelteMarkdown source={message.content} />
-							</div>
-						{/each}
-						{#if processingState}
-							<div class="mb-2">
-								<strong>Assistant:</strong>
-								<p>{processingState}</p>
-							</div>
-						{/if}
-					</div>
+					<slot name="actions" />
 				{:else if activeTab === 'settings'}
 					<slot name="settings" />
 				{:else if activeTab === 'legal'}

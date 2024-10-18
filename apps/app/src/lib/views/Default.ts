@@ -3,7 +3,8 @@ export const view = {
     layout: {
         areas: `
 			"main"
-		`
+		`,
+        overflow: 'auto',
     },
     children: [
         {
