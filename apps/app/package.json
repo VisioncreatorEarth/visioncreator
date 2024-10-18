@@ -32,10 +32,12 @@
 		"lodash": "^4.17.21",
 		"lodash.isequal": "^4.5.0",
 		"monaco-editor": "^0.44.0",
+		"openai": "^4.67.3",
 		"qrcode": "^1.5.3",
 		"svelte-markdown": "^0.4.1",
 		"sveltekit-superforms": "^1.7.2",
 		"vidstack": "^1.12.11",
+		"ws": "^8.18.0",
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
