@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
-	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import Hominio from './Hominio.svelte';
 
@@ -24,6 +23,9 @@
 
 	let isPressed = false;
 
+	let mediaRecorder: MediaRecorder | null = null;
+	let audioChunks: Blob[] = [];
+
 	function setActiveTab(tab: string) {
 		dispatch('setActiveTab', tab);
 	}
@@ -37,13 +39,25 @@
 		dispatch('navigate', href);
 	}
 
-	function handleMouseDown() {
+	async function handleMouseDown() {
 		isPressed = true;
 		pressStartTime = performance.now();
-		longPressTimer = setTimeout(() => {
-			isRecording = true;
-			transcript = 'Recording...';
-			console.log(`Long press detected after ${performance.now() - pressStartTime}ms`);
+		longPressTimer = setTimeout(async () => {
+			if (!mediaRecorder) {
+				const permissionGranted = await requestMicrophonePermission();
+				if (!permissionGranted) {
+					console.log('Microphone permission denied');
+					return;
+				}
+			}
+			if (mediaRecorder && mediaRecorder.state === 'inactive') {
+				isRecording = true;
+				transcript = 'Recording...';
+				startRecording();
+				console.log(`Long press detected after ${performance.now() - pressStartTime}ms`);
+			} else {
+				console.log('MediaRecorder not available or already recording');
+			}
 		}, 500);
 	}
 
@@ -58,7 +72,7 @@
 		if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 			if (isRecording) {
 				isRecording = false;
-				transcript = 'Processing your request...';
+				stopRecording();
 				console.log(`Recording stopped after ${pressDuration}ms`);
 
 				// Play a random "working on it" audio file
@@ -109,7 +123,76 @@
 		}
 	}
 
+	function startRecording() {
+		if (mediaRecorder && mediaRecorder.state === 'inactive') {
+			audioChunks = [];
+			mediaRecorder.start();
+		}
+	}
+
+	function stopRecording() {
+		if (mediaRecorder && mediaRecorder.state === 'recording') {
+			mediaRecorder.stop();
+		}
+	}
+
+	async function requestMicrophonePermission() {
+		try {
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			setupMediaRecorder(stream);
+			return true;
+		} catch (error) {
+			console.error('Error requesting microphone permission:', error);
+			return false;
+		}
+	}
+
+	function setupMediaRecorder(stream) {
+		mediaRecorder = new MediaRecorder(stream);
+
+		mediaRecorder.ondataavailable = (event) => {
+			audioChunks.push(event.data);
+		};
+
+		mediaRecorder.onstop = async () => {
+			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+			const formData = new FormData();
+			formData.append('audio', audioBlob, 'recording.webm');
+
+			try {
+				const response = await fetch('/api/speech-to-text', {
+					method: 'POST',
+					body: formData
+				});
+
+				if (!response.ok) {
+					throw new Error('Failed to transcribe audio');
+				}
+
+				const data = await response.json();
+				console.log('Transcription:', data.text);
+			} catch (error) {
+				console.error('Error sending audio to server:', error);
+			}
+		};
+	}
+
 	onMount(() => {
+		async function initializeAudio() {
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				setupMediaRecorder(stream);
+			} catch (error) {
+				if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+					console.log('Microphone permission not granted. Waiting for user interaction.');
+				} else {
+					console.error('Error accessing microphone:', error);
+				}
+			}
+		}
+
+		initializeAudio();
+
 		buttonElement?.addEventListener('touchstart', handleMouseDown);
 		buttonElement?.addEventListener('touchend', handleMouseUp);
 		return () => {
@@ -133,9 +216,7 @@
 			on:click|stopPropagation
 		>
 			<div class="flex flex-col flex-grow w-full h-full p-4 overflow-hidden">
-				{#if activeTab === 'hominio'}
-					<Hominio />
-				{:else if activeTab === 'actions'}
+				{#if activeTab === 'actions'}
 					<slot name="actions" />
 				{:else if activeTab === 'settings'}
 					<slot name="settings" />
@@ -146,15 +227,9 @@
 								value="privacy"
 								on:click={(e) => handleLinkClick(e, '/en/privacy-policy')}
 							>
-								<svelte:fragment slot="lead">
-									<Icon icon="mdi:shield-check" class="w-6 h-6" />
-								</svelte:fragment>
 								Privacy Policy
 							</ListBoxItem>
 							<ListBoxItem value="imprint" on:click={(e) => handleLinkClick(e, '/en/imprint')}>
-								<svelte:fragment slot="lead">
-									<Icon icon="mdi:information" class="w-6 h-6" />
-								</svelte:fragment>
 								Site Notice
 							</ListBoxItem>
 						</ListBox>
@@ -165,7 +240,7 @@
 			<!-- Tab navigation -->
 			<div class="flex items-center justify-between p-2 border-t border-surface-500">
 				<ul class="flex flex-wrap text-sm font-medium text-center sm:text-md">
-					{#each ['hominio', 'actions', 'settings', 'legal'] as tab}
+					{#each ['actions', 'settings', 'legal'] as tab}
 						<li class="relative px-0.5 sm:px-1">
 							<button
 								class={`inline-block px-2 py-2 sm:px-3 rounded-lg transition-colors duration-200 ${
