@@ -2,7 +2,6 @@
 	import { fade } from 'svelte/transition';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import Hominio from './Hominio.svelte';
 
 	export let isOpen: boolean;
 	export let activeTab: string;
@@ -13,10 +12,10 @@
 
 	let isRecording = false;
 	let transcript = '';
+	let processingState = '';
 	let longPressTimer: ReturnType<typeof setTimeout>;
 	let buttonElement: HTMLButtonElement;
 	let pressStartTime: number;
-	let pressTimer: ReturnType<typeof setTimeout>;
 
 	let lastToggleTime = 0;
 	const DEBOUNCE_DELAY = 300; // milliseconds
@@ -73,6 +72,7 @@
 			if (isRecording) {
 				isRecording = false;
 				stopRecording();
+				processingState = 'Processing...';
 				console.log(`Recording stopped after ${pressDuration}ms`);
 
 				// Play a random "working on it" audio file
@@ -101,12 +101,14 @@
 
 					// Update transcript with the result
 					transcript = `Generated code: ${aiGeneratedCode}`;
+					processingState = '';
 					setTimeout(() => {
 						transcript = '';
 					}, 5000);
 				} catch (error) {
 					console.error('Error during processing:', error);
 					transcript = 'An error occurred during processing.';
+					processingState = '';
 					setTimeout(() => {
 						transcript = '';
 					}, 3000);
@@ -127,6 +129,7 @@
 		if (mediaRecorder && mediaRecorder.state === 'inactive') {
 			audioChunks = [];
 			mediaRecorder.start();
+			transcript = 'Recording...';
 		}
 	}
 
@@ -291,10 +294,10 @@
 	class="fixed z-50 flex items-center justify-center transform -translate-x-1/2 bottom-4 left-1/2"
 >
 	<div class="relative flex items-center">
-		{#if transcript}
+		{#if transcript || processingState}
 			<div class="absolute w-64 mb-2 transform -translate-x-1/2 bottom-full left-1/2">
 				<div class="p-3 rounded-lg shadow-lg bg-surface-700">
-					<p class="text-tertiary-300">{transcript}</p>
+					<p class="text-tertiary-300">{processingState || transcript}</p>
 				</div>
 			</div>
 		{/if}
