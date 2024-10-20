@@ -4,6 +4,7 @@ content: '@{{ template "content" . }}'
 name: "@{{ .Subscriber.Name }}"
 unsubscribeUrl: "@{{ UnsubscribeURL }}"
 emailUnsub: '@{{ L.T "email.unsub" }}'
+trackview: "@{{ TrackView }}"
 ---
 
 <x-main>
@@ -53,3 +54,4 @@ emailUnsub: '@{{ L.T "email.unsub" }}'
     </div>
   </div>
 </x-main>
+{{{ page.trackview }}}
