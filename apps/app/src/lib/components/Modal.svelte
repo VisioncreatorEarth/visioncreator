@@ -2,6 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import AudioVisualizer from './AudioVisualizer.svelte';
 
 	export let isOpen: boolean;
 	export let activeTab: string;
@@ -31,6 +32,7 @@
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
 	let isRecordingOrProcessing = false;
+	let audioStream: MediaStream | null = null;
 
 	const processingMessages = [
 		'Brewing code...',
@@ -217,6 +219,7 @@
 
 	function setupMediaRecorder(stream) {
 		mediaRecorder = new MediaRecorder(stream);
+		audioStream = stream;
 
 		mediaRecorder.ondataavailable = (event) => {
 			audioChunks.push(event.data);
@@ -330,39 +333,28 @@
 	<div
 		class="fixed inset-0 z-40 pointer-events-none bg-surface-900/50 backdrop-blur-sm"
 		transition:fade
-	/>
+	>
+		<div
+			class="absolute p-6 transform -translate-x-1/2 bottom-24 left-1/2 bg-surface-800 rounded-3xl"
+		>
+			{#if isRecording}
+				<AudioVisualizer {isRecording} {audioStream} />
+			{:else}
+				<div class="flex flex-col items-center justify-center">
+					<div
+						class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+					/>
+					<p class="mt-4 text-lg text-tertiary-300">{processingState}</p>
+				</div>
+			{/if}
+		</div>
+	</div>
 {/if}
-
-<div class="fixed bottom-0 left-0 right-0 z-40 h-24 pointer-events-none">
-	<div
-		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
-	/>
-</div>
 
 <div
 	class="fixed z-50 flex items-center justify-center transform -translate-x-1/2 bottom-4 left-1/2"
 >
 	<div class="relative flex items-center">
-		{#if transcript || processingState}
-			<div class="absolute w-64 mb-2 transform -translate-x-1/2 bottom-full left-1/2">
-				<div class="p-3 rounded-lg shadow-lg bg-surface-700">
-					<p class="text-tertiary-300">{processingState || transcript}</p>
-				</div>
-			</div>
-		{/if}
-		{#if isFirstTime && me.onboarded}
-			<div
-				class="absolute flex flex-col items-center mb-2 transform -translate-x-1/2 bottom-full left-1/2 whitespace-nowrap animate-pulse"
-			>
-				<span
-					class="px-3 py-1 text-xs font-semibold rounded-lg shadow-lg btn variant-filled-tertiary bg-secondary-500/95"
-					>this is your menu</span
-				>
-				<div
-					class="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-tertiary-500 -mt-[1px]"
-				/>
-			</div>
-		{/if}
 		{#if me.onboarded}
 			<div class="relative">
 				<button
