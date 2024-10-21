@@ -9,7 +9,7 @@ export const view = {
     children: [
         {
             id: 'xyz1',
-            component: 'Logger',
+            component: 'HelloEarth',
             slot: 'main',
         }
     ]
