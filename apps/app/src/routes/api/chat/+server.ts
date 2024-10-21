@@ -9,7 +9,7 @@ const anthropic = new Anthropic({
 });
 
 const CLAUDE_FILE_PATH = path.resolve('src/lib/components/Claude.svelte');
-const ARTIFACTS_FILE_PATH = path.resolve('src/lib/prompts/artifacts.txt');
+const ARTIFACTS_FILE_PATH = path.resolve('src/lib/prompts/component-agent.txt');
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 async function readFileContent(filePath: string): Promise<string> {
@@ -158,17 +158,17 @@ export async function POST({ request }: { request: Request }) {
 				}
 			}
 
-			// Extract content inside <antartifact> tags
-			const artifactMatch = assistantMessage.match(/<antartifact[^>]*>([\s\S]*?)<\/antartifact>/);
+			// Extract content inside <svelte-component> tags
+			const componentMatch = assistantMessage.match(/<svelte-component[^>]*>([\s\S]*?)<\/svelte-component>/);
 
-			if (artifactMatch) {
-				const artifactContent = artifactMatch[1].trim();
-				await writeFileContent(CLAUDE_FILE_PATH, artifactContent);
+			if (componentMatch) {
+				const componentContent = componentMatch[1].trim();
+				await writeFileContent(CLAUDE_FILE_PATH, componentContent);
 			}
 
-			// Remove <antartifact> tags from the assistant message
+			// Remove <svelte-component> tags from the assistant message
 			let cleanedMessage = assistantMessage.replace(
-				/<antartifact[^>]*>[\s\S]*?<\/antartifact>/g,
+				/<svelte-component[^>]*>[\s\S]*?<\/svelte-component>/g,
 				''
 			);
 
@@ -176,7 +176,7 @@ export async function POST({ request }: { request: Request }) {
 			for (const toolUse of toolUses) {
 				if (toolUse.name === 'save_file') {
 					const { filename } = toolUse.input;
-					const content = artifactMatch ? artifactMatch[1].trim() : existingComponent;
+					const content = componentMatch ? componentMatch[1].trim() : existingComponent;
 					await saveFile(filename, content);
 					cleanedMessage += `\n\nI've saved the component to o-${filename}.svelte.`;
 				}
