@@ -15,7 +15,6 @@
 	}
 
 	const listings = writable<Listing[]>([]);
-	const bannerImage = writable('');
 
 	function generateListings(): Listing[] {
 		const locations = ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt'];
@@ -33,14 +32,8 @@
 		}));
 	}
 
-	function getRandomBannerImage() {
-		const imageId = Math.floor(Math.random() * 1000);
-		return `https://picsum.photos/seed/${imageId}/1600/400`;
-	}
-
 	onMount(() => {
 		listings.set(generateListings());
-		bannerImage.set(getRandomBannerImage());
 	});
 
 	function formatCurrency(amount: number): string {
@@ -49,21 +42,6 @@
 </script>
 
 <div class="flex flex-col w-full h-full overflow-hidden bg-surface-900 text-surface-50">
-	<!-- Sticky banner -->
-	<div class="sticky top-0 z-50 bg-surface-800">
-		<div class="relative flex items-center justify-center h-40 overflow-hidden">
-			<img
-				src={$bannerImage}
-				alt="Banner"
-				class="absolute inset-0 object-cover w-full h-full opacity-30"
-			/>
-			<div class="relative z-10 text-center">
-				<h1 class="mb-2 text-3xl font-bold text-white">Willkommen bei Ihrem Traumurlaub</h1>
-				<p class="text-lg text-white">Entdecken Sie die besten Unterkünfte in ganz Deutschland</p>
-			</div>
-		</div>
-	</div>
-
 	<!-- Scrollable content -->
 	<div class="flex-grow overflow-auto">
 		<!-- Listing View -->
@@ -94,7 +72,7 @@
 							<div class="flex items-center justify-between">
 								<span class="font-bold">{formatCurrency(listing.price)} / Nacht</span>
 								<button
-									class="px-4 py-2 text-white transition-colors duration-200 rounded-lg bg-primary-500 hover:bg-primary-600"
+									class="btn variant-filled-primary"
 								>
 									Buchen
 								</button>

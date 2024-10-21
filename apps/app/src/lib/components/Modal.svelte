@@ -26,9 +26,11 @@
 	let lastToggleTime = 0;
 	const DEBOUNCE_DELAY = 300;
 	let isPressed = false;
+	let isFirstLongPress = true;
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
+	let isRecordingOrProcessing = false;
 
 	const processingMessages = [
 		'Brewing code...',
@@ -68,15 +70,18 @@
 		isPressed = true;
 		pressStartTime = performance.now();
 		longPressTimer = setTimeout(async () => {
-			if (!mediaRecorder) {
+			if (isFirstLongPress) {
 				const permissionGranted = await requestMicrophonePermission();
 				if (!permissionGranted) {
 					console.log('Microphone permission denied');
 					return;
 				}
+				isFirstLongPress = false;
 			}
+
 			if (mediaRecorder && mediaRecorder.state === 'inactive') {
 				isRecording = true;
+				isRecordingOrProcessing = true;
 				transcript = 'Recording...';
 				startRecording();
 				console.log(`Long press detected after ${performance.now() - pressStartTime}ms`);
@@ -171,10 +176,12 @@
 					stopProcessingMessages();
 					transcript = '';
 					scrollToBottom();
+					isRecordingOrProcessing = false;
 				} catch (error) {
 					stopProcessingMessages();
 					transcript = 'An error occurred during processing.';
 					processingState = '';
+					isRecordingOrProcessing = false;
 				}
 			} else if (pressDuration < 500) {
 				toggleModal();
@@ -231,21 +238,6 @@
 	}
 
 	onMount(() => {
-		async function initializeAudio() {
-			try {
-				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-				setupMediaRecorder(stream);
-			} catch (error) {
-				if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-					console.log('Microphone permission not granted. Waiting for user interaction.');
-				} else {
-					console.error('Error accessing microphone:', error);
-				}
-			}
-		}
-
-		initializeAudio();
-
 		buttonElement?.addEventListener('touchstart', handleMouseDown);
 		buttonElement?.addEventListener('touchend', handleMouseUp);
 		return () => {
@@ -257,7 +249,7 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6"
+		class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6 bg-surface-900/50 backdrop-blur-sm"
 		on:click={toggleModal}
 		on:keydown={(e) => e.key === 'Escape' && toggleModal()}
 		role="dialog"
@@ -332,6 +324,13 @@
 			</div>
 		</div>
 	</div>
+{/if}
+
+{#if isRecordingOrProcessing}
+	<div
+		class="fixed inset-0 z-40 pointer-events-none bg-surface-900/50 backdrop-blur-sm"
+		transition:fade
+	/>
 {/if}
 
 <div class="fixed bottom-0 left-0 right-0 z-40 h-24 pointer-events-none">
