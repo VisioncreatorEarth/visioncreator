@@ -2,8 +2,8 @@
 	import { writable } from 'svelte/store';
 
 	interface TaskMove {
-		from: 'todo' | 'inProgress' | 'done';
-		to: 'todo' | 'inProgress' | 'done';
+		from: 'backlog' | 'todo' | 'inProgress' | 'done';
+		to: 'backlog' | 'todo' | 'inProgress' | 'done';
 		timestamp: Date;
 	}
 
@@ -11,7 +11,7 @@
 		id: number;
 		title: string;
 		description: string;
-		status: 'todo' | 'inProgress' | 'done';
+		status: 'backlog' | 'todo' | 'inProgress' | 'done';
 		history: TaskMove[];
 	}
 
@@ -40,13 +40,47 @@
 				{ from: 'inProgress', to: 'done', timestamp: new Date('2023-05-03') }
 			]
 		},
-		// ... (other tasks remain the same)
+		{
+			id: 4,
+			title: 'Research new tech stack',
+			description: 'Evaluate potential technologies for the next project',
+			status: 'backlog',
+			history: []
+		},
+		{
+			id: 5,
+			title: 'Update documentation',
+			description: 'Review and update all API documentation',
+			status: 'backlog',
+			history: []
+		},
+		{
+			id: 6,
+			title: 'Implement dark mode',
+			description: 'Add a dark mode option to the user interface',
+			status: 'todo',
+			history: []
+		},
+		{
+			id: 7,
+			title: 'Conduct user survey',
+			description: 'Create and distribute a survey to gather user feedback',
+			status: 'inProgress',
+			history: [{ from: 'todo', to: 'inProgress', timestamp: new Date('2023-05-04') }]
+		},
+		{
+			id: 8,
+			title: 'Refactor legacy code',
+			description: 'Identify and refactor outdated code sections',
+			status: 'backlog',
+			history: []
+		}
 	]);
 
 	let selectedTask: Task | null = null;
 	let draggedTask: Task | null = null;
 
-	function moveTask(taskId: number, newStatus: 'todo' | 'inProgress' | 'done') {
+	function moveTask(taskId: number, newStatus: 'backlog' | 'todo' | 'inProgress' | 'done') {
 		tasks.update((currentTasks) =>
 			currentTasks.map((task) => {
 				if (task.id === taskId && task.status !== newStatus) {
@@ -89,7 +123,7 @@
 		}
 	}
 
-	function handleDrop(event: DragEvent, newStatus: 'todo' | 'inProgress' | 'done') {
+	function handleDrop(event: DragEvent, newStatus: 'backlog' | 'todo' | 'inProgress' | 'done') {
 		event.preventDefault();
 		const taskId = event.dataTransfer?.getData('text/plain');
 		if (taskId && draggedTask) {
@@ -137,42 +171,44 @@
 		>
 			Kanban Board
 		</h1>
-		<div class="flex-grow grid grid-cols-1 gap-4 @md:grid-cols-3 p-4 overflow-hidden">
-			{#each ['todo', 'inProgress', 'done'] as status}
-				<div
-					class="flex flex-col h-full card bg-surface-200-700-token overflow-hidden"
-					on:dragover={handleDragOver}
-					on:drop={(event) => handleDrop(event, status)}
-				>
-					<h2
-						class="p-4 text-center h3 text-xl @lg:text-2xl @xl:text-3xl sticky top-0 z-10 bg-surface-200-700-token"
+		<div class="flex-grow overflow-x-auto">
+			<div class="flex flex-nowrap min-w-max h-full p-4 gap-4">
+				{#each ['backlog', 'todo', 'inProgress', 'done'] as status}
+					<div
+						class="flex flex-col h-full w-80 card bg-surface-200-700-token overflow-hidden"
+						on:dragover={handleDragOver}
+						on:drop={(event) => handleDrop(event, status)}
 					>
-						{status === 'inProgress'
-							? 'In Progress'
-							: status.charAt(0).toUpperCase() + status.slice(1)}
-					</h2>
-					<div class="flex-grow overflow-y-auto p-4">
-						{#each $tasks.filter((task) => task.status === status) as task (task.id)}
-							<div
-								class="p-3 mb-3 cursor-move card bg-surface-300-600-token"
-								draggable="true"
-								on:dragstart={(event) => handleDragStart(event, task)}
-							>
-								<h3 class="mb-1 font-semibold text-sm @lg:text-base @xl:text-lg">{task.title}</h3>
-								<p class="mb-2 text-xs @lg:text-sm @xl:text-base">{task.description}</p>
-								<div class="flex justify-end">
-									<button
-										class="btn btn-sm variant-soft-secondary text-xs @lg:text-sm"
-										on:click={() => showTaskHistory(task)}
-									>
-										View Details
-									</button>
+						<h2
+							class="p-4 text-center h3 text-xl @lg:text-2xl @xl:text-3xl sticky top-0 z-10 bg-surface-200-700-token"
+						>
+							{status === 'inProgress'
+								? 'In Progress'
+								: status.charAt(0).toUpperCase() + status.slice(1)}
+						</h2>
+						<div class="flex-grow overflow-y-auto p-4">
+							{#each $tasks.filter((task) => task.status === status) as task (task.id)}
+								<div
+									class="p-3 mb-3 cursor-move card bg-surface-300-600-token"
+									draggable="true"
+									on:dragstart={(event) => handleDragStart(event, task)}
+								>
+									<h3 class="mb-1 font-semibold text-sm @lg:text-base @xl:text-lg">{task.title}</h3>
+									<p class="mb-2 text-xs @lg:text-sm @xl:text-base">{task.description}</p>
+									<div class="flex justify-end">
+										<button
+											class="btn btn-sm variant-soft-secondary text-xs @lg:text-sm"
+											on:click={() => showTaskHistory(task)}
+										>
+											View Details
+										</button>
+									</div>
 								</div>
-							</div>
-						{/each}
+							{/each}
+						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>
