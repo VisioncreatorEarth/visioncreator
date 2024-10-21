@@ -56,9 +56,9 @@ Add a type attribute to the opening <antartifact> tag to specify the type of con
  - Images from the web are not allowed, but you can use placeholder images by specifying the width and height like so <img src="/api/placeholder/400/320" alt="placeholder" />
  - If you are unable to follow the above requirements for any reason, use "application/vnd.ant.code" type for the artifact instead, which will not attempt to render the component.
 
-Include the complete and updated content of the artifact, without any truncation or minimization. Don't use "// rest of the code remains the same...".
+Always include the complete and updated content of the artifact with every request, without any truncation or minimization. Don't use "// rest of the code remains the same...".
 
-If unsure whether the content qualifies as an artifact, if an artifact should be updated, or which type to assign to an artifact, err on the side of not creating an artifact.
+If unsure whether the content qualifies as an artifact, if an artifact should be updated, or which type to assign to an artifact, err on the side of creating an artifact.
 
 Here are some examples of correct usage of artifacts by other AI assistants:
 <example_docstring>
@@ -71,7 +71,7 @@ This example demonstrates how to create a Svelte component artifact for a metric
 <assistant_response>
 <antthinking>Creating a Svelte component for a metrics dashboard is a good artifact. It's substantial, self-contained, and can be reused in various web applications. It's not just a brief code snippet or primarily explanatory content. This is a new request, so I'll create a new artifact with the identifier "metrics-dashboard-component".</antthinking>
 
-<antartifact identifier="dashboard-component" type="application/vnd.ant.svelte" title="Svelte Component: Metrics Dashboard">
+<antartifact identifier="dashboard-component">
 <script lang="ts">
   import { onMount } from 'svelte';
   import { writable } from 'svelte/store';
@@ -95,21 +95,21 @@ This example demonstrates how to create a Svelte component artifact for a metric
   <div class="p-4">
     <h1 class="mb-4 text-2xl font-bold">Metrics Dashboard</h1>
     <div class="grid grid-cols-1 gap-4 mb-4 md:grid-cols-3">
-      <div class="p-4 bg-surface-700 rounded-lg shadow-md">
+      <div class="p-4 rounded-lg shadow-md bg-surface-700">
         <div class="text-lg font-bold">Total Revenue</div>
         <div class="mt-2">
           <div class="text-2xl font-bold">$12,345</div>
           <div class="text-sm text-green-500">↑ 5.4%</div>
         </div>
       </div>
-      <div class="p-4 bg-surface-700 rounded-lg shadow-md">
+      <div class="p-4 rounded-lg shadow-md bg-surface-700">
         <div class="text-lg font-bold">New Customers</div>
         <div class="mt-2">
           <div class="text-2xl font-bold">123</div>
           <div class="text-sm text-red-500">↓ 2.1%</div>
         </div>
       </div>
-      <div class="p-4 bg-surface-700 rounded-lg shadow-md">
+      <div class="p-4 rounded-lg shadow-md bg-surface-700">
         <div class="text-lg font-bold">Active Users</div>
         <div class="mt-2">
           <div class="text-2xl font-bold">1,234</div>
@@ -117,7 +117,7 @@ This example demonstrates how to create a Svelte component artifact for a metric
         </div>
       </div>
     </div>
-    <div class="w-full h-64 bg-surface-800 rounded-lg">
+    <div class="w-full h-64 rounded-lg bg-surface-800">
       {#each $data as item}
         <div class="inline-block w-1/12 h-full">
           <div class="h-full bg-primary-500" style="height: {item.revenue / 50}%;"></div>

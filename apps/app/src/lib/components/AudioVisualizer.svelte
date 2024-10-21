@@ -18,19 +18,17 @@
 				fftSize: 8192,
 				minFreq: 20,
 				maxFreq: 22000,
-				smoothing: 0.5,
-				radius: 0.65,
-				lineWidth: 1.5,
+				smoothing: 0.85,
+				radius: 0.5,
+				lineWidth: 2,
 				fillAlpha: 0.5,
 				showBgColor: false,
 				bgAlpha: 0,
 				showScaleY: false,
-				showPeaks: true,
-				peakLine: true,
-				gradient: 'rainbow',
-				lumiBars: true,
+				showPeaks: false,
+				lumiBars: false,
 				radial: true,
-				spinSpeed: 1,
+				spinSpeed: 0,
 				reflexRatio: 0,
 				reflexAlpha: 0,
 				reflexBright: 1,
@@ -39,7 +37,10 @@
 				ledBars: false,
 				width: 300,
 				height: 300,
-				overlay: true
+				overlay: true,
+				outlineBars: true,
+				mirror: 0,
+				gradient: 'rainbow'
 			});
 		}
 	});
