@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { PDFInvoice } from '@h1dd3nsn1p3r/pdf-invoice';
 import type { RequestHandler } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
@@ -5,6 +6,9 @@ import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join, dirname } from 'path';
 
 export const POST: RequestHandler = async ({ request }) => {
+    if (!dev) {
+        return json({ error: 'This endpoint is only available in development mode' }, { status: 403 });
+    }
     console.log('Received request to generate invoice');
     const payload = await request.json();
     console.log('Payload received:', JSON.stringify(payload, null, 2));

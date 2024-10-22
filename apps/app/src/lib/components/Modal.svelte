@@ -126,7 +126,7 @@
 							formData.append('audio', audioBlob, 'recording.webm');
 
 							try {
-								const response = await fetch('/api/speech-to-text', {
+								const response = await fetch('/local/api/speech-to-text', {
 									method: 'POST',
 									body: formData
 								});
@@ -150,7 +150,7 @@
 					messages = [...messages, { role: 'user', content: transcriptionResult }];
 
 					// Actual API call to Claude AI for code generation
-					const response = await fetch('/api/chat', {
+					const response = await fetch('/local/api/chat', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json'

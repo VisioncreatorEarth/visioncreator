@@ -1,3 +1,4 @@
+import { dev } from '$app/environment';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { json } from '@sveltejs/kit';
@@ -23,6 +24,9 @@ async function writeFileContent(filePath, content) {
 }
 
 export async function POST({ request }) {
+	if (!dev) {
+        return json({ error: 'This endpoint is only available in development mode' }, { status: 403 });
+    }
 	const { name } = await request.json();
 	const newFileName = `o-${name}.svelte`;
 	const newFilePath = path.resolve(`src/lib/components/${newFileName}`);

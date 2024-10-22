@@ -7,7 +7,13 @@ const config = {
     preprocess: [vitePreprocess()],
     
     kit: {
-        adapter: adapter(),
-    }
+		adapter: adapter(),
+		routes: (route) => {
+			if (process.env.NODE_ENV === 'production' && route.id?.startsWith('local')) {
+				return false;
+			}
+			return true;
+		}
+	},
 };
 export default config;
