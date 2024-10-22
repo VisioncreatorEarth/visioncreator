@@ -3,6 +3,7 @@
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import AudioVisualizer from './AudioVisualizer.svelte';
+	import { dev } from '$app/environment';
 
 	export let isOpen: boolean;
 	export let activeTab: string;
@@ -71,26 +72,28 @@
 	async function handleMouseDown() {
 		isPressed = true;
 		pressStartTime = performance.now();
-		longPressTimer = setTimeout(async () => {
-			if (isFirstLongPress) {
-				const permissionGranted = await requestMicrophonePermission();
-				if (!permissionGranted) {
-					console.log('Microphone permission denied');
-					return;
+		if (dev) {
+			longPressTimer = setTimeout(async () => {
+				if (isFirstLongPress) {
+					const permissionGranted = await requestMicrophonePermission();
+					if (!permissionGranted) {
+						console.log('Microphone permission denied');
+						return;
+					}
+					isFirstLongPress = false;
 				}
-				isFirstLongPress = false;
-			}
 
-			if (mediaRecorder && mediaRecorder.state === 'inactive') {
-				isRecording = true;
-				isRecordingOrProcessing = true;
-				transcript = 'Recording...';
-				startRecording();
-				console.log(`Long press detected after ${performance.now() - pressStartTime}ms`);
-			} else {
-				console.log('MediaRecorder not available or already recording');
-			}
-		}, 500);
+				if (mediaRecorder && mediaRecorder.state === 'inactive') {
+					isRecording = true;
+					isRecordingOrProcessing = true;
+					transcript = 'Recording...';
+					startRecording();
+					console.log(`Long press detected after ${performance.now() - pressStartTime}ms`);
+				} else {
+					console.log('MediaRecorder not available or already recording');
+				}
+			}, 500);
+		}
 	}
 
 	async function handleMouseUp() {
@@ -100,7 +103,7 @@
 		clearTimeout(longPressTimer);
 
 		if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
-			if (isRecording) {
+			if (dev && isRecording) {
 				isRecording = false;
 				stopRecording();
 				startProcessingMessages();
@@ -190,7 +193,7 @@
 					processingState = '';
 					isRecordingOrProcessing = false;
 				}
-			} else if (pressDuration < 500) {
+			} else if (!dev || pressDuration < 500) {
 				toggleModal();
 				lastToggleTime = currentTime;
 			}
