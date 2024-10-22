@@ -13,6 +13,7 @@
 		description: string;
 		status: 'backlog' | 'todo' | 'inProgress' | 'done';
 		history: TaskMove[];
+		sinProfileImage: string; // URL for the fake profile image
 	}
 
 	const tasks = writable<Task[]>([
@@ -21,14 +22,16 @@
 			title: 'Implement user authentication',
 			description: 'Set up JWT-based authentication system for the web app',
 			status: 'todo',
-			history: []
+			history: [],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&1'
 		},
 		{
 			id: 2,
 			title: 'Design new landing page',
 			description: 'Create a modern and responsive design for the company website',
 			status: 'inProgress',
-			history: [{ from: 'todo', to: 'inProgress', timestamp: new Date('2023-05-01') }]
+			history: [{ from: 'todo', to: 'inProgress', timestamp: new Date('2023-05-01') }],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&2'
 		},
 		{
 			id: 3,
@@ -38,42 +41,48 @@
 			history: [
 				{ from: 'todo', to: 'inProgress', timestamp: new Date('2023-05-02') },
 				{ from: 'inProgress', to: 'done', timestamp: new Date('2023-05-03') }
-			]
+			],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&3'
 		},
 		{
 			id: 4,
 			title: 'Research new tech stack',
 			description: 'Evaluate potential technologies for the next project',
 			status: 'backlog',
-			history: []
+			history: [],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&4'
 		},
 		{
 			id: 5,
 			title: 'Update documentation',
 			description: 'Review and update all API documentation',
 			status: 'backlog',
-			history: []
+			history: [],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&5'
 		},
 		{
 			id: 6,
 			title: 'Implement dark mode',
 			description: 'Add a dark mode option to the user interface',
 			status: 'todo',
-			history: []
+			history: [],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&6'
 		},
 		{
 			id: 7,
 			title: 'Conduct user survey',
 			description: 'Create and distribute a survey to gather user feedback',
 			status: 'inProgress',
-			history: [{ from: 'todo', to: 'inProgress', timestamp: new Date('2023-05-04') }]
+			history: [{ from: 'todo', to: 'inProgress', timestamp: new Date('2023-05-04') }],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&7'
 		},
 		{
 			id: 8,
 			title: 'Refactor legacy code',
 			description: 'Identify and refactor outdated code sections',
 			status: 'backlog',
-			history: []
+			history: [],
+			sinProfileImage: 'https://source.unsplash.com/random/100x100?face&8'
 		}
 	]);
 
@@ -143,7 +152,14 @@
 				<h1 class="h1 text-2xl @sm:text-3xl @lg:text-4xl @xl:text-5xl">{selectedTask.title}</h1>
 			</div>
 			<div class="card bg-surface-200-700-token p-6 flex-grow overflow-y-auto">
-				<h2 class="h2 text-xl @lg:text-2xl @xl:text-3xl mb-4">Task Details</h2>
+				<div class="flex items-center mb-4">
+					<img
+						src={selectedTask.sinProfileImage}
+						alt="Profile"
+						class="w-16 h-16 rounded-full mr-4"
+					/>
+					<h2 class="h2 text-xl @lg:text-2xl @xl:text-3xl">Task Details</h2>
+				</div>
 				<p class="text-sm @lg:text-base @xl:text-lg mb-4">{selectedTask.description}</p>
 				<h3 class="h3 text-lg @lg:text-xl @xl:text-2xl mb-2">Current Status</h3>
 				<p class="text-sm @lg:text-base @xl:text-lg mb-4 font-semibold">
@@ -193,7 +209,14 @@
 									draggable="true"
 									on:dragstart={(event) => handleDragStart(event, task)}
 								>
-									<h3 class="mb-1 font-semibold text-sm @lg:text-base @xl:text-lg">{task.title}</h3>
+									<div class="flex items-center mb-2">
+										<img
+											src={task.sinProfileImage}
+											alt="Profile"
+											class="w-10 h-10 rounded-full mr-3"
+										/>
+										<h3 class="font-semibold text-sm @lg:text-base @xl:text-lg">{task.title}</h3>
+									</div>
 									<p class="mb-2 text-xs @lg:text-sm @xl:text-base">{task.description}</p>
 									<div class="flex justify-end">
 										<button
