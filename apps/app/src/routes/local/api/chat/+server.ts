@@ -5,9 +5,13 @@ import { env } from '$env/dynamic/private';
 import { componentAgent } from '$lib/agents/componentAgent';
 import { viewAgent } from '$lib/agents/viewAgent';
 
-const anthropic = new Anthropic({
-    apiKey: env.SECRET_ANTHROPIC_API_KEY
-});
+let anthropic: Anthropic | null = null;
+
+if (dev && env.SECRET_ANTHROPIC_API_KEY) {
+    anthropic = new Anthropic({
+        apiKey: env.SECRET_ANTHROPIC_API_KEY
+    });
+}
 
 const coordinatorTools = [
     {
@@ -38,6 +42,11 @@ export async function POST({ request }: { request: Request }) {
     if (!dev) {
         return json({ error: 'This endpoint is only available in development mode' }, { status: 403 });
     }
+
+    if (!anthropic) {
+        return json({ error: 'Anthropic client is not initialized' }, { status: 500 });
+    }
+
     const { messages } = await request.json();
 
     console.log('Received new request with messages:', messages);

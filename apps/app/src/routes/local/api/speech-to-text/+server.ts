@@ -3,14 +3,23 @@ import OpenAI from 'openai';
 import { json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 
-const openai = new OpenAI({
-    apiKey: env.SECRET_OPENAI_API_KEY
-});
+let openai: OpenAI | null = null;
+
+if (dev && env.SECRET_OPENAI_API_KEY) {
+    openai = new OpenAI({
+        apiKey: env.SECRET_OPENAI_API_KEY
+    });
+}
 
 export async function POST({ request }) {
     if (!dev) {
         return json({ error: 'This endpoint is only available in development mode' }, { status: 403 });
     }
+
+    if (!openai) {
+        return json({ error: 'OpenAI client is not initialized' }, { status: 500 });
+    }
+
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
 
