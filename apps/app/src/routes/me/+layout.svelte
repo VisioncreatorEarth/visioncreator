@@ -13,6 +13,7 @@
 	$: ({ session } = data);
 
 	let isFirstTime = writable(true);
+	let viewConfiguration = writable(null);
 
 	function handleLinkClick(event: Event, href: string) {
 		event.preventDefault();
@@ -63,13 +64,18 @@
 	function setActiveTab(tab: string) {
 		activeTab.set(tab);
 	}
+
+	function handleUpdateView(event: CustomEvent) {
+		viewConfiguration.set(event.detail);
+		window.dispatchEvent(new CustomEvent('updateView', { detail: event.detail }));
+	}
 </script>
 
 <div
 	class={`@container overflow-hidden w-full h-full ${$modalOpen ? 'blur-md' : ''}`}
 	style="-webkit-overflow-scrolling: touch;"
 >
-	<slot />
+	<slot {viewConfiguration} />
 </div>
 
 <Modal
@@ -81,6 +87,7 @@
 	on:toggleModal={toggleModal}
 	on:setActiveTab={(e) => setActiveTab(e.detail)}
 	on:navigate={(e) => handleLinkClick(e, e.detail)}
+	on:updateView={handleUpdateView}
 >
 	<svelte:fragment slot="actions">
 		<ActionButtons me={{ id: session.user.id }} />

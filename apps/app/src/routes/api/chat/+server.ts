@@ -34,7 +34,7 @@ const coordinatorTools = [
 	},
 	{
 		name: 'viewAgent',
-		description: 'Use this agent for tasks related to showing or creating views, especially for the HelloEarth component.',
+		description: 'Use this agent for tasks related to showing or creating views for any component.',
 		input_schema: {
 			type: 'object',
 			properties: {
@@ -72,7 +72,7 @@ export async function POST({ request }: { request: Request }) {
 		}
 
 		console.log('Successful response from masterCoordinator');
-		return json({ content: result.content });
+		return json(result);
 	} catch (error: unknown) {
 		console.error('Error in POST handler:', error);
 		return json({ error: 'An error occurred while processing your request.' }, { status: 500 });

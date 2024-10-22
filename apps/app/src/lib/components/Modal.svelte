@@ -168,6 +168,11 @@
 					// Add assistant message
 					messages = [...messages, { role: 'assistant', content: aiGeneratedCode }];
 
+					// Dispatch event with the new view configuration
+					if (data.viewConfiguration) {
+						dispatch('updateView', data.viewConfiguration);
+					}
+
 					// Process complete, play a random "done" audio file
 					const randomDoneAudio = Math.floor(Math.random() * 5) + 1;
 					const doneAudio = new Audio(`/audio/done${randomDoneAudio}.mp3`);

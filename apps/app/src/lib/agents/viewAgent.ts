@@ -18,6 +18,21 @@ When generating a view configuration:
 5. Include 'children' for nested components.
 6. Use the 'map' property for data requirements and transformations.
 
+Available components (always prepend with "o-"):
+- HelloEarth
+- Bring
+- Banking
+- AirBNB
+- Splitwise
+- Kanban
+
+Instructions for component selection:
+1. Analyze the user's request to determine which component best fits their needs.
+2. Select the most appropriate component from the available list.
+3. If the user explicitly requests a specific component, use that one.
+4. If the user's request is ambiguous, choose the component that best matches their intent.
+5. Always prepend the selected component name with "o-" in the configuration.
+
 Always return the JSON configuration wrapped in <compose-view> tags, like this:
 <compose-view>
 {
@@ -30,13 +45,14 @@ Always return the JSON configuration wrapped in <compose-view> tags, like this:
     "children": [
         {
             "id": "ContentArea",
-            "component": "HelloEarth",
+            "component": "o-[SelectedComponent]",
             "slot": "content"
         }
     ]
 }
 </compose-view>
 
+Replace [SelectedComponent] with the appropriate component name based on the user's request.
 Do not include any explanations or other text outside these tags.
 `;
 
