@@ -5,6 +5,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 const { verify } = jwt;
 
 export async function GET({ request }: RequestEvent) {
+	console.log('Received request to /auth/userinfo');
 	const authHeader = request.headers.get('Authorization');
 	if (!authHeader) {
 		console.error('No Authorization header provided');
@@ -14,6 +15,7 @@ export async function GET({ request }: RequestEvent) {
 		});
 	}
 
+	console.log('Authorization header:', authHeader);
 	const token = authHeader.split(' ')[1];
 	if (!token) {
 		console.error('No JWT provided');
@@ -23,8 +25,11 @@ export async function GET({ request }: RequestEvent) {
 		});
 	}
 
+	console.log('JWT token:', token);
 	try {
+		console.log('Verifying JWT with secret:', env.SECRET_SUPABASE_JWT_SECRET);
 		const decoded = verify(token, env.SECRET_SUPABASE_JWT_SECRET) as jwt.JwtPayload;
+		console.log('Decoded JWT:', JSON.stringify(decoded, null, 2));
 
 		if (!decoded.sub) {
 			console.error('Invalid JWT: Subject missing');
@@ -36,10 +41,12 @@ export async function GET({ request }: RequestEvent) {
 
 		// Initialize roles array from the token
 		const roles = decoded.role ? [decoded.role as string] : [];
+		console.log('Initial roles:', roles);
 
 		// Check if the subject is one of the hardcoded admin IDs
 		if (decoded.sub === '00000000-0000-0000-0000-000000000001') {
 			roles.push('admin');
+			console.log('Added admin role');
 		}
 
 		const user = {
@@ -49,7 +56,7 @@ export async function GET({ request }: RequestEvent) {
 			roles
 		};
 
-		console.log('User info:', user);
+		console.log('User info:', JSON.stringify(user, null, 2));
 
 		return new Response(JSON.stringify(user), {
 			status: 200,
@@ -57,7 +64,7 @@ export async function GET({ request }: RequestEvent) {
 		});
 	} catch (err) {
 		console.error('JWT verification error:', err);
-		return new Response(JSON.stringify({ error: 'Invalid JWT' }), {
+		return new Response(JSON.stringify({ error: 'Invalid JWT', details: err.message }), {
 			status: 401,
 			headers: { 'Content-Type': 'application/json' }
 		});
