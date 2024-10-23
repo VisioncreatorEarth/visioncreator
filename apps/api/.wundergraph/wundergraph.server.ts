@@ -2,13 +2,11 @@ import { configureWunderGraphServer } from "@wundergraph/sdk/server";
 import { createClient } from "@supabase/supabase-js";
 import { Nango } from "@nangohq/node";
 import * as postmark from "postmark";
-import { Polar } from "@polar-sh/sdk";
 
 class MyContext {
   supabase: ReturnType<typeof createClient>;
   nango: Nango;
   postmark: postmark.ServerClient;
-  polar: Polar;
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -16,18 +14,16 @@ class MyContext {
     const nangoHost = process.env.NANGO_HOST;
     const nangoSecretKey = process.env.NANGO_SECRET_KEY;
     const postmarkServerToken = process.env.POSTMARK_SERVER_TOKEN;
-    const polarAccessToken = process.env.POLAR_ACCESS_TOKEN;
 
     if (
       !supabaseUrl ||
       !supabaseKey ||
       !nangoHost ||
       !nangoSecretKey ||
-      !postmarkServerToken ||
-      !polarAccessToken
+      !postmarkServerToken
     ) {
       throw new Error(
-        "Supabase URL, Key, Nango Host, Secret Key, Postmark Server Token, and Polar Access Token must be provided."
+        "Supabase URL, Key, Nango Host, Secret Key, Postmark Server Token must be provided."
       );
     }
 
@@ -37,10 +33,6 @@ class MyContext {
       secretKey: nangoSecretKey,
     });
     this.postmark = new postmark.ServerClient(postmarkServerToken);
-    this.polar = new Polar({
-      accessToken: polarAccessToken,
-      server: "sandbox",
-    });
   }
 }
 
@@ -57,11 +49,7 @@ export default configureWunderGraphServer(() => ({
         if (user.roles === null) {
           if (user.customClaims?.roles) {
             user.roles = Object.values(user.customClaims.roles);
-          } else {
-            console.log('No roles found in customClaims');
           }
-        } else {
-          console.log('User roles:', user.roles);
         }
         return {
           user,
@@ -78,9 +66,11 @@ export default configureWunderGraphServer(() => ({
   context: {
     request: {
       create: async () => {
-        console.log('Creating MyContext');
         return new MyContext();
       },
     },
+  },
+  logger: {
+    level: "debug",
   },
 }));

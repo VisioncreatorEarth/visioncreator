@@ -5,7 +5,6 @@ import type { RequestEvent } from '@sveltejs/kit';
 const { verify } = jwt;
 
 export async function GET({ request }: RequestEvent) {
-	console.log('Received request to /auth/userinfo');
 	const authHeader = request.headers.get('Authorization');
 	if (!authHeader) {
 		console.error('No Authorization header provided');
@@ -15,7 +14,6 @@ export async function GET({ request }: RequestEvent) {
 		});
 	}
 
-	console.log('Authorization header:', authHeader);
 	const token = authHeader.split(' ')[1];
 	if (!token) {
 		console.error('No JWT provided');
@@ -25,7 +23,6 @@ export async function GET({ request }: RequestEvent) {
 		});
 	}
 
-	console.log('JWT token:', token);
 	try {
 		const decoded = verify(token, env.SECRET_SUPABASE_JWT_SECRET) as jwt.JwtPayload;
 
@@ -52,7 +49,7 @@ export async function GET({ request }: RequestEvent) {
 			roles
 		};
 
-		console.log('User info:', JSON.stringify(user, null, 2));
+		console.log('User info:', user);
 
 		return new Response(JSON.stringify(user), {
 			status: 200,
@@ -60,7 +57,7 @@ export async function GET({ request }: RequestEvent) {
 		});
 	} catch (err) {
 		console.error('JWT verification error:', err);
-		return new Response(JSON.stringify({ error: 'Invalid JWT', details: err.message }), {
+		return new Response(JSON.stringify({ error: 'Invalid JWT' }), {
 			status: 401,
 			headers: { 'Content-Type': 'application/json' }
 		});
