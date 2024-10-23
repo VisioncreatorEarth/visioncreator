@@ -2,7 +2,7 @@
 import { env } from '$env/dynamic/public'
 import { createServerClient } from '@supabase/ssr'
 import type { Handle } from '@sveltejs/kit'
-// import { dev } from '$app/environment';
+import { dev } from '$app/environment';
 
 export const handle: Handle = async ({ event, resolve }) => {
     // Check for local routes in production
