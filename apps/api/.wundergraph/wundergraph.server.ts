@@ -54,11 +54,19 @@ export default configureWunderGraphServer(() => ({
   hooks: {
     authentication: {
       mutatingPostAuthentication: async ({ user }) => {
+        console.log('mutatingPostAuthentication hook called with user:', JSON.stringify(user, null, 2));
         if (user.roles === null) {
+          console.log('User roles is null, checking customClaims');
           if (user.customClaims?.roles) {
+            console.log('Found roles in customClaims:', user.customClaims.roles);
             user.roles = Object.values(user.customClaims.roles);
+          } else {
+            console.log('No roles found in customClaims');
           }
+        } else {
+          console.log('User roles:', user.roles);
         }
+        console.log('Returning user:', JSON.stringify(user, null, 2));
         return {
           user,
           status: "ok",
@@ -74,6 +82,7 @@ export default configureWunderGraphServer(() => ({
   context: {
     request: {
       create: async () => {
+        console.log('Creating MyContext');
         return new MyContext();
       },
     },
