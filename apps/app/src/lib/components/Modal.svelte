@@ -4,6 +4,7 @@
 
 	export let isOpen: boolean;
 	export let showTabs = false;
+	export let isLoginModal = false; // New prop to handle login modal styling
 
 	const dispatch = createEventDispatcher();
 
@@ -24,7 +25,9 @@
 		transition:fade
 	>
 		<div
-			class="relative z-10 w-full max-w-6xl bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+			class="relative z-10 w-full bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+			class:max-w-6xl={!isLoginModal}
+			class:max-w-md={isLoginModal}
 			on:click|stopPropagation
 		>
 			<slot />

@@ -18,6 +18,7 @@
 	let pressStartTime = 0;
 	let lastToggleTime = 0;
 	let voiceControlRef;
+	let emailInput = ''; // For login form
 	const DEBOUNCE_DELAY = 300;
 
 	function handleLinkClick(event: Event, href: string) {
@@ -98,31 +99,72 @@
 			}
 		}
 	}
+
+	function handleLogin() {
+		// Mock login for now
+		console.log('Login attempted with:', emailInput);
+		// Here you would typically handle the actual login logic
+		isModalOpen = false;
+	}
 </script>
 
-<div class="@container overflow-hidden w-full h-full" class:blur-md={isModalOpen && isMenuMode}>
+<div class="@container overflow-hidden w-full h-full" class:blur-md={isModalOpen}>
 	<slot />
 </div>
 
-<!-- Menu Modal -->
-{#if isModalOpen && isMenuMode && session}
-	<Modal isOpen={true} on:close={toggleModal}>
-		<TabMenu {activeTab} on:setActiveTab={setActiveTab} on:close={toggleModal}>
-			<svelte:fragment slot="content">
-				{#if activeTab === 'actions'}
-					<ActionButtons me={{ id: session.user.id }} />
-				{:else if activeTab === 'settings'}
-					<Newsletter me={{ email: session.user.email, id: session.user.id }} />
-				{:else if activeTab === 'legal'}
-					<LegalMenu on:navigate={handleLinkClick} />
-				{/if}
-			</svelte:fragment>
-		</TabMenu>
-	</Modal>
-{/if}
+{#if !session}
+	<!-- Login Modal -->
+	{#if isModalOpen}
+		<Modal isOpen={true} on:close={toggleModal} isLoginModal={true}>
+			<div class="p-6">
+				<h2 class="mb-4 text-2xl font-bold text-tertiary-100">Welcome to Visioncreator</h2>
+				<p class="mb-6 text-tertiary-200">Please enter your email to continue</p>
+				<form on:submit|preventDefault={handleLogin} class="space-y-4">
+					<input
+						type="email"
+						bind:value={emailInput}
+						placeholder="Enter your email"
+						class="w-full p-3 border rounded-lg bg-surface-700 text-tertiary-100 border-tertiary-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+					/>
+					<button
+						type="submit"
+						class="w-full px-4 py-3 text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
+					>
+						Continue
+					</button>
+				</form>
+			</div>
+		</Modal>
+	{/if}
 
-<!-- Voice Control Component -->
-{#if session}
+	<!-- Login Button (shown when not authenticated) -->
+	{#if !isModalOpen}
+		<button
+			class="fixed z-50 flex items-center justify-center px-6 transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
+			on:click={() => (isModalOpen = true)}
+		>
+			<span class="font-medium text-white">Login</span>
+		</button>
+	{/if}
+{:else}
+	<!-- Existing authenticated content -->
+	{#if isModalOpen && isMenuMode}
+		<Modal isOpen={true} on:close={toggleModal}>
+			<TabMenu {activeTab} on:setActiveTab={setActiveTab} on:close={toggleModal}>
+				<svelte:fragment slot="content">
+					{#if activeTab === 'actions'}
+						<ActionButtons me={{ id: session.user.id }} />
+					{:else if activeTab === 'settings'}
+						<Newsletter me={{ email: session.user.email, id: session.user.id }} />
+					{:else if activeTab === 'legal'}
+						<LegalMenu on:navigate={handleLinkClick} />
+					{/if}
+				</svelte:fragment>
+			</TabMenu>
+		</Modal>
+	{/if}
+
+	<!-- Voice Control Component -->
 	<VoiceControl
 		bind:this={voiceControlRef}
 		bind:isRecording
@@ -130,19 +172,19 @@
 		{session}
 		on:updateView={handleUpdateView}
 	/>
-{/if}
 
-<!-- Floating button - hide when modal is open -->
-{#if !isModalOpen || !isMenuMode}
-	<button
-		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
-		class:recording-border={isRecording}
-		on:mousedown={handleMouseDown}
-		on:mouseup={handleMouseUp}
-		on:mouseleave={handleMouseUp}
-	>
-		<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-	</button>
+	<!-- Floating button - hide when modal is open -->
+	{#if !isModalOpen || !isMenuMode}
+		<button
+			class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
+			class:recording-border={isRecording}
+			on:mousedown={handleMouseDown}
+			on:mouseup={handleMouseUp}
+			on:mouseleave={handleMouseUp}
+		>
+			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		</button>
+	{/if}
 {/if}
 
 <!-- Background gradient -->

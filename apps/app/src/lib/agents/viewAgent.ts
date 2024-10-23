@@ -42,7 +42,7 @@ Always return the JSON configuration wrapped in <compose-view> tags, like this:
         "columns": "1fr",
         "rows": "1fr",
         "overflow": "auto",
-        "style": 'p-4 max-w-8xl mx-auto'
+        "style": 'p-4 max-w-7xl mx-auto'
     },
     "children": [
         {
