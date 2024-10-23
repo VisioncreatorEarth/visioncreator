@@ -27,9 +27,7 @@ export async function GET({ request }: RequestEvent) {
 
 	console.log('JWT token:', token);
 	try {
-		console.log('Verifying JWT with secret:', env.SECRET_SUPABASE_JWT_SECRET);
 		const decoded = verify(token, env.SECRET_SUPABASE_JWT_SECRET) as jwt.JwtPayload;
-		console.log('Decoded JWT:', JSON.stringify(decoded, null, 2));
 
 		if (!decoded.sub) {
 			console.error('Invalid JWT: Subject missing');
@@ -41,12 +39,10 @@ export async function GET({ request }: RequestEvent) {
 
 		// Initialize roles array from the token
 		const roles = decoded.role ? [decoded.role as string] : [];
-		console.log('Initial roles:', roles);
 
 		// Check if the subject is one of the hardcoded admin IDs
 		if (decoded.sub === '00000000-0000-0000-0000-000000000001') {
 			roles.push('admin');
-			console.log('Added admin role');
 		}
 
 		const user = {
