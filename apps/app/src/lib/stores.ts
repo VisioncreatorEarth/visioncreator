@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { persist, createLocalStorage } from '@macfja/svelte-persistent-store';
+import { view as meView } from '$lib/views/Me';
 
 type EventType = 'updateMe' | 'otherEventType';
 
@@ -122,3 +123,23 @@ const createLogger = (): LogFunction => {
 };
 
 export const log = createLogger();
+
+// Simplified View interface
+interface View {
+	view: {
+		id: string;
+		layout: {
+			areas: string;
+			rows: string;
+			gap: string;
+			overflow: string;
+			style: string;
+		};
+		children: any[];
+	} | null;
+}
+
+const defaultView: View = { view: meView };
+
+// Regular writable store that will reset to meView on page reload
+export const dynamicView = writable<View>(defaultView);

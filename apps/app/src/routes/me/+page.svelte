@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { view as meView } from '$lib/views/Me';
 	import ComposeView from '$lib/components/ComposeView.svelte';
+	import { dynamicView } from '$lib/stores';
 
 	export let data;
 
@@ -11,7 +12,6 @@
 	$: ({ session } = data);
 
 	let showComposeView = false;
-	let dynamicView = null;
 
 	const updateNameMutation = createMutation({
 		operationName: 'updateMe'
@@ -89,9 +89,22 @@
 		}
 	}
 
-	// Function to handle dynamic view updates from VoiceControl
+	// Subscribe to the store
+	$: currentView = $dynamicView.view;
+
 	function handleViewUpdate(event: CustomEvent) {
-		dynamicView = event.detail;
+		console.log('View update received:', event.detail); // Debug log
+		if (event.detail && event.detail.view) {
+			dynamicView.update((store) => ({
+				...store,
+				view: event.detail.view
+			}));
+		}
+	}
+
+	// Debug: Watch for view changes
+	$: if (currentView) {
+		console.log('Current view updated:', currentView);
 	}
 </script>
 
@@ -111,10 +124,10 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView view={dynamicView || meView} {session} />
+		<ComposeView view={currentView || meView} {session} />
 	{/if}
 {:else if meData}
-	<ComposeView view={dynamicView || meView} {session} />
+	<ComposeView view={currentView || meView} {session} />
 {:else}
 	<div class="flex items-center justify-center h-screen text-red-500">Error loading user data</div>
 {/if}

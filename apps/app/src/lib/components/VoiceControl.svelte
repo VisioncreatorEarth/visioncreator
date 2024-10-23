@@ -125,8 +125,11 @@
 			const transcriptionResult = await handleTranscription();
 			const aiResponse = await handleAIProcessing(transcriptionResult);
 
+			// Make sure we're dispatching the view update
 			if (aiResponse.viewConfiguration) {
-				dispatch('updateView', aiResponse.viewConfiguration);
+				dispatch('updateView', {
+					view: aiResponse.viewConfiguration
+				});
 			}
 
 			playAudio('done');
@@ -208,6 +211,14 @@
 
 		const data = await response.json();
 		messages = [...messages, { role: 'assistant', content: data.content }];
+
+		// Extract view configuration and dispatch it
+		if (data.viewConfiguration) {
+			dispatch('updateView', {
+				view: data.viewConfiguration
+			});
+		}
+
 		return data;
 	}
 

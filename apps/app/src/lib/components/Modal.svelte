@@ -10,8 +10,13 @@
 
 	function handleClose(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
+			console.log('Modal closing');
 			dispatch('close');
 		}
+	}
+
+	function handleContentClick(event: MouseEvent) {
+		event.stopPropagation();
 	}
 </script>
 
@@ -22,13 +27,13 @@
 		on:keydown={(e) => e.key === 'Escape' && handleClose()}
 		role="dialog"
 		aria-modal="true"
-		transition:fade
+		transition:fade={{ duration: 200 }}
 	>
 		<div
 			class="relative z-10 w-full bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
 			class:max-w-6xl={!isLoginModal}
 			class:max-w-md={isLoginModal}
-			on:click|stopPropagation
+			on:click={handleContentClick}
 		>
 			<slot />
 		</div>
