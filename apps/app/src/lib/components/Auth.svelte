@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { dev } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
 
 	export let modalType: 'login' | 'signup';
 	export let supabase: any;
@@ -15,6 +15,35 @@
 	let message = '';
 	let messageType = '';
 	let showInput = true;
+	let nameInputEl: HTMLInputElement;
+	let emailInputEl: HTMLInputElement;
+
+	// Check if device is mobile
+	let isMobile = false;
+
+	if (browser) {
+		isMobile = window.matchMedia('(max-width: 768px)').matches;
+	}
+
+	// Handle enter key
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' && showInput && !isLoading) {
+			handleAuth(modalType === 'signup');
+		}
+	}
+
+	// Focus first input on mount for desktop
+	import { onMount } from 'svelte';
+
+	onMount(() => {
+		if (!isMobile) {
+			if (modalType === 'signup' && nameInputEl) {
+				nameInputEl.focus();
+			} else if (emailInputEl) {
+				emailInputEl.focus();
+			}
+		}
+	});
 
 	// Validation state
 	let nameError = '';
@@ -92,8 +121,6 @@
 		showInput = true;
 		message = '';
 		messageType = '';
-		emailInput = '';
-		nameInput = '';
 	}
 
 	// Real-time validation
@@ -133,8 +160,11 @@
 					<div class="space-y-1">
 						<input
 							bind:value={nameInput}
+							bind:this={nameInputEl}
 							placeholder="First name (optional)"
+							on:keydown={handleKeydown}
 							class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
+							tabindex="1"
 						/>
 						{#if nameError}
 							<p class="ml-4 text-sm text-error-400">{nameError}</p>
@@ -145,8 +175,11 @@
 					<input
 						type="email"
 						bind:value={emailInput}
+						bind:this={emailInputEl}
 						placeholder="Email address"
+						on:keydown={handleKeydown}
 						class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
+						tabindex="2"
 					/>
 					{#if emailError}
 						<p class="ml-4 text-sm text-error-400">{emailError}</p>
@@ -156,6 +189,7 @@
 					on:click={() => handleAuth(modalType === 'signup')}
 					class="w-full btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 					disabled={!!emailError || !!nameError || isLoading}
+					tabindex="3"
 				>
 					{#if isLoading}
 						<div class="flex items-center justify-center gap-2">
@@ -198,6 +232,7 @@
 						type="button"
 						on:click={resetForm}
 						class="mt-4 btn btn-sm variant-ghost-secondary hover:variant-ghost-primary"
+						tabindex="1"
 					>
 						Try Again
 					</button>
