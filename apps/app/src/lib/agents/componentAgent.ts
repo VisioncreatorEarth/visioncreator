@@ -15,7 +15,7 @@ export async function componentAgent(anthropic: Anthropic, request: any) {
         const fullSystemPrompt = `${componentAgentPrompt}\n\nHere is our existing component:\n\n\`\`\`svelte\n${existingComponent}\n\`\`\`\n\nTask: ${task}`;
 
         const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20240620',
+            model: 'claude-3-5-sonnet-20241022',
             max_tokens: 4000,
             messages: [{ role: 'user', content: fullSystemPrompt }],
             temperature: 0.7,
