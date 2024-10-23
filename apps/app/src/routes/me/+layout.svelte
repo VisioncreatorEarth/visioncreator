@@ -1,19 +1,24 @@
 <script lang="ts">
-	import { writable } from 'svelte/store';
+	import { dev } from '$app/environment';
 	import { Me, eventStream } from '$lib/stores';
 	import { onMount } from 'svelte';
 	import { eventBus } from '$lib/composables/eventBus';
 	import { goto } from '$app/navigation';
+	import type { LayoutData } from './$types';
 
-	export let data;
-
-	let modalOpen = writable(false);
-	let activeTab = writable('actions');
+	export let data: LayoutData;
 	let { session } = data;
 	$: ({ session } = data);
 
-	let isFirstTime = writable(true);
-	let viewConfiguration = writable(null);
+	let isModalOpen = false;
+	let activeTab = 'actions';
+	let isMenuMode = true;
+	let isPressed = false;
+	let isRecording = false;
+	let pressStartTime = 0;
+	let lastToggleTime = 0;
+	let voiceControlRef;
+	const DEBOUNCE_DELAY = 300;
 
 	function handleLinkClick(event: Event, href: string) {
 		event.preventDefault();
@@ -29,14 +34,14 @@
 			const latestEvent = events[events.length - 1];
 			if (latestEvent && latestEvent.type === 'updateMe') {
 				setTimeout(() => {
-					modalOpen.set(false);
+					isModalOpen = false;
 				}, 1000);
 			}
 		});
 
 		const handleToggleModal = () => {
 			setTimeout(() => {
-				modalOpen.set(false);
+				isModalOpen = false;
 			}, 2000);
 		};
 
@@ -48,58 +53,118 @@
 		};
 	});
 
-	function toggleModal(event?: MouseEvent) {
-		if (!event || event.target === event.currentTarget) {
-			modalOpen.update((n) => !n);
-			if ($isFirstTime) {
-				isFirstTime.set(false);
-				localStorage.setItem('isFirstTime', 'false');
-			}
-			if (!$modalOpen) {
-				activeTab.set('actions');
-			}
+	function toggleModal() {
+		isModalOpen = !isModalOpen;
+		if (isModalOpen) {
+			isMenuMode = true;
+			activeTab = 'actions';
 		}
 	}
 
-	function setActiveTab(tab: string) {
-		activeTab.set(tab);
+	function setActiveTab(event) {
+		activeTab = event.detail;
 	}
 
 	function handleUpdateView(event: CustomEvent) {
-		viewConfiguration.set(event.detail);
 		window.dispatchEvent(new CustomEvent('updateView', { detail: event.detail }));
+	}
+
+	function handleMouseDown() {
+		isPressed = true;
+		pressStartTime = performance.now();
+
+		if (dev) {
+			setTimeout(() => {
+				if (isPressed && performance.now() - pressStartTime >= 500) {
+					isMenuMode = false;
+					voiceControlRef?.handleLongPress();
+				}
+			}, 500);
+		}
+	}
+
+	function handleMouseUp() {
+		const currentTime = performance.now();
+		const pressDuration = currentTime - pressStartTime;
+
+		if (isPressed) {
+			isPressed = false;
+			if (dev && pressDuration >= 500) {
+				voiceControlRef?.handleRelease();
+			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
+				isMenuMode = true;
+				isModalOpen = true;
+				lastToggleTime = currentTime;
+			}
+		}
 	}
 </script>
 
-<div
-	class={`@container overflow-hidden w-full h-full ${$modalOpen ? 'blur-md' : ''}`}
-	style="-webkit-overflow-scrolling: touch;"
->
-	<slot {viewConfiguration} />
+<div class="@container overflow-hidden w-full h-full" class:blur-md={isModalOpen && isMenuMode}>
+	<slot />
 </div>
 
-<Modal
-	isOpen={$modalOpen}
-	activeTab={$activeTab}
-	me={{ id: session.user.id, email: session.user.email, onboarded: $Me.onboarded }}
-	{session}
-	isFirstTime={$isFirstTime}
-	on:toggleModal={toggleModal}
-	on:setActiveTab={(e) => setActiveTab(e.detail)}
-	on:navigate={(e) => handleLinkClick(e, e.detail)}
-	on:updateView={handleUpdateView}
->
-	<svelte:fragment slot="actions">
-		<ActionButtons me={{ id: session.user.id }} />
-	</svelte:fragment>
-	<svelte:fragment slot="settings">
-		<Newsletter me={{ email: session.user.email, id: session.user.id }} />
-	</svelte:fragment>
-</Modal>
+<!-- Menu Modal -->
+{#if isModalOpen && isMenuMode && session}
+	<Modal isOpen={true} on:close={toggleModal}>
+		<TabMenu {activeTab} on:setActiveTab={setActiveTab} on:close={toggleModal}>
+			<svelte:fragment slot="content">
+				{#if activeTab === 'actions'}
+					<ActionButtons me={{ id: session.user.id }} />
+				{:else if activeTab === 'settings'}
+					<Newsletter me={{ email: session.user.email, id: session.user.id }} />
+				{:else if activeTab === 'legal'}
+					<LegalMenu on:navigate={handleLinkClick} />
+				{/if}
+			</svelte:fragment>
+		</TabMenu>
+	</Modal>
+{/if}
 
-<!-- Fading out behind our Modal button -->
+<!-- Voice Control Component -->
+{#if session}
+	<VoiceControl
+		bind:this={voiceControlRef}
+		bind:isRecording
+		bind:isPressed
+		{session}
+		on:updateView={handleUpdateView}
+	/>
+{/if}
+
+<!-- Floating button - hide when modal is open -->
+{#if !isModalOpen || !isMenuMode}
+	<button
+		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
+		class:recording-border={isRecording}
+		on:mousedown={handleMouseDown}
+		on:mouseup={handleMouseUp}
+		on:mouseleave={handleMouseUp}
+	>
+		<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+	</button>
+{/if}
+
+<!-- Background gradient -->
 <div class="fixed bottom-0 left-0 right-0 z-40 h-24 pointer-events-none">
 	<div
 		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
 	/>
 </div>
+
+<style>
+	.recording-border {
+		@apply border-primary-500 scale-110;
+		box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
+		animation: pulse-red 0.3s infinite alternate;
+	}
+
+	@keyframes pulse-red {
+		0% {
+			box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
+		}
+		100% {
+			box-shadow: 0 0 0 2px red, 0 0 0 8px rgba(255, 0, 0, 0);
+		}
+	}
+</style>

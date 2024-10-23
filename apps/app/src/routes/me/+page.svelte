@@ -89,8 +89,8 @@
 		}
 	}
 
-	// New function to handle dynamic view updates
-	function handleViewUpdate(event) {
+	// Function to handle dynamic view updates from VoiceControl
+	function handleViewUpdate(event: CustomEvent) {
 		dynamicView = event.detail;
 	}
 </script>
