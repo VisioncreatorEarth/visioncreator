@@ -4,11 +4,15 @@
 	import { dev } from '$app/environment';
 	import { browser } from '$app/environment';
 	import { futureMe } from '$lib/stores';
+	import { onMount } from 'svelte';
 
 	export let modalType: 'login' | 'signup';
 	export let supabase: any;
 
 	const dispatch = createEventDispatcher();
+
+	// Lock the initial modal type
+	const lockedModalType = modalType;
 
 	// Form state
 	let emailInput = '';
@@ -18,27 +22,20 @@
 	let showInput = true;
 	let nameInputEl: HTMLInputElement;
 	let emailInputEl: HTMLInputElement;
-
-	// Check if device is mobile
+	let isLoading = false; // Single declaration of isLoading
 	let isMobile = false;
+
+	// Validation state
+	let nameError = '';
+	let emailError = '';
 
 	if (browser) {
 		isMobile = window.matchMedia('(max-width: 768px)').matches;
 	}
 
-	// Handle enter key
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter' && showInput && !isLoading) {
-			handleAuth(modalType === 'signup');
-		}
-	}
-
-	// Focus first input on mount for desktop
-	import { onMount } from 'svelte';
-
 	onMount(() => {
 		if (!isMobile) {
-			if (modalType === 'signup' && nameInputEl) {
+			if (lockedModalType === 'signup' && nameInputEl) {
 				nameInputEl.focus();
 			} else if (emailInputEl) {
 				emailInputEl.focus();
@@ -46,12 +43,11 @@
 		}
 	});
 
-	// Validation state
-	let nameError = '';
-	let emailError = '';
-
-	// Add loading state
-	let isLoading = false;
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' && showInput && !isLoading) {
+			handleAuth();
+		}
+	}
 
 	function validateName(value: string) {
 		if (value.length > 0 && value.length < 3) {
@@ -80,7 +76,19 @@
 		return true;
 	}
 
-	async function handleAuth(isSignup = false) {
+	function resetForm() {
+		showInput = true;
+		message = '';
+		messageType = '';
+		emailInput = '';
+		nameInput = '';
+		emailError = '';
+		nameError = '';
+	}
+
+	async function handleAuth() {
+		const isSignup = lockedModalType === 'signup';
+
 		const isEmailValid = validateEmail(emailInput);
 		const isNameValid = !isSignup || validateName(nameInput);
 
@@ -91,29 +99,20 @@
 		try {
 			isLoading = true;
 
-			// Update futureMe store before auth request
-			if (isSignup) {
-				futureMe.update((current) => ({
-					...current,
-					name: nameInput || 'UpdateMyName',
-					// Preserve existing visionid if it exists
-					visionid: current.visionid || ''
-				}));
-			}
-
-			const { error } = await supabase.auth.signInWithOtp({
+			const authData = {
 				email: emailInput,
 				options: {
 					data: isSignup
 						? {
 								name: nameInput,
-								// Include the visionid in auth metadata if it exists
 								visionid: $futureMe.visionid
 						  }
 						: undefined,
 					emailRedirectTo: window.location.origin
 				}
-			});
+			};
+
+			const { error } = await supabase.auth.signInWithOtp(authData);
 
 			if (error) throw error;
 
@@ -130,12 +129,6 @@
 		}
 	}
 
-	function resetForm() {
-		showInput = true;
-		message = '';
-		messageType = '';
-	}
-
 	// Real-time validation
 	$: if (nameInput) validateName(nameInput);
 	$: if (emailInput) validateEmail(emailInput);
@@ -147,9 +140,9 @@
 			class="flex flex-col items-center justify-center p-6 text-center shadow-md bg-surface-700 rounded-3xl"
 		>
 			<div class="h2 text-xl font-bold mb-2.5 @3xl:text-3xl">
-				{modalType === 'signup' ? 'Put me on the waitlist' : 'Welcome Back'}
+				{lockedModalType === 'signup' ? 'Put me on the waitlist' : 'Welcome Back'}
 			</div>
-			{#if modalType === 'signup'}
+			{#if lockedModalType === 'signup'}
 				<p class="max-w-2xl text-md @3xl:text-lg">
 					Grab your chance to be one of the first humans on earth to receive your exclusive early
 					pioneer invite.
@@ -169,7 +162,7 @@
 		</div>
 		<div class="w-full mt-4 space-y-4">
 			{#if showInput}
-				{#if modalType === 'signup'}
+				{#if lockedModalType === 'signup'}
 					<div class="space-y-1">
 						<input
 							bind:value={nameInput}
@@ -199,7 +192,7 @@
 					{/if}
 				</div>
 				<button
-					on:click={() => handleAuth(modalType === 'signup')}
+					on:click={() => handleAuth()}
 					class="w-full btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 					disabled={!!emailError || !!nameError || isLoading}
 					tabindex="3"
@@ -229,7 +222,7 @@
 							<span>Processing...</span>
 						</div>
 					{:else}
-						{modalType === 'signup' ? 'Sign Up Now' : 'Login'}
+						{lockedModalType === 'signup' ? 'Sign Up Now' : 'Login'}
 					{/if}
 				</button>
 			{:else}

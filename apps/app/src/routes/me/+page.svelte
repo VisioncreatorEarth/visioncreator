@@ -2,8 +2,6 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
-	import ComposeView from '$lib/components/ComposeView.svelte';
-	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
 
 	export let data;
 
