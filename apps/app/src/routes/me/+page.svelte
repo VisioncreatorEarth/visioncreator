@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { futureMe, Me } from '$lib/stores';
-	import { onMount } from 'svelte';
+	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
 	import ComposeView from '$lib/components/ComposeView.svelte';
-	import { dynamicView } from '$lib/stores';
+	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
 
 	export let data;
 
@@ -12,6 +11,7 @@
 	$: ({ session } = data);
 
 	let showComposeView = false;
+	let initialSetupComplete = false;
 
 	const updateNameMutation = createMutation({
 		operationName: 'updateMe'
@@ -39,33 +39,85 @@
 
 	$: meData = $meQuery.data as MeQueryResult | null;
 
-	onMount(async () => {
-		const supabaseMe = await supabase.auth.getUser();
-		Me.update((store) => ({ ...store, id: supabaseMe.data.user?.id || '' }));
+	async function handleInitialSetup() {
+		if (!initialSetupComplete && session?.user) {
+			const {
+				data: { user }
+			} = await supabase.auth.getUser();
 
-		if (!supabaseMe.data.user?.user_metadata.inviter && !supabaseMe.data.user?.user_metadata.name) {
-			try {
-				await supabase.auth.updateUser({
-					data: { inviter: $futureMe.visionid, name: $futureMe.name || 'UpdateMyName' }
+			// Only proceed if we don't have an inviter set and have a visionid
+			if (!user?.user_metadata.inviter && $futureMe.visionid) {
+				try {
+					console.log('Starting initial setup...', {
+						currentName: user?.user_metadata.name,
+						futureMeName: $futureMe.name,
+						visionId: $futureMe.visionid
+					});
+
+					// Update user metadata with inviter and name
+					await supabase.auth.updateUser({
+						data: {
+							inviter: $futureMe.visionid,
+							name: user.user_metadata.name || $futureMe.name || 'UpdateMyName'
+						}
+					});
+
+					// Create invite relationship if we have a valid visionid
+					if ($futureMe.visionid) {
+						await $createInviteMutation.mutateAsync({
+							invitee: session.user.id,
+							inviter: $futureMe.visionid
+						});
+
+						// Update name in database if needed
+						if ($futureMe.name) {
+							await $updateNameMutation.mutateAsync({
+								id: session.user.id,
+								name: $futureMe.name
+							});
+						}
+					}
+
+					// Update Me store
+					Me.update((store) => ({
+						...store,
+						id: session.user.id,
+						name: $futureMe.name || user.user_metadata.name || 'UpdateMyName'
+					}));
+
+					// Refetch user data
+					await $meQuery.refetch();
+
+					console.log('Initial setup completed successfully');
+				} catch (error) {
+					console.error('Error during initial setup:', error);
+					initialSetupComplete = true;
+				}
+			} else {
+				console.log('No initial setup needed', {
+					hasInviter: !!user?.user_metadata.inviter,
+					hasVisionId: !!$futureMe.visionid
 				});
-
-				await $updateNameMutation.mutateAsync({
-					id: session.user.id,
-					name: $futureMe.name
-				});
-
-				await $createInviteMutation.mutateAsync({
-					invitee: session.user.id,
-					inviter: $futureMe.visionid
-				});
-
-				$meQuery.refetch();
-			} catch (error) {
-				console.error('Error during signup process:', error);
 			}
-		}
-	});
 
+			initialSetupComplete = true;
+		}
+	}
+
+	function handleViewUpdate(event: CustomEvent) {
+		const view = event.detail;
+		if (view) {
+			console.log('Updating view:', view);
+			dynamicView.update((store) => ({ ...store, view }));
+		}
+	}
+
+	// Handle initial setup on mount and when session changes
+	$: if (session?.user && !initialSetupComplete) {
+		handleInitialSetup();
+	}
+
+	// Update Me store when meData changes
 	$: if (meData) {
 		Me.update((store) => ({
 			...store,
@@ -82,29 +134,11 @@
 			});
 
 			await $meQuery.refetch();
-
 			showComposeView = true;
 		} catch (error) {
 			console.error('Error updating onboarded status:', error);
+			showComposeView = false;
 		}
-	}
-
-	// Subscribe to the store
-	$: currentView = $dynamicView.view;
-
-	function handleViewUpdate(event: CustomEvent) {
-		console.log('View update received:', event.detail); // Debug log
-		if (event.detail && event.detail.view) {
-			dynamicView.update((store) => ({
-				...store,
-				view: event.detail.view
-			}));
-		}
-	}
-
-	// Debug: Watch for view changes
-	$: if (currentView) {
-		console.log('Current view updated:', currentView);
 	}
 </script>
 
@@ -124,10 +158,10 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView view={currentView || meView} {session} />
+		<ComposeView view={$dynamicView.view || meView} {session} />
 	{/if}
 {:else if meData}
-	<ComposeView view={currentView || meView} {session} />
+	<ComposeView view={$dynamicView.view || meView} {session} />
 {:else}
 	<div class="flex items-center justify-center h-screen text-red-500">Error loading user data</div>
 {/if}

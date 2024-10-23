@@ -3,6 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import { dev } from '$app/environment';
 	import { browser } from '$app/environment';
+	import { futureMe } from '$lib/stores';
 
 	export let modalType: 'login' | 'signup';
 	export let supabase: any;
@@ -89,15 +90,27 @@
 
 		try {
 			isLoading = true;
-			if (isSignup && !nameInput) {
-				alert('Please enter your name');
-				return;
+
+			// Update futureMe store before auth request
+			if (isSignup) {
+				futureMe.update((current) => ({
+					...current,
+					name: nameInput || 'UpdateMyName',
+					// Preserve existing visionid if it exists
+					visionid: current.visionid || ''
+				}));
 			}
 
 			const { error } = await supabase.auth.signInWithOtp({
 				email: emailInput,
 				options: {
-					data: isSignup ? { name: nameInput } : undefined,
+					data: isSignup
+						? {
+								name: nameInput,
+								// Include the visionid in auth metadata if it exists
+								visionid: $futureMe.visionid
+						  }
+						: undefined,
 					emailRedirectTo: window.location.origin
 				}
 			});

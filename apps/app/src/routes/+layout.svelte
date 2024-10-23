@@ -89,15 +89,18 @@
 	}
 
 	function handleUpdateView(event: CustomEvent) {
-		window.dispatchEvent(
-			new CustomEvent('updateView', {
-				detail: event.detail,
-				bubbles: true,
-				composed: true
-			})
-		);
-		isModalOpen = false;
-		goto('/me');
+		const view = event.detail.view; // Make sure we're getting the view object
+		if (view) {
+			window.dispatchEvent(
+				new CustomEvent('updateView', {
+					detail: view,
+					bubbles: true,
+					composed: true
+				})
+			);
+			isModalOpen = false;
+			goto('/me');
+		}
 	}
 
 	function handleLinkClick(event: Event, href: string) {

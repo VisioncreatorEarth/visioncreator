@@ -215,7 +215,7 @@
 		// Extract view configuration and dispatch it
 		if (data.viewConfiguration) {
 			dispatch('updateView', {
-				view: data.viewConfiguration
+				view: data.viewConfiguration // This is the complete view object
 			});
 		}
 
