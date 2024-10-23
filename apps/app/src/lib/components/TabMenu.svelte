@@ -33,16 +33,18 @@
 			{/each}
 		</ul>
 		<button
-			class="p-2 text-tertiary-400 hover:text-tertiary-300"
+			class="flex items-center justify-center w-8 h-8 transition-colors rounded-full bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 			on:click={() => dispatch('close')}
 		>
-			<svg class="w-6 h-6" viewBox="0 0 24 24" stroke="currentColor" fill="none">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M6 18L18 6M6 6l12 12"
-				/>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="2"
+				stroke="currentColor"
+				class="w-4 h-4"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 			</svg>
 		</button>
 	</div>

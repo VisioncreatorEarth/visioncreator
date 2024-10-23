@@ -168,6 +168,12 @@
 	$: if (browser && !session && window.location.pathname !== '/') {
 		window.location.replace('/');
 	}
+
+	// Add this event handler
+	function handleModalOpen(event: CustomEvent) {
+		const { type } = event.detail;
+		toggleModal(type);
+	}
 </script>
 
 <!-- Wrap everything in QueryClientProvider -->
@@ -235,10 +241,10 @@
 		{/if}
 	{:else if !isModalOpen}
 		<button
-			class="fixed z-50 flex items-center justify-center px-6 transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
+			class="fixed z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary bottom-4 left-1/2"
 			on:click={() => toggleModal('login')}
 		>
-			<span class="font-medium text-white">Login</span>
+			<span>Login</span>
 		</button>
 	{/if}
 </QueryClientProvider>
@@ -248,6 +254,8 @@
 		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
 	/>
 </div>
+
+<svelte:window on:openModal={handleModalOpen} />
 
 <style>
 	.recording-border {

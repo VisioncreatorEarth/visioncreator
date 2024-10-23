@@ -16,8 +16,50 @@
 	let messageType = '';
 	let showInput = true;
 
+	// Validation state
+	let nameError = '';
+	let emailError = '';
+
+	// Add loading state
+	let isLoading = false;
+
+	function validateName(value: string) {
+		if (value.length > 0 && value.length < 3) {
+			nameError = 'Name must be at least 3 characters';
+			return false;
+		}
+		if (value.length > 20) {
+			nameError = 'Name must be less than 20 characters';
+			return false;
+		}
+		nameError = '';
+		return true;
+	}
+
+	function validateEmail(value: string) {
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!value) {
+			emailError = 'Email is required';
+			return false;
+		}
+		if (!emailRegex.test(value)) {
+			emailError = 'Please enter a valid email address';
+			return false;
+		}
+		emailError = '';
+		return true;
+	}
+
 	async function handleAuth(isSignup = false) {
+		const isEmailValid = validateEmail(emailInput);
+		const isNameValid = !isSignup || validateName(nameInput);
+
+		if (!isEmailValid || !isNameValid) {
+			return;
+		}
+
 		try {
+			isLoading = true;
 			if (isSignup && !nameInput) {
 				alert('Please enter your name');
 				return;
@@ -27,7 +69,7 @@
 				email: emailInput,
 				options: {
 					data: isSignup ? { name: nameInput } : undefined,
-					emailRedirectTo: window.location.origin // Ensure redirect to root
+					emailRedirectTo: window.location.origin
 				}
 			});
 
@@ -41,6 +83,8 @@
 			message = error.message;
 			messageType = 'error';
 			showInput = false;
+		} finally {
+			isLoading = false;
 		}
 	}
 
@@ -51,6 +95,10 @@
 		emailInput = '';
 		nameInput = '';
 	}
+
+	// Real-time validation
+	$: if (nameInput) validateName(nameInput);
+	$: if (emailInput) validateEmail(emailInput);
 </script>
 
 <div class="@container">
@@ -82,26 +130,63 @@
 		<div class="w-full mt-4 space-y-4">
 			{#if showInput}
 				{#if modalType === 'signup'}
-					<input
-						bind:value={nameInput}
-						placeholder="First name (optional)"
-						class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50"
-					/>
+					<div class="space-y-1">
+						<input
+							bind:value={nameInput}
+							placeholder="First name (optional)"
+							class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
+						/>
+						{#if nameError}
+							<p class="ml-4 text-sm text-error-400">{nameError}</p>
+						{/if}
+					</div>
 				{/if}
-				<input
-					type="email"
-					bind:value={emailInput}
-					placeholder="Email address"
-					class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50"
-				/>
+				<div class="space-y-1">
+					<input
+						type="email"
+						bind:value={emailInput}
+						placeholder="Email address"
+						class="w-full px-4 py-2 @md:px-6 @md:py-3 text-lg @md:text-2xl text-white transition-all duration-300 ease-in-out bg-white border rounded-full outline-none bg-opacity-20 border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
+					/>
+					{#if emailError}
+						<p class="ml-4 text-sm text-error-400">{emailError}</p>
+					{/if}
+				</div>
 				<button
 					on:click={() => handleAuth(modalType === 'signup')}
 					class="w-full btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
+					disabled={!!emailError || !!nameError || isLoading}
 				>
-					{modalType === 'signup' ? 'Sign Up Now' : 'Login'}
+					{#if isLoading}
+						<div class="flex items-center justify-center gap-2">
+							<svg
+								class="w-4 h-4 animate-spin"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								/>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								/>
+							</svg>
+							<span>Processing...</span>
+						</div>
+					{:else}
+						{modalType === 'signup' ? 'Sign Up Now' : 'Login'}
+					{/if}
 				</button>
 			{:else}
-				<div in:fade={{ duration: 200 }} out:fade={{ duration: 200 }} class="text-center">
+				<div class="text-center">
 					<div
 						class="card p-6 rounded-3xl {messageType === 'success'
 							? 'variant-ghost-success'
@@ -112,7 +197,7 @@
 					<button
 						type="button"
 						on:click={resetForm}
-						class="mt-4 rounded-full btn btn-sm variant-ghost-tertiary"
+						class="mt-4 btn btn-sm variant-ghost-secondary hover:variant-ghost-primary"
 					>
 						Try Again
 					</button>

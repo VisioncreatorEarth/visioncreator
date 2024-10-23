@@ -4,7 +4,9 @@
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
-	import { eventBus } from '$lib/composables/eventBus';
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	let videoElement: HTMLVideoElement;
 	let contentWrapper: HTMLDivElement;
@@ -47,12 +49,23 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
-			goto('/?modal=signup');
+			window.dispatchEvent(
+				new CustomEvent('openModal', {
+					detail: { type: 'signup' },
+					bubbles: true
+				})
+			);
 		}
 	}
 
 	function openSignUp() {
-		goto('/?modal=signup');
+		// Create a custom event that bubbles up through the DOM
+		window.dispatchEvent(
+			new CustomEvent('openModal', {
+				detail: { type: 'signup' },
+				bubbles: true
+			})
+		);
 	}
 </script>
 
