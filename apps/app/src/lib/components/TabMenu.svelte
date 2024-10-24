@@ -12,7 +12,7 @@
 		<slot name="content" />
 	</div>
 
-	<div class="flex items-center justify-between p-2 border-t border-surface-500">
+	<div class="flex items-center justify-between p-2 pr-16 border-t border-surface-500">
 		<ul class="flex flex-wrap text-sm font-medium text-center sm:text-md">
 			{#each tabs as tab}
 				<li class="relative px-0.5 sm:px-1">

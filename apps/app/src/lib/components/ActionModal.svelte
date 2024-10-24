@@ -170,23 +170,25 @@
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
-				<div class="relative">
+				<div class="relative flex flex-col">
 					<Auth modalType={currentModalType} {supabase} />
-					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-4 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
-						on:click={() => toggleModal()}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
+					<div class="flex justify-center mb-3">
+						<button
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+							on:click={() => toggleModal()}
 						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-						</svg>
-					</button>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</div>
 				</div>
 			{:else if currentModalType === 'menu'}
 				<div class="relative">
@@ -216,7 +218,7 @@
 						</svelte:fragment>
 					</TabMenu>
 					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-4 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-2 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
 					>
 						<svg

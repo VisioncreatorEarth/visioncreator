@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { fade } from 'svelte/transition';
 	import { dev } from '$app/environment';
 	import { browser } from '$app/environment';
 	import { futureMe } from '$lib/stores';
