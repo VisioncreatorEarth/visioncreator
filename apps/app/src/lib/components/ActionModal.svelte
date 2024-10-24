@@ -30,6 +30,12 @@
 	// Keep track of the initial modal type to prevent unwanted changes
 	let currentModalType: 'login' | 'signup' | 'menu' = 'menu';
 
+	$: {
+		if (voiceControlRef) {
+			console.log('ActionModal: VoiceControl reference updated:', voiceControlRef);
+		}
+	}
+
 	function handleClose(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			isModalOpen = false;
@@ -41,12 +47,14 @@
 	}
 
 	function handleMouseDown() {
+		console.log('ActionModal: Mouse down event triggered');
 		isPressed = true;
 		pressStartTime = performance.now();
 
 		if (dev) {
 			setTimeout(() => {
 				if (isPressed && performance.now() - pressStartTime >= 500) {
+					console.log('ActionModal: Long press detected, switching to voice mode');
 					isMenuMode = false;
 					voiceControlRef?.handleLongPress();
 				}
@@ -55,18 +63,20 @@
 	}
 
 	function handleMouseUp() {
+		console.log('ActionModal: Mouse up event triggered');
 		const currentTime = performance.now();
 		const pressDuration = currentTime - pressStartTime;
 
 		if (isPressed) {
 			isPressed = false;
 			if (dev && pressDuration >= 500) {
+				console.log('ActionModal: Long press completed, releasing voice control');
 				voiceControlRef?.handleRelease();
 			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
+				console.log('ActionModal: Short press detected, toggling modal');
 				if (session) {
 					toggleModal('menu');
 				} else {
-					// Maintain the login state
 					toggleModal('login');
 				}
 				lastToggleTime = currentTime;
@@ -127,13 +137,7 @@
 <svelte:window on:openModal={handleModalOpen} />
 
 {#if session}
-	<VoiceControl
-		bind:this={voiceControlRef}
-		bind:isRecording
-		bind:isPressed
-		{session}
-		on:updateView={handleUpdateView}
-	/>
+	<VoiceControl bind:this={voiceControlRef} {session} on:updateView={handleUpdateView} />
 
 	{#if !isModalOpen || !isMenuMode}
 		<button

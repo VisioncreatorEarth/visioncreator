@@ -2,6 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import AudioVisualizer from './AudioVisualizer.svelte';
+	import ComposeView from './ComposeView.svelte';
 	import { dev } from '$app/environment';
 
 	export let session = null;
@@ -34,6 +35,15 @@
 	];
 
 	let processingInterval: number;
+
+	let currentAction: { action: string; view: any } | null = null;
+
+	$: {
+		if (currentAction) {
+			console.log('VoiceControl: Current action updated:', currentAction);
+			console.log('VoiceControl: Action view:', currentAction.view);
+		}
+	}
 
 	function startRecording() {
 		if (mediaRecorder && mediaRecorder.state === 'inactive') {
@@ -90,22 +100,22 @@
 	}
 
 	export async function handleLongPress() {
+		console.log('VoiceControl: Long press handler called');
 		if (dev) {
 			if (isFirstLongPress) {
+				console.log('VoiceControl: First long press, requesting microphone permission');
 				const permissionGranted = await requestMicrophonePermission();
 				if (!permissionGranted) {
-					console.log('Microphone permission denied');
+					console.error('VoiceControl: Microphone permission denied');
 					return;
 				}
 				isFirstLongPress = false;
 			}
 
-			if (mediaRecorder && mediaRecorder.state === 'inactive') {
-				isRecording = true;
-				isRecordingOrProcessing = true;
-				transcript = 'Recording...';
-				startRecording();
-			}
+			isRecording = true;
+			isRecordingOrProcessing = true;
+			startRecording();
+			console.log('VoiceControl: Recording started');
 		}
 	}
 
@@ -118,24 +128,23 @@
 	}
 
 	async function processRecording() {
-		startProcessingMessages();
-		playAudio('workingonit');
-
+		console.log('VoiceControl: Processing recording');
 		try {
-			const transcriptionResult = await handleTranscription();
+			const transcriptionResult = await handleTranscription(); // Changed from transcribeAudio to handleTranscription
+			console.log('VoiceControl: Transcription completed:', transcriptionResult);
+
+			transcript = transcriptionResult;
 			const aiResponse = await handleAIProcessing(transcriptionResult);
+			console.log('VoiceControl: AI processing completed:', aiResponse);
 
-			// Make sure we're dispatching the view update
-			if (aiResponse.viewConfiguration) {
-				dispatch('updateView', {
-					view: aiResponse.viewConfiguration
-				});
+			if (aiResponse.isAction) {
+				console.log('VoiceControl: Action view detected, keeping modal open');
+			} else {
+				isRecordingOrProcessing = false;
 			}
-
-			playAudio('done');
-			cleanup();
 		} catch (error) {
-			handleError(error);
+			console.error('VoiceControl: Error processing recording:', error);
+			isRecordingOrProcessing = false;
 		}
 	}
 
@@ -194,32 +203,47 @@
 	}
 
 	async function handleAIProcessing(transcriptionResult: string) {
+		console.log('Starting AI processing with transcription:', transcriptionResult);
 		processingState = 'Programming...';
 		messages = [...messages, { role: 'user', content: transcriptionResult }];
 
-		const response = await fetch('/local/api/chat', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({ messages })
-		});
-
-		if (!response.ok) {
-			throw new Error('Network response was not ok');
-		}
-
-		const data = await response.json();
-		messages = [...messages, { role: 'assistant', content: data.content }];
-
-		// Extract view configuration and dispatch it
-		if (data.viewConfiguration) {
-			dispatch('updateView', {
-				view: data.viewConfiguration // This is the complete view object
+		try {
+			const response = await fetch('/local/api/chat', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ messages })
 			});
-		}
 
-		return data;
+			if (!response.ok) {
+				throw new Error('Network response was not ok');
+			}
+
+			const data = await response.json();
+			console.log('Received AI response:', data);
+
+			// Handle action views
+			if (data.isAction && data.actionConfig) {
+				console.log('Received action config:', data.actionConfig);
+				currentAction = data.actionConfig;
+				messages = [...messages, { role: 'assistant', content: data.content }];
+				return data;
+			}
+
+			messages = [...messages, { role: 'assistant', content: data.content }];
+
+			if (data.viewConfiguration) {
+				dispatch('updateView', {
+					view: data.viewConfiguration
+				});
+			}
+
+			return data;
+		} catch (error) {
+			console.error('Error in handleAIProcessing:', error);
+			throw error;
+		}
 	}
 
 	onMount(() => {
@@ -231,16 +255,45 @@
 
 {#if isRecordingOrProcessing}
 	<div
-		class="fixed inset-0 z-40 pointer-events-none bg-surface-900/50 backdrop-blur-sm"
+		class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6 bg-surface-900/50 backdrop-blur-sm"
 		transition:fade
 	>
 		<div
-			class="absolute p-6 transform -translate-x-1/2 bottom-24 left-1/2 bg-surface-800 rounded-3xl"
+			class="relative z-10 flex flex-col w-full overflow-hidden bg-surface-600 rounded-3xl"
+			class:max-w-6xl={currentAction}
 		>
 			{#if isRecording}
-				<AudioVisualizer {isRecording} {audioStream} />
+				<div class="p-4">
+					<AudioVisualizer {isRecording} {audioStream} />
+				</div>
+			{:else if currentAction}
+				<div class="relative">
+					<div class="p-6">
+						<ComposeView
+							view={currentAction.view}
+							{session}
+							showSpacer={false}
+							on:mount={() => console.log('VoiceControl: ComposeView mounted')}
+						/>
+					</div>
+					<button
+						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-2 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						on:click={() => (isRecordingOrProcessing = false)}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="w-4 h-4"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
 			{:else}
-				<div class="flex flex-col items-center justify-center">
+				<div class="flex flex-col items-center justify-center p-8">
 					<div
 						class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
 					/>
