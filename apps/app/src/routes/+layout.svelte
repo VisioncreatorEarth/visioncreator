@@ -6,6 +6,7 @@
 	import { client } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
 	import ActionModal from '$lib/components/ActionModal.svelte';
+	import { browser } from '$app/environment';
 
 	export let data: LayoutData;
 	let { supabase, session, queryClient } = data;
@@ -15,14 +16,50 @@
 		client.setAuthorizationToken(session.access_token);
 	}
 
+	// Listen for auth state changes
 	onMount(() => {
 		const { data: authData } = supabase.auth.onAuthStateChange(async (event, _session) => {
+			console.log('Auth state change:', event);
+
+			if (event === 'SIGNED_OUT') {
+				// Immediately redirect on signout event
+				if (browser) {
+					window.location.replace('/');
+				}
+				return;
+			}
+
 			if (_session?.expires_at !== session?.expires_at) {
-				invalidate('supabase:auth');
+				await invalidate('supabase:auth');
 			}
 		});
-		return () => authData.subscription.unsubscribe();
+
+		return () => {
+			if (authData?.subscription) {
+				authData.subscription.unsubscribe();
+			}
+		};
 	});
+
+	// Enhanced signout handler
+	async function handleSignOut() {
+		try {
+			// First invalidate auth state
+			await invalidate('supabase:auth');
+
+			// Then sign out from Supabase
+			const { error } = await supabase.auth.signOut();
+			if (error) throw error;
+
+			// The onAuthStateChange listener will handle the redirect
+		} catch (error) {
+			console.error('Error signing out:', error);
+			// Fallback redirect
+			if (browser) {
+				window.location.replace('/');
+			}
+		}
+	}
 </script>
 
 <QueryClientProvider client={queryClient}>
@@ -30,7 +67,7 @@
 		<slot />
 	</div>
 
-	<ActionModal {session} {supabase} />
+	<ActionModal {session} {supabase} on:signout={handleSignOut} />
 </QueryClientProvider>
 
 <div class="fixed bottom-0 left-0 right-0 z-40 h-24 pointer-events-none">

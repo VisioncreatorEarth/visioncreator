@@ -21,28 +21,16 @@
 
 	async function handleSignOut() {
 		if (loading) return;
-
 		loading = true;
-		console.log('Starting logout process...');
+		logoutStatus = 'Signing out...';
 
 		try {
-			// Immediately redirect
-			if (browser) {
-				window.location.replace('/'); // Using replace instead of href
-			}
-
-			// Then handle the cleanup
 			dispatch('signout');
-
-			const { error } = await supabase.auth.signOut();
-			if (error) throw error;
-
-			await invalidate('supabase:auth');
 		} catch (error) {
 			console.error('Error during logout:', error);
-			if (browser) {
-				window.location.replace('/');
-			}
+			logoutStatus = 'Error signing out';
+		} finally {
+			loading = false;
 		}
 	}
 

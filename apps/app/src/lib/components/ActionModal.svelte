@@ -118,9 +118,10 @@
 		toggleModal(type);
 	}
 
-	// Make sure we're passing the correct modalType to Auth
-	$: modalTypeForAuth =
-		currentModalType === 'login' || currentModalType === 'signup' ? currentModalType : 'login';
+	function handleSignOut() {
+		isModalOpen = false;
+		dispatch('signout');
+	}
 </script>
 
 <svelte:window on:openModal={handleModalOpen} />
@@ -198,11 +199,7 @@
 								<ActionButtons
 									{session}
 									{supabase}
-									on:signout={() => {
-										isModalOpen = false;
-										isMenuMode = true;
-										activeTab = 'actions';
-									}}
+									on:signout={handleSignOut}
 									on:updateView={handleUpdateView}
 								/>
 							{:else if activeTab === 'settings'}
