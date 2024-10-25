@@ -109,17 +109,17 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
         if (!toolCall) {
             const clarificationMessage = {
                 role: 'hominio',
-                content: "I'm not sure I understand. Could you please clarify your request?",
+                content: "I need more information to help you. Could you please provide more details about what you'd like me to do?",
                 timestamp: Date.now()
             };
             console.log('🤖 Hominio:', JSON.stringify(clarificationMessage, null, 2));
             intentManager.addMessage(clarificationMessage);
 
-            // Return special response type for UI handling
             return {
                 type: 'clarification_needed',
                 content: clarificationMessage.content,
-                keepSessionOpen: true // Signal to keep the modal open
+                keepSessionOpen: true,
+                needsClarification: true
             };
         }
 
@@ -138,20 +138,7 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
             tool_use_id: toolCall.tool_use_id
         });
 
-        if (agentResult.message) {
-            console.log(`✨ ${toolCall.name} Result:`, JSON.stringify(agentResult.message, null, 2));
-            intentManager.addMessage(agentResult.message);
-
-            // Extract and return viewConfiguration if present in toolResult
-            if (agentResult.message.toolResult?.type === 'view' && agentResult.message.toolResult.data) {
-                return {
-                    ...agentResult,
-                    viewConfiguration: agentResult.message.toolResult.data
-                };
-            }
-        }
-
-        // Add and log hominio completion message
+        // Add completion message
         const completionMessage = {
             role: 'hominio',
             content: `Task completed. Let me know if you need anything else.`,
@@ -160,8 +147,13 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
         console.log('🤖 Hominio:', JSON.stringify(completionMessage, null, 2));
         intentManager.addMessage(completionMessage);
 
-        if (!agentResult.is_error) {
-            intentManager.reset();
+        // Handle agent result
+        if (agentResult.message?.toolResult?.type === 'action') {
+            return {
+                type: 'action',
+                content: agentResult.message.toolResult.data,
+                message: completionMessage
+            };
         }
 
         return agentResult;

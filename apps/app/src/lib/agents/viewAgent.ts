@@ -60,7 +60,26 @@ Replace [SelectedComponent] with the appropriate component name based on the use
 Do not include any explanations or other text outside these tags.
 `;
 
-export async function viewAgent(anthropic: Anthropic, request: any) {
+interface AgentResponse {
+    type: 'tool_result';
+    tool_use_id: string;
+    content: string | null;
+    is_error: boolean;
+    message: Message;
+}
+
+interface Message {
+    role: string;
+    content: string;
+    timestamp: number;
+    toolResult?: {
+        type: 'view' | 'component' | 'action';
+        data: any;
+        tool_use_id: string;
+    };
+}
+
+export async function viewAgent(anthropic: Anthropic, request: any): Promise<AgentResponse> {
     try {
         const userMessage = request.agentInput?.task || request.messages[request.messages.length - 1].content;
 
@@ -100,7 +119,7 @@ function extractViewConfig(text: string) {
 function createAgentMessage(content: string, viewConfig: any, toolUseId: string): Message {
     return {
         role: 'viewAgent',
-        content,
+        content: viewConfig ? 'View configuration generated successfully' : 'Failed to generate view',
         timestamp: Date.now(),
         toolResult: viewConfig ? {
             type: 'view',

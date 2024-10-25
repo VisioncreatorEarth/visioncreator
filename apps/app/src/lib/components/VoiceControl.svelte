@@ -9,6 +9,7 @@
 	export let session = null;
 	export let isRecording = false;
 	export let isPressed = false;
+	export let needsClarification = false; // Add this new state
 
 	const dispatch = createEventDispatcher();
 
@@ -142,7 +143,7 @@
 
 			isRecording = true;
 			isRecordingOrProcessing = true;
-			playAudio('start'); // Add start sound
+			// Removed playAudio('start')
 			startRecording();
 			console.log('VoiceControl: Recording started');
 		}
@@ -151,8 +152,8 @@
 	export async function handleRelease() {
 		if (dev && isRecording) {
 			isRecording = false;
+			isProcessingNewRequest = true; // Immediately show processing state
 			stopRecording();
-			playAudio('workingonit'); // Play working sound when recording stops
 			await processRecording();
 		}
 	}
@@ -164,10 +165,20 @@
 
 			startProcessingMessages();
 			const aiResponse = await handleAIProcessing(transcriptionResult);
-			stopProcessingMessages();
 
-			// Keep modal open only for action views
-			if (!aiResponse.viewConfiguration && !aiResponse.content?.action) {
+			// Only stop processing messages if we're not in clarification mode
+			if (!aiResponse.needsClarification) {
+				stopProcessingMessages();
+			}
+
+			// Keep modal open for clarification or actions
+			if (
+				aiResponse.needsClarification ||
+				aiResponse.viewConfiguration ||
+				aiResponse.content?.action
+			) {
+				isRecordingOrProcessing = true;
+			} else {
 				isRecordingOrProcessing = false;
 			}
 		} catch (error) {
@@ -177,10 +188,13 @@
 	}
 
 	function cleanup() {
-		stopProcessingMessages();
-		transcript = '';
-		scrollToBottom();
-		isRecordingOrProcessing = false;
+		if (!needsClarification) {
+			// Only cleanup if we're not in clarification mode
+			stopProcessingMessages();
+			transcript = '';
+			scrollToBottom();
+			isRecordingOrProcessing = false;
+		}
 	}
 
 	function handleError(error: Error) {
@@ -225,7 +239,6 @@
 	async function handleAIProcessing(transcriptionResult: string) {
 		isProcessingNewRequest = true;
 		currentAction = null;
-		let result;
 
 		try {
 			const response = await fetch('/local/api/chat', {
@@ -238,72 +251,76 @@
 			});
 
 			if (!response.ok) throw new Error('Network response was not ok');
-
-			result = await response.json();
+			const result = await response.json();
 			console.log('AI Response:', result);
 
-			// Update messages in UI
+			// Update messages
 			if ($currentIntent) {
 				currentMessages = [...$currentIntent.messages];
 			}
 
-			// Handle tool results with actions
-			if (result.type === 'tool_result' && result.content) {
+			// Handle view agent response
+			if (result.message?.toolResult?.type === 'view') {
+				// Dispatch view update event
+				window.dispatchEvent(
+					new CustomEvent('updateView', {
+						detail: {
+							view: result.message.toolResult.data
+						}
+					})
+				);
+
+				isProcessingNewRequest = false;
+				isRecordingOrProcessing = false;
+				return result;
+			}
+
+			// Handle action view
+			if (result.type === 'action' && result.content) {
+				window.dispatchEvent(
+					new CustomEvent('updateView', {
+						detail: {
+							view: result.content.view
+						}
+					})
+				);
+
 				currentAction = {
 					action: result.content.action,
 					view: result.content.view
 				};
-				isRecordingOrProcessing = true;
 				isProcessingNewRequest = false;
+				isRecordingOrProcessing = true;
 				return result;
 			}
 
-			// Handle clarification needed case
+			// Handle clarification
 			if (result.type === 'clarification_needed') {
-				playAudio('workingonit');
 				isProcessingNewRequest = false;
 				isRecordingOrProcessing = true;
-
-				if ($currentIntent) {
-					currentMessages = [...$currentIntent.messages];
-				}
-
-				setTimeout(() => {
-					transcript = 'Please clarify your request...';
-					processingState = '';
-				}, 1000);
-
+				transcript = result.content;
 				return result;
 			}
 
-			// Handle direct view configurations
-			if (result.viewConfiguration) {
-				console.log('Dispatching view update:', result.viewConfiguration);
-				window.dispatchEvent(
-					new CustomEvent('updateView', {
-						detail: { view: result.viewConfiguration }
-					})
-				);
-			}
-
-			playAudio('done');
+			// Handle regular response
+			isProcessingNewRequest = false;
+			isRecordingOrProcessing = false;
 			return result;
 		} catch (error) {
 			console.error('Error in handleAIProcessing:', error);
 			throw error;
-		} finally {
-			// Only reset states if we don't have an action or clarification
-			if (result && result.type !== 'clarification_needed' && result.type !== 'tool_result') {
-				isProcessingNewRequest = false;
-				isRecordingOrProcessing = false;
-			}
 		}
 	}
 
 	function handleFormClose() {
-		currentAction = null;
-		isRecordingOrProcessing = false;
-		isProcessingNewRequest = false;
+		// Only allow closing if we're not in clarification mode
+		if (!needsClarification) {
+			currentAction = null;
+			isRecordingOrProcessing = false;
+			isProcessingNewRequest = false;
+			needsClarification = false;
+			stopProcessingMessages();
+		}
 	}
 
 	onMount(() => {
@@ -321,7 +338,7 @@
 		on:keydown={(e) => e.key === 'Escape' && handleFormClose()}
 	/>
 
-	<!-- Modal Wrapper - Adjusted bottom padding -->
+	<!-- Modal Wrapper -->
 	<div
 		class="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 mb-20"
 		role="dialog"
@@ -352,50 +369,49 @@
 				</button>
 			</div>
 
-			<!-- Modal Content with Centered Items -->
+			<!-- Modal Content -->
 			<div class="flex flex-col min-h-[300px] max-h-[60vh]">
 				{#if isRecording}
-					<div class="flex items-center justify-center flex-1 w-full p-8">
-						<div class="w-full max-w-lg">
-							<AudioVisualizer {isRecording} {audioStream} />
-						</div>
+					<div class="flex items-center justify-center flex-1 p-8">
+						<AudioVisualizer {isRecording} {audioStream} />
 					</div>
 				{:else if isProcessingNewRequest}
-					<div class="flex items-center justify-center flex-1 w-full">
+					<div class="flex items-center justify-center flex-1">
 						<div class="flex flex-col items-center gap-4">
 							<div
-								class="w-16 h-16 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+								class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
 							/>
-							<p class="text-xl text-center text-tertiary-300">{processingState}</p>
+							<p class="text-lg text-tertiary-300">{processingState}</p>
 						</div>
 					</div>
+				{:else if currentAction}
+					<div class="flex-1">
+						<ComposeView view={currentAction.view} />
+					</div>
 				{:else}
-					<!-- Chat history and processing state -->
-					<div class="flex-1 p-6 overflow-y-auto" bind:this={messageContainer}>
-						<div class="space-y-4">
+					<div class="flex-1 p-4 overflow-y-auto" bind:this={messageContainer}>
+						<div class="space-y-3">
 							{#each currentMessages as message (message.timestamp)}
-								<div class="flex flex-col gap-2">
-									<div class="text-sm font-medium text-tertiary-400">
+								<div class="flex flex-col gap-1.5">
+									<div class="text-xs font-medium text-tertiary-400">
 										{message.role === 'user' ? 'You' : message.role}
 									</div>
-									<div class="p-3 rounded-lg bg-surface-800">
+									<div class="p-2.5 rounded-lg bg-surface-800/80">
 										{message.content}
 									</div>
 								</div>
 							{/each}
 						</div>
 					</div>
-
-					{#if transcript}
-						<div class="p-4 text-center text-tertiary-300">
-							{transcript}
-						</div>
-					{/if}
 				{/if}
 
-				{#if currentAction}
-					<div class="flex-1">
-						<ComposeView view={currentAction.view} />
+				{#if transcript && !currentAction && !isRecording && !isProcessingNewRequest}
+					<div class="absolute inset-0 flex items-center justify-center p-4">
+						<div
+							class="max-w-md p-6 text-lg text-center text-tertiary-200 bg-surface-800/90 rounded-xl"
+						>
+							{transcript}
+						</div>
 					</div>
 				{/if}
 			</div>

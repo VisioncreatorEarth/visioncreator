@@ -39,15 +39,17 @@ export async function componentAgent(anthropic: Anthropic, request: any) {
 
             return {
                 type: 'tool_result',
+                tool_use_id: request.tool_use_id,
                 content: `Component updated successfully`,
                 is_error: false,
                 message: {
                     role: 'componentAgent',
-                    content: assistantMessage,
+                    content: 'Component updated successfully',
                     timestamp: Date.now(),
                     toolResult: {
                         type: 'component',
-                        data: componentContent
+                        data: componentContent,
+                        tool_use_id: request.tool_use_id
                     }
                 }
             };
