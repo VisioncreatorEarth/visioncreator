@@ -4,8 +4,7 @@
 	import AudioVisualizer from './AudioVisualizer.svelte';
 	import ComposeView from './ComposeView.svelte';
 	import { dev } from '$app/environment';
-	import { currentIntent, intentHistory, type Message } from '$lib/agentStore';
-	import Time from 'svelte-time';
+	import { currentIntent, type Message } from '$lib/agentStore';
 
 	export let session = null;
 	export let isRecording = false;
@@ -120,6 +119,14 @@
 		}
 	}
 
+	function playAudio(audioName: string) {
+		const randomAudio = Math.floor(Math.random() * 5) + 1;
+		const audio = new Audio(`/audio/${audioName}${randomAudio}.mp3`);
+		audio.play().catch((error) => {
+			console.error('Error playing audio:', error);
+		});
+	}
+
 	export async function handleLongPress() {
 		console.log('VoiceControl: Long press handler called');
 		if (dev) {
@@ -135,6 +142,7 @@
 
 			isRecording = true;
 			isRecordingOrProcessing = true;
+			playAudio('start'); // Add start sound
 			startRecording();
 			console.log('VoiceControl: Recording started');
 		}
@@ -144,6 +152,7 @@
 		if (dev && isRecording) {
 			isRecording = false;
 			stopRecording();
+			playAudio('workingonit'); // Play working sound when recording stops
 			await processRecording();
 		}
 	}
@@ -165,14 +174,6 @@
 			console.error('Error processing recording:', error);
 			handleError(error);
 		}
-	}
-
-	function playAudio(audioName: string) {
-		const randomAudio = Math.floor(Math.random() * 5) + 1;
-		const audio = new Audio(`/audio/${audioName}${randomAudio}.mp3`);
-		audio.play().catch((error) => {
-			console.error('Error playing audio:', error);
-		});
 	}
 
 	function cleanup() {
@@ -245,6 +246,31 @@
 				currentMessages = [...$currentIntent.messages];
 			}
 
+			// Handle clarification needed case
+			if (result.type === 'clarification_needed') {
+				playAudio('workingonit'); // Play different sound for clarification needed
+				isProcessingNewRequest = false;
+				isRecordingOrProcessing = true;
+
+				// Show the clarification message
+				if ($currentIntent) {
+					currentMessages = [...$currentIntent.messages];
+				}
+
+				// Keep the modal open in a state ready for new recording
+				setTimeout(() => {
+					transcript = 'Please clarify your request...';
+					processingState = '';
+				}, 1000);
+
+				return result;
+			}
+
+			// Only play done sound for successful completions
+			if (!result.type === 'clarification_needed') {
+				playAudio('done');
+			}
+
 			// Handle view updates
 			if (result.viewConfiguration) {
 				console.log('Dispatching view update:', result.viewConfiguration);
@@ -268,7 +294,9 @@
 			console.error('Error in handleAIProcessing:', error);
 			throw error;
 		} finally {
-			isProcessingNewRequest = false;
+			if (!result?.type === 'clarification_needed') {
+				isProcessingNewRequest = false;
+			}
 		}
 	}
 
@@ -286,114 +314,83 @@
 </script>
 
 {#if isRecordingOrProcessing}
+	<!-- Full screen backdrop with blur -->
 	<div
-		class="fixed inset-x-0 z-50 flex justify-center px-4 bottom-24 sm:px-6"
-		on:click|self={handleFormClose}
+		class="fixed inset-0 z-40 bg-surface-900/50 backdrop-blur-sm"
+		on:click={handleFormClose}
 		on:keydown={(e) => e.key === 'Escape' && handleFormClose()}
+	/>
+
+	<!-- Modal Wrapper - Adjusted bottom padding -->
+	<div
+		class="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 mb-20"
 		role="dialog"
 		aria-modal="true"
 		transition:fade={{ duration: 200 }}
 	>
+		<!-- Modal Container -->
 		<div
-			class="relative z-10 w-full max-w-md overflow-hidden border shadow-lg rounded-2xl bg-surface-800/95 backdrop-blur-sm border-surface-700"
+			class="relative w-full max-w-4xl min-h-[300px] max-h-[70vh] overflow-hidden border shadow-xl rounded-xl bg-surface-700/95 border-surface-700"
 		>
-			<div class="relative">
+			<!-- Modal Header -->
+			<div class="flex items-center justify-between p-4 border-b border-surface-700">
+				<h2 class="text-lg font-semibold text-tertiary-200">
+					{#if isRecording}
+						Recording...
+					{:else if isProcessingNewRequest}
+						Processing Request
+					{:else if currentAction}
+						Action Required
+					{/if}
+				</h2>
+
+				<button
+					class="flex items-center justify-center w-8 h-8 transition-colors rounded-full bg-surface-700 hover:bg-surface-600 text-tertiary-400 hover:text-tertiary-300"
+					on:click={handleFormClose}
+				>
+					<Icon icon="ph:x" class="w-5 h-5" />
+				</button>
+			</div>
+
+			<!-- Modal Content -->
+			<div class="flex flex-col h-full">
 				{#if isRecording}
-					<div class="p-4">
-						<AudioVisualizer {isRecording} {audioStream} />
-					</div>
-				{:else if isProcessingNewRequest}
-					<div class="flex flex-col p-6 space-y-4">
-						<!-- Processing indicator -->
-						<div class="flex flex-col items-center justify-center gap-3">
-							<div
-								class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
-							/>
-							<p class="text-lg text-center text-tertiary-300">{processingState}</p>
+					<div class="flex items-center justify-center w-full h-full">
+						<div class="w-full max-w-lg">
+							<AudioVisualizer {isRecording} {audioStream} />
 						</div>
-
-						<!-- Chat history -->
-						<div
-							class="w-full p-4 mt-4 overflow-y-auto rounded-lg bg-surface-900/50 max-h-[400px]"
-							bind:this={messageContainer}
-						>
+					</div>
+				{:else}
+					<!-- Chat history and processing state -->
+					<div class="flex-1 p-6 overflow-y-auto" bind:this={messageContainer}>
+						<div class="space-y-4">
 							{#each currentMessages as message (message.timestamp)}
-								<div
-									class="flex flex-col mb-3 {message.role === 'user' ? 'items-end' : 'items-start'}"
-									transition:fade|local={{ duration: 150 }}
-								>
-									<div
-										class="max-w-[85%] rounded-lg p-3
-										{message.role === 'user'
-											? 'bg-primary-500 text-white'
-											: message.role === 'hominio'
-											? 'bg-surface-700 text-tertiary-100'
-											: 'bg-surface-600 text-tertiary-200'}"
-									>
-										<!-- Role badge -->
-										<div class="flex items-center gap-2 mb-2 text-xs font-medium opacity-75">
-											<span class="px-2 py-1 rounded-full bg-surface-800/50">
-												{message.role}
-											</span>
-											<Time timestamp={message.timestamp} relative />
-										</div>
-
-										<!-- Message content -->
-										<p class="text-sm">{message.content}</p>
-
-										<!-- Tool result -->
-										{#if message.toolResult}
-											<div
-												class="px-2 py-1 mt-2 text-xs rounded bg-surface-800/50 text-tertiary-300"
-											>
-												🛠 {message.toolResult.type}
-												{#if message.toolResult.data}
-													- {JSON.stringify(message.toolResult.data)}
-												{/if}
-											</div>
-										{/if}
+								<div class="flex flex-col gap-2">
+									<div class="text-sm font-medium text-tertiary-400">
+										{message.role === 'user' ? 'You' : message.role}
+									</div>
+									<div class="p-3 rounded-lg bg-surface-800">
+										{message.content}
 									</div>
 								</div>
 							{/each}
 						</div>
 					</div>
-				{:else if currentAction}
-					<div class="relative">
-						<ComposeView
-							view={currentAction.view}
-							{session}
-							showSpacer={false}
-							on:mount={() => console.log('ComposeView mounted')}
-							on:close={handleFormClose}
-							on:message={(event) => {
-								if (event.detail) {
-									intentManager.addMessage(event.detail);
-								}
-								handleFormClose();
-							}}
-						/>
-					</div>
-				{/if}
 
-				<!-- Close button -->
-				<button
-					class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-2 right-2 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
-					on:click={handleFormClose}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="w-4 h-4"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-					</svg>
-				</button>
+					{#if isProcessingNewRequest}
+						<div class="flex flex-col items-center justify-center gap-4 p-8">
+							<div
+								class="w-16 h-16 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+							/>
+							<p class="text-xl text-center text-tertiary-300">{processingState}</p>
+						</div>
+					{:else if transcript}
+						<div class="p-4 text-center text-tertiary-300">
+							{transcript}
+						</div>
+					{/if}
+				{/if}
 			</div>
 		</div>
 	</div>
 {/if}
-
-<!-- Remove the duplicate message container at the bottom -->

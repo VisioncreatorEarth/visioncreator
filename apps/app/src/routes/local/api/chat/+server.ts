@@ -95,15 +95,6 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
             timestamp: Date.now()
         });
 
-        // Add and log hominio controller message
-        const hominioMessage = {
-            role: 'hominio',
-            content: `Processing your request: "${lastMessage}". Let me delegate to the appropriate agent.`,
-            timestamp: Date.now()
-        };
-        console.log('🤖 Hominio:', JSON.stringify(hominioMessage, null, 2));
-        intentManager.addMessage(hominioMessage);
-
         const coordinatorResponse = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20240620',
             max_tokens: 1000,
@@ -113,9 +104,23 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
         });
 
         const toolCall = coordinatorResponse.content.find(c => c.type === 'tool_use');
+
+        // Handle case where coordinator doesn't understand the request
         if (!toolCall) {
-            intentManager.complete('error');
-            return { content: "Could not determine appropriate action" };
+            const clarificationMessage = {
+                role: 'hominio',
+                content: "I'm not sure I understand. Could you please clarify your request?",
+                timestamp: Date.now()
+            };
+            console.log('🤖 Hominio:', JSON.stringify(clarificationMessage, null, 2));
+            intentManager.addMessage(clarificationMessage);
+
+            // Return special response type for UI handling
+            return {
+                type: 'clarification_needed',
+                content: clarificationMessage.content,
+                keepSessionOpen: true // Signal to keep the modal open
+            };
         }
 
         // Add and log agent delegation message
