@@ -128,34 +128,59 @@
 		});
 	}
 
+	// Add these variables at the top of the script
+	let longPressTimer: number;
+	const LONG_PRESS_DURATION = 300; // Reduced from default 500ms
+	const CLICK_TOLERANCE = 200; // Time window to detect quick clicks
+
 	export async function handleLongPress() {
-		console.log('VoiceControl: Long press handler called');
 		if (dev) {
 			if (isFirstLongPress) {
-				console.log('VoiceControl: First long press, requesting microphone permission');
 				const permissionGranted = await requestMicrophonePermission();
-				if (!permissionGranted) {
-					console.error('VoiceControl: Microphone permission denied');
-					return;
-				}
+				if (!permissionGranted) return;
 				isFirstLongPress = false;
 			}
 
 			isRecording = true;
 			isRecordingOrProcessing = true;
-			// Removed playAudio('start')
 			startRecording();
-			console.log('VoiceControl: Recording started');
+			playAudio('start');
+		}
+	}
+
+	export function handlePress() {
+		if (dev) {
+			longPressTimer = window.setTimeout(() => {
+				handleLongPress();
+			}, LONG_PRESS_DURATION);
 		}
 	}
 
 	export async function handleRelease() {
-		if (dev && isRecording) {
-			isRecording = false;
-			isProcessingNewRequest = true; // Immediately show processing state
-			stopRecording();
-			await processRecording();
+		if (dev) {
+			clearTimeout(longPressTimer);
+
+			if (isRecording) {
+				isRecording = false;
+				isProcessingNewRequest = true;
+				stopRecording();
+				await processRecording();
+			} else if (Date.now() - lastPressTime < CLICK_TOLERANCE) {
+				// Handle single click action if needed
+				dispatch('click');
+			}
 		}
+	}
+
+	// Add touch handlers for better mobile support
+	export function handleTouchStart(event: TouchEvent) {
+		event.preventDefault();
+		handlePress();
+	}
+
+	export function handleTouchEnd(event: TouchEvent) {
+		event.preventDefault();
+		handleRelease();
 	}
 
 	async function processRecording() {
@@ -254,14 +279,8 @@
 			const result = await response.json();
 			console.log('AI Response:', result);
 
-			// Update messages
-			if ($currentIntent) {
-				currentMessages = [...$currentIntent.messages];
-			}
-
-			// Handle view agent response
+			// Handle view agent response - update page view
 			if (result.message?.toolResult?.type === 'view') {
-				// Dispatch view update event
 				window.dispatchEvent(
 					new CustomEvent('updateView', {
 						detail: {
@@ -275,16 +294,8 @@
 				return result;
 			}
 
-			// Handle action view
+			// Handle action view - only update modal
 			if (result.type === 'action' && result.content) {
-				window.dispatchEvent(
-					new CustomEvent('updateView', {
-						detail: {
-							view: result.content.view
-						}
-					})
-				);
-
 				currentAction = {
 					action: result.content.action,
 					view: result.content.view
@@ -370,9 +381,11 @@
 			</div>
 
 			<!-- Modal Content -->
-			<div class="flex flex-col min-h-[300px] max-h-[60vh]">
+			<div class="flex flex-col min-h-[200px] max-h-[60vh]">
+				<!-- Changed from min-h-[300px] -->
 				{#if isRecording}
-					<div class="flex items-center justify-center flex-1 p-8">
+					<div class="flex items-center justify-center flex-1 p-4">
+						<!-- Reduced padding from p-8 -->
 						<AudioVisualizer {isRecording} {audioStream} />
 					</div>
 				{:else if isProcessingNewRequest}

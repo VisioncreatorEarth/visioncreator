@@ -35,7 +35,7 @@ Instructions for component selection:
 4. If the user's request is ambiguous, choose the component that best matches their intent.
 5. Always prepend the selected component name with "o-" in the configuration.
 
-Always return the JSON configuration wrapped in <compose-view> tags, like this:
+Always return the JSON configuration wrapped in <compose-view> tags, like this, alsways return the o-selectedComponent with one of the above mentioned component names. 
 <compose-view>
 {
     "id": "MainContainer",
