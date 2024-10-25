@@ -1,5 +1,5 @@
-import { writable } from 'svelte/store';
-import crypto from 'crypto';
+import { writable, get } from 'svelte/store';
+import type { Writable } from 'svelte/store';
 
 // New interfaces and types for the agent system
 export type AgentType =
@@ -14,78 +14,67 @@ export type ToolResultType = 'view' | 'action' | 'component' | 'error';
 export type IntentStatus = 'active' | 'completed' | 'error';
 
 export interface Message {
-    role: AgentType;
+    role: string;
     content: string;
     timestamp: number;
-    toolResult?: {
-        type: ToolResultType;
-        data: any;
-        tool_use_id?: string;
-    };
 }
 
 export interface Intent {
     id: string;
-    status: IntentStatus;
     messages: Message[];
-    sessionId: string;
-    created: number;
-    updated: number;
+    status: 'active' | 'complete' | 'error';
 }
 
 // Stores
-export const currentIntent = writable<Intent | null>(null);
-export const intentHistory = writable<Intent[]>([]);
-export const isPressed = writable<boolean>(false);
+const currentIntent: Writable<Intent | null> = writable(null);
+const currentMessages: Writable<Message[]> = writable([]);
 
-// Intent manager
 export const intentManager = {
-    create: (sessionId: string) => {
+    create(id: string) {
         currentIntent.set({
-            id: crypto.randomUUID(),
-            status: 'active',
+            id,
             messages: [],
-            sessionId,
-            created: Date.now(),
-            updated: Date.now()
+            status: 'active'
         });
+        currentMessages.set([]);
     },
 
-    addMessage: (message: Message) => {
-        currentIntent.update(intent =>
-            intent ? { ...intent, messages: [...intent.messages, message], updated: Date.now() } : null
-        );
+    getCurrentMessages(): Message[] {
+        return get(currentMessages);
     },
 
-    complete: (status: IntentStatus = 'completed') => {
+    addMessage(message: Message) {
+        currentMessages.update(messages => [...messages, message]);
         currentIntent.update(intent => {
-            if (!intent) return null;
-            const completedIntent = { ...intent, status, updated: Date.now() };
-            intentHistory.update(history => [...history, completedIntent]);
-            return null;
+            if (intent) {
+                return {
+                    ...intent,
+                    messages: [...intent.messages, message]
+                };
+            }
+            return intent;
         });
     },
 
-    getCurrentMessages: () => {
-        let messages: Message[] = [];
-        currentIntent.subscribe(intent => {
-            if (intent) messages = intent.messages;
-        })();
-        return messages;
+    complete(status: 'complete' | 'error' = 'complete') {
+        currentIntent.update(intent => {
+            if (intent) {
+                return {
+                    ...intent,
+                    status
+                };
+            }
+            return intent;
+        });
     },
 
-    reset: () => {
+    resetContext() {
         currentIntent.set(null);
-        // Optionally store in history before reset
-        currentIntent.subscribe(intent => {
-            if (intent) {
-                intentHistory.update(history => [...history, { ...intent, status: 'completed' }]);
-            }
-        })();
+        currentMessages.set([]);
     }
 };
 
-// ... (existing store code remains the same)
+export { currentIntent };
 
 // Add message styling configuration
 export const messageStyleConfig = {

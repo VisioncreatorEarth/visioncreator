@@ -66,6 +66,8 @@ export async function POST({ request }: { request: Request }) {
 
     try {
         const { messages, sessionId } = await request.json();
+
+        // Reset context if it's a new session
         if (!intentManager.getCurrentMessages().length) {
             intentManager.create(sessionId);
         }
@@ -75,6 +77,20 @@ export async function POST({ request }: { request: Request }) {
     } catch (error) {
         console.error('Error:', error);
         return json({ error: 'Request processing failed' }, { status: 500 });
+    }
+}
+
+export async function DELETE() {
+    if (!dev) {
+        return json({ error: 'Service not available' }, { status: 403 });
+    }
+
+    try {
+        // Simply return success - the client side will handle the actual reset
+        return json({ status: 'Context reset successful' });
+    } catch (error) {
+        console.error('Error in DELETE handler:', error);
+        return json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 
@@ -162,6 +178,17 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
                 context: intentManager.getCurrentMessages()
             };
         }
+
+        // Add to masterCoordinator where agent is called:
+        console.log('🔧 Agent Context:', JSON.stringify({
+            toolCall: {
+                name: toolCall.name,
+                input: toolCall.input,
+                tool_use_id: toolCall.tool_use_id
+            },
+            messageContext: intentManager.getCurrentMessages(),
+            agentResult: agentResult
+        }, null, 2));
 
         return {
             ...agentResult,

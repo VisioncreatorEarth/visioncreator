@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
 	import AudioVisualizer from './AudioVisualizer.svelte';
 	import ComposeView from './ComposeView.svelte';
 	import { dev } from '$app/environment';
-	import { currentIntent, type Message } from '$lib/agentStore';
+	import { currentIntent, type Message, intentManager } from '$lib/agentStore';
 
 	export let session = null;
 	export let isRecording = false;
@@ -332,19 +332,66 @@
 		}
 	}
 
-	function handleFormClose() {
+	// Separate reset and close functions
+	function resetContext() {
 		if (!needsClarification) {
+			// First reset the local state
+			currentMessages = [];
 			currentAction = null;
-			isRecordingOrProcessing = false;
+			needsClarification = false;
 			isProcessingNewRequest = false;
+			transcript = '';
 			stopProcessingMessages();
+
+			// Then reset the server state and store
+			fetch('/local/api/chat', { method: 'DELETE' })
+				.then(() => {
+					intentManager.resetContext();
+				})
+				.catch((error) => {
+					console.error('Error resetting context:', error);
+				});
 		}
 	}
 
+	function handleFormClose() {
+		if (!needsClarification) {
+			currentAction = null;
+			isRecordingOrProcessing = false; // This is crucial
+			isProcessingNewRequest = false;
+			stopProcessingMessages();
+			resetContext();
+		}
+	}
+
+	// Handle click outside
+	function handleBackdropClick(event: MouseEvent) {
+		if (event.target === event.currentTarget && !needsClarification) {
+			handleFormClose();
+		}
+	}
+
+	// Add page reload handler
 	onMount(() => {
 		if (dev) {
 			requestMicrophonePermission();
 		}
+
+		window.addEventListener('beforeunload', resetContext);
+		document.addEventListener('visibilitychange', () => {
+			if (document.visibilityState === 'hidden') {
+				resetContext();
+			}
+		});
+
+		return () => {
+			window.removeEventListener('beforeunload', resetContext);
+			document.removeEventListener('visibilitychange', resetContext);
+		};
+	});
+
+	onDestroy(() => {
+		resetContext();
 	});
 </script>
 
@@ -352,8 +399,9 @@
 	<!-- Full screen backdrop with blur -->
 	<div
 		class="fixed inset-0 z-40 bg-surface-900/50 backdrop-blur-sm"
-		on:click={handleFormClose}
+		on:click|self={handleBackdropClick}
 		on:keydown={(e) => e.key === 'Escape' && handleFormClose()}
+		role="presentation"
 	/>
 
 	<!-- Modal Wrapper -->
