@@ -102,6 +102,8 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
                 content: userMessage
             }],
             system: `You are a helper that extracts structured data from user messages about form actions. always retunr the first letters of the values you put in there with capital letter, f.e. name = Sam, or subject = Hello or body = How are you? 
+                        unless its names, try to translate any request into english and only return english jsons. 
+
                     Return JSON in the following format:
                     {
                         "action": "updateName" | "sendMail",

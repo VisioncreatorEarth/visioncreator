@@ -263,34 +263,60 @@
 </script>
 
 {#if isRecordingOrProcessing}
-	<div class="fixed inset-x-0 z-50 flex justify-center px-4 bottom-20" transition:fade>
+	<div
+		class="fixed inset-x-0 z-50 flex justify-center px-4 bottom-24 sm:px-6"
+		on:click|self={handleFormClose}
+		on:keydown={(e) => e.key === 'Escape' && handleFormClose()}
+		role="dialog"
+		aria-modal="true"
+		transition:fade={{ duration: 200 }}
+	>
 		<div
-			class="relative z-10 flex flex-col w-full max-w-md overflow-hidden border shadow-lg rounded-2xl bg-surface-800/95 backdrop-blur-sm border-surface-700"
+			class="relative z-10 w-full max-w-md overflow-hidden border shadow-lg rounded-2xl bg-surface-800/95 backdrop-blur-sm border-surface-700"
 		>
-			{#if isRecording}
-				<div class="p-4">
-					<AudioVisualizer {isRecording} {audioStream} />
-				</div>
-			{:else if isProcessingNewRequest}
-				<div class="flex flex-col items-center justify-center p-8">
-					<div
-						class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
-					/>
-					<p class="mt-4 text-lg text-tertiary-300">{processingState}</p>
-				</div>
-			{:else if currentAction}
-				<div class="relative">
+			<div class="relative">
+				{#if isRecording}
 					<div class="p-4">
-						<ComposeView
-							view={currentAction.view}
-							{session}
-							showSpacer={false}
-							on:mount={() => console.log('VoiceControl: ComposeView mounted')}
-							on:close={handleFormClose}
-						/>
+						<AudioVisualizer {isRecording} {audioStream} />
 					</div>
-				</div>
-			{/if}
+				{:else if isProcessingNewRequest}
+					<div class="flex flex-col items-center justify-center p-8">
+						<div
+							class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+						/>
+						<p class="mt-4 text-lg text-tertiary-300">{processingState}</p>
+					</div>
+				{:else if currentAction}
+					<div class="relative">
+						<div class="p-4">
+							<ComposeView
+								view={currentAction.view}
+								{session}
+								showSpacer={false}
+								on:mount={() => console.log('VoiceControl: ComposeView mounted')}
+								on:close={handleFormClose}
+							/>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Close button -->
+				<button
+					class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-2 right-2 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+					on:click={handleFormClose}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="w-4 h-4"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}
