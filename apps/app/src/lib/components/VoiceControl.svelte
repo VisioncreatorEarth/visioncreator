@@ -225,6 +225,7 @@
 	async function handleAIProcessing(transcriptionResult: string) {
 		isProcessingNewRequest = true;
 		currentAction = null;
+		let result;
 
 		try {
 			const response = await fetch('/local/api/chat', {
@@ -238,7 +239,7 @@
 
 			if (!response.ok) throw new Error('Network response was not ok');
 
-			const result = await response.json();
+			result = await response.json();
 			console.log('AI Response:', result);
 
 			// Update messages in UI
@@ -246,18 +247,27 @@
 				currentMessages = [...$currentIntent.messages];
 			}
 
+			// Handle tool results with actions
+			if (result.type === 'tool_result' && result.content) {
+				currentAction = {
+					action: result.content.action,
+					view: result.content.view
+				};
+				isRecordingOrProcessing = true;
+				isProcessingNewRequest = false;
+				return result;
+			}
+
 			// Handle clarification needed case
 			if (result.type === 'clarification_needed') {
-				playAudio('workingonit'); // Play different sound for clarification needed
+				playAudio('workingonit');
 				isProcessingNewRequest = false;
 				isRecordingOrProcessing = true;
 
-				// Show the clarification message
 				if ($currentIntent) {
 					currentMessages = [...$currentIntent.messages];
 				}
 
-				// Keep the modal open in a state ready for new recording
 				setTimeout(() => {
 					transcript = 'Please clarify your request...';
 					processingState = '';
@@ -266,12 +276,7 @@
 				return result;
 			}
 
-			// Only play done sound for successful completions
-			if (!result.type === 'clarification_needed') {
-				playAudio('done');
-			}
-
-			// Handle view updates
+			// Handle direct view configurations
 			if (result.viewConfiguration) {
 				console.log('Dispatching view update:', result.viewConfiguration);
 				window.dispatchEvent(
@@ -279,23 +284,18 @@
 						detail: { view: result.viewConfiguration }
 					})
 				);
-				isRecordingOrProcessing = false;
-			}
-			// Handle action views
-			else if (result.type === 'tool_result' && result.content?.action) {
-				currentAction = {
-					action: result.content.action,
-					view: result.content.view
-				};
 			}
 
+			playAudio('done');
 			return result;
 		} catch (error) {
 			console.error('Error in handleAIProcessing:', error);
 			throw error;
 		} finally {
-			if (!result?.type === 'clarification_needed') {
+			// Only reset states if we don't have an action or clarification
+			if (result && result.type !== 'clarification_needed' && result.type !== 'tool_result') {
 				isProcessingNewRequest = false;
+				isRecordingOrProcessing = false;
 			}
 		}
 	}
@@ -389,6 +389,12 @@
 							{transcript}
 						</div>
 					{/if}
+				{/if}
+
+				{#if currentAction}
+					<div class="flex-1 p-4">
+						<ComposeView view={currentAction.view} />
+					</div>
 				{/if}
 			</div>
 		</div>
