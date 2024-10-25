@@ -144,7 +144,6 @@
 			isRecording = true;
 			isRecordingOrProcessing = true;
 			startRecording();
-			playAudio('start');
 		}
 	}
 
@@ -279,6 +278,16 @@
 			const result = await response.json();
 			console.log('AI Response:', result);
 
+			// Handle clarification needed
+			if (result.type === 'clarification_needed') {
+				needsClarification = true;
+				isProcessingNewRequest = false;
+				isRecordingOrProcessing = true;
+				transcript = result.content;
+				processingState = 'Waiting for clarification...';
+				return result;
+			}
+
 			// Handle view agent response - update page view
 			if (result.message?.toolResult?.type === 'view') {
 				window.dispatchEvent(
@@ -324,12 +333,10 @@
 	}
 
 	function handleFormClose() {
-		// Only allow closing if we're not in clarification mode
 		if (!needsClarification) {
 			currentAction = null;
 			isRecordingOrProcessing = false;
 			isProcessingNewRequest = false;
-			needsClarification = false;
 			stopProcessingMessages();
 		}
 	}
@@ -429,5 +436,13 @@
 				{/if}
 			</div>
 		</div>
+	</div>
+{/if}
+
+{#if needsClarification}
+	<div class="p-4 text-center bg-surface-800/50">
+		<p class="text-tertiary-200">
+			Please clarify your request by holding the microphone button again.
+		</p>
 	</div>
 {/if}

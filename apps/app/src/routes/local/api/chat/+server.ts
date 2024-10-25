@@ -89,7 +89,6 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
             timestamp: Date.now()
         }, null, 2));
 
-        // Add message to intent manager
         intentManager.addMessage({
             role: 'user',
             content: lastMessage,
@@ -106,8 +105,22 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
 
         const toolCall = coordinatorResponse.content.find(c => c.type === 'tool_use');
 
+        // Handle clarification needed with hardcoded message
         if (!toolCall) {
-            // ... clarification handling ...
+            const clarificationMessage = {
+                role: 'hominio',
+                content: "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.",
+                timestamp: Date.now()
+            };
+            console.log('🤔 Clarification needed:', JSON.stringify(clarificationMessage, null, 2));
+            intentManager.addMessage(clarificationMessage);
+
+            return {
+                type: 'clarification_needed',
+                content: clarificationMessage.content,
+                needsClarification: true,
+                context: intentManager.getCurrentMessages()
+            };
         }
 
         // Log agent delegation
