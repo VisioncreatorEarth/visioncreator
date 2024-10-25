@@ -65,14 +65,14 @@ const actionSendMailView = {
                             type: 'text',
                             title: "What's the topic?",
                             description: 'Share a short title about what you want to talk to us',
-                            value: '' // Will be populated by AI
+                            value: '' // Will be populated by AI, make sure to deliver a short title, less than 40 
                         },
                         {
                             name: 'body',
                             type: 'textarea',
                             title: 'Your message',
                             description: 'Paint us a picture with your words',
-                            value: '' // Will be populated by AI
+                            value: '' // Will be populated by AI, write a nice text based on the users request, just like an official personal mail. 
                         }
                     ],
                     validators: 'sendMail', // Now just passing the schema name
