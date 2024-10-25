@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { z } from 'zod';
 	import { derived, writable } from 'svelte/store';
+	import { submitForm } from '$lib/composables/flowOperations';
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 
 	// Define schemas
 	const FORM_SCHEMAS = {
@@ -30,13 +33,13 @@
 		($me) =>
 			$me.data.form || {
 				fields: [],
-				validators: '',
+				validators: '', // Now expects a string
 				submitAction: ''
 			}
 	);
 
 	$: fields = $formStore.fields;
-	$: validatorName = $formStore.validators;
+	$: validatorName = $formStore.validators; // String reference to schema
 	$: submitAction = $formStore.submitAction;
 
 	// Get actual validator schema
@@ -119,11 +122,14 @@
 				return acc;
 			}, {});
 
-			await me.services.core.emit('submit', {
-				action: submitAction,
-				values,
-				componentId: me.id
+			const result = await submitForm({
+				operation: submitAction,
+				input: values
 			});
+
+			if (!result.error) {
+				dispatch('close');
+			}
 		} catch (error) {
 			console.error('Submission error:', error);
 		} finally {
@@ -135,37 +141,63 @@
 <div class="flex flex-col gap-4 p-4">
 	{#each fields as field}
 		<div class="flex flex-col gap-2">
-			<h3 class="text-lg font-semibold">{field.title}</h3>
-			<p class="text-sm text-tertiary-300">{field.description}</p>
-
-			<div class="p-3 rounded-lg bg-surface-800">
-				<p class="text-lg">{$fieldStates[field.name]?.value}</p>
+			<div class="p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm">
+				<label for={field.name} class="block mb-1 text-sm font-medium capitalize text-tertiary-200">
+					{field.name}
+				</label>
+				<p class="text-lg text-tertiary-100">{$fieldStates[field.name]?.value}</p>
 			</div>
 
 			{#if $fieldStates[field.name]?.error}
-				<p class="text-sm text-error-500">{$fieldStates[field.name].error}</p>
+				<p class="text-sm text-error-400">{$fieldStates[field.name].error}</p>
 			{/if}
 
 			<div class="flex items-center gap-2">
 				<div
-					class={`w-2 h-2 rounded-full ${
-						$fieldStates[field.name]?.isValid ? 'bg-success-500' : 'bg-error-500'
+					class={`w-1.5 h-1.5 rounded-full transition-colors ${
+						$fieldStates[field.name]?.isValid ? 'bg-success-400' : 'bg-error-400'
 					}`}
 				/>
-				<p class="text-sm">{$fieldStates[field.name]?.isValid ? 'Valid' : 'Invalid'}</p>
+				<p class="text-xs text-tertiary-300">
+					{$fieldStates[field.name]?.isValid ? 'Valid' : 'Invalid'}
+				</p>
 			</div>
 		</div>
 	{/each}
 
-	<button
-		class="w-full p-4 mt-4 text-center text-white rounded-lg bg-primary-500 disabled:opacity-50"
-		disabled={!isFormValid || isLoading}
-		on:click={handleSubmit}
-	>
-		{#if isLoading}
-			Submitting...
-		{:else}
-			Submit
-		{/if}
-	</button>
+	<div class="flex justify-center mt-2">
+		<button
+			class="relative px-8 py-2 font-medium text-white transition-all duration-200 btn rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+			disabled={!isFormValid || isLoading}
+			on:click={handleSubmit}
+		>
+			{#if isLoading}
+				<div class="flex items-center gap-2">
+					<svg
+						class="w-4 h-4 animate-spin"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<circle
+							class="opacity-25"
+							cx="12"
+							cy="12"
+							r="10"
+							stroke="currentColor"
+							stroke-width="4"
+						/>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						/>
+					</svg>
+					<span>Processing...</span>
+				</div>
+			{:else}
+				Submit
+			{/if}
+		</button>
+	</div>
 </div>

@@ -37,6 +37,7 @@
 	let processingInterval: number;
 
 	let currentAction: { action: string; view: any } | null = null;
+	let isProcessingNewRequest = false;
 
 	$: {
 		if (currentAction) {
@@ -202,18 +203,20 @@
 		});
 	}
 
-	async function handleAIProcessing(transcriptionResult: string) {
-		console.log('Starting AI processing with transcription:', transcriptionResult);
-		processingState = 'Programming...';
-		messages = [...messages, { role: 'user', content: transcriptionResult }];
+	async function handleAIProcessing(transcriptionResult) {
+		isProcessingNewRequest = true;
+		currentAction = null;
 
 		try {
+			// Add the user's transcribed message to messages array
+			messages = [...messages, { role: 'user', content: transcriptionResult }];
+
 			const response = await fetch('/local/api/chat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ messages })
+				body: JSON.stringify({ messages }) // Now includes the transcribed message
 			});
 
 			if (!response.ok) {
@@ -225,7 +228,7 @@
 
 			// Handle action views
 			if (data.isAction && data.actionConfig) {
-				console.log('Received action config:', data.actionConfig);
+				isProcessingNewRequest = false;
 				currentAction = data.actionConfig;
 				messages = [...messages, { role: 'assistant', content: data.content }];
 				return data;
@@ -246,6 +249,12 @@
 		}
 	}
 
+	function handleFormClose() {
+		currentAction = null;
+		isRecordingOrProcessing = false;
+		isProcessingNewRequest = false;
+	}
+
 	onMount(() => {
 		if (dev) {
 			requestMicrophonePermission();
@@ -254,50 +263,32 @@
 </script>
 
 {#if isRecordingOrProcessing}
-	<div
-		class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6 bg-surface-900/50 backdrop-blur-sm"
-		transition:fade
-	>
+	<div class="fixed inset-x-0 z-50 flex justify-center px-4 bottom-20" transition:fade>
 		<div
-			class="relative z-10 flex flex-col w-full overflow-hidden bg-surface-600 rounded-3xl"
-			class:max-w-6xl={currentAction}
+			class="relative z-10 flex flex-col w-full max-w-md overflow-hidden border shadow-lg rounded-2xl bg-surface-800/95 backdrop-blur-sm border-surface-700"
 		>
 			{#if isRecording}
 				<div class="p-4">
 					<AudioVisualizer {isRecording} {audioStream} />
 				</div>
-			{:else if currentAction}
-				<div class="relative">
-					<div class="p-6">
-						<ComposeView
-							view={currentAction.view}
-							{session}
-							showSpacer={false}
-							on:mount={() => console.log('VoiceControl: ComposeView mounted')}
-						/>
-					</div>
-					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-2 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
-						on:click={() => (isRecordingOrProcessing = false)}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-						</svg>
-					</button>
-				</div>
-			{:else}
+			{:else if isProcessingNewRequest}
 				<div class="flex flex-col items-center justify-center p-8">
 					<div
 						class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
 					/>
 					<p class="mt-4 text-lg text-tertiary-300">{processingState}</p>
+				</div>
+			{:else if currentAction}
+				<div class="relative">
+					<div class="p-4">
+						<ComposeView
+							view={currentAction.view}
+							{session}
+							showSpacer={false}
+							on:mount={() => console.log('VoiceControl: ComposeView mounted')}
+							on:close={handleFormClose}
+						/>
+					</div>
 				</div>
 			{/if}
 		</div>

@@ -39,7 +39,7 @@ const actionUpdateNameView = {
                         }
                     ],
                     validators: 'updateName', // Now just passing the schema name
-                    submitAction: 'updateName'
+                    submitAction: 'updateMe'
                 }
             }
         }
@@ -93,36 +93,54 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
         const userMessage = request.agentInput?.task || request.messages[request.messages.length - 1].content;
         console.log('Action agent processing message:', userMessage);
 
-        let action = '';
-        let extractedValues = {};
+        // First, use Claude to extract structured data
+        const response = await anthropic.messages.create({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 4000,
+            messages: [{
+                role: 'user',
+                content: userMessage
+            }],
+            system: `You are a helper that extracts structured data from user messages about form actions. always retunr the first letters of the values you put in there with capital letter, f.e. name = Sam, or subject = Hello or body = How are you? 
+                    Return JSON in the following format:
+                    {
+                        "action": "updateName" | "sendMail",
+                        "values": {
+                            // extracted values like name, subject, body
+                        }
+                    }
+                    Only return valid JSON, no other text.`,
+            temperature: 0.1 // Low temperature for consistent outputs
+        });
 
-        // Extract action and values from message
-        if (userMessage.toLowerCase().includes('update') && userMessage.toLowerCase().includes('name')) {
-            action = 'updateName';
-            // Extract name value using regex
-            const nameMatch = userMessage.match(/name to ([a-zA-Z]+)/i);
-            if (nameMatch) {
-                extractedValues = { name: nameMatch[1] };
+        let extractedData = null;
+        if (response.content && response.content.length > 0) {
+            for (const content of response.content) {
+                if (content.type === 'text') {
+                    try {
+                        extractedData = JSON.parse(content.text);
+                        break;
+                    } catch (e) {
+                        console.error('Failed to parse Claude response:', e);
+                    }
+                }
             }
-        } else if (userMessage.toLowerCase().includes('send') && userMessage.toLowerCase().includes('mail')) {
-            action = 'sendMail';
-            // Add mail extraction logic here if needed
         }
 
-        if (action && actionViews[action]) {
-            // Deep clone the view to avoid modifying the original
-            const view = JSON.parse(JSON.stringify(actionViews[action]));
+        if (extractedData?.action && actionViews[extractedData.action]) {
+            // Deep clone the view
+            const view = JSON.parse(JSON.stringify(actionViews[extractedData.action]));
 
             // Update field values in the view
             view.children[0].data.form.fields = view.children[0].data.form.fields.map(field => ({
                 ...field,
-                value: extractedValues[field.name] || ''
+                value: extractedData.values[field.name] || ''
             }));
 
             const actionConfig = {
-                action: action,
+                action: extractedData.action,
                 view: view,
-                values: extractedValues
+                values: extractedData.values
             };
 
             console.log('Action agent returning config:', JSON.stringify(actionConfig, null, 2));
