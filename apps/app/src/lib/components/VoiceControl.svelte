@@ -5,6 +5,7 @@
 	import ComposeView from './ComposeView.svelte';
 	import { dev } from '$app/environment';
 	import { currentIntent, intentHistory, type Message } from '$lib/agentStore';
+	import Time from 'svelte-time';
 
 	export let session = null;
 	export let isRecording = false;
@@ -299,11 +300,82 @@
 						<AudioVisualizer {isRecording} {audioStream} />
 					</div>
 				{:else if isProcessingNewRequest}
-					<div class="flex flex-col items-center justify-center p-8">
-						<div
-							class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
-						/>
-						<p class="mt-4 text-lg text-tertiary-300">{processingState}</p>
+					<div class="flex flex-col p-6 space-y-4">
+						<!-- Loading spinner -->
+						<div class="flex items-center justify-center">
+							<div
+								class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+							/>
+						</div>
+
+						<!-- Processing state message -->
+						<p class="text-lg text-center text-tertiary-300">{processingState}</p>
+
+						<!-- Conversation flow -->
+						<div class="mt-4 space-y-3 max-h-[300px] overflow-y-auto">
+							{#each currentMessages as message}
+								<div class="flex flex-col {message.role === 'user' ? 'items-end' : 'items-start'}">
+									<!-- Message bubble -->
+									<div
+										class="max-w-[80%] rounded-lg p-3
+										{message.role === 'user'
+											? 'bg-primary-500 text-white ml-auto'
+											: 'bg-surface-700 text-tertiary-200'}"
+									>
+										<div class="flex items-center gap-2 mb-1">
+											<!-- Role icon -->
+											{#if message.role === 'user'}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													class="w-4 h-4"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+													/>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													class="w-4 h-4"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+													/>
+												</svg>
+											{/if}
+											<!-- Role and timestamp using svelte-time -->
+											<span class="text-xs opacity-75">
+												{message.role} •
+												<Time timestamp={message.timestamp} relative live={30 * 1000} />
+											</span>
+										</div>
+										<!-- Message content -->
+										<p class="text-sm whitespace-pre-wrap">{message.content}</p>
+
+										<!-- Tool result if present -->
+										{#if message.toolResult}
+											<div
+												class="px-2 py-1 mt-2 text-xs rounded bg-surface-800/50 text-tertiary-300"
+											>
+												🛠 {message.toolResult.type}
+											</div>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
 					</div>
 				{:else if currentAction}
 					<div class="relative">

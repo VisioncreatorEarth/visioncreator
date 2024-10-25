@@ -2,7 +2,14 @@ import { writable } from 'svelte/store';
 import crypto from 'crypto';
 
 // New interfaces and types for the agent system
-export type AgentType = 'hominio' | 'actionAgent' | 'viewAgent' | 'componentAgent' | 'user';
+export type AgentType =
+    | 'user'
+    | 'hominio'
+    | 'actionAgent'
+    | 'viewAgent'
+    | 'componentAgent'
+    | 'system';
+
 export type ToolResultType = 'view' | 'action' | 'component' | 'error';
 export type IntentStatus = 'active' | 'completed' | 'error';
 
@@ -79,3 +86,31 @@ export const intentManager = {
 };
 
 // ... (existing store code remains the same)
+
+// Add message styling configuration
+export const messageStyleConfig = {
+    user: {
+        bgColor: 'bg-primary-500',
+        textColor: 'text-white'
+    },
+    hominio: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    actionAgent: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    viewAgent: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    componentAgent: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    system: {
+        bgColor: 'bg-surface-800',
+        textColor: 'text-tertiary-300'
+    }
+} as const;

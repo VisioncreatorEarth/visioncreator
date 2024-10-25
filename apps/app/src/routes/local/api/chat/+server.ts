@@ -83,7 +83,12 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
         const processedMessages = processMessages(messages);
         const lastMessage = processedMessages[processedMessages.length - 1]?.content;
 
-        console.log('🎯 Intent:', lastMessage);
+        // Log initial intent with full message structure
+        console.log('📥 Intent:', JSON.stringify({
+            type: 'intent',
+            message: lastMessage,
+            timestamp: Date.now()
+        }, null, 2));
 
         intentManager.addMessage({
             role: 'user',
@@ -105,7 +110,13 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
             return { content: "Could not determine appropriate action" };
         }
 
-        console.log('🤖 Agent:', toolCall.name);
+        // Log agent selection with full tool call data
+        console.log('🤖 Agent Call:', JSON.stringify({
+            type: 'agent_selection',
+            agent: toolCall.name,
+            input: toolCall.input,
+            tool_use_id: toolCall.tool_use_id
+        }, null, 2));
 
         const agentResult = await agents[toolCall.name](anthropic, {
             messages: processedMessages,
@@ -115,28 +126,47 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
 
         if (agentResult.message) {
             intentManager.addMessage(agentResult.message);
+            // Log agent response with full message structure
+            console.log('📤 Agent Response:', JSON.stringify({
+                type: 'agent_response',
+                message: agentResult.message,
+                result: agentResult
+            }, null, 2));
         }
 
         // Handle view configuration
         if (toolCall.name === 'viewAgent') {
-            return {
+            const result = {
                 type: 'tool_result',
                 content: agentResult.content,
                 is_error: false,
                 message: agentResult.message,
                 viewConfiguration: agentResult.content ? JSON.parse(agentResult.content) : null
             };
+            // Log view configuration
+            console.log('🎨 View Update:', JSON.stringify(result, null, 2));
+            return result;
         }
 
         // Reset conversation after successful execution
         if (!agentResult.is_error) {
             intentManager.reset();
+            // Log conversation reset
+            console.log('🔄 Conversation Reset:', JSON.stringify({
+                type: 'reset',
+                timestamp: Date.now(),
+                final_messages: intentManager.getCurrentMessages()
+            }, null, 2));
         }
 
         return agentResult;
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error:', JSON.stringify({
+            type: 'error',
+            error: error.message,
+            timestamp: Date.now()
+        }, null, 2));
         intentManager.complete('error');
         throw error;
     }
