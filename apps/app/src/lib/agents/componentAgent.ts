@@ -36,7 +36,21 @@ export async function componentAgent(anthropic: Anthropic, request: any) {
         if (componentMatch) {
             const componentContent = componentMatch[1].trim();
             await writeFileContent(CLAUDE_FILE_PATH, componentContent);
-            return { content: `I've updated the component with the new tasks. Here's a summary of the changes:\n\n${assistantMessage}` };
+
+            return {
+                type: 'tool_result',
+                content: `Component updated successfully`,
+                is_error: false,
+                message: {
+                    role: 'componentAgent',
+                    content: assistantMessage,
+                    timestamp: Date.now(),
+                    toolResult: {
+                        type: 'component',
+                        data: componentContent
+                    }
+                }
+            };
         } else {
             return { content: "I couldn't find a valid Svelte component in the response. Here's what I got:\n\n" + assistantMessage };
         }

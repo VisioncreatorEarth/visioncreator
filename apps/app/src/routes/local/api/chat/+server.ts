@@ -5,6 +5,8 @@ import { env } from '$env/dynamic/private';
 import { componentAgent } from '$lib/agents/componentAgent';
 import { viewAgent } from '$lib/agents/viewAgent';
 import { actionAgent } from '$lib/agents/actionAgent';
+import { intentManager } from '$lib/agentStore';
+import type { Message } from '$lib/agentStore';
 
 let anthropic: Anthropic | null = null;
 
@@ -13,6 +15,13 @@ if (dev && env.SECRET_ANTHROPIC_API_KEY) {
         apiKey: env.SECRET_ANTHROPIC_API_KEY
     });
 }
+
+// Define available agents
+const agents = {
+    componentAgent,
+    viewAgent,
+    actionAgent
+};
 
 const coordinatorTools = [
     {
@@ -56,104 +65,93 @@ export async function POST({ request }: { request: Request }) {
     }
 
     try {
-        const { messages } = await request.json();
-        const processedMessages = processMessages(messages);
-        const result = await masterCoordinator(anthropic, processedMessages);
+        const { messages, sessionId } = await request.json();
+        if (!intentManager.getCurrentMessages().length) {
+            intentManager.create(sessionId);
+        }
 
+        const result = await masterCoordinator(anthropic, messages);
         return json(result);
     } catch (error) {
-        console.error('Error in POST handler:', error);
+        console.error('Error:', error);
         return json({ error: 'Request processing failed' }, { status: 500 });
     }
 }
 
 async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
-    const lastMessage = messages[messages.length - 1].content;
-    console.log('User\'s last message:', lastMessage);
-
     try {
+        const processedMessages = processMessages(messages);
+        const lastMessage = processedMessages[processedMessages.length - 1]?.content;
+
+        console.log('🎯 Intent:', lastMessage);
+
+        intentManager.addMessage({
+            role: 'user',
+            content: lastMessage,
+            timestamp: Date.now()
+        });
+
         const coordinatorResponse = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20240620',
             max_tokens: 1000,
-            messages: [{ role: 'user', content: lastMessage }],
+            messages: processedMessages,
             temperature: 0.7,
-            top_p: 1,
             tools: coordinatorTools
         });
 
-        console.log('Received coordinator response from Anthropic:', JSON.stringify(coordinatorResponse, null, 2));
-
-        let chosenAgent = null;
-        let agentInput = null;
-        let toolUseId = null;
-
-        if (coordinatorResponse.content) {
-            for (const content of coordinatorResponse.content) {
-                if (content.type === 'tool_use') {
-                    chosenAgent = content.name;
-                    agentInput = content.input;
-                    toolUseId = content.tool_use_id;
-                    break;
-                }
-            }
+        const toolCall = coordinatorResponse.content.find(c => c.type === 'tool_use');
+        if (!toolCall) {
+            intentManager.complete('error');
+            return { content: "Could not determine appropriate action" };
         }
 
-        console.log('Chosen agent:', chosenAgent);
-        console.log('Agent input:', agentInput);
+        console.log('🤖 Agent:', toolCall.name);
 
-        const agents = {
-            componentAgent,
-            viewAgent,
-            actionAgent
-        };
+        const agentResult = await agents[toolCall.name](anthropic, {
+            messages: processedMessages,
+            agentInput: toolCall.input,
+            tool_use_id: toolCall.tool_use_id
+        });
 
-        if (chosenAgent && agentInput && chosenAgent in agents) {
-            const agentResult = await agents[chosenAgent](anthropic, {
-                messages,
-                agentInput,
-                tool_use_id: toolUseId
-            });
-
-            console.log(`${chosenAgent} result:`, JSON.stringify(agentResult, null, 2));
-
-            if (chosenAgent === 'viewAgent' && agentResult.content) {
-                return {
-                    content: 'View configuration generated successfully.',
-                    viewConfiguration: JSON.parse(agentResult.content)
-                };
-            }
-
-            if (chosenAgent === 'actionAgent' && agentResult.content) {
-                console.log('Processing action agent result:', agentResult);
-                return {
-                    content: 'Please fill out the form to update your information.',
-                    actionConfig: agentResult.content,
-                    isAction: true
-                };
-            }
-
-            return agentResult;
+        if (agentResult.message) {
+            intentManager.addMessage(agentResult.message);
         }
 
-        console.log('No agent chosen or invalid agent');
-        return {
-            content: "I need more information to help you. Could you please be more specific?"
-        };
+        // Handle view configuration
+        if (toolCall.name === 'viewAgent') {
+            return {
+                type: 'tool_result',
+                content: agentResult.content,
+                is_error: false,
+                message: agentResult.message,
+                viewConfiguration: agentResult.content ? JSON.parse(agentResult.content) : null
+            };
+        }
+
+        // Reset conversation after successful execution
+        if (!agentResult.is_error) {
+            intentManager.reset();
+        }
+
+        return agentResult;
+
     } catch (error) {
-        console.error('Error in coordinator:', error);
-        return { error: 'Coordination failed' };
+        console.error('Error:', error);
+        intentManager.complete('error');
+        throw error;
     }
 }
 
 function processMessages(messages: any[]) {
-    if (!messages.length || messages[0]?.role !== 'user') {
-        messages.unshift({
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return [{
             role: 'user',
             content: 'Hello, I need assistance.'
-        });
+        }];
     }
+
     return messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content || ''
     }));
 }

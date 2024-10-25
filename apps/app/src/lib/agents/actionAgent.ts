@@ -130,7 +130,6 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
         }
 
         if (extractedData?.action && actionViews[extractedData.action]) {
-            // Deep clone the view
             const view = JSON.parse(JSON.stringify(actionViews[extractedData.action]));
 
             // Update field values in the view
@@ -145,11 +144,20 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
                 values: extractedData.values
             };
 
-            console.log('Action agent returning config:', JSON.stringify(actionConfig, null, 2));
             return {
                 type: 'tool_result',
                 tool_use_id: request.tool_use_id,
-                content: actionConfig
+                content: actionConfig,
+                is_error: false,
+                message: {
+                    role: 'actionAgent',
+                    content: `Action prepared: ${extractedData.action}`,
+                    timestamp: Date.now(),
+                    toolResult: {
+                        type: 'action',
+                        data: actionConfig
+                    }
+                }
             };
         }
 
@@ -157,7 +165,16 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
             type: 'tool_result',
             tool_use_id: request.tool_use_id,
             content: "I couldn't determine the appropriate action for your request.",
-            is_error: true
+            is_error: true,
+            message: {
+                role: 'actionAgent',
+                content: "Failed to determine appropriate action",
+                timestamp: Date.now(),
+                toolResult: {
+                    type: 'error',
+                    data: "No matching action found"
+                }
+            }
         };
     } catch (error) {
         console.error('Error in actionAgent:', error);
@@ -165,7 +182,16 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
             type: 'tool_result',
             tool_use_id: request.tool_use_id,
             content: 'An error occurred while processing your request in the actionAgent.',
-            is_error: true
+            is_error: true,
+            message: {
+                role: 'actionAgent',
+                content: 'Error processing request',
+                timestamp: Date.now(),
+                toolResult: {
+                    type: 'error',
+                    data: error.message || 'Unknown error'
+                }
+            }
         };
     }
 }

@@ -3,7 +3,10 @@
 	import { derived, writable } from 'svelte/store';
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher<{
+		close: void;
+		message: { role: string; content: string; timestamp: number; toolResult?: any };
+	}>();
 
 	// Define schemas
 	const FORM_SCHEMAS = {
@@ -128,6 +131,16 @@
 			});
 
 			if (!result.error) {
+				// Dispatch success message
+				dispatch('message', {
+					role: 'form',
+					content: `Form submitted successfully: ${submitAction}`,
+					timestamp: Date.now(),
+					toolResult: {
+						type: 'form',
+						data: values
+					}
+				});
 				dispatch('close');
 			}
 		} catch (error) {

@@ -1,4 +1,6 @@
 import type { Anthropic } from '@anthropic-ai/sdk';
+import type { Message, ToolResultType } from '$lib/agentStore';
+
 
 const SYSTEM_PROMPT = `
 You are an AI assistant specialized in creating view configurations for a dynamic Svelte component system called Composer. Your task is to interpret user requests and generate appropriate JSON configurations for the Composer.svelte component.
@@ -59,60 +61,51 @@ Do not include any explanations or other text outside these tags.
 `;
 
 export async function viewAgent(anthropic: Anthropic, request: any) {
-    console.log('viewAgent called with request:', JSON.stringify(request, null, 2));
     try {
         const userMessage = request.agentInput?.task || request.messages[request.messages.length - 1].content;
-        console.log('User message for viewAgent:', userMessage);
+
+        console.log('🎯 ViewAgent processing:', userMessage);
 
         const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-3-5-sonnet-20240620',
             max_tokens: 4000,
-            messages: [
-                { role: 'user', content: userMessage }
-            ],
+            messages: [{ role: 'user', content: userMessage }],
             system: SYSTEM_PROMPT,
-            temperature: 0.7,
-            top_p: 1
+            temperature: 0.7
         });
 
-        console.log('Received response from Anthropic:', JSON.stringify(response, null, 2));
+        const viewConfig = extractViewConfig(response.content[0].text);
+        console.log('🎨 Generated view config:', viewConfig);
 
-        let viewConfiguration = null;
-        if (response.content && response.content.length > 0) {
-            for (const content of response.content) {
-                if (content.type === 'text') {
-                    const match = content.text.match(/<compose-view>([\s\S]*?)<\/compose-view>/);
-                    if (match) {
-                        viewConfiguration = JSON.parse(match[1]);
-                        break;
-                    }
-                }
-            }
-        }
+        const message = createAgentMessage(response.content[0].text, viewConfig, request.tool_use_id);
 
-        if (viewConfiguration) {
-            console.log('Generated view configuration:', JSON.stringify(viewConfiguration, null, 2));
-            return {
-                type: 'tool_result',
-                tool_use_id: request.tool_use_id,
-                content: JSON.stringify(viewConfiguration)
-            };
-        }
-
-        console.log('Could not generate a valid view configuration');
         return {
             type: 'tool_result',
             tool_use_id: request.tool_use_id,
-            content: "I couldn't generate a valid view configuration. Here's what I got:\n\n" + response.content[0].text,
-            is_error: true
+            content: viewConfig ? JSON.stringify(viewConfig) : null,
+            is_error: !viewConfig,
+            message
         };
     } catch (error) {
-        console.error('Error in viewAgent:', error);
-        return {
-            type: 'tool_result',
-            tool_use_id: request.tool_use_id,
-            content: 'An error occurred while processing your request in the viewAgent.',
-            is_error: true
-        };
+        console.error('❌ ViewAgent error:', error);
+        return createErrorResponse(error, request.tool_use_id);
     }
+}
+
+function extractViewConfig(text: string) {
+    const match = text.match(/<compose-view>([\s\S]*?)<\/compose-view>/);
+    return match ? JSON.parse(match[1]) : null;
+}
+
+function createAgentMessage(content: string, viewConfig: any, toolUseId: string): Message {
+    return {
+        role: 'viewAgent',
+        content,
+        timestamp: Date.now(),
+        toolResult: viewConfig ? {
+            type: 'view',
+            data: viewConfig,
+            tool_use_id: toolUseId
+        } : undefined
+    };
 }

@@ -4,6 +4,7 @@
 	import AudioVisualizer from './AudioVisualizer.svelte';
 	import ComposeView from './ComposeView.svelte';
 	import { dev } from '$app/environment';
+	import { currentIntent, intentHistory, type Message } from '$lib/agentStore';
 
 	export let session = null;
 	export let isRecording = false;
@@ -38,6 +39,15 @@
 
 	let currentAction: { action: string; view: any } | null = null;
 	let isProcessingNewRequest = false;
+
+	let currentMessages: Message[] = [];
+
+	// Subscribe to current intent messages
+	$: if ($currentIntent) {
+		currentMessages = $currentIntent.messages;
+	} else {
+		currentMessages = [];
+	}
 
 	$: {
 		if (currentAction) {
@@ -129,23 +139,21 @@
 	}
 
 	async function processRecording() {
-		console.log('VoiceControl: Processing recording');
 		try {
-			const transcriptionResult = await handleTranscription(); // Changed from transcribeAudio to handleTranscription
-			console.log('VoiceControl: Transcription completed:', transcriptionResult);
-
+			const transcriptionResult = await handleTranscription();
 			transcript = transcriptionResult;
-			const aiResponse = await handleAIProcessing(transcriptionResult);
-			console.log('VoiceControl: AI processing completed:', aiResponse);
 
-			if (aiResponse.isAction) {
-				console.log('VoiceControl: Action view detected, keeping modal open');
-			} else {
+			startProcessingMessages();
+			const aiResponse = await handleAIProcessing(transcriptionResult);
+			stopProcessingMessages();
+
+			// Keep modal open only for action views
+			if (!aiResponse.viewConfiguration && !aiResponse.content?.action) {
 				isRecordingOrProcessing = false;
 			}
 		} catch (error) {
-			console.error('VoiceControl: Error processing recording:', error);
-			isRecordingOrProcessing = false;
+			console.error('Error processing recording:', error);
+			handleError(error);
 		}
 	}
 
@@ -203,20 +211,30 @@
 		});
 	}
 
-	async function handleAIProcessing(transcriptionResult) {
+	async function handleAIProcessing(transcriptionResult: string) {
 		isProcessingNewRequest = true;
 		currentAction = null;
 
 		try {
-			// Add the user's transcribed message to messages array
-			messages = [...messages, { role: 'user', content: transcriptionResult }];
+			if (!transcriptionResult) {
+				throw new Error('No transcription result to process');
+			}
 
 			const response = await fetch('/local/api/chat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ messages }) // Now includes the transcribed message
+				body: JSON.stringify({
+					messages: [
+						...currentMessages,
+						{
+							role: 'user',
+							content: transcriptionResult
+						}
+					],
+					sessionId: session?.user?.id
+				})
 			});
 
 			if (!response.ok) {
@@ -224,27 +242,28 @@
 			}
 
 			const data = await response.json();
-			console.log('Received AI response:', data);
 
-			// Handle action views
-			if (data.isAction && data.actionConfig) {
-				isProcessingNewRequest = false;
-				currentAction = data.actionConfig;
-				messages = [...messages, { role: 'assistant', content: data.content }];
-				return data;
-			}
-
-			messages = [...messages, { role: 'assistant', content: data.content }];
-
+			// Handle view updates
 			if (data.viewConfiguration) {
 				dispatch('updateView', {
 					view: data.viewConfiguration
 				});
+				isRecordingOrProcessing = false;
+			}
+			// Handle action views
+			else if (data.type === 'tool_result' && data.content?.action) {
+				currentAction = {
+					action: data.content.action,
+					view: data.content.view
+				};
+				isRecordingOrProcessing = true;
 			}
 
+			isProcessingNewRequest = false;
 			return data;
 		} catch (error) {
 			console.error('Error in handleAIProcessing:', error);
+			isProcessingNewRequest = false;
 			throw error;
 		}
 	}
@@ -288,15 +307,20 @@
 					</div>
 				{:else if currentAction}
 					<div class="relative">
-						<div class="p-4">
-							<ComposeView
-								view={currentAction.view}
-								{session}
-								showSpacer={false}
-								on:mount={() => console.log('VoiceControl: ComposeView mounted')}
-								on:close={handleFormClose}
-							/>
-						</div>
+						<ComposeView
+							view={currentAction.view}
+							{session}
+							showSpacer={false}
+							on:mount={() => console.log('VoiceControl: ComposeView mounted')}
+							on:close={handleFormClose}
+							on:message={(event) => {
+								// Handle form messages
+								if (event.detail) {
+									intentManager.addMessage(event.detail);
+								}
+								handleFormClose();
+							}}
+						/>
 					</div>
 				{/if}
 
@@ -322,10 +346,15 @@
 {/if}
 
 <div bind:this={messageContainer} class="flex-1 p-4 overflow-y-auto">
-	{#each messages as message}
+	{#each currentMessages as message}
 		<div class="mb-4">
 			<div class="font-bold">{message.role}</div>
 			<div class="whitespace-pre-wrap">{message.content}</div>
+			{#if message.toolResult}
+				<div class="mt-2 text-sm text-tertiary-400">
+					Tool Result: {message.toolResult.type}
+				</div>
+			{/if}
 		</div>
 	{/each}
 </div>
