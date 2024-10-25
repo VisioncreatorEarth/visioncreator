@@ -103,10 +103,16 @@
 	}
 
 	function handleViewUpdate(event: CustomEvent) {
-		const view = event.detail;
-		if (view) {
-			console.log('Updating view:', view);
-			dynamicView.update((store) => ({ ...store, view }));
+		const viewData = event.detail?.view;
+		if (viewData) {
+			console.log('Page receiving view update:', viewData);
+			dynamicView.set({ view: viewData });
+
+			// Force re-render of ComposeView
+			showComposeView = false;
+			requestAnimationFrame(() => {
+				showComposeView = true;
+			});
 		}
 	}
 
@@ -156,10 +162,18 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView view={$dynamicView.view || meView} {session} />
+		<ComposeView
+			view={$dynamicView.view || meView}
+			{session}
+			key={JSON.stringify($dynamicView.view)}
+		/>
 	{/if}
 {:else if meData}
-	<ComposeView view={$dynamicView.view || meView} {session} />
+	<ComposeView
+		view={$dynamicView.view || meView}
+		{session}
+		key={JSON.stringify($dynamicView.view)}
+	/>
 {:else}
 	<div class="flex items-center justify-center h-screen text-red-500">Error loading user data</div>
 {/if}

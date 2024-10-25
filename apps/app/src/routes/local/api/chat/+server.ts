@@ -136,6 +136,14 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
         if (agentResult.message) {
             console.log(`✨ ${toolCall.name} Result:`, JSON.stringify(agentResult.message, null, 2));
             intentManager.addMessage(agentResult.message);
+
+            // Extract and return viewConfiguration if present in toolResult
+            if (agentResult.message.toolResult?.type === 'view' && agentResult.message.toolResult.data) {
+                return {
+                    ...agentResult,
+                    viewConfiguration: agentResult.message.toolResult.data
+                };
+            }
         }
 
         // Add and log hominio completion message

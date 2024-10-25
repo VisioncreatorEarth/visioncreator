@@ -44,10 +44,13 @@
 	let currentMessages: Message[] = [];
 
 	// Subscribe to current intent messages
-	$: if ($currentIntent) {
-		currentMessages = $currentIntent.messages;
-	} else {
-		currentMessages = [];
+	$: {
+		if ($currentIntent) {
+			currentMessages = [...$currentIntent.messages];
+			console.log('Current messages updated:', currentMessages);
+		} else {
+			currentMessages = [];
+		}
 	}
 
 	$: {
@@ -57,7 +60,7 @@
 		}
 	}
 
-	// Add reactive statement to scroll when messages update
+	// Add scroll behavior when messages update
 	$: if (currentMessages.length) {
 		setTimeout(scrollToBottom, 100);
 	}
@@ -223,60 +226,49 @@
 		currentAction = null;
 
 		try {
-			if (!transcriptionResult) {
-				throw new Error('No transcription result to process');
-			}
-
 			const response = await fetch('/local/api/chat', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					messages: [
-						...currentMessages,
-						{
-							role: 'user',
-							content: transcriptionResult
-						}
-					],
+					messages: [...currentMessages, { role: 'user', content: transcriptionResult }],
 					sessionId: session?.user?.id
 				})
 			});
 
-			if (!response.ok) {
-				throw new Error('Network response was not ok');
-			}
+			if (!response.ok) throw new Error('Network response was not ok');
 
-			const data = await response.json();
+			const result = await response.json();
+			console.log('AI Response:', result);
 
-			// Ensure messages are updated in the UI
+			// Update messages in UI
 			if ($currentIntent) {
 				currentMessages = [...$currentIntent.messages];
 			}
 
 			// Handle view updates
-			if (data.viewConfiguration) {
-				dispatch('updateView', {
-					view: data.viewConfiguration
-				});
+			if (result.viewConfiguration) {
+				console.log('Dispatching view update:', result.viewConfiguration);
+				window.dispatchEvent(
+					new CustomEvent('updateView', {
+						detail: { view: result.viewConfiguration }
+					})
+				);
 				isRecordingOrProcessing = false;
 			}
 			// Handle action views
-			else if (data.type === 'tool_result' && data.content?.action) {
+			else if (result.type === 'tool_result' && result.content?.action) {
 				currentAction = {
-					action: data.content.action,
-					view: data.content.view
+					action: result.content.action,
+					view: result.content.view
 				};
-				isRecordingOrProcessing = true;
 			}
 
-			isProcessingNewRequest = false;
-			return data;
+			return result;
 		} catch (error) {
 			console.error('Error in handleAIProcessing:', error);
-			isProcessingNewRequest = false;
 			throw error;
+		} finally {
+			isProcessingNewRequest = false;
 		}
 	}
 
@@ -312,69 +304,44 @@
 					</div>
 				{:else if isProcessingNewRequest}
 					<div class="flex flex-col p-6 space-y-4">
-						<!-- Loading spinner -->
-						<div class="flex items-center justify-center">
+						<!-- Processing indicator -->
+						<div class="flex flex-col items-center justify-center gap-3">
 							<div
 								class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
 							/>
+							<p class="text-lg text-center text-tertiary-300">{processingState}</p>
 						</div>
 
-						<!-- Processing state message -->
-						<p class="text-lg text-center text-tertiary-300">{processingState}</p>
-
-						<!-- Conversation flow -->
-						<div class="mt-4 space-y-3 max-h-[300px] overflow-y-auto">
-							{#each currentMessages as message}
-								<div class="flex flex-col {message.role === 'user' ? 'items-end' : 'items-start'}">
+						<!-- Chat history -->
+						<div
+							class="w-full p-4 mt-4 overflow-y-auto rounded-lg bg-surface-900/50 max-h-[400px]"
+							bind:this={messageContainer}
+						>
+							{#each currentMessages as message (message.timestamp)}
+								<div
+									class="flex flex-col mb-3 {message.role === 'user' ? 'items-end' : 'items-start'}"
+									transition:fade|local={{ duration: 150 }}
+								>
 									<div
-										class="max-w-[80%] rounded-lg p-3
+										class="max-w-[85%] rounded-lg p-3
 										{message.role === 'user'
 											? 'bg-primary-500 text-white'
 											: message.role === 'hominio'
-											? 'bg-surface-900 text-tertiary-100'
-											: 'bg-surface-700 text-tertiary-200'}"
+											? 'bg-surface-700 text-tertiary-100'
+											: 'bg-surface-600 text-tertiary-200'}"
 									>
-										<div class="flex items-center gap-2 mb-1">
-											<!-- Role icons -->
-											{#if message.role === 'user'}
-												<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-													/>
-												</svg>
-											{:else if message.role === 'hominio'}
-												<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-													/>
-												</svg>
-											{:else}
-												<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-													/>
-												</svg>
-											{/if}
-
-											<!-- Role label and timestamp -->
-											<span class="text-xs opacity-75">
-												{message.role} • <Time timestamp={message.timestamp} relative />
+										<!-- Role badge -->
+										<div class="flex items-center gap-2 mb-2 text-xs font-medium opacity-75">
+											<span class="px-2 py-1 rounded-full bg-surface-800/50">
+												{message.role}
 											</span>
+											<Time timestamp={message.timestamp} relative />
 										</div>
 
 										<!-- Message content -->
-										<p class="text-sm whitespace-pre-wrap">{message.content}</p>
+										<p class="text-sm">{message.content}</p>
 
-										<!-- Tool result if present -->
+										<!-- Tool result -->
 										{#if message.toolResult}
 											<div
 												class="px-2 py-1 mt-2 text-xs rounded bg-surface-800/50 text-tertiary-300"
@@ -396,10 +363,9 @@
 							view={currentAction.view}
 							{session}
 							showSpacer={false}
-							on:mount={() => console.log('VoiceControl: ComposeView mounted')}
+							on:mount={() => console.log('ComposeView mounted')}
 							on:close={handleFormClose}
 							on:message={(event) => {
-								// Handle form messages
 								if (event.detail) {
 									intentManager.addMessage(event.detail);
 								}
@@ -430,16 +396,4 @@
 	</div>
 {/if}
 
-<div bind:this={messageContainer} class="flex-1 p-4 overflow-y-auto">
-	{#each currentMessages as message}
-		<div class="mb-4">
-			<div class="font-bold">{message.role}</div>
-			<div class="whitespace-pre-wrap">{message.content}</div>
-			{#if message.toolResult}
-				<div class="mt-2 text-sm text-tertiary-400">
-					Tool Result: {message.toolResult.type}
-				</div>
-			{/if}
-		</div>
-	{/each}
-</div>
+<!-- Remove the duplicate message container at the bottom -->
