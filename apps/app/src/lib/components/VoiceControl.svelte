@@ -330,7 +330,7 @@
 	>
 		<!-- Modal Container -->
 		<div
-			class="relative w-full max-w-4xl min-h-[300px] max-h-[70vh] overflow-hidden border shadow-xl rounded-xl bg-surface-700/95 border-surface-700"
+			class="relative w-full max-w-4xl overflow-hidden border shadow-xl rounded-xl bg-surface-700/95 border-surface-700"
 		>
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between p-4 border-b border-surface-700">
@@ -352,12 +352,21 @@
 				</button>
 			</div>
 
-			<!-- Modal Content -->
-			<div class="flex flex-col h-full">
+			<!-- Modal Content with Centered Items -->
+			<div class="flex flex-col min-h-[300px] max-h-[60vh]">
 				{#if isRecording}
-					<div class="flex items-center justify-center w-full h-full">
+					<div class="flex items-center justify-center flex-1 w-full p-8">
 						<div class="w-full max-w-lg">
 							<AudioVisualizer {isRecording} {audioStream} />
+						</div>
+					</div>
+				{:else if isProcessingNewRequest}
+					<div class="flex items-center justify-center flex-1 w-full">
+						<div class="flex flex-col items-center gap-4">
+							<div
+								class="w-16 h-16 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+							/>
+							<p class="text-xl text-center text-tertiary-300">{processingState}</p>
 						</div>
 					</div>
 				{:else}
@@ -377,14 +386,7 @@
 						</div>
 					</div>
 
-					{#if isProcessingNewRequest}
-						<div class="flex flex-col items-center justify-center gap-4 p-8">
-							<div
-								class="w-16 h-16 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
-							/>
-							<p class="text-xl text-center text-tertiary-300">{processingState}</p>
-						</div>
-					{:else if transcript}
+					{#if transcript}
 						<div class="p-4 text-center text-tertiary-300">
 							{transcript}
 						</div>
@@ -392,7 +394,7 @@
 				{/if}
 
 				{#if currentAction}
-					<div class="flex-1 p-4">
+					<div class="flex-1">
 						<ComposeView view={currentAction.view} />
 					</div>
 				{/if}

@@ -151,30 +151,36 @@
 	}
 </script>
 
-<div class="flex flex-col gap-4 p-4">
+<div class="flex flex-col gap-3 p-4">
 	{#each fields as field}
 		<div class="flex flex-col gap-2">
-			<div class="p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm">
-				<label for={field.name} class="block mb-1 text-sm font-medium capitalize text-tertiary-200">
-					{field.name}
-				</label>
-				<p class="text-lg text-tertiary-100">{$fieldStates[field.name]?.value}</p>
+			<!-- Field Container with Inline Layout -->
+			<div
+				class="flex items-center justify-between p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm"
+			>
+				<div class="flex-1">
+					<label for={field.name} class="block text-sm font-medium capitalize text-tertiary-200">
+						{field.name}
+					</label>
+					<p class="text-lg text-tertiary-100">{$fieldStates[field.name]?.value}</p>
+				</div>
+
+				<!-- Validation Status -->
+				<div class="flex items-center gap-2 px-3">
+					<div
+						class={`w-1.5 h-1.5 rounded-full transition-colors ${
+							$fieldStates[field.name]?.isValid ? 'bg-success-400' : 'bg-error-400'
+						}`}
+					/>
+					<p class="text-xs text-tertiary-300">
+						{$fieldStates[field.name]?.isValid ? 'Valid' : 'Invalid'}
+					</p>
+				</div>
 			</div>
 
 			{#if $fieldStates[field.name]?.error}
 				<p class="text-sm text-error-400">{$fieldStates[field.name].error}</p>
 			{/if}
-
-			<div class="flex items-center gap-2">
-				<div
-					class={`w-1.5 h-1.5 rounded-full transition-colors ${
-						$fieldStates[field.name]?.isValid ? 'bg-success-400' : 'bg-error-400'
-					}`}
-				/>
-				<p class="text-xs text-tertiary-300">
-					{$fieldStates[field.name]?.isValid ? 'Valid' : 'Invalid'}
-				</p>
-			</div>
 		</div>
 	{/each}
 
