@@ -57,9 +57,15 @@
 		}
 	}
 
+	// Add reactive statement to scroll when messages update
+	$: if (currentMessages.length) {
+		setTimeout(scrollToBottom, 100);
+	}
+
 	function startRecording() {
 		if (mediaRecorder && mediaRecorder.state === 'inactive') {
 			audioChunks = [];
+
 			mediaRecorder.start();
 			transcript = 'Recording...';
 		}
@@ -244,6 +250,11 @@
 
 			const data = await response.json();
 
+			// Ensure messages are updated in the UI
+			if ($currentIntent) {
+				currentMessages = [...$currentIntent.messages];
+			}
+
 			// Handle view updates
 			if (data.viewConfiguration) {
 				dispatch('updateView', {
@@ -315,23 +326,18 @@
 						<div class="mt-4 space-y-3 max-h-[300px] overflow-y-auto">
 							{#each currentMessages as message}
 								<div class="flex flex-col {message.role === 'user' ? 'items-end' : 'items-start'}">
-									<!-- Message bubble -->
 									<div
 										class="max-w-[80%] rounded-lg p-3
 										{message.role === 'user'
-											? 'bg-primary-500 text-white ml-auto'
+											? 'bg-primary-500 text-white'
+											: message.role === 'hominio'
+											? 'bg-surface-900 text-tertiary-100'
 											: 'bg-surface-700 text-tertiary-200'}"
 									>
 										<div class="flex items-center gap-2 mb-1">
-											<!-- Role icon -->
+											<!-- Role icons -->
 											{#if message.role === 'user'}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													class="w-4 h-4"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-												>
+												<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
@@ -339,14 +345,17 @@
 														d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
 													/>
 												</svg>
+											{:else if message.role === 'hominio'}
+												<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+													/>
+												</svg>
 											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													class="w-4 h-4"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-												>
+												<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 													<path
 														stroke-linecap="round"
 														stroke-linejoin="round"
@@ -355,12 +364,13 @@
 													/>
 												</svg>
 											{/if}
-											<!-- Role and timestamp using svelte-time -->
+
+											<!-- Role label and timestamp -->
 											<span class="text-xs opacity-75">
-												{message.role} •
-												<Time timestamp={message.timestamp} relative live={30 * 1000} />
+												{message.role} • <Time timestamp={message.timestamp} relative />
 											</span>
 										</div>
+
 										<!-- Message content -->
 										<p class="text-sm whitespace-pre-wrap">{message.content}</p>
 
@@ -370,6 +380,9 @@
 												class="px-2 py-1 mt-2 text-xs rounded bg-surface-800/50 text-tertiary-300"
 											>
 												🛠 {message.toolResult.type}
+												{#if message.toolResult.data}
+													- {JSON.stringify(message.toolResult.data)}
+												{/if}
 											</div>
 										{/if}
 									</div>
