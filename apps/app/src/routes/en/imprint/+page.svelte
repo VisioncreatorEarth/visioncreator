@@ -3,7 +3,7 @@
 		<a href="/en/imprint">English</a>
 		<a href="/de/impressum">Deutsch</a>
 	</svelte:fragment>
-	<div class="image-container mb-10 w-28">
+	<div class="mb-10 image-container w-28">
 		<img src="/impressum-siegel.png" alt="Impressum Siegel" />
 	</div>
 
@@ -36,6 +36,14 @@
 	<p>
 		Sales tax identification number according to Sect. 27 a of the Sales Tax Law:<br />
 		DE368356417
+	</p>
+
+	<h2>Person responsible for editorial</h2>
+	<p>
+		Visioncreator GmbH<br />
+		Samuel Andert<br />
+		Reifenstuelstr. 6<br />
+		80469 M&uuml;nchen
 	</p>
 
 	<h2>EU dispute resolution</h2>
