@@ -8,7 +8,7 @@
 	import Newsletter from './Newsletter.svelte';
 	import LegalMenu from './LegalMenu.svelte';
 	import Auth from './Auth.svelte';
-	import VoiceControl from './VoiceControl.svelte';
+	import MyIntent from './MyIntent.svelte';
 
 	export let session: any;
 	export let supabase: any;
@@ -24,15 +24,16 @@
 	let isRecording = false;
 	let pressStartTime = 0;
 	let lastToggleTime = 0;
-	let voiceControlRef: any;
+	let myIntentRef: any;
+	let isIntentModalOpen = false;
 	const DEBOUNCE_DELAY = 300;
 
 	// Keep track of the initial modal type to prevent unwanted changes
 	let currentModalType: 'login' | 'signup' | 'menu' = 'menu';
 
 	$: {
-		if (voiceControlRef) {
-			console.log('ActionModal: VoiceControl reference updated:', voiceControlRef);
+		if (myIntentRef) {
+			console.log('ActionModal: MyIntent reference updated:', myIntentRef);
 		}
 	}
 
@@ -51,15 +52,15 @@
 		isPressed = true;
 		pressStartTime = performance.now();
 
-		if (dev) {
-			setTimeout(() => {
-				if (isPressed && performance.now() - pressStartTime >= 500) {
-					console.log('ActionModal: Long press detected, switching to voice mode');
-					isMenuMode = false;
-					voiceControlRef?.handleLongPress();
+		setTimeout(() => {
+			if (isPressed && performance.now() - pressStartTime >= 500) {
+				console.log('ActionModal: Long press detected, switching to intent mode');
+				isIntentModalOpen = true;
+				if (isIntentModalOpen && myIntentRef) {
+					myIntentRef.handleLongPressStart();
 				}
-			}, 500);
-		}
+			}
+		}, 500);
 	}
 
 	function handleMouseUp() {
@@ -69,9 +70,11 @@
 
 		if (isPressed) {
 			isPressed = false;
-			if (dev && pressDuration >= 500) {
-				console.log('ActionModal: Long press completed, releasing voice control');
-				voiceControlRef?.handleRelease();
+			if (pressDuration >= 500) {
+				console.log('ActionModal: Long press completed, releasing intent control');
+				if (isIntentModalOpen && myIntentRef) {
+					myIntentRef.handleLongPressEnd();
+				}
 			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 				console.log('ActionModal: Short press detected, toggling modal');
 				if (session) {
@@ -132,12 +135,21 @@
 		isModalOpen = false;
 		dispatch('signout');
 	}
+
+	function handleIntentClose() {
+		isIntentModalOpen = false;
+	}
 </script>
 
 <svelte:window on:openModal={handleModalOpen} />
 
 {#if session}
-	<VoiceControl bind:this={voiceControlRef} {session} on:updateView={handleUpdateView} />
+	<MyIntent
+		bind:this={myIntentRef}
+		isOpen={isIntentModalOpen}
+		{session}
+		on:close={handleIntentClose}
+	/>
 
 	{#if !isModalOpen || !isMenuMode}
 		<button
