@@ -2,32 +2,36 @@
 	import { createAvatar } from '@dicebear/core';
 	import { lorelei } from '@dicebear/collection';
 
-	export let agentType: 'hominio' | 'vroni' | 'charly' | 'ali' | 'user';
-	export let seed: string;
+	export let agentType: 'hominio' | 'ali' | 'walter' | 'user';
+	export let seed: string = '';
 	export let size: 'sm' | 'md' | 'lg' = 'md';
 
 	const agentSeeds = {
-		vroni: 'vroni-agent-2024',
-		charly: 'charly-agent-2024',
-		ali: 'ali-agent-2024'
+		ali: 'ali-action-agent-2024',
+		walter: 'walter-wunder-agent-2024',
+		user: seed || 'default-user'
 	};
 
 	function generateAvatar(seed: string): string {
 		return createAvatar(lorelei, {
 			size: 128,
 			seed: seed,
-			mouth: ['happy01', 'happy02', 'happy03', 'happy04']
+			// Customize avatar styles for different agents
+			mouth:
+				agentType === 'walter'
+					? ['happy01', 'happy02']
+					: agentType === 'ali'
+					? ['happy03', 'happy04']
+					: ['happy01', 'happy02', 'happy03', 'happy04'],
+			// Add more customizations for different agents if needed
+			backgroundColor:
+				agentType === 'walter' ? ['b6e3f4'] : agentType === 'ali' ? ['c0aede'] : undefined
 		}).toDataUriSync();
 	}
 
 	$: sizeClass = size === 'lg' ? 'w-12 h-12' : 'w-8 h-8';
 
-	$: avatar =
-		agentType === 'hominio'
-			? '/logo.png'
-			: agentType === 'user'
-			? generateAvatar(seed)
-			: generateAvatar(agentSeeds[agentType]);
+	$: avatar = agentType === 'hominio' ? '/logo.png' : generateAvatar(agentSeeds[agentType] || seed);
 </script>
 
 <div class="flex-shrink-0">

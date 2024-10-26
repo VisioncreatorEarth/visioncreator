@@ -1,13 +1,14 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 
-// Simplified MessagePayload interface focused on actions
+// Update MessagePayload interface to handle multiple types
 export interface MessagePayload {
-    type: 'action';
-    title: string;
+    type: 'action' | 'view' | 'response'; // Added new payload types
+    title?: string;
     content: {
-        action: string;
-        view: any;
+        action?: string;
+        view?: any;
+        [key: string]: any; // Allow for flexible content structure
     };
 }
 
@@ -15,7 +16,7 @@ export interface Message {
     id: string;
     content: string;
     type: 'user' | 'agent';
-    agentType?: 'hominio' | 'ali';
+    agentType?: 'hominio' | 'ali' | 'walter'; // Added walter
     timestamp: string;
     status?: 'pending' | 'complete' | 'error';
     payloads?: MessagePayload[];
@@ -118,6 +119,18 @@ export class ConversationManager {
         };
     }
 
+    private generateWalterResponse(message: string, payloads?: MessagePayload[]): Message {
+        return {
+            id: crypto.randomUUID(),
+            content: message,
+            type: 'agent',
+            agentType: 'walter',
+            timestamp: new Date().toISOString(),
+            status: 'complete',
+            payloads
+        };
+    }
+
     startNewConversation() {
         const newConversation: AgentConversation = {
             id: crypto.randomUUID(),
@@ -143,7 +156,7 @@ export class ConversationManager {
         content: string,
         type: 'user' | 'agent',
         status: 'pending' | 'complete' | 'error' = 'complete',
-        agentType?: 'hominio' | 'ali',
+        agentType?: 'hominio' | 'ali' | 'walter', // Added walter
         payloads?: MessagePayload[]
     ) {
         const currentState = get(conversationStore);

@@ -116,7 +116,10 @@
 
 	// Submit handler
 	async function handleSubmit() {
-		if (!isFormValid) return;
+		if (!isFormValid) {
+			console.log('Form validation failed:', $fieldStates);
+			return;
+		}
 
 		isLoading = true;
 		try {
@@ -131,6 +134,12 @@
 			});
 
 			if (!result.error) {
+				console.log('Form submitted successfully:', {
+					action: submitAction,
+					values,
+					result
+				});
+
 				// Dispatch success message
 				dispatch('message', {
 					role: 'form',
@@ -138,13 +147,16 @@
 					timestamp: Date.now(),
 					toolResult: {
 						type: 'form',
-						data: values
+						data: values,
+						result // Include the result in the toolResult
 					}
 				});
 				dispatch('close');
+			} else {
+				console.error('Form submission error:', result.error);
 			}
 		} catch (error) {
-			console.error('Submission error:', error);
+			console.error('Form submission exception:', error);
 		} finally {
 			isLoading = false;
 		}

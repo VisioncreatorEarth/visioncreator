@@ -25,6 +25,7 @@
 	let expandedMessages: Set<string> = new Set();
 	let messageContainer: HTMLDivElement;
 	let transcribedText = '';
+	let expandedPayloads = new Map<string, Set<string>>();
 
 	const debug = (message: string, data?: any) => {
 		console.log(`[MyIntent] ${message}`, data || '');
@@ -201,6 +202,29 @@
 			}
 		}, 100);
 	}
+
+	function togglePayload(messageId: string, payloadType: string) {
+		const key = `${messageId}-${payloadType}`;
+		if (!expandedPayloads.has(messageId)) {
+			expandedPayloads.set(messageId, new Set([payloadType]));
+		} else {
+			const types = expandedPayloads.get(messageId)!;
+			if (types.has(payloadType)) {
+				types.delete(payloadType);
+			} else {
+				types.add(payloadType);
+			}
+		}
+		expandedPayloads = expandedPayloads; // trigger reactivity
+	}
+
+	function isPayloadExpanded(messageId: string, payloadType: string): boolean {
+		return expandedPayloads.get(messageId)?.has(payloadType) ?? false;
+	}
+
+	function formatTimestamp(timestamp: string): string {
+		return new Date(timestamp).toLocaleTimeString();
+	}
 </script>
 
 {#if isOpen}
@@ -283,7 +307,13 @@
 												{#if message.type === 'agent'}
 													<div class="flex items-center space-x-2">
 														<span class="text-xs font-medium text-tertiary-300">
-															{message.agentType === 'hominio' ? 'Hominio' : 'Ali (Action Agent)'}
+															{#if message.agentType === 'hominio'}
+																Hominio
+															{:else if message.agentType === 'ali'}
+																Ali (Action Agent)
+															{:else if message.agentType === 'walter'}
+																Walter (Wunder Agent)
+															{/if}
 														</span>
 														<span class="text-xs text-tertiary-600">
 															{formatTime(message.timestamp)}

@@ -2,13 +2,15 @@ import { client } from '$lib/wundergraph';
 import { get } from 'svelte/store';
 import { Me } from '$lib/stores';
 import { eventBus } from '$lib/composables/eventBus';
+import { conversationManager } from '$lib/stores/intentStore';
 
 interface SubmitFormParams {
 	operation: string;
 	input: Record<string, unknown>;
+	view?: unknown;
 }
 
-export async function submitForm({ operation, input }: SubmitFormParams) {
+export async function submitForm({ operation, input, view = null }: SubmitFormParams) {
 	console.log(`Submitting form for operation: ${operation}`, input);
 	try {
 		let fullInput = { ...input };
@@ -39,6 +41,25 @@ export async function submitForm({ operation, input }: SubmitFormParams) {
 			throw new Error(result.data?.message || `An error occurred during ${operation}`);
 		}
 
+		// Add Walter's response to conversation
+		conversationManager.addMessage(
+			result.data.message || `${operation} completed successfully`,
+			'agent',
+			'complete',
+			'walter', // Ensure it's Walter responding
+			[
+				{
+					type: 'view',
+					content: { view } // Original view that triggered the action
+				},
+				{
+					type: 'response',
+					content: result.data // API response data
+				}
+			]
+		);
+
+		// Emit original event
 		eventBus.emit(operation);
 
 		return {
@@ -48,6 +69,17 @@ export async function submitForm({ operation, input }: SubmitFormParams) {
 		};
 	} catch (error) {
 		console.error(`Error in submitForm for operation ${operation}:`, error);
+
+		// Add error message from Walter
+		conversationManager.addMessage(
+			error instanceof Error
+				? error.message
+				: `An error occurred during ${operation}`,
+			'agent',
+			'error',
+			'walter'  // Ensure errors also come from Walter
+		);
+
 		if (error instanceof Error) {
 			return {
 				success: false,
