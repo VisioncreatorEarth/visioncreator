@@ -52,8 +52,7 @@ const updateNameView = {
                         {
                             name: 'name',
                             type: 'text',
-                            title: 'What is your name?',
-                            description: 'Please enter your first name',
+                            action: 'What would you like your new name to be?',
                             value: ''
                         }
                     ],
@@ -87,7 +86,7 @@ const debug = (message: string, data?: any) => {
 };
 
 // Conversation Manager Class
-class ConversationManager {
+export class ConversationManager {
     // Simplified agent responses
     private generateActionAgentResponse(userMessage: string): Message {
         return {
@@ -120,32 +119,24 @@ class ConversationManager {
     }
 
     startNewConversation() {
-        const currentState = get(conversationStore);
-        const newId = crypto.randomUUID();
-
-        // Deactivate any active conversations
-        const updatedConversations = currentState.conversations.map(conv => ({
-            ...conv,
-            isActive: false
-        }));
-
-        // Create new conversation
         const newConversation: AgentConversation = {
-            id: newId,
+            id: crypto.randomUUID(),
             messages: [],
             isActive: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
+        const currentState = get(conversationStore) || defaultConversationState;
+
         const updatedState = {
-            currentConversationId: newId,
-            conversations: [...updatedConversations, newConversation]
+            currentConversationId: newConversation.id,
+            conversations: [...(currentState.conversations || []), newConversation]
         };
 
         debug('Starting new conversation', updatedState);
         conversationStore.set(updatedState);
-        return newId;
+        return newConversation.id;
     }
 
     addMessage(
@@ -157,113 +148,61 @@ class ConversationManager {
     ) {
         const currentState = get(conversationStore);
 
-        // Start new conversation if none exists
-        if (!currentState.currentConversationId) {
-            const newId = this.startNewConversation();
-            const newState = get(conversationStore);
-
-            const newMessage: Message = {
-                id: crypto.randomUUID(),
-                content,
-                type,
-                timestamp: new Date().toISOString(),
-                status,
-                agentType,
-                payloads
-            };
-
-            // Add message to new conversation
-            const updatedState = {
-                ...newState,
-                conversations: newState.conversations.map(conv =>
-                    conv.id === newId
-                        ? {
-                            ...conv,
-                            messages: [...conv.messages, newMessage],
-                            updatedAt: new Date().toISOString()
-                        }
-                        : conv
-                )
-            };
-
-            debug('Adding message to new conversation', updatedState);
-            conversationStore.set(updatedState);
-
-            // If user message, generate agent responses
-            if (type === 'user') {
-                const hominioResponse = this.generateHominioResponse(content);
-                const actionResponse = this.generateActionAgentResponse(content);
-
-                setTimeout(() => {
-                    this.addMessage(
-                        hominioResponse.content,
-                        'agent',
-                        'complete',
-                        'hominio'
-                    );
-                    setTimeout(() => {
-                        this.addMessage(
-                            actionResponse.content,
-                            'agent',
-                            'complete',
-                            'ali',
-                            actionResponse.payloads
-                        );
-                    }, 1000);
-                }, 1000);
-            }
-            return;
+        // If no conversation exists, create one
+        if (!currentState?.currentConversationId) {
+            this.startNewConversation();
         }
 
-        // Add message to existing conversation
-        const newMessage: Message = {
+        const message: Message = {
             id: crypto.randomUUID(),
             content,
             type,
+            agentType,
             timestamp: new Date().toISOString(),
             status,
-            agentType,
             payloads
         };
 
-        const updatedState = {
-            ...currentState,
-            conversations: currentState.conversations.map(conv =>
-                conv.id === currentState.currentConversationId
+        // Get fresh state after possible initialization
+        const updatedState = get(conversationStore);
+
+        // Add message to current conversation
+        const newState = {
+            ...updatedState,
+            conversations: updatedState.conversations.map(conv =>
+                conv.id === updatedState.currentConversationId
                     ? {
                         ...conv,
-                        messages: [...conv.messages, newMessage],
+                        messages: [...conv.messages, message],
                         updatedAt: new Date().toISOString()
                     }
                     : conv
             )
         };
 
-        debug('Adding message to existing conversation', updatedState);
-        conversationStore.set(updatedState);
+        debug('Adding message to conversation', { message, newState });
+        conversationStore.set(newState);
 
-        // Generate agent responses for user messages
-        if (type === 'user') {
+        // If this is a user message, automatically add agent responses
+        if (type === 'user' && status === 'complete') {
+            // Add Hominio response
             const hominioResponse = this.generateHominioResponse(content);
-            const actionResponse = this.generateActionAgentResponse(content);
+            this.addMessage(
+                hominioResponse.content,
+                'agent',
+                'complete',
+                'hominio'
+            );
 
-            setTimeout(() => {
-                this.addMessage(
-                    hominioResponse.content,
-                    'agent',
-                    'complete',
-                    'hominio'
-                );
-                setTimeout(() => {
-                    this.addMessage(
-                        actionResponse.content,
-                        'agent',
-                        'complete',
-                        'ali',
-                        actionResponse.payloads
-                    );
-                }, 1000);
-            }, 1000);
+            // Add Action Agent response
+            const actionResponse = this.generateActionAgentResponse(content);
+            this.addMessage(
+                actionResponse.content,
+                'agent',
+                'complete',
+                'ali',
+                actionResponse.payloads
+            );
         }
     }
 

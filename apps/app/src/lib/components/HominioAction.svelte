@@ -3,6 +3,7 @@
 	import { derived, writable } from 'svelte/store';
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { createEventDispatcher } from 'svelte';
+	import { conversationManager } from '$lib/stores/intentStore';
 
 	const dispatch = createEventDispatcher<{
 		close: void;
@@ -125,19 +126,25 @@
 			});
 
 			if (!result.error) {
-				dispatch('message', {
-					role: 'form',
-					content: `Form submitted successfully: ${submitAction}`,
-					timestamp: Date.now(),
-					toolResult: {
-						type: 'form',
-						data: values
-					}
-				});
+				// Add success message to conversation
+				conversationManager.addMessage(
+					"Great! I've updated that for you. Is there anything else you need help with?",
+					'agent',
+					'complete',
+					'hominio'
+				);
+
 				dispatch('close');
 			}
 		} catch (error) {
 			console.error('Submission error:', error);
+			// Add error message to conversation
+			conversationManager.addMessage(
+				"I'm sorry, there was an error processing your request. Please try again.",
+				'agent',
+				'error',
+				'hominio'
+			);
 		} finally {
 			isLoading = false;
 		}
