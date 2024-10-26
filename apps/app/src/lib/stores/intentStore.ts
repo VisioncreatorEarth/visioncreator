@@ -52,8 +52,9 @@ const updateNameView = {
                         {
                             name: 'name',
                             type: 'text',
-                            action: 'What would you like your new name to be?',
-                            value: ''
+                            title: 'Name',
+                            description: 'Enter your new name',
+                            value: 'NewName'
                         }
                     ],
                     validators: 'updateName',

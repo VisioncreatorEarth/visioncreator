@@ -267,14 +267,18 @@
 										<div
 											class="flex justify-{message.type === 'user'
 												? 'end'
-												: 'start'} items-start space-x-3"
+												: 'start'} items-start space-x-3 w-full"
 											transition:slide
 										>
 											{#if message.type === 'agent'}
 												<AgentAvatar agentType={message.agentType} seed={message.agentType} />
 											{/if}
 
-											<div class="flex flex-col space-y-1 max-w-[80%]">
+											<div
+												class="flex flex-col space-y-1 {message.payloads?.length
+													? 'w-full'
+													: 'max-w-[80%]'}"
+											>
 												<!-- Agent header -->
 												{#if message.type === 'agent'}
 													<div class="flex items-center space-x-2">

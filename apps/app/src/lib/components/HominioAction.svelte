@@ -48,22 +48,20 @@
 	$: submitAction = $formStore.submitAction;
 	$: activeSchema = FORM_SCHEMAS[validatorName] || FORM_SCHEMAS.updateName;
 
-	// Initialize field states with values directly from form fields
-	const fieldStates = writable({});
-	let isLoading = false;
-
-	// Update field states when fields change
+	// Initialize field states with values from form fields
 	$: {
-		if (fields?.length > 0) {
-			const states = fields.reduce((acc, field) => {
-				acc[field.name] = {
-					value: field.value, // Directly use the field value
-					isValid: false,
-					error: null
-				};
+		if (fields) {
+			const newStates = fields.reduce((acc, field) => {
+				if (!$fieldStates[field.name]) {
+					acc[field.name] = {
+						value: field.value || '',
+						isValid: false,
+						error: null
+					};
+				}
 				return acc;
 			}, {});
-			fieldStates.set(states);
+			fieldStates.set({ ...$fieldStates, ...newStates });
 		}
 	}
 
@@ -151,14 +149,14 @@
 	}
 </script>
 
-<div class="flex flex-col gap-3 p-4">
+<div class="flex flex-col w-full gap-3 p-4">
 	{#each fields as field}
-		<div class="flex flex-col gap-2">
+		<div class="flex flex-col w-full gap-2">
 			<div
-				class="flex items-center justify-between p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm"
+				class="flex items-center justify-between w-full p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm"
 			>
 				<div class="flex-1">
-					<label for={field.name} class="block text-sm font-medium capitalize text-tertiary-200">
+					<label for={field.name} class="block text-sm font-medium text-tertiary-200">
 						{field.title || field.name}
 					</label>
 					<input
@@ -168,17 +166,6 @@
 						class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0"
 						placeholder={field.description || ''}
 					/>
-				</div>
-
-				<div class="flex items-center gap-2 px-3">
-					<div
-						class={`w-1.5 h-1.5 rounded-full transition-colors ${
-							$fieldStates[field.name]?.isValid ? 'bg-success-400' : 'bg-error-400'
-						}`}
-					/>
-					<p class="text-xs text-tertiary-300">
-						{$fieldStates[field.name]?.isValid ? 'Valid' : 'Invalid'}
-					</p>
 				</div>
 			</div>
 
