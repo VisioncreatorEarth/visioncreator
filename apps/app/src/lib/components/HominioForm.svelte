@@ -151,30 +151,22 @@
 	}
 </script>
 
-<div class="flex flex-col gap-3 p-4">
+<div class="flex flex-col w-full gap-3 p-4">
 	{#each fields as field}
-		<div class="flex flex-col gap-2">
-			<!-- Field Container with Inline Layout -->
+		<div class="flex flex-col w-full gap-2">
 			<div
-				class="flex items-center justify-between p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm"
+				class="flex items-center justify-between w-full p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm"
 			>
 				<div class="flex-1">
-					<label for={field.name} class="block text-sm font-medium capitalize text-tertiary-200">
-						{field.name}
+					<label for={field.name} class="block text-sm font-medium text-tertiary-200">
+						{field.title}
 					</label>
-					<p class="text-lg text-tertiary-100">{$fieldStates[field.name]?.value}</p>
-				</div>
-
-				<!-- Validation Status -->
-				<div class="flex items-center gap-2 px-3">
-					<div
-						class={`w-1.5 h-1.5 rounded-full transition-colors ${
-							$fieldStates[field.name]?.isValid ? 'bg-success-400' : 'bg-error-400'
-						}`}
+					<input
+						type="text"
+						id={field.name}
+						bind:value={$fieldStates[field.name].value}
+						class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0"
 					/>
-					<p class="text-xs text-tertiary-300">
-						{$fieldStates[field.name]?.isValid ? 'Valid' : 'Invalid'}
-					</p>
 				</div>
 			</div>
 
@@ -184,14 +176,14 @@
 		</div>
 	{/each}
 
-	<div class="flex justify-center mt-2">
+	<div class="flex justify-center w-full mt-4">
 		<button
-			class="relative px-8 py-2 font-medium text-white transition-all duration-200 btn rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
-			disabled={!isFormValid || isLoading}
 			on:click={handleSubmit}
+			class="btn btn-md bg-gradient-to-br variant-gradient-secondary-primary"
+			disabled={!isFormValid || isLoading}
 		>
 			{#if isLoading}
-				<div class="flex items-center gap-2">
+				<div class="flex items-center justify-center gap-2">
 					<svg
 						class="w-4 h-4 animate-spin"
 						xmlns="http://www.w3.org/2000/svg"
@@ -215,7 +207,7 @@
 					<span>Processing...</span>
 				</div>
 			{:else}
-				Submit
+				Sign to confirm
 			{/if}
 		</button>
 	</div>

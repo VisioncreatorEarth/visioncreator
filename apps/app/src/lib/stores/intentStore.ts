@@ -43,8 +43,8 @@ const updateNameView = {
     },
     children: [
         {
-            id: 'HominioForm',
-            component: 'HominioForm',
+            id: 'UpdateNameForm',
+            component: 'HominioForm', // Change back to HominioForm
             slot: 'main',
             data: {
                 form: {
@@ -53,8 +53,7 @@ const updateNameView = {
                             name: 'name',
                             type: 'text',
                             title: 'Name',
-                            description: 'Enter your new name',
-                            value: 'NewName'
+                            value: 'Samuel' // Hardcoded value
                         }
                     ],
                     validators: 'updateName',

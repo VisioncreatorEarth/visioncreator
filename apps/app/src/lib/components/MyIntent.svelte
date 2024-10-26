@@ -294,7 +294,7 @@
 												<!-- Message content -->
 												<div
 													class="relative {message.type === 'user'
-														? 'bg-primary-500 text-white'
+														? 'bg-secondary-800 text-white'
 														: 'bg-surface-600 text-tertiary-200'} 
 													px-4 py-2 rounded-2xl {message.type === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'}"
 												>
