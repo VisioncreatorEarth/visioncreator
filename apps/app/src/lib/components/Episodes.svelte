@@ -27,6 +27,14 @@
 			description: 'The day I jumped and took action on the biggest decision of my life',
 			poster: 'images/001_poster.png',
 			youtubeId: 'K8iiYmb0r10'
+		},
+		{
+			id: '002',
+			title: '002 - We Filed 136 Documents Just to Exist in Germany.',
+			description:
+				'Ever wondered what happens when German efficiency meets startup dreams? Join me on a 180-day adventure through a maze of paperwork, where proving your existence requires more documents than launching a spacecraft.',
+			poster: 'images/002_poster.png',
+			youtubeId: 'QMo2eV_aKDY'
 		}
 	];
 	const reversedVideos: Video[] = [...allVideos].reverse();
@@ -80,10 +88,10 @@
 	}
 </script>
 
-<div class="video-grid flex flex-col md:flex-row text-surface-50 p-4 h-full overflow-hidden">
-	<div class="main-view w-full md:w-2/3 md:pr-4 mb-8 md:mb-0 overflow-y-auto">
-		<h2 class="text-2xl font-bold mb-4 text-primary-400">Now Playing</h2>
-		<div class="aspect-w-16 aspect-h-9 bg-surface-600 rounded-lg overflow-hidden relative mb-4">
+<div class="flex flex-col h-full p-4 overflow-hidden video-grid md:flex-row text-surface-50">
+	<div class="w-full mb-8 overflow-y-auto main-view md:w-2/3 md:pr-4 md:mb-0">
+		<h2 class="mb-4 text-2xl font-bold text-primary-400">Now Playing</h2>
+		<div class="relative mb-4 overflow-hidden rounded-lg aspect-w-16 aspect-h-9 bg-surface-600">
 			<VideoPlayer
 				bind:this={videoPlayer}
 				youtubeId={selectedVideo.youtubeId}
@@ -91,20 +99,20 @@
 				on:videoEnded={handlePlaybackEnded}
 			/>
 		</div>
-		<h1 class="h1 text-2xl md:text-3xl font-semibold mb-3 text-primary-200">
+		<h1 class="mb-3 text-2xl font-semibold h1 md:text-3xl text-primary-200">
 			{selectedVideo.title}
 		</h1>
 		<p class="text-base md:text-lg text-primary-100">{selectedVideo.description}</p>
 	</div>
-	<div class="episode-list w-full md:w-1/3 md:pl-4 flex flex-col overflow-hidden">
-		<h2 class="text-2xl font-bold mb-4 text-primary-400">Episodes</h2>
-		<div class="space-y-4 overflow-y-auto flex-grow">
+	<div class="flex flex-col w-full overflow-hidden episode-list md:w-1/3 md:pl-4">
+		<h2 class="mb-4 text-2xl font-bold text-primary-400">Episodes</h2>
+		<div class="flex-grow space-y-4 overflow-y-auto">
 			{#each $videos as video (video.id)}
 				<button
-					class="video-card bg-surface-700 rounded-lg overflow-hidden shadow-lg cursor-pointer w-full text-left relative flex"
+					class="relative flex w-full overflow-hidden text-left rounded-lg shadow-lg cursor-pointer video-card bg-surface-700"
 					on:click={() => selectVideo(video)}
 				>
-					<div class="w-2/5 md:w-1/3 relative">
+					<div class="relative w-2/5 md:w-1/3">
 						<div class="aspect-w-16 aspect-h-9">
 							<img
 								src={video.poster}
@@ -112,15 +120,15 @@
 								class="absolute inset-0 object-cover w-full h-full"
 							/>
 							<div class="absolute inset-0 flex items-center justify-center">
-								<Icon icon="mdi:play" class="text-primary-300 text-3xl" />
+								<Icon icon="mdi:play" class="text-3xl text-primary-300" />
 							</div>
 						</div>
 					</div>
 					<div
-						class="w-3/5 md:w-2/3 px-4 py-2 sm:px-5 sm:py-3 flex flex-col justify-center overflow-hidden"
+						class="flex flex-col justify-center w-3/5 px-4 py-2 overflow-hidden md:w-2/3 sm:px-5 sm:py-3"
 					>
-						<h3 class="text-sm sm:text-base font-semibold truncate">{video.title}</h3>
-						<p class="text-xs sm:text-sm text-primary-300 line-clamp-2 mt-1">{video.description}</p>
+						<h3 class="text-sm font-semibold truncate sm:text-base">{video.title}</h3>
+						<p class="mt-1 text-xs sm:text-sm text-primary-300 line-clamp-2">{video.description}</p>
 					</div>
 				</button>
 			{/each}
