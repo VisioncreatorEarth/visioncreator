@@ -3,7 +3,7 @@
 		<a href="/en/imprint">English</a>
 		<a href="/de/impressum">Deutsch</a>
 	</svelte:fragment>
-	<div class="image-container mb-10 w-28">
+	<div class="mb-10 image-container w-28">
 		<img src="/impressum-siegel.png" alt="Impressum Siegel" />
 	</div>
 
@@ -36,6 +36,14 @@
 	<p>
 		Umsatzsteuer-Identifikationsnummer gem&auml;&szlig; &sect; 27 a Umsatzsteuergesetz:<br />
 		DE368356417
+	</p>
+
+	<h2>Redaktionell verantwortlich</h2>
+	<p>
+		Visioncreator GmbH<br />
+		Samuel Andert<br />
+		Reifenstuelstr. 6<br />
+		80469 M&uuml;nchen
 	</p>
 
 	<h2>EU-Streitschlichtung</h2>
