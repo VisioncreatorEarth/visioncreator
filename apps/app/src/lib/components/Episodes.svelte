@@ -40,7 +40,7 @@
 			id: '003',
 			title: '003 - From Chaos to Focus - How We Built Our Startup MVP in 24 Hours',
 			description:
-				"Ever wondered what it's like to build a startup from scratch? Join Chielo, Samuel and Yvonne as they navigate the chaotic world of MVPs (Minimum Viable Products) building the first working prototype! Watch as they code through the night, fuel up on bavarian beer, and receive an unexpected visitor that changes everything...",
+				"Ever wondered what it's like to build a startup from scratch? Join Chielo, Samuel and Yvonne as they navigate the chaotic world of MVPs (Minimum Viable Products) building the first working prototype! Watch as they code through the night, fuel up on bavarian beer, and receive an unexpected visitor that changes everything.",
 			poster: 'images/003_poster.png',
 			youtubeId: 'bWfSO1koXrs'
 		}
