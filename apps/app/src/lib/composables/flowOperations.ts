@@ -42,19 +42,31 @@ export async function submitForm({ operation, input, view = null }: SubmitFormPa
 		}
 
 		// Add Walter's response to conversation
+		console.log('Adding Walter response with payloads:', {
+			message: result.data.message,
+			viewPayload: {
+				type: 'view',
+				content: { view }
+			},
+			responsePayload: {
+				type: 'response',
+				content: result.data
+			}
+		});
+
 		conversationManager.addMessage(
 			result.data.message || `${operation} completed successfully`,
 			'agent',
 			'complete',
-			'walter', // Ensure it's Walter responding
+			'walter',
 			[
 				{
 					type: 'view',
-					content: { view } // Original view that triggered the action
+					content: view // Simplified - remove the extra nesting
 				},
 				{
 					type: 'response',
-					content: result.data // API response data
+					content: result.data // The API response data
 				}
 			]
 		);

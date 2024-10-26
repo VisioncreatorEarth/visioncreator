@@ -8,6 +8,7 @@
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import ComposeView from './ComposeView.svelte';
+	import { writable } from 'svelte/store';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -25,7 +26,7 @@
 	let expandedMessages: Set<string> = new Set();
 	let messageContainer: HTMLDivElement;
 	let transcribedText = '';
-	let expandedPayloads = new Map<string, Set<string>>();
+	const expandedPayloads = writable<{ [key: string]: string[] }>({});
 
 	const debug = (message: string, data?: any) => {
 		console.log(`[MyIntent] ${message}`, data || '');
@@ -203,27 +204,54 @@
 		}, 100);
 	}
 
-	function togglePayload(messageId: string, payloadType: string) {
-		const key = `${messageId}-${payloadType}`;
-		if (!expandedPayloads.has(messageId)) {
-			expandedPayloads.set(messageId, new Set([payloadType]));
-		} else {
-			const types = expandedPayloads.get(messageId)!;
-			if (types.has(payloadType)) {
-				types.delete(payloadType);
-			} else {
-				types.add(payloadType);
-			}
-		}
-		expandedPayloads = expandedPayloads; // trigger reactivity
+	// Debug helper for payload state
+	function logPayloadState(message: string, data?: any) {
+		console.log(`[Payload] ${message}`, data);
 	}
 
+	// Improved toggle function
+	function togglePayload(messageId: string, payloadType: string) {
+		console.log('Toggle payload:', { messageId, payloadType });
+
+		expandedPayloads.update((state) => {
+			const newState = { ...state };
+			if (!newState[messageId]) {
+				newState[messageId] = [payloadType];
+			} else {
+				const index = newState[messageId].indexOf(payloadType);
+				if (index > -1) {
+					newState[messageId] = newState[messageId].filter((t) => t !== payloadType);
+					if (newState[messageId].length === 0) {
+						delete newState[messageId];
+					}
+				} else {
+					newState[messageId] = [...newState[messageId], payloadType];
+				}
+			}
+			console.log('New expanded state:', newState);
+			return newState;
+		});
+	}
+
+	// Simplified check function
 	function isPayloadExpanded(messageId: string, payloadType: string): boolean {
-		return expandedPayloads.get(messageId)?.has(payloadType) ?? false;
+		return Boolean($expandedPayloads[messageId]?.includes(payloadType));
 	}
 
 	function formatTimestamp(timestamp: string): string {
 		return new Date(timestamp).toLocaleTimeString();
+	}
+
+	// Add this debug logging to verify payloads are present
+	$: if (currentConversation?.messages) {
+		currentConversation.messages.forEach((message) => {
+			if (message.payloads?.length) {
+				logPayloadState('Message has payloads:', {
+					messageId: message.id,
+					payloads: message.payloads
+				});
+			}
+		});
 	}
 </script>
 
@@ -331,7 +359,7 @@
 													<p class="text-sm whitespace-pre-wrap">{message.content}</p>
 												</div>
 
-												<!-- Action view if present -->
+												<!-- Payloads section -->
 												{#if message.payloads?.length > 0}
 													{#each message.payloads as payload}
 														{#if payload.type === 'action'}
@@ -345,6 +373,49 @@
 																	showSpacer={false}
 																	on:actionComplete={handleActionComplete}
 																/>
+															</div>
+														{/if}
+														{#if message.agentType === 'walter' && message.payloads}
+															<div
+																class="w-full mt-2 overflow-hidden border rounded-lg border-surface-600"
+															>
+																<button
+																	type="button"
+																	class="flex items-center justify-between w-full p-3 text-sm bg-surface-700/50 hover:bg-surface-600/50"
+																	on:click={() => togglePayload(message.id, payload.type)}
+																>
+																	<span class="font-medium text-tertiary-200">
+																		{#if payload.type === 'view'}
+																			View Configuration
+																		{:else if payload.type === 'response'}
+																			Operation Result ({Object.keys(payload.content || {}).length} properties)
+																		{/if}
+																	</span>
+																	<svg
+																		class="w-4 h-4 transition-transform duration-200"
+																		class:rotate-180={isPayloadExpanded(message.id, payload.type)}
+																		xmlns="http://www.w3.org/2000/svg"
+																		viewBox="0 0 20 20"
+																		fill="currentColor"
+																	>
+																		<path
+																			d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+																		/>
+																	</svg>
+																</button>
+
+																{#if isPayloadExpanded(message.id, payload.type)}
+																	<div class="p-3 bg-surface-800/50" transition:slide>
+																		{#if payload.content}
+																			<pre
+																				class="p-2 overflow-x-auto text-sm whitespace-pre-wrap rounded bg-surface-900/50 text-tertiary-200">
+																				{JSON.stringify(payload.content, null, 2)}
+																			</pre>
+																		{:else}
+																			<p class="text-sm text-tertiary-400">No content available</p>
+																		{/if}
+																	</div>
+																{/if}
 															</div>
 														{/if}
 													{/each}
@@ -373,3 +444,11 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Add some styles for better interaction feedback */
+	[role='button']:focus-visible {
+		outline: 2px solid rgb(var(--color-tertiary-400));
+		outline-offset: -2px;
+	}
+</style>
