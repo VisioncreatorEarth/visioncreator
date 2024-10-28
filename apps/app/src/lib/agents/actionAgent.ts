@@ -103,6 +103,8 @@ export async function actionAgent(anthropic: Anthropic, request: any) {
             }],
             system: `You are a helper that extracts structured data from user messages about form actions. always retunr the first letters of the values you put in there with capital letter, f.e. name = Sam, or subject = Hello or body = How are you? 
                         unless its names, try to translate any request into english and only return english jsons. 
+                        Also you receive as additonal context always the previous conversations had with the user or other agents, please checkout the payload of the most recent ali action agent message payload, in case the user would like to update or change some current text the form data in the view:  id: 'HominioForm',
+                            component: 'HominioForm' ->  data: { form: {  fields: [ xyz ] } } }
 
                     Return JSON in the following format:
                     {

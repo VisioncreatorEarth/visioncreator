@@ -3,6 +3,7 @@
 	import { derived, writable } from 'svelte/store';
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { createEventDispatcher } from 'svelte';
+
 	const dispatch = createEventDispatcher<{
 		close: void;
 		message: { role: string; content: string; timestamp: number; toolResult?: any };
@@ -135,9 +136,7 @@
 
 			if (!result.error) {
 				console.log('Form submitted successfully:', {
-					action: submitAction,
-					values,
-					result
+					action: submitAction
 				});
 
 				// Dispatch success message
@@ -146,9 +145,7 @@
 					content: `Form submitted successfully: ${submitAction}`,
 					timestamp: Date.now(),
 					toolResult: {
-						type: 'form',
-						data: values,
-						result // Include the result in the toolResult
+						type: 'form'
 					}
 				});
 				dispatch('close');
