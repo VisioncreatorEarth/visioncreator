@@ -32,8 +32,9 @@
 	let currentModalType: 'login' | 'signup' | 'menu' = 'menu';
 
 	$: {
-		if (myIntentRef) {
-			console.log('ActionModal: MyIntent reference updated:', myIntentRef);
+		if (myIntentRef && dev) {
+			// Keep only if absolutely necessary for debugging in development
+			console.error('[Error] MyIntent reference issue:', myIntentRef);
 		}
 	}
 
@@ -48,35 +49,37 @@
 	}
 
 	function handleMouseDown() {
-		console.log('ActionModal: Mouse down event triggered');
 		isPressed = true;
 		pressStartTime = performance.now();
 
 		setTimeout(() => {
 			if (isPressed && performance.now() - pressStartTime >= 500) {
-				console.log('ActionModal: Long press detected, switching to intent mode');
 				isIntentModalOpen = true;
 				if (isIntentModalOpen && myIntentRef) {
 					myIntentRef.handleLongPressStart();
+				}
+			}
+			if (isPressed && performance.now() - pressStartTime < 500) {
+				if (session) {
+					toggleModal('menu');
+				} else {
+					toggleModal('login');
 				}
 			}
 		}, 500);
 	}
 
 	function handleMouseUp() {
-		console.log('ActionModal: Mouse up event triggered');
 		const currentTime = performance.now();
 		const pressDuration = currentTime - pressStartTime;
 
 		if (isPressed) {
 			isPressed = false;
 			if (pressDuration >= 500) {
-				console.log('ActionModal: Long press completed, releasing intent control');
 				if (isIntentModalOpen && myIntentRef) {
 					myIntentRef.handleLongPressEnd();
 				}
 			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
-				console.log('ActionModal: Short press detected, toggling modal');
 				if (session) {
 					toggleModal('menu');
 				} else {

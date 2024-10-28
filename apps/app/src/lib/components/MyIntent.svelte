@@ -22,24 +22,13 @@
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
-	let transcribedText = '';
 
-	const debug = (message: string, data?: any) => {
-		console.log(`[MyIntent] ${message}`, data || '');
-	};
-
-	// Safe store subscription
-	$: {
-		if ($conversationStore?.conversations) {
-			currentConversation = $conversationStore.conversations.find(
-				(conv) => conv.id === $conversationStore.currentConversationId
-			);
-			debug('Current conversation updated:', currentConversation);
-		}
-	}
+	// Simplified store subscription
+	$: currentConversation = $conversationStore?.conversations?.find(
+		(conv) => conv.id === $conversationStore.currentConversationId
+	);
 
 	onMount(() => {
-		debug('Component mounted, isOpen:', isOpen);
 		if (isOpen) {
 			conversationManager.startNewConversation();
 		}
@@ -48,6 +37,7 @@
 	onDestroy(() => {
 		if (audioStream) {
 			audioStream.getTracks().forEach((track) => track.stop());
+			audioStream = null;
 		}
 	});
 
@@ -59,16 +49,12 @@
 		mediaRecorder = null;
 		audioChunks = [];
 		modalState = 'idle';
-		transcribedText = '';
 
-		// Just end the current conversation
 		conversationManager.endCurrentConversation();
-
 		dispatch('close');
 	}
 
 	export async function handleLongPressStart() {
-		console.log('Starting recording...');
 		modalState = 'recording';
 		try {
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -83,15 +69,13 @@
 
 			mediaRecorder.start();
 		} catch (error) {
-			console.error('Failed to start recording:', error);
+			console.error('[Error] Recording failed:', error);
 			modalState = 'idle';
 		}
 	}
 
 	export async function handleLongPressEnd() {
-		debug('Stopping recording...');
 		if (!mediaRecorder || !audioStream) return;
-
 		modalState = 'transcribing';
 
 		return new Promise((resolve) => {
@@ -107,17 +91,14 @@
 					});
 
 					const data = await response.json();
-					debug('Received transcription:', data.text);
-
 					if (data.text) {
 						modalState = 'result';
-						// Add user message and trigger agent responses
 						conversationManager.addMessage(data.text, 'user', 'complete');
 					}
 
 					resolve(true);
 				} catch (error) {
-					console.error('Error processing audio:', error);
+					console.error('[Error] Audio processing failed:', error);
 					modalState = 'idle';
 					resolve(false);
 				} finally {
@@ -134,24 +115,14 @@
 		});
 	}
 
-	// Add function to handle action completion
-	function handleActionComplete(event: CustomEvent) {
-		debug('Action completed:', event.detail);
+	function handleActionComplete() {
 		currentAction = null;
-		// Additional handling as needed
 	}
 
-	// Add debug for action views
-	$: if (currentAction) {
-		debug('Current action view:', currentAction);
-	}
-
-	// Update the message container when new messages arrive
-	$: if (currentConversation?.messages?.length) {
+	// Auto-scroll messages
+	$: if (currentConversation?.messages?.length && messageContainer) {
 		setTimeout(() => {
-			if (messageContainer) {
-				messageContainer.scrollTop = messageContainer.scrollHeight;
-			}
+			messageContainer.scrollTop = messageContainer.scrollHeight;
 		}, 100);
 	}
 </script>

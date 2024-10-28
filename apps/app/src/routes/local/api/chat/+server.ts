@@ -5,8 +5,7 @@ import { env } from '$env/dynamic/private';
 import { componentAgent } from '$lib/agents/componentAgent';
 import { viewAgent } from '$lib/agents/viewAgent';
 import { actionAgent } from '$lib/agents/actionAgent';
-import { intentManager } from '$lib/agentStore';
-import type { Message } from '$lib/agentStore';
+import { conversationManager } from '$lib/stores/intentStore';
 
 let anthropic: Anthropic | null = null;
 
@@ -67,9 +66,9 @@ export async function POST({ request }: { request: Request }) {
     try {
         const { messages, sessionId } = await request.json();
 
-        // Reset context if it's a new session
-        if (!intentManager.getCurrentMessages().length) {
-            intentManager.create(sessionId);
+        // Start new conversation if needed
+        if (!conversationManager.getCurrentConversation()) {
+            conversationManager.startNewConversation();
         }
 
         const result = await masterCoordinator(anthropic, messages);
@@ -99,17 +98,8 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
         const processedMessages = processMessages(messages);
         const lastMessage = processedMessages[processedMessages.length - 1]?.content;
 
-        // Log user message
-        console.log('👤 User:', JSON.stringify({
-            content: lastMessage,
-            timestamp: Date.now()
-        }, null, 2));
-
-        intentManager.addMessage({
-            role: 'user',
-            content: lastMessage,
-            timestamp: Date.now()
-        });
+        // Add user message
+        conversationManager.addMessage(lastMessage, 'user', 'complete');
 
         const coordinatorResponse = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20240620',
@@ -123,81 +113,76 @@ async function masterCoordinator(anthropic: Anthropic, messages: any[]) {
 
         // Handle clarification needed with hardcoded message
         if (!toolCall) {
-            const clarificationMessage = {
-                role: 'hominio',
-                content: "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.",
-                timestamp: Date.now()
-            };
-            console.log('🤔 Clarification needed:', JSON.stringify(clarificationMessage, null, 2));
-            intentManager.addMessage(clarificationMessage);
+            const clarificationContent = "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.";
+            conversationManager.addMessage(
+                clarificationContent,
+                'agent',
+                'complete',
+                'hominio'
+            );
 
             return {
                 type: 'clarification_needed',
-                content: clarificationMessage.content,
+                content: clarificationContent,
                 needsClarification: true,
-                context: intentManager.getCurrentMessages()
+                context: conversationManager.getCurrentConversation()?.messages || []
             };
         }
 
-        // Log agent delegation
-        const agentMessage = {
-            role: toolCall.name,
-            content: `I'll handle this request. Processing...`,
-            timestamp: Date.now()
-        };
-        console.log(`🔧 ${toolCall.name}:`, JSON.stringify(agentMessage, null, 2));
-        intentManager.addMessage(agentMessage);
+        // Add agent message
+        conversationManager.addMessage(
+            `I'll handle this request. Processing...`,
+            'agent',
+            'complete',
+            toolCall.name as AgentType
+        );
 
         // Pass full context to agents
         const agentResult = await agents[toolCall.name](anthropic, {
-            messages: intentManager.getCurrentMessages(), // Pass full intent history
+            messages: conversationManager.getCurrentConversation()?.messages || [],
             agentInput: {
                 ...toolCall.input,
-                originalRequest: lastMessage, // Pass original request explicitly
-                context: intentManager.getCurrentMessages() // Pass full context
+                originalRequest: lastMessage,
+                context: conversationManager.getCurrentConversation()?.messages || []
             },
             tool_use_id: toolCall.tool_use_id
         });
 
-        // Add completion message with context
-        const completionMessage = {
-            role: 'hominio',
-            content: `Task completed based on your request: "${lastMessage}". Let me know if you need anything else.`,
-            timestamp: Date.now(),
-            context: intentManager.getCurrentMessages()
-        };
-        console.log('🤖 Hominio:', JSON.stringify(completionMessage, null, 2));
-        intentManager.addMessage(completionMessage);
+        // Add completion message
+        conversationManager.addMessage(
+            `Task completed based on your request: "${lastMessage}". Let me know if you need anything else.`,
+            'agent',
+            'complete',
+            'hominio'
+        );
 
         // Return result with full context
         if (agentResult.message?.toolResult?.type === 'action') {
             return {
                 type: 'action',
                 content: agentResult.message.toolResult.data,
-                message: completionMessage,
-                context: intentManager.getCurrentMessages()
+                message: {
+                    role: 'hominio',
+                    content: `Task completed based on your request: "${lastMessage}". Let me know if you need anything else.`,
+                    timestamp: Date.now()
+                },
+                context: conversationManager.getCurrentConversation()?.messages || []
             };
         }
 
-        // Add to masterCoordinator where agent is called:
-        console.log('🔧 Agent Context:', JSON.stringify({
-            toolCall: {
-                name: toolCall.name,
-                input: toolCall.input,
-                tool_use_id: toolCall.tool_use_id
-            },
-            messageContext: intentManager.getCurrentMessages(),
-            agentResult: agentResult
-        }, null, 2));
-
         return {
             ...agentResult,
-            context: intentManager.getCurrentMessages()
+            context: conversationManager.getCurrentConversation()?.messages || []
         };
 
     } catch (error) {
-        console.error('❌ Error:', error);
-        intentManager.complete('error');
+        console.error('Error:', error);
+        conversationManager.addMessage(
+            'An error occurred while processing your request.',
+            'agent',
+            'error',
+            'system'
+        );
         throw error;
     }
 }

@@ -1,26 +1,55 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 
-// Update MessagePayload interface to handle multiple types
+// Merge agent types and message styling from agentStore
+export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'system';
+
+// Update MessagePayload interface to include tool results
 export interface MessagePayload {
-    type: 'action' | 'view' | 'response'; // Added new payload types
+    type: 'action' | 'view' | 'response' | 'error';
     title?: string;
     content: {
         action?: string;
         view?: any;
-        [key: string]: any; // Allow for flexible content structure
+        [key: string]: any;
     };
 }
 
+// Update Message interface to include role
 export interface Message {
     id: string;
     content: string;
     type: 'user' | 'agent';
-    agentType?: 'hominio' | 'ali' | 'walter'; // Added walter
+    agentType?: AgentType;
+    role?: string;
     timestamp: string;
     status?: 'pending' | 'complete' | 'error';
     payloads?: MessagePayload[];
 }
+
+// Add message styling configuration
+export const messageStyleConfig = {
+    user: {
+        bgColor: 'bg-primary-500',
+        textColor: 'text-white'
+    },
+    hominio: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    ali: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    walter: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    system: {
+        bgColor: 'bg-surface-800',
+        textColor: 'text-tertiary-300'
+    }
+} as const;
 
 export interface AgentConversation {
     id: string;
@@ -81,13 +110,24 @@ export const conversationStore = persist(
     'conversations'
 );
 
-// Debug logging helper
-const debug = (message: string, data?: any) => {
-    console.log(`[IntentStore] ${message}`, data || '');
-};
-
 // Conversation Manager Class
 export class ConversationManager {
+    private logMessage(agentType: AgentType, content: string, payloads?: MessagePayload[]) {
+        if (agentType && agentType !== 'user') {
+            console.log(`[${agentType}] ${content}`);
+
+            // Log payloads if they exist
+            if (payloads?.length) {
+                payloads.forEach(payload => {
+                    console.log(`[${agentType}:payload] type: ${payload.type}`, {
+                        title: payload.title,
+                        content: payload.content
+                    });
+                });
+            }
+        }
+    }
+
     // Simplified agent responses
     private generateActionAgentResponse(userMessage: string): Message {
         return {
@@ -141,13 +181,11 @@ export class ConversationManager {
         };
 
         const currentState = get(conversationStore) || defaultConversationState;
-
         const updatedState = {
             currentConversationId: newConversation.id,
             conversations: [...(currentState.conversations || []), newConversation]
         };
 
-        debug('Starting new conversation', updatedState);
         conversationStore.set(updatedState);
         return newConversation.id;
     }
@@ -156,9 +194,14 @@ export class ConversationManager {
         content: string,
         type: 'user' | 'agent',
         status: 'pending' | 'complete' | 'error' = 'complete',
-        agentType?: 'hominio' | 'ali' | 'walter', // Added walter
+        agentType?: AgentType,
         payloads?: MessagePayload[]
     ) {
+        // Only log agent messages with their payloads
+        if (type === 'agent' && agentType) {
+            this.logMessage(agentType, content, payloads);
+        }
+
         const currentState = get(conversationStore);
 
         // If no conversation exists, create one
@@ -193,7 +236,6 @@ export class ConversationManager {
             )
         };
 
-        debug('Adding message to conversation', { message, newState });
         conversationStore.set(newState);
 
         // If this is a user message, automatically add agent responses
@@ -235,12 +277,10 @@ export class ConversationManager {
                 conv.isActive ? { ...conv, isActive: false } : conv
             )
         };
-        debug('Ending current conversation', updatedState);
         conversationStore.set(updatedState);
     }
 
     resetAll() {
-        debug('Resetting all conversations');
         conversationStore.set(defaultConversationState);
     }
 }
