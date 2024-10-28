@@ -54,9 +54,47 @@
 		dispatch('close');
 	}
 
+	// Add new state variables
+	let hasPermissions = false;
+	let permissionRequesting = false;
+
+	// New function to handle permissions
+	async function requestMicrophonePermissions() {
+		if (hasPermissions) return true;
+		if (permissionRequesting) return false;
+
+		try {
+			permissionRequesting = true;
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
+			hasPermissions = true;
+			return true;
+		} catch (error) {
+			console.error('[Error] Microphone permission denied:', error);
+			return false;
+		} finally {
+			permissionRequesting = false;
+		}
+	}
+
 	export async function handleLongPressStart() {
 		modalState = 'recording';
+
+		// First check/request permissions
+		if (!hasPermissions) {
+			const granted = await requestMicrophonePermissions();
+			if (!granted) {
+				modalState = 'idle';
+				return;
+			}
+		}
+
 		try {
+			// Clean up any existing stream
+			if (audioStream) {
+				audioStream.getTracks().forEach((track) => track.stop());
+			}
+
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			mediaRecorder = new MediaRecorder(audioStream);
 			audioChunks = [];
@@ -71,48 +109,55 @@
 		} catch (error) {
 			console.error('[Error] Recording failed:', error);
 			modalState = 'idle';
+			if (audioStream) {
+				audioStream.getTracks().forEach((track) => track.stop());
+				audioStream = null;
+			}
 		}
 	}
 
 	export async function handleLongPressEnd() {
-		if (!mediaRecorder || !audioStream) return;
+		if (!mediaRecorder || !audioStream || mediaRecorder.state === 'inactive') return;
+
 		modalState = 'transcribing';
 
-		return new Promise((resolve) => {
-			mediaRecorder!.onstop = async () => {
-				try {
-					const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-					const formData = new FormData();
-					formData.append('audio', audioBlob, 'recording.webm');
+		try {
+			// Stop the media recorder
+			mediaRecorder.stop();
 
-					const response = await fetch('/local/api/speech-to-text', {
-						method: 'POST',
-						body: formData
-					});
+			// Wait for the data to be available
+			await new Promise<void>((resolve) => {
+				mediaRecorder!.onstop = () => resolve();
+			});
 
-					const data = await response.json();
-					if (data.text) {
-						modalState = 'result';
-						conversationManager.addMessage(data.text, 'user', 'complete');
-					}
+			// Create blob from recorded chunks
+			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+			const formData = new FormData();
+			formData.append('audio', audioBlob, 'recording.webm');
 
-					resolve(true);
-				} catch (error) {
-					console.error('[Error] Audio processing failed:', error);
-					modalState = 'idle';
-					resolve(false);
-				} finally {
-					if (audioStream) {
-						audioStream.getTracks().forEach((track) => track.stop());
-					}
-					audioStream = null;
-					mediaRecorder = null;
-					audioChunks = [];
-				}
-			};
+			// Send to transcription API
+			const response = await fetch('/local/api/speech-to-text', {
+				method: 'POST',
+				body: formData
+			});
 
-			mediaRecorder!.stop();
-		});
+			const data = await response.json();
+			if (data.text) {
+				modalState = 'result';
+				conversationManager.addMessage(data.text, 'user', 'complete');
+			}
+		} catch (error) {
+			console.error('[Error] Audio processing failed:', error);
+			modalState = 'idle';
+		} finally {
+			// Cleanup
+			if (audioStream) {
+				audioStream.getTracks().forEach((track) => track.stop());
+			}
+			audioStream = null;
+			mediaRecorder = null;
+			audioChunks = [];
+		}
 	}
 
 	function handleActionComplete() {
