@@ -22,8 +22,7 @@
 		| 'transcribing'
 		| 'result'
 		| 'need-permissions'
-		| 'permissions-denied'
-		| 'first-time-ready' = 'idle';
+		| 'permissions-denied' = 'idle';
 	let currentConversation: any = null;
 	let audioStream: MediaStream | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
@@ -67,18 +66,17 @@
 		| 'transcribing'
 		| 'result'
 		| 'need-permissions'
-		| 'permissions-denied'
-		| 'first-time-ready';
+		| 'permissions-denied';
 
 	let hasPermissions = false;
 	let permissionRequesting = false;
-	let hasShownFirstTimeReady = localStorage.getItem('hasShownFirstTimeReady') === 'true';
 
 	onMount(async () => {
 		try {
 			const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
 			if (result.state === 'granted') {
 				hasPermissions = true;
+				modalState = 'idle'; // Set to idle to show default message view
 			} else if (result.state === 'denied') {
 				modalState = 'permissions-denied';
 			} else {
@@ -99,15 +97,7 @@
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 			stream.getTracks().forEach((track) => track.stop());
 			hasPermissions = true;
-
-			if (!hasShownFirstTimeReady) {
-				modalState = 'first-time-ready';
-				hasShownFirstTimeReady = true;
-				localStorage.setItem('hasShownFirstTimeReady', 'true');
-			} else {
-				modalState = 'idle';
-			}
-
+			modalState = 'idle'; // Set to idle first
 			return true;
 		} catch (error) {
 			console.error('[Error] Microphone permission denied:', error);
@@ -119,17 +109,18 @@
 	}
 
 	export async function handleLongPressStart() {
-		modalState = 'recording';
-
 		// First check/request permissions
 		if (!hasPermissions) {
 			const granted = await requestMicrophonePermissions();
 			if (!granted) {
-				modalState = 'idle';
-				return;
+				return; // Exit early if permissions weren't granted
 			}
+			// Don't automatically start recording after getting permissions
+			return;
 		}
 
+		// Only start recording if we already had permissions
+		modalState = 'recording';
 		try {
 			// Clean up any existing stream
 			if (audioStream) {
@@ -236,8 +227,6 @@
 								Microphone Access
 							{:else if modalState === 'permissions-denied'}
 								Access Denied
-							{:else if modalState === 'first-time-ready'}
-								Ready to Go!
 							{:else}
 								Your Message
 							{/if}
@@ -272,9 +261,6 @@
 								<p class="text-surface-200">
 									Please allow microphone access to start making voice requests.
 								</p>
-								<button class="btn variant-filled-primary" on:click={requestMicrophonePermissions}>
-									Enable Microphone
-								</button>
 							</div>
 						{:else if modalState === 'permissions-denied'}
 							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
@@ -292,17 +278,6 @@
 										<li>Refresh the page</li>
 									</ol>
 								</div>
-							</div>
-						{:else if modalState === 'first-time-ready'}
-							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
-								<div class="text-4xl">✨</div>
-								<h3 class="text-xl font-semibold text-tertiary-200">You're All Set!</h3>
-								<p class="text-surface-200">
-									Long press the button anytime to start your first voice request.
-								</p>
-								<button class="btn variant-filled-primary" on:click={() => (modalState = 'idle')}>
-									Got it!
-								</button>
 							</div>
 						{:else if modalState === 'recording'}
 							<div class="flex items-center justify-center flex-1">
