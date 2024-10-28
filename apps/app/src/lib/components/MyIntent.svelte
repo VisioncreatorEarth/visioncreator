@@ -12,11 +12,18 @@
 	dayjs.extend(relativeTime);
 
 	export let isOpen = false;
-	export let session = null;
+	export let session: any;
 
 	const dispatch = createEventDispatcher();
 	let currentAction: { action: string; view: any } | null = null;
-	let modalState: 'idle' | 'recording' | 'transcribing' | 'result' = 'idle';
+	let modalState:
+		| 'idle'
+		| 'recording'
+		| 'transcribing'
+		| 'result'
+		| 'need-permissions'
+		| 'permissions-denied'
+		| 'first-time-ready' = 'idle';
 	let currentConversation: any = null;
 	let audioStream: MediaStream | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
@@ -54,11 +61,35 @@
 		dispatch('close');
 	}
 
-	// Add new state variables
+	type ModalState =
+		| 'idle'
+		| 'recording'
+		| 'transcribing'
+		| 'result'
+		| 'need-permissions'
+		| 'permissions-denied'
+		| 'first-time-ready';
+
 	let hasPermissions = false;
 	let permissionRequesting = false;
+	let hasShownFirstTimeReady = localStorage.getItem('hasShownFirstTimeReady') === 'true';
 
-	// New function to handle permissions
+	onMount(async () => {
+		try {
+			const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+			if (result.state === 'granted') {
+				hasPermissions = true;
+			} else if (result.state === 'denied') {
+				modalState = 'permissions-denied';
+			} else {
+				modalState = 'need-permissions';
+			}
+		} catch (error) {
+			console.error('[Error] Permission check failed:', error);
+			modalState = 'need-permissions';
+		}
+	});
+
 	async function requestMicrophonePermissions() {
 		if (hasPermissions) return true;
 		if (permissionRequesting) return false;
@@ -66,11 +97,21 @@
 		try {
 			permissionRequesting = true;
 			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
+			stream.getTracks().forEach((track) => track.stop());
 			hasPermissions = true;
+
+			if (!hasShownFirstTimeReady) {
+				modalState = 'first-time-ready';
+				hasShownFirstTimeReady = true;
+				localStorage.setItem('hasShownFirstTimeReady', 'true');
+			} else {
+				modalState = 'idle';
+			}
+
 			return true;
 		} catch (error) {
 			console.error('[Error] Microphone permission denied:', error);
+			modalState = 'permissions-denied';
 			return false;
 		} finally {
 			permissionRequesting = false;
@@ -191,6 +232,12 @@
 								Recording...
 							{:else if modalState === 'transcribing'}
 								Transcribing...
+							{:else if modalState === 'need-permissions'}
+								Microphone Access
+							{:else if modalState === 'permissions-denied'}
+								Access Denied
+							{:else if modalState === 'first-time-ready'}
+								Ready to Go!
 							{:else}
 								Your Message
 							{/if}
@@ -218,7 +265,46 @@
 
 					<!-- Content -->
 					<div class="flex flex-col min-h-[200px] max-h-[60vh] overflow-y-auto p-6">
-						{#if modalState === 'recording'}
+						{#if modalState === 'need-permissions'}
+							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
+								<div class="text-4xl">🎤</div>
+								<h3 class="text-xl font-semibold text-tertiary-200">Microphone Access Needed</h3>
+								<p class="text-surface-200">
+									Please allow microphone access to start making voice requests.
+								</p>
+								<button class="btn variant-filled-primary" on:click={requestMicrophonePermissions}>
+									Enable Microphone
+								</button>
+							</div>
+						{:else if modalState === 'permissions-denied'}
+							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
+								<div class="text-4xl">🚫</div>
+								<h3 class="text-xl font-semibold text-tertiary-200">Microphone Access Denied</h3>
+								<p class="text-surface-200">
+									Please enable microphone access in your browser settings.
+								</p>
+								<div class="text-sm text-surface-300">
+									<p>How to enable:</p>
+									<ol class="mt-2 text-left list-decimal list-inside">
+										<li>Click the lock icon in your browser's address bar</li>
+										<li>Find "Microphone" in the permissions list</li>
+										<li>Change the setting to "Allow"</li>
+										<li>Refresh the page</li>
+									</ol>
+								</div>
+							</div>
+						{:else if modalState === 'first-time-ready'}
+							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
+								<div class="text-4xl">✨</div>
+								<h3 class="text-xl font-semibold text-tertiary-200">You're All Set!</h3>
+								<p class="text-surface-200">
+									Long press the button anytime to start your first voice request.
+								</p>
+								<button class="btn variant-filled-primary" on:click={() => (modalState = 'idle')}>
+									Got it!
+								</button>
+							</div>
+						{:else if modalState === 'recording'}
 							<div class="flex items-center justify-center flex-1">
 								<AudioVisualizer isRecording={true} {audioStream} />
 							</div>
@@ -229,7 +315,6 @@
 								/>
 							</div>
 						{:else if modalState === 'result'}
-							<!-- Message history with new MessageItem component -->
 							<div class="flex-1 space-y-4" bind:this={messageContainer}>
 								{#if currentConversation?.messages?.length}
 									{#each currentConversation.messages as message (message.id)}
@@ -258,5 +343,9 @@
 	[role='button']:focus-visible {
 		outline: 2px solid rgb(var(--color-tertiary-400));
 		outline-offset: -2px;
+	}
+
+	.modal-container {
+		@apply bg-surface-800 dark:bg-surface-900 rounded-lg shadow-xl;
 	}
 </style>
