@@ -1,6 +1,4 @@
-import type { Anthropic } from '@anthropic-ai/sdk';
-import type { Message, ToolResultType } from '$lib/agentStore';
-
+import { conversationManager } from '$lib/stores/intentStore';
 
 const SYSTEM_PROMPT = `
 You are an AI assistant specialized in creating view configurations for a dynamic Svelte component system called Composer. Your task is to interpret user requests and generate appropriate JSON configurations for the Composer.svelte component.
@@ -79,35 +77,79 @@ interface Message {
     };
 }
 
-export async function viewAgent(anthropic: Anthropic, request: any): Promise<AgentResponse> {
+export async function viewAgent(request: any): Promise<AgentResponse> {
     try {
-        const userMessage = request.agentInput?.task || request.messages[request.messages.length - 1].content;
+        const userMessage = request.task;
 
-        console.log('🎯 ViewAgent processing:', userMessage);
+        conversationManager.addMessage(
+            'Generating view configuration...',
+            'agent',
+            'pending',
+            'walter'
+        );
 
-        const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20240620',
-            max_tokens: 4000,
-            messages: [{ role: 'user', content: userMessage }],
-            system: SYSTEM_PROMPT,
-            temperature: 0.7
+        const response = await fetch('/local/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: userMessage }],
+                system: SYSTEM_PROMPT
+            })
         });
 
-        const viewConfig = extractViewConfig(response.content[0].text);
-        console.log('🎨 Generated view config:', viewConfig);
+        const data = await response.json();
+        const viewConfig = extractViewConfig(data.content[0].text);
 
-        const message = createAgentMessage(response.content[0].text, viewConfig, request.tool_use_id);
+        if (viewConfig) {
+            conversationManager.addMessage(
+                'View configuration ready',
+                'agent',
+                'complete',
+                'walter',
+                [{
+                    type: 'view',
+                    content: viewConfig
+                }]
+            );
+            return {
+                type: 'tool_result',
+                tool_use_id: request.tool_use_id,
+                content: JSON.stringify(viewConfig),
+                is_error: false,
+                message: {
+                    role: 'viewAgent',
+                    content: 'View configuration generated successfully',
+                    timestamp: Date.now(),
+                    toolResult: {
+                        type: 'view',
+                        data: viewConfig,
+                        tool_use_id: request.tool_use_id
+                    }
+                }
+            };
+        }
 
+        throw new Error('Could not generate view');
+    } catch (error) {
+        console.error('View Agent Error:', error);
+        conversationManager.addMessage(
+            'Sorry, I could not generate that view.',
+            'agent',
+            'error',
+            'walter'
+        );
         return {
             type: 'tool_result',
             tool_use_id: request.tool_use_id,
-            content: viewConfig ? JSON.stringify(viewConfig) : null,
-            is_error: !viewConfig,
-            message
+            content: null,
+            is_error: true,
+            message: {
+                role: 'viewAgent',
+                content: 'Failed to generate view',
+                timestamp: Date.now(),
+                toolResult: undefined
+            }
         };
-    } catch (error) {
-        console.error('❌ ViewAgent error:', error);
-        return createErrorResponse(error, request.tool_use_id);
     }
 }
 

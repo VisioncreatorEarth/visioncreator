@@ -7,6 +7,7 @@
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import MessageItem from './MessageItem.svelte';
+	import { hominioAgent } from '$lib/agents/hominioAgent';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -176,7 +177,7 @@
 			const data = await response.json();
 			if (data.text) {
 				modalState = 'result';
-				conversationManager.addMessage(data.text, 'user', 'complete');
+				await handleTranscriptionComplete(data.text);
 			}
 		} catch (error) {
 			console.error('[Error] Audio processing failed:', error);
@@ -201,6 +202,36 @@
 		setTimeout(() => {
 			messageContainer.scrollTop = messageContainer.scrollHeight;
 		}, 100);
+	}
+
+	// Add this function to handle voice transcription completion
+	async function handleTranscriptionComplete(text: string) {
+		modalState = 'result';
+		try {
+			const response = await hominioAgent.processRequest(text);
+
+			// Scroll to bottom after new messages
+			if (messageContainer) {
+				setTimeout(() => {
+					messageContainer.scrollTop = messageContainer.scrollHeight;
+				}, 100);
+			}
+
+			if (response?.message?.toolResult) {
+				const { type, content } = response.message.toolResult;
+				if (type === 'action' && content.action) {
+					currentAction = content;
+				}
+			}
+		} catch (error) {
+			console.error('Error processing request:', error);
+			conversationManager.addMessage(
+				'Sorry, I encountered an error processing your request.',
+				'agent',
+				'error',
+				'system'
+			);
+		}
 	}
 </script>
 

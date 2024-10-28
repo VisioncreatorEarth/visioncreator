@@ -1,34 +1,49 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import type { Anthropic } from '@anthropic-ai/sdk';
+import { conversationManager } from '$lib/stores/intentStore';
 
 const CLAUDE_FILE_PATH = path.resolve('src/lib/components/Claude.svelte');
 const COMPONENT_AGENT_FILE_PATH = path.resolve('src/lib/prompts/component-agent.txt');
 
-export async function componentAgent(anthropic: Anthropic, request: any) {
+export async function componentAgent(request: any) {
     try {
+        const userMessage = request.task;
+
+        conversationManager.addMessage(
+            'Reading component files...',
+            'agent',
+            'pending',
+            'componentAgent'
+        );
+
+        // Read existing files
         const existingComponent = await readFileContent(CLAUDE_FILE_PATH);
         const componentAgentPrompt = await readFileContent(COMPONENT_AGENT_FILE_PATH);
 
-        const task = request.agentInput?.task || request.messages[request.messages.length - 1].content;
+        const fullSystemPrompt = `${componentAgentPrompt}\n\nHere is our existing component:\n\n\`\`\`svelte\n${existingComponent}\n\`\`\`\n\nTask: ${userMessage}`;
 
-        const fullSystemPrompt = `${componentAgentPrompt}\n\nHere is our existing component:\n\n\`\`\`svelte\n${existingComponent}\n\`\`\`\n\nTask: ${task}`;
+        conversationManager.addMessage(
+            'Generating component updates...',
+            'agent',
+            'pending',
+            'componentAgent'
+        );
 
-        const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 4000,
-            messages: [{ role: 'user', content: fullSystemPrompt }],
-            temperature: 0.7,
-            top_p: 1
+        // Call Claude through server endpoint
+        const response = await fetch('/local/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: fullSystemPrompt }],
+                system: 'Generate or modify Svelte component based on user request.'
+            })
         });
 
+        const data = await response.json();
         let assistantMessage = '';
-        if (response.content && response.content.length > 0) {
-            for (const content of response.content) {
-                if (content.type === 'text') {
-                    assistantMessage += content.text;
-                }
-            }
+
+        if (data.content?.[0]?.text) {
+            assistantMessage = data.content[0].text;
         }
 
         const componentMatch = assistantMessage.match(/<svelte-component[^>]*>([\s\S]*?)<\/svelte-component>/);
@@ -36,6 +51,20 @@ export async function componentAgent(anthropic: Anthropic, request: any) {
         if (componentMatch) {
             const componentContent = componentMatch[1].trim();
             await writeFileContent(CLAUDE_FILE_PATH, componentContent);
+
+            conversationManager.addMessage(
+                'Component updated successfully',
+                'agent',
+                'complete',
+                'componentAgent',
+                [{
+                    type: 'component',
+                    content: {
+                        data: componentContent,
+                        tool_use_id: request.tool_use_id
+                    }
+                }]
+            );
 
             return {
                 type: 'tool_result',
@@ -54,14 +83,33 @@ export async function componentAgent(anthropic: Anthropic, request: any) {
                 }
             };
         } else {
-            return { content: "I couldn't find a valid Svelte component in the response. Here's what I got:\n\n" + assistantMessage };
+            conversationManager.addMessage(
+                'Could not generate valid component code',
+                'agent',
+                'error',
+                'componentAgent'
+            );
+            return {
+                content: "I couldn't find a valid Svelte component in the response.",
+                is_error: true
+            };
         }
     } catch (error) {
         console.error('Error in componentAgent:', error);
-        return { error: 'An error occurred while processing your request in the componentAgent.' };
+        conversationManager.addMessage(
+            'An error occurred while processing the component',
+            'agent',
+            'error',
+            'componentAgent'
+        );
+        return {
+            error: 'An error occurred while processing your request in the componentAgent.',
+            is_error: true
+        };
     }
 }
 
+// Keep existing file handling functions
 async function readFileContent(filePath: string): Promise<string> {
     return await fs.readFile(filePath, 'utf-8');
 }

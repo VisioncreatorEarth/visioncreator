@@ -1,4 +1,4 @@
-import type { Anthropic } from '@anthropic-ai/sdk';
+import { conversationManager } from '$lib/stores/intentStore';
 import { z } from 'zod';
 
 const UpdateNameSchema = z.object({
@@ -88,112 +88,73 @@ const actionViews = {
     sendMail: actionSendMailView
 };
 
-export async function actionAgent(anthropic: Anthropic, request: any) {
+export async function actionAgent(request: any) {
     try {
-        const userMessage = request.agentInput?.task || request.messages[request.messages.length - 1].content;
+        const userMessage = request.task;
         console.log('Action agent processing message:', userMessage);
+        conversationManager.addMessage(
+            'Processing your action request...',
+            'agent',
+            'pending',
+            'ali'
+        );
 
-        // First, use Claude to extract structured data
-        const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 4000,
-            messages: [{
-                role: 'user',
-                content: userMessage
-            }],
-            system: `You are a helper that extracts structured data from user messages about form actions. always retunr the first letters of the values you put in there with capital letter, f.e. name = Sam, or subject = Hello or body = How are you? 
-                        unless its names, try to translate any request into english and only return english jsons. 
-                        Also you receive as additonal context always the previous conversations had with the user or other agents, please checkout the payload of the most recent ali action agent message payload, in case the user would like to update or change some current text the form data in the view:  id: 'HominioForm',
-                            component: 'HominioForm' ->  data: { form: {  fields: [ xyz ] } } }
-
-                    Return JSON in the following format:
-                    {
-                        "action": "updateName" | "sendMail",
-                        "values": {
-                            // extracted values like name, subject, body
-                        }
-                    }
-                    Only return valid JSON, no other text.`,
-            temperature: 0.1 // Low temperature for consistent outputs
+        // Call Claude through our server endpoint
+        const response = await fetch('/local/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: userMessage }],
+                system: `Extract form action data. Return JSON with action (updateName|sendMail) and values.`
+            })
         });
 
+        const data = await response.json();
         let extractedData = null;
-        if (response.content && response.content.length > 0) {
-            for (const content of response.content) {
-                if (content.type === 'text') {
-                    try {
-                        extractedData = JSON.parse(content.text);
-                        break;
-                    } catch (e) {
-                        console.error('Failed to parse Claude response:', e);
-                    }
-                }
+
+        if (data.content?.[0]?.text) {
+            try {
+                extractedData = JSON.parse(data.content[0].text);
+            } catch (e) {
+                console.error('Failed to parse response:', e);
             }
         }
 
         if (extractedData?.action && actionViews[extractedData.action]) {
             const view = JSON.parse(JSON.stringify(actionViews[extractedData.action]));
 
-            // Update field values in the view
+            // Update field values
             view.children[0].data.form.fields = view.children[0].data.form.fields.map(field => ({
                 ...field,
                 value: extractedData.values[field.name] || ''
             }));
 
-            const actionConfig = {
-                action: extractedData.action,
-                view: view,
-                values: extractedData.values
-            };
-
-            return {
-                type: 'tool_result',
-                tool_use_id: request.tool_use_id,
-                content: actionConfig,
-                is_error: false,
-                message: {
-                    role: 'actionAgent',
-                    content: `Action prepared: ${extractedData.action}`,
-                    timestamp: Date.now(),
-                    toolResult: {
-                        type: 'action',
-                        data: actionConfig
+            conversationManager.addMessage(
+                `Form prepared for: ${extractedData.action}`,
+                'agent',
+                'complete',
+                'ali',
+                [{
+                    type: 'action',
+                    content: {
+                        action: extractedData.action,
+                        view: view
                     }
-                }
-            };
+                }]
+            );
+
+            return { success: true, view };
         }
 
-        return {
-            type: 'tool_result',
-            tool_use_id: request.tool_use_id,
-            content: "I couldn't determine the appropriate action for your request.",
-            is_error: true,
-            message: {
-                role: 'actionAgent',
-                content: "Failed to determine appropriate action",
-                timestamp: Date.now(),
-                toolResult: {
-                    type: 'error',
-                    data: "No matching action found"
-                }
-            }
-        };
+        throw new Error('Could not process action');
     } catch (error) {
-        console.error('Error in actionAgent:', error);
-        return {
-            type: 'tool_result',
-            tool_use_id: request.tool_use_id,
-            content: 'An error occurred while processing your request in the actionAgent.',
-            is_error: true,
-            message: {
-                role: 'actionAgent',
-                content: 'Error processing request',
-                timestamp: Date.now(),
-                toolResult: {
-                    type: 'error',
-                    data: error.message || 'Unknown error'
-                }
-            }
-        };
+        console.error('Action Agent Error:', error);
+        conversationManager.addMessage(
+            'Sorry, I could not process that action.',
+            'agent',
+            'error',
+            'ali'
+        );
+        return { error: true };
     }
 }
