@@ -1,10 +1,8 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 
-// Merge agent types and message styling from agentStore
 export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'system';
 
-// Update MessagePayload interface to include tool results
 export interface MessagePayload {
     type: 'action' | 'view' | 'response' | 'error';
     title?: string;
@@ -15,7 +13,6 @@ export interface MessagePayload {
     };
 }
 
-// Update Message interface to include role
 export interface Message {
     id: string;
     content: string;
@@ -27,7 +24,6 @@ export interface Message {
     payloads?: MessagePayload[];
 }
 
-// Add message styling configuration
 export const messageStyleConfig = {
     user: {
         bgColor: 'bg-primary-500',
@@ -64,111 +60,20 @@ export interface ConversationState {
     conversations: AgentConversation[];
 }
 
-// Hardcoded view config for name update action
-const updateNameView = {
-    id: 'UpdateNameContainer',
-    layout: {
-        rows: '1fr auto',
-        areas: `"main"`
-    },
-    children: [
-        {
-            id: 'UpdateNameForm',
-            component: 'HominioForm', // Change back to HominioForm
-            slot: 'main',
-            data: {
-                form: {
-                    fields: [
-                        {
-                            name: 'name',
-                            type: 'text',
-                            title: 'Name',
-                            value: 'Samuel' // Hardcoded value
-                        }
-                    ],
-                    validators: 'updateName',
-                    submitAction: 'updateMe'
-                }
-            }
-        }
-    ]
-};
-
-// Default state
 const defaultConversationState: ConversationState = {
     currentConversationId: null,
     conversations: []
 };
 
-// Create IndexedDB storage
 const storage = createIndexedDBStorage('intentDB', 'conversations');
 
-// Create persistent store
-export const conversationStore = persist(
-    writable<ConversationState>(defaultConversationState),
-    storage,
-    'conversations'
-);
-
-// Conversation Manager Class
 export class ConversationManager {
-    private logMessage(agentType: AgentType, content: string, payloads?: MessagePayload[]) {
-        if (agentType && agentType !== 'user') {
-            console.log(`[${agentType}] ${content}`);
-
-            // Log payloads if they exist
-            if (payloads?.length) {
-                payloads.forEach(payload => {
-                    console.log(`[${agentType}:payload] type: ${payload.type}`, {
-                        title: payload.title,
-                        content: payload.content
-                    });
-                });
-            }
-        }
+    constructor() {
+        this.initializeStore();
     }
 
-    // Simplified agent responses
-    private generateActionAgentResponse(userMessage: string): Message {
-        return {
-            id: crypto.randomUUID(),
-            content: "I'll help you update your name. Here's a form to do that:",
-            type: 'agent',
-            agentType: 'ali',
-            timestamp: new Date().toISOString(),
-            status: 'complete',
-            payloads: [{
-                type: 'action',
-                title: 'Update Name Form',
-                content: {
-                    action: 'updateName',
-                    view: updateNameView
-                }
-            }]
-        };
-    }
-
-    private generateHominioResponse(userMessage: string): Message {
-        return {
-            id: crypto.randomUUID(),
-            content: "I understand you want to update your name. I'll delegate this to Ali, our Action Agent.",
-            type: 'agent',
-            agentType: 'hominio',
-            timestamp: new Date().toISOString(),
-            status: 'complete'
-        };
-    }
-
-    private generateWalterResponse(message: string, payloads?: MessagePayload[]): Message {
-        return {
-            id: crypto.randomUUID(),
-            content: message,
-            type: 'agent',
-            agentType: 'walter',
-            timestamp: new Date().toISOString(),
-            status: 'complete',
-            payloads
-        };
+    private initializeStore() {
+        conversationStore.set(defaultConversationState);
     }
 
     startNewConversation() {
@@ -197,14 +102,8 @@ export class ConversationManager {
         agentType?: AgentType,
         payloads?: MessagePayload[]
     ) {
-        // Only log agent messages with their payloads
-        if (type === 'agent' && agentType) {
-            this.logMessage(agentType, content, payloads);
-        }
-
         const currentState = get(conversationStore);
 
-        // If no conversation exists, create one
         if (!currentState?.currentConversationId) {
             this.startNewConversation();
         }
@@ -219,10 +118,11 @@ export class ConversationManager {
             payloads
         };
 
-        // Get fresh state after possible initialization
-        const updatedState = get(conversationStore);
+        if (type === 'agent' && payloads) {
+            console.log(`Agent ${agentType} message payloads:`, payloads);
+        }
 
-        // Add message to current conversation
+        const updatedState = get(conversationStore);
         const newState = {
             ...updatedState,
             conversations: updatedState.conversations.map(conv =>
@@ -237,28 +137,6 @@ export class ConversationManager {
         };
 
         conversationStore.set(newState);
-
-        // If this is a user message, automatically add agent responses
-        if (type === 'user' && status === 'complete') {
-            // Add Hominio response
-            const hominioResponse = this.generateHominioResponse(content);
-            this.addMessage(
-                hominioResponse.content,
-                'agent',
-                'complete',
-                'hominio'
-            );
-
-            // Add Action Agent response
-            const actionResponse = this.generateActionAgentResponse(content);
-            this.addMessage(
-                actionResponse.content,
-                'agent',
-                'complete',
-                'ali',
-                actionResponse.payloads
-            );
-        }
     }
 
     getCurrentConversation(): AgentConversation | null {
@@ -285,8 +163,10 @@ export class ConversationManager {
     }
 }
 
-// Export singleton instance
-export const conversationManager = new ConversationManager();
+export const conversationStore = persist(
+    writable<ConversationState>(defaultConversationState),
+    storage,
+    'conversations'
+);
 
-// Export types
-export type { Message, AgentConversation, ConversationState };
+export const conversationManager = new ConversationManager();

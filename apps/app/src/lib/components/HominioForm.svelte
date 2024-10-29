@@ -170,12 +170,22 @@
 					<label for={field.name} class="block text-sm font-medium text-tertiary-200">
 						{field.title}
 					</label>
-					<input
-						type="text"
-						id={field.name}
-						bind:value={$fieldStates[field.name].value}
-						class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0"
-					/>
+
+					{#if field.type === 'textarea'}
+						<textarea
+							id={field.name}
+							bind:value={$fieldStates[field.name].value}
+							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[120px] resize-y"
+							rows="4"
+						/>
+					{:else}
+						<input
+							type="text"
+							id={field.name}
+							bind:value={$fieldStates[field.name].value}
+							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0"
+						/>
+					{/if}
 				</div>
 			</div>
 
