@@ -107,24 +107,42 @@ const actionSystemPrompts = {
         }`,
 
     sendMail: `You are Ali, the Action Agent. For email requests:
-        1. Create a clear subject line
-        2. Format the message content
-        3. Use the sendMail action
-        4. Set both subject and body in the values object
+        1. ALWAYS compose emails in professional English, regardless of input language
+        2. Create a clear subject line in English
+        3. Format the message content in English
+        4. Use the sendMail action
+        5. For follow-up edits:
+           - Review previous message history
+           - Identify the last email draft
+           - Apply requested changes while maintaining English format
         
-        Example: For "send email about meeting", use:
+        Example for new email: 
         {
             action: "sendMail",
             values: { 
                 subject: "Meeting Request",
-                body: "..."
+                body: "Professional English content..."
             }
-        }`
+        }
+
+        Example for edit request:
+        - Find latest draft from context
+        - Apply changes while keeping English format
+        - Return updated full draft`
 };
 
 export async function actionAgent(request: any) {
     try {
         const userMessage = request.task;
+        const messageHistory = request.context || [];
+
+        // Find latest email draft from context
+        const lastEmailDraft = messageHistory
+            .reverse()
+            .find(msg =>
+                msg.metadata?.type === 'action' &&
+                msg.metadata?.action === 'sendMail'
+            )?.metadata?.processed_values;
 
         // Initial pending message
         conversationManager.addMessage(
@@ -138,24 +156,39 @@ export async function actionAgent(request: any) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [{
-                    role: 'user',
-                    content: userMessage
-                }],
-                system: `You are an action parser. Extract form data from user messages.
-                    For emails/messages (including informal or foreign language requests):
+                messages: [
+                    {
+                        role: 'system',
+                        content: lastEmailDraft ?
+                            `You are editing an existing email draft:
+                            Subject: ${lastEmailDraft.subject}
+                            Content: ${lastEmailDraft.body}
+                            
+                            Apply the user's requested changes to this existing draft.
+                            Return the modified version in the same format.
+                            Keep the same subject unless specifically asked to change it.`
+                            : 'Create a new email draft based on the user request.'
+                    },
+                    {
+                        role: 'user',
+                        content: userMessage
+                    }
+                ],
+                system: `You are an action parser. For email requests:
+                    1. If editing existing draft (indicated by system message):
+                       - Modify the existing content according to user's request
+                       - Keep same subject unless asked to change
+                       - Return modified version
+                    2. If new email:
+                       - Create fresh content
+                       - Generate appropriate subject
+                    
+                    Always return in format:
                     {
                         "action": "sendMail",
                         "values": {
-                            "subject": "Extracted or generated subject",
-                            "body": "Extracted or formatted message body"
-                        }
-                    }
-                    For name updates:
-                    {
-                        "action": "updateName",
-                        "values": {
-                            "name": "Extracted name"
+                            "subject": "Subject line",
+                            "body": "Email content"
                         }
                     }`,
                 tools: [{
@@ -170,7 +203,11 @@ export async function actionAgent(request: any) {
                             },
                             values: {
                                 type: 'object',
-                                additionalProperties: true
+                                properties: {
+                                    subject: { type: 'string' },
+                                    body: { type: 'string' }
+                                },
+                                required: ['subject', 'body']
                             }
                         },
                         required: ['action', 'values']

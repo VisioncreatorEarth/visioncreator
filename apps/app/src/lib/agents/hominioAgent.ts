@@ -39,8 +39,14 @@ export const coordinatorTools = [
 export class HominioAgent {
     async processRequest(userMessage: string) {
         try {
+            // Get current conversation context first
+            const currentContext = conversationManager.getCurrentConversation()?.messages || [];
+
             // Add user message to conversation
             conversationManager.addMessage(userMessage, 'user', 'complete');
+
+            // Check if this is a follow-up edit request
+            const isEditRequest = this.isEmailEditRequest(userMessage, currentContext);
 
             // Log Hominio thinking state
             conversationManager.addMessage(
@@ -54,15 +60,26 @@ export class HominioAgent {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: [{ role: 'user', content: userMessage }],
-                    system: `You are Hominio, a coordinator agent. Your main tasks:
-                    1. For ANY email/mail/message sending requests -> use actionAgent
-                    2. For name update requests -> use actionAgent
-                    3. For view creation -> use viewAgent
-                    4. For component modifications -> use componentAgent
-                    
-                    IMPORTANT: ANY mention of email, mail, message, or writing should be directed to actionAgent.
-                    Even if the request is informal or in different languages, if it's about sending a message, use actionAgent.`,
+                    messages: [
+                        ...currentContext.map(msg => ({
+                            role: msg.role === 'user' ? 'user' : 'assistant',
+                            content: msg.content
+                        })),
+                        { role: 'user', content: userMessage }
+                    ],
+                    system: `You are Hominio, a coordinator agent.
+                        ${isEditRequest ? 'IMPORTANT: Current request is to modify an existing email draft - ALWAYS use actionAgent for this.' : ''}
+                        
+                        Your tasks:
+                        1. For ANY email/mail/message requests -> use actionAgent
+                           - This includes new emails AND edit requests
+                           - This includes requests to add names/signatures to emails
+                        2. For explicit name update requests (NOT email signatures) -> use actionAgent
+                        3. For view creation -> use viewAgent
+                        4. For component modifications -> use componentAgent
+                        
+                        IMPORTANT: If the request mentions making an email shorter, adding a name to it, 
+                        or any other email modifications -> this is an email edit request, use actionAgent`,
                     tools: coordinatorTools,
                     temperature: 0
                 })
@@ -73,7 +90,7 @@ export class HominioAgent {
 
             if (!toolCall) {
                 conversationManager.addMessage(
-                    "I can help you send emails or update your name. Would you like to do either of those?",
+                    "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.",
                     'agent',
                     'complete',
                     'hominio'
@@ -84,7 +101,10 @@ export class HominioAgent {
             const selectedAgent = toolCall.name;
             const delegationMessages = {
                 actionAgent: (userMessage: string) => {
-                    if (userMessage.toLowerCase().includes('name')) {
+                    if (this.isEmailEditRequest(userMessage, currentContext)) {
+                        return "I'll have Ali help you modify that email.";
+                    }
+                    if (userMessage.toLowerCase().includes('name') && !userMessage.toLowerCase().includes('mail')) {
                         return "I understand you want to update your name. I'll delegate this to Ali, our Action Agent.";
                     }
                     return "I'll have Ali help you send that message.";
@@ -106,7 +126,7 @@ export class HominioAgent {
                 task: userMessage,
                 toolCall,
                 tool_use_id: toolCall.tool_use_id,
-                context: conversationManager.getCurrentConversation()?.messages || []
+                context: currentContext
             });
 
         } catch (error) {
@@ -142,6 +162,35 @@ export class HominioAgent {
             console.error(`Error delegating to ${selectedAgent}:`, error);
             throw error;
         }
+    }
+
+    private isEmailEditRequest(message: string, context: any[]): boolean {
+        // Check if there's a previous email draft
+        const hasEmailDraft = context.some(msg =>
+            msg.metadata?.type === 'action' &&
+            msg.metadata?.action === 'sendMail'
+        );
+
+        if (!hasEmailDraft) return false;
+
+        // Enhanced edit request detection patterns
+        const editPatterns = [
+            /make.*shorter|make.*precise|edit|update|modify|change/i,
+            /half.*length|shorter|longer|brief|concise/i,
+            /add.*name|sign.*with|put.*name/i,
+            /remove|delete|fix|adjust/i,
+            /the (last|previous) (mail|email|message)/i
+        ];
+
+        // Check for name addition without explicit name update request
+        const isNameAddition = message.toLowerCase().includes('name') &&
+            !message.toLowerCase().includes('update name') &&
+            !message.toLowerCase().includes('change name');
+
+        return hasEmailDraft && (
+            editPatterns.some(pattern => pattern.test(message)) ||
+            isNameAddition
+        );
     }
 }
 

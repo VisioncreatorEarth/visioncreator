@@ -159,13 +159,27 @@
 		}
 	}
 
-	// Add this function to handle textarea auto-resize
+	// Improved autoResize function
 	function autoResize(event: Event) {
 		const textarea = event.target as HTMLTextAreaElement;
-		// Reset height to auto to get the correct scrollHeight
-		textarea.style.height = 'auto';
-		// Set the height to match the content
-		textarea.style.height = textarea.scrollHeight + 'px';
+		// Reset height temporarily to get the correct scrollHeight
+		textarea.style.height = '0px';
+		// Set to scrollHeight to get the full content height
+		textarea.style.height = `${textarea.scrollHeight}px`;
+	}
+
+	// Add reactive statement to handle initial content and updates
+	$: {
+		if (fields?.length > 0) {
+			// Wait for DOM update
+			setTimeout(() => {
+				const textareas = document.querySelectorAll('textarea');
+				textareas.forEach((textarea) => {
+					textarea.style.height = '0px';
+					textarea.style.height = `${textarea.scrollHeight}px`;
+				});
+			}, 0);
+		}
 	}
 </script>
 
@@ -185,7 +199,7 @@
 							id={field.name}
 							bind:value={$fieldStates[field.name].value}
 							on:input={autoResize}
-							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[120px] overflow-hidden"
+							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[2.5rem] overflow-hidden"
 							rows="1"
 						/>
 					{:else}
@@ -246,7 +260,19 @@
 	textarea {
 		display: block;
 		box-sizing: border-box;
-		max-height: 400px; /* Optional: set a max height if needed */
-		resize: none; /* Prevent manual resizing since we're handling it automatically */
+		max-height: 400px;
+		resize: none;
+		line-height: 1.5;
+		transition: height 0.1s ease-out;
+	}
+
+	/* Hide scrollbar but keep functionality */
+	textarea::-webkit-scrollbar {
+		display: none;
+	}
+
+	textarea {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
 	}
 </style>
