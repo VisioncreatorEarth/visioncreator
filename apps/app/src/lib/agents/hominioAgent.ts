@@ -51,9 +51,8 @@ export class HominioAgent {
             // Log Hominio thinking state
             conversationManager.addMessage(
                 "I'm analyzing your request...",
-                'agent',
-                'pending',
-                'hominio'
+                'hominio',
+                'pending'
             );
 
             const response = await fetch('/local/api/chat', {
@@ -91,9 +90,8 @@ export class HominioAgent {
             if (!toolCall) {
                 conversationManager.addMessage(
                     "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.",
-                    'agent',
-                    'complete',
-                    'hominio'
+                    'hominio',
+                    'complete'
                 );
                 return;
             }
@@ -117,9 +115,8 @@ export class HominioAgent {
                 typeof delegationMessages[selectedAgent] === 'function'
                     ? delegationMessages[selectedAgent](userMessage)
                     : delegationMessages[selectedAgent],
-                'agent',
-                'complete',
-                'hominio'
+                'hominio',
+                'complete'
             );
 
             return await this.delegateToAgent(selectedAgent, {
@@ -133,9 +130,8 @@ export class HominioAgent {
             console.error('Error in Hominio:', error);
             conversationManager.addMessage(
                 'Sorry, I encountered an error.',
-                'agent',
-                'error',
-                'hominio'
+                'hominio',
+                'error'
             );
         }
     }

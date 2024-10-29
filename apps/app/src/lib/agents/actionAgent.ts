@@ -136,20 +136,11 @@ export async function actionAgent(request: any) {
         const userMessage = request.task;
         const messageHistory = request.context || [];
 
-        // Find latest email draft from context
-        const lastEmailDraft = messageHistory
-            .reverse()
-            .find(msg =>
-                msg.metadata?.type === 'action' &&
-                msg.metadata?.action === 'sendMail'
-            )?.metadata?.processed_values;
-
         // Initial pending message
         conversationManager.addMessage(
             `Processing your request...`,
-            'agent',
-            'pending',
-            'ali'
+            'ali',
+            'pending'
         );
 
         const response = await fetch('/local/api/chat', {
@@ -159,38 +150,19 @@ export async function actionAgent(request: any) {
                 messages: [
                     {
                         role: 'system',
-                        content: lastEmailDraft ?
-                            `You are editing an existing email draft:
-                            Subject: ${lastEmailDraft.subject}
-                            Content: ${lastEmailDraft.body}
+                        content: `You are Ali, the Action Agent. Extract information from user messages and format them into actions.
+                            For name updates:
+                            1. Extract the name from messages like "change name to X" or "update name to X"
+                            2. Return in format: { action: "updateName", values: { name: "X" } }
                             
-                            Apply the user's requested changes to this existing draft.
-                            Return the modified version in the same format.
-                            Keep the same subject unless specifically asked to change it.`
-                            : 'Create a new email draft based on the user request.'
+                            Current conversation context:
+                            ${messageHistory.map(msg => `${msg.agent}: ${msg.content}`).join('\n')}`
                     },
                     {
                         role: 'user',
                         content: userMessage
                     }
                 ],
-                system: `You are an action parser. For email requests:
-                    1. If editing existing draft (indicated by system message):
-                       - Modify the existing content according to user's request
-                       - Keep same subject unless asked to change
-                       - Return modified version
-                    2. If new email:
-                       - Create fresh content
-                       - Generate appropriate subject
-                    
-                    Always return in format:
-                    {
-                        "action": "sendMail",
-                        "values": {
-                            "subject": "Subject line",
-                            "body": "Email content"
-                        }
-                    }`,
                 tools: [{
                     name: 'extractFormAction',
                     description: 'Extract form action and values',
@@ -199,15 +171,11 @@ export async function actionAgent(request: any) {
                         properties: {
                             action: {
                                 type: 'string',
-                                enum: ['sendMail', 'updateName']
+                                enum: ['updateName', 'sendMail']
                             },
                             values: {
                                 type: 'object',
-                                properties: {
-                                    subject: { type: 'string' },
-                                    body: { type: 'string' }
-                                },
-                                required: ['subject', 'body']
+                                additionalProperties: true
                             }
                         },
                         required: ['action', 'values']
@@ -231,13 +199,21 @@ export async function actionAgent(request: any) {
         // Get the view template and create a deep copy
         const view = JSON.parse(JSON.stringify(actionViews[action]));
 
-        // Enhanced form field value setting
+        // Enhanced form field value setting with validation
         if (view.children[0].data.form.fields) {
             view.children[0].data.form.fields = view.children[0].data.form.fields.map(field => {
                 const fieldValue = values[field.name];
+                // Ensure we have a valid value
+                if (!fieldValue && action === 'updateName') {
+                    // Extract name from the last user message if not provided
+                    const nameMatch = userMessage.match(/(?:change|update|set).*name.*to\s+["']?([^"']+)["']?/i);
+                    if (nameMatch) {
+                        values[field.name] = nameMatch[1].trim();
+                    }
+                }
                 return {
                     ...field,
-                    value: fieldValue ? fieldValue.trim() : ''
+                    value: values[field.name] ? values[field.name].trim() : ''
                 };
             });
         }
@@ -249,48 +225,34 @@ export async function actionAgent(request: any) {
 
         const message = actionMessages[action] || "Please review your request:";
 
-        const responsePayload = {
+        conversationManager.addMessage(
+            message,
+            'ali',
+            'complete',
+            {
+                view,
+                action
+            }
+        );
+
+        return {
             success: true,
             message: {
-                role: 'assistant',
+                agent: 'ali',
                 content: message,
-                metadata: {
-                    type: 'action',
-                    action,
+                payload: {
                     view,
-                    tool_use_id: request.tool_use_id,
-                    original_message: userMessage,
-                    processed_values: values
+                    action
                 }
             }
         };
-
-        conversationManager.addMessage(
-            message,
-            'agent',
-            'complete',
-            'ali',
-            [{
-                type: 'action',
-                content: {
-                    action,
-                    view,
-                    tool_use_id: request.tool_use_id,
-                    original_message: userMessage,
-                    processed_values: values
-                }
-            }]
-        );
-
-        return responsePayload;
 
     } catch (error) {
         console.error('Action Agent Error:', error);
         conversationManager.addMessage(
             'Sorry, I could not process that action.',
-            'agent',
-            'error',
-            'ali'
+            'ali',
+            'error'
         );
         throw error;
     }

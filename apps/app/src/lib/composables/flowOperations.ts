@@ -35,8 +35,8 @@ export async function submitForm({ operation, input, view = null }: SubmitFormPa
 		}
 
 		conversationManager.addMessage(
-			result.data.message || `${operation} completed successfully`,
-			'agent',
+			result.data.message || `Your profile has been successfully updated to ${input.name}!`,
+			'walter',
 			'complete',
 			'walter',
 			[
@@ -52,7 +52,7 @@ export async function submitForm({ operation, input, view = null }: SubmitFormPa
 
 		return {
 			success: true,
-			message: result.data.message || `${operation} completed successfully`,
+			message: result.data.message || `Your profile has been successfully updated to ${input.name}!`,
 			data: result.data
 		};
 	} catch (error) {

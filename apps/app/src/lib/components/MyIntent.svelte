@@ -326,7 +326,7 @@
 						{:else if modalState === 'result'}
 							<div class="flex-1 space-y-4" bind:this={messageContainer}>
 								{#if currentConversation?.messages?.length}
-									{#each currentConversation.messages as message (message.id)}
+									{#each currentConversation.messages as message, index (message.timestamp + '-' + index)}
 										<MessageItem {message} {session} on:actionComplete={handleActionComplete} />
 									{/each}
 								{:else}

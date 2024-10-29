@@ -3,25 +3,16 @@ import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store
 
 export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'system';
 
-export interface MessagePayload {
-    type: 'action' | 'view' | 'response' | 'error';
-    title?: string;
-    content: {
-        action?: string;
-        view?: any;
-        [key: string]: any;
-    };
-}
-
 export interface Message {
-    id: string;
+    id?: string;
+    agent: AgentType;
     content: string;
-    type: 'user' | 'agent';
-    agentType?: AgentType;
-    role?: string;
     timestamp: string;
     status?: 'pending' | 'complete' | 'error';
-    payloads?: MessagePayload[];
+    payload?: {
+        view?: any;
+        action?: string;
+    };
 }
 
 export const messageStyleConfig = {
@@ -97,10 +88,9 @@ export class ConversationManager {
 
     addMessage(
         content: string,
-        type: 'user' | 'agent',
+        agent: AgentType,
         status: 'pending' | 'complete' | 'error' = 'complete',
-        agentType?: AgentType,
-        payloads?: MessagePayload[]
+        payload?: { view?: any; action?: string; }
     ) {
         const currentState = get(conversationStore);
 
@@ -110,17 +100,14 @@ export class ConversationManager {
 
         const message: Message = {
             id: crypto.randomUUID(),
+            agent,
             content,
-            type,
-            agentType,
             timestamp: new Date().toISOString(),
             status,
-            payloads
+            payload
         };
 
-        if (type === 'agent' && payloads) {
-            console.log(`Agent ${agentType} message payloads:`, payloads);
-        }
+        console.log(`[${agent}] message: "${content}"${payload ? `, payload: ${JSON.stringify(payload)}` : ''}`);
 
         const updatedState = get(conversationStore);
         const newState = {
