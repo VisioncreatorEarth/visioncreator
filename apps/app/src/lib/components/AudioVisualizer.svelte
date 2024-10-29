@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
+	import Avatar from './Avatar.svelte';
+	import { getContext } from 'svelte';
 
 	export let isRecording: boolean;
 	export let audioStream: MediaStream | null;
+
+	// Get the me store from context (similar to Profile.svelte)
+	const me = getContext('me');
 
 	let container: HTMLDivElement;
 	let audioMotion: any;
@@ -19,7 +24,7 @@
 				minFreq: 20,
 				maxFreq: 22000,
 				smoothing: 0.85,
-				radius: 0.5,
+				radius: 0.75,
 				lineWidth: 2,
 				fillAlpha: 0.5,
 				showBgColor: false,
@@ -72,10 +77,26 @@
 	});
 </script>
 
-<div bind:this={container} class="w-[300px] h-[300px]" />
+<div class="relative w-[300px] h-[300px] flex items-center justify-center">
+	<!-- Audio visualizer container -->
+	<div bind:this={container} class="absolute inset-0 flex items-center justify-center" />
+
+	<!-- Centered avatar - adjusted for perfect centering -->
+	<div class="absolute inset-0 flex items-center justify-center">
+		<div class="flex items-center justify-center w-40 h-40">
+			<Avatar
+				me={{
+					data: { seed: 'random user' },
+					design: { highlight: true, ring: true },
+					size: 'xl'
+				}}
+			/>
+		</div>
+	</div>
+</div>
 
 <style>
-	div {
-		background: transparent;
+	:global(.avatar-container) {
+		filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
 	}
 </style>

@@ -5,7 +5,7 @@
 	export let me: {
 		data: { seed: string };
 		design: { highlight: boolean };
-		size: 'sm' | 'md' | 'lg';
+		size: 'sm' | 'md' | 'lg' | 'xl';
 	};
 
 	function generateAvatar(seed: string): string {
@@ -38,7 +38,9 @@
 	$: avatar = generateAvatar(me.data.seed);
 	$: bgColorClass = me.design.highlight ? 'bg-tertiary-500' : 'bg-surface-600';
 	$: sizeClass =
-		me.size === 'lg'
+		me.size === 'xl'
+			? 'w-40 h-40 border-4 rounded-full'
+			: me.size === 'lg'
 			? 'w-24 h-24 mb-2 border-4 rounded-full'
 			: 'w-12 h-12 @3xl:h-14 @3xl:w-14 rounded-full';
 </script>
