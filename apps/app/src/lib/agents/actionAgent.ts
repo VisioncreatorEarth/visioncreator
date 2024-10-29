@@ -136,9 +136,33 @@ export async function actionAgent(request: any) {
         const userMessage = request.task;
         const messageHistory = request.context || [];
 
-        // Initial pending message
+        // Get the last email draft if it exists
+        const lastEmailDraft = messageHistory
+            .reverse()
+            .find(msg => msg.payload?.action === 'sendMail');
+
+        const systemPrompt = `You are Ali, the Action Agent. Analyze the conversation history and user's request to:
+1. For name updates: Extract name from messages like "change name to X"
+2. For emails: 
+   - Create new emails or modify existing drafts
+   - Maintain context and previous content when editing
+   - Keep formatting and structure consistent
+   - Preserve signatures and personal details
+
+Current conversation context:
+${messageHistory.map(msg => `[${msg.agent}]: ${msg.content}${msg.payload ? `\nPayload: ${JSON.stringify(msg.payload)}` : ''
+            }`).join('\n')}
+
+Last email draft: ${lastEmailDraft ? JSON.stringify(lastEmailDraft.payload) : 'None'}
+
+Instructions:
+- When editing emails, preserve existing structure and only modify requested parts
+- Keep all formatting, including line breaks and sections
+- Maintain existing signatures, just update the name if requested
+- For new emails, create a well-structured format with clear sections`;
+
         conversationManager.addMessage(
-            `Processing your request...`,
+            "Processing your request...",
             'ali',
             'pending'
         );
@@ -148,20 +172,8 @@ export async function actionAgent(request: any) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: [
-                    {
-                        role: 'system',
-                        content: `You are Ali, the Action Agent. Extract information from user messages and format them into actions.
-                            For name updates:
-                            1. Extract the name from messages like "change name to X" or "update name to X"
-                            2. Return in format: { action: "updateName", values: { name: "X" } }
-                            
-                            Current conversation context:
-                            ${messageHistory.map(msg => `${msg.agent}: ${msg.content}`).join('\n')}`
-                    },
-                    {
-                        role: 'user',
-                        content: userMessage
-                    }
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
                 ],
                 tools: [{
                     name: 'extractFormAction',
@@ -218,9 +230,12 @@ export async function actionAgent(request: any) {
             });
         }
 
+        // Enhanced message for form updates
         const actionMessages = {
-            updateName: `I've prepared a form to update your name to "${values.name}". Please review and confirm:`,
-            sendMail: "I've formatted your message. Please review and confirm:"
+            updateName: `I've prepared a name update form with "${values.name}". Please review:`,
+            sendMail: lastEmailDraft
+                ? "I've updated the email draft with your changes. Please review:"
+                : "I've formatted your new email. Please review:"
         };
 
         const message = actionMessages[action] || "Please review your request:";

@@ -42,97 +42,54 @@ export class HominioAgent {
             // Get current conversation context first
             const currentContext = conversationManager.getCurrentConversation()?.messages || [];
 
-            // Add user message to conversation
-            conversationManager.addMessage(userMessage, 'user', 'complete');
-
-            // Check if this is a follow-up edit request
-            const isEditRequest = this.isEmailEditRequest(userMessage, currentContext);
-
-            // Log Hominio thinking state
+            // Add initial analysis message
             conversationManager.addMessage(
                 "I'm analyzing your request...",
                 'hominio',
                 'pending'
             );
 
-            const response = await fetch('/local/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        ...currentContext.map(msg => ({
-                            role: msg.role === 'user' ? 'user' : 'assistant',
-                            content: msg.content
-                        })),
-                        { role: 'user', content: userMessage }
-                    ],
-                    system: `You are Hominio, a coordinator agent.
-                        ${isEditRequest ? 'IMPORTANT: Current request is to modify an existing email draft - ALWAYS use actionAgent for this.' : ''}
-                        
-                        Your tasks:
-                        1. For ANY email/mail/message requests -> use actionAgent
-                           - This includes new emails AND edit requests
-                           - This includes requests to add names/signatures to emails
-                        2. For explicit name update requests (NOT email signatures) -> use actionAgent
-                        3. For view creation -> use viewAgent
-                        4. For component modifications -> use componentAgent
-                        
-                        IMPORTANT: If the request mentions making an email shorter, adding a name to it, 
-                        or any other email modifications -> this is an email edit request, use actionAgent`,
-                    tools: coordinatorTools,
-                    temperature: 0
-                })
-            });
+            // Check if this is a follow-up edit request
+            const isEditRequest = this.isEmailEditRequest(userMessage, currentContext);
+            const lastEmailDraft = currentContext
+                .reverse()
+                .find(msg => msg.payload?.action === 'sendMail');
 
-            const claudeResponse = await response.json();
-            const toolCall = claudeResponse.content.find(c => c.type === 'tool_use');
-
-            if (!toolCall) {
+            // Direct messages to Ali based on request type
+            if (isEditRequest && lastEmailDraft) {
                 conversationManager.addMessage(
-                    "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.",
+                    "Ali, the user wants to modify their previous email draft. Please help them make the requested changes.",
                     'hominio',
                     'complete'
                 );
-                return;
+            } else if (userMessage.toLowerCase().includes('mail') || userMessage.toLowerCase().includes('email')) {
+                conversationManager.addMessage(
+                    "Ali, please help compose a new email based on the user's request.",
+                    'hominio',
+                    'complete'
+                );
+            } else if (userMessage.toLowerCase().includes('name')) {
+                conversationManager.addMessage(
+                    "Ali, please prepare a name update form based on the user's request.",
+                    'hominio',
+                    'complete'
+                );
             }
 
-            const selectedAgent = toolCall.name;
-            const delegationMessages = {
-                actionAgent: (userMessage: string) => {
-                    if (this.isEmailEditRequest(userMessage, currentContext)) {
-                        return "I'll have Ali help you modify that email.";
-                    }
-                    if (userMessage.toLowerCase().includes('name') && !userMessage.toLowerCase().includes('mail')) {
-                        return "I understand you want to update your name. I'll delegate this to Ali, our Action Agent.";
-                    }
-                    return "I'll have Ali help you send that message.";
-                },
-                viewAgent: "I'll have Walter create a view for you.",
-                componentAgent: "I'll have our Component Agent modify that for you."
-            };
-
-            conversationManager.addMessage(
-                typeof delegationMessages[selectedAgent] === 'function'
-                    ? delegationMessages[selectedAgent](userMessage)
-                    : delegationMessages[selectedAgent],
-                'hominio',
-                'complete'
-            );
-
-            return await this.delegateToAgent(selectedAgent, {
+            // Delegate to action agent with full context
+            return await this.delegateToAgent('actionAgent', {
                 task: userMessage,
-                toolCall,
-                tool_use_id: toolCall.tool_use_id,
                 context: currentContext
             });
 
         } catch (error) {
-            console.error('Error in Hominio:', error);
+            console.error('Hominio Agent Error:', error);
             conversationManager.addMessage(
-                'Sorry, I encountered an error.',
+                'An error occurred while processing your request.',
                 'hominio',
                 'error'
             );
+            throw error;
         }
     }
 
@@ -145,15 +102,7 @@ export class HominioAgent {
 
         try {
             const agent = await agents[selectedAgent]();
-            const response = await agent(params);
-
-            // Handle the agent response consistently
-            if (response?.success && response.message?.metadata?.type === 'action') {
-                // The action agent now handles its own message adding
-                return response;
-            }
-
-            return response;
+            return await agent(params);
         } catch (error) {
             console.error(`Error delegating to ${selectedAgent}:`, error);
             throw error;
@@ -161,31 +110,23 @@ export class HominioAgent {
     }
 
     private isEmailEditRequest(message: string, context: any[]): boolean {
-        // Check if there's a previous email draft
-        const hasEmailDraft = context.some(msg =>
-            msg.metadata?.type === 'action' &&
-            msg.metadata?.action === 'sendMail'
-        );
+        const lastEmailDraft = context
+            .reverse()
+            .find(msg => msg.payload?.action === 'sendMail');
 
-        if (!hasEmailDraft) return false;
+        if (!lastEmailDraft) return false;
 
-        // Enhanced edit request detection patterns
-        const editPatterns = [
-            /make.*shorter|make.*precise|edit|update|modify|change/i,
-            /half.*length|shorter|longer|brief|concise/i,
-            /add.*name|sign.*with|put.*name/i,
-            /remove|delete|fix|adjust/i,
-            /the (last|previous) (mail|email|message)/i
+        const editKeywords = [
+            'edit', 'update', 'modify', 'change', 'revise',
+            'add', 'include', 'append', 'extend',
+            'remove', 'delete', 'take out',
+            'subject', 'title', 'topic',
+            'signature', 'sign', 'name',
+            'more', 'details', 'points', 'information'
         ];
 
-        // Check for name addition without explicit name update request
-        const isNameAddition = message.toLowerCase().includes('name') &&
-            !message.toLowerCase().includes('update name') &&
-            !message.toLowerCase().includes('change name');
-
-        return hasEmailDraft && (
-            editPatterns.some(pattern => pattern.test(message)) ||
-            isNameAddition
+        return editKeywords.some(keyword =>
+            message.toLowerCase().includes(keyword)
         );
     }
 }
