@@ -138,10 +138,13 @@
 		// Look through messages in reverse order to get the latest state
 		for (const message of [...conversation.messages].reverse()) {
 			if (message.agent === 'walter' && message.payload?.type === 'response') {
-				const formState = message.payload.content?.view?.formState;
+				// Access the formState from the correct path in the payload
 				const matchingFormId = message.payload.view?.formId === formId;
+				const formState =
+					message.payload.content?.view?.formState || message.payload.view?.formState;
 
 				if (formState && matchingFormId) {
+					console.log('Found existing form state:', { formId, formState });
 					return {
 						isSubmitted: formState.isSubmitted,
 						success: formState.success,
@@ -179,20 +182,15 @@
 		formError = null;
 
 		try {
-			// Get field values but structure them correctly for the API
 			const formValues = Object.entries($fieldStates).reduce((acc, [key, state]: [string, any]) => {
 				acc[key] = state.value;
 				return acc;
 			}, {} as Record<string, any>);
 
-			// Create the proper input structure based on the operation
 			let input: Record<string, any> = {};
-
 			switch (submitAction) {
 				case 'updateMe':
-					input = {
-						name: formValues.name // Just send the name field
-					};
+					input = { name: formValues.name };
 					break;
 				case 'sendMail':
 					input = {
@@ -203,8 +201,6 @@
 				default:
 					input = formValues;
 			}
-
-			console.log('Submitting form with input:', input); // Debug log
 
 			const result = await submitForm({
 				operation: submitAction,
@@ -223,7 +219,30 @@
 
 			if (result.success) {
 				isSubmitted = true;
-				// Let the walter message handle the success state
+				// Add success state to conversation with proper structure
+				conversationManager.addMessage(
+					result.message || 'Form submitted successfully',
+					'walter',
+					'complete',
+					{
+						type: 'response',
+						content: {
+							success: true,
+							message: result.message,
+							data: result.data
+						},
+						view: {
+							formId,
+							action: submitAction,
+							values: formValues,
+							formState: {
+								isSubmitted: true,
+								success: true,
+								timestamp: new Date().toISOString()
+							}
+						}
+					}
+				);
 				dispatch('close');
 			} else {
 				throw new Error(result.message || 'Form submission failed');

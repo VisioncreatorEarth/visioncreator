@@ -32,18 +32,6 @@ export async function submitForm({ operation, input, view = null }: SubmitFormPa
 
 		// Check for proper success conditions
 		if (!result.error && result.data) {
-			// Add message to conversation
-			conversationManager.addMessage(
-				result.data.message || `Operation ${operation} completed successfully!`,
-				'walter',
-				'complete',
-				{
-					type: 'response',
-					content: result.data,
-					view
-				}
-			);
-
 			// Emit event
 			eventBus.emit(operation);
 
@@ -57,13 +45,6 @@ export async function submitForm({ operation, input, view = null }: SubmitFormPa
 		}
 	} catch (error) {
 		console.error(`[Error] Operation ${operation} failed:`, error);
-
-		// Add error message to conversation
-		conversationManager.addMessage(
-			error instanceof Error ? error.message : `An error occurred during ${operation}`,
-			'walter',
-			'error'
-		);
 
 		return {
 			success: false,
