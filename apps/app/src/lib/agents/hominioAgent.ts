@@ -23,33 +23,7 @@ export class HominioAgent {
                 console.log('[HominioAgent] Processing shopping request');
 
                 try {
-                    // First show the bring view
-                    await this.delegateToAgent('view', {
-                        task: 'open bring list view',
-                        context: currentContext,
-                        type: 'view'
-                    });
-
-                    // Then add the items using Bert
-                    const shoppingResult = await this.delegateToAgent('shopping', {
-                        task: userMessage,
-                        context: currentContext,
-                        type: 'shopping'
-                    });
-
-                    return shoppingResult;
-
-                } catch (error) {
-                    console.error('[HominioAgent] Shopping request error:', error);
-                    throw error;
-                }
-            }
-
-            // Handle shopping list requests
-            if (requestAnalysis.type === 'shopping') {
-                console.log('[HominioAgent] Delegating to shopping handler');
-
-                try {
+                    // Run both view and shopping actions in parallel
                     const [viewResult, shoppingResult] = await Promise.all([
                         this.delegateToAgent('view', {
                             task: 'open bring list view',
@@ -63,17 +37,28 @@ export class HominioAgent {
                         })
                     ]);
 
-                    console.log('[HominioAgent] Shopping results:', { view: viewResult, shopping: shoppingResult });
+                    console.log('[HominioAgent] Parallel operations completed:', {
+                        view: viewResult,
+                        shopping: shoppingResult
+                    });
+
+                    // Combine the results, prioritizing the shopping message but including view payload
                     return {
                         success: true,
                         message: {
-                            agent: 'hominio',
+                            agent: 'bert',
                             content: shoppingResult.message.content,
-                            payload: viewResult.message.payload
+                            payload: viewResult.message?.payload // Include view payload for UI updates
                         }
                     };
+
                 } catch (error) {
                     console.error('[HominioAgent] Shopping request error:', error);
+                    conversationManager.addMessage(
+                        "I encountered an issue while processing your request. Please try again.",
+                        'hominio',
+                        'error'
+                    );
                     throw error;
                 }
             }

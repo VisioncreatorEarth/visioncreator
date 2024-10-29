@@ -41,44 +41,42 @@ export async function bringAgent(request: any) {
             'pending'
         );
 
-        const systemPrompt = `You are Bert, the Shopping List Assistant. Your task is to extract shopping items from user messages in both German and English.
-
-Available predefined items:
-${preselectedItems.map(item => item.name).join(', ')}
-
-Current conversation context:
-${messageHistory.map(msg => `[${msg.agent}]: ${msg.content}`).join('\n')}
-
-Instructions:
-1. Extract all shopping items from the user message
-2. Match items to predefined list where possible
-3. Detect the language (de/en) of the request
-4. Return only actual shopping items, no other words`;
-
         const response = await fetch('/local/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: [
-                    { role: 'system', content: systemPrompt },
+                    {
+                        role: 'system',
+                        content: `You are Bert, the Shopping List Assistant. Extract shopping items and determine operations.
+Available items: ${preselectedItems.map(item => item.name).join(', ')}`
+                    },
                     { role: 'user', content: userMessage }
                 ],
                 tools: [{
                     name: 'extractShoppingItems',
-                    description: 'Extract shopping items and language',
+                    description: 'Extract shopping items and operation from user message',
                     input_schema: {
                         type: 'object',
                         properties: {
+                            operation: {
+                                type: 'string',
+                                enum: ['add', 'remove', 'clear'],
+                                description: 'Type of operation to perform'
+                            },
                             items: {
                                 type: 'array',
-                                items: { type: 'string' }
+                                items: {
+                                    type: 'string',
+                                    description: 'Item name that matches available items list'
+                                }
                             },
                             language: {
                                 type: 'string',
                                 enum: ['de', 'en']
                             }
                         },
-                        required: ['items', 'language']
+                        required: ['operation', 'items', 'language']
                     }
                 }],
                 temperature: 0.1
@@ -88,63 +86,39 @@ Instructions:
         const data = await response.json();
         console.log('[Bert] Claude response:', data);
 
-        const toolCall = data.content?.find(c => c.type === 'tool_use');
-
-        if (!toolCall?.input?.items || !toolCall?.input?.language) {
-            throw new Error('Invalid tool response');
+        // Improved error handling and response validation
+        const toolCall = data.content?.find(c => c.type === 'tool_calls' || c.type === 'tool_use');
+        if (!toolCall) {
+            console.error('[Bert] No tool call found in response:', data);
+            throw new Error('No tool call in response');
         }
 
-        const { items, language } = toolCall.input;
-
-        if (items.length === 0) {
-            console.warn('[Bert] No items found in message');
-            conversationManager.addMessage(
-                'I could not identify any items in your request. Please try again.',
-                'bert',
-                'error'
-            );
-            throw new Error('No items found in message');
+        const toolInput = toolCall.input || toolCall.tool_calls?.[0]?.parameters;
+        if (!toolInput) {
+            console.error('[Bert] No tool input found:', toolCall);
+            throw new Error('No tool input found');
         }
 
-        const newItems = items.map(itemName => {
-            const predefined = preselectedItems.find(
-                item => item.name.toLowerCase() === itemName.toLowerCase()
-            );
+        const { operation, items, language } = toolInput;
 
-            return {
-                id: Date.now() + Math.random(),
-                name: predefined?.name || itemName,
-                icon: predefined?.icon || 'mdi:shopping'
-            };
-        });
+        if (!operation || !Array.isArray(items) || !language) {
+            console.error('[Bert] Invalid tool input format:', toolInput);
+            throw new Error('Invalid tool input format');
+        }
 
-        console.log('[Bert] Adding items:', newItems);
+        console.log('[Bert] Extracted data:', { operation, items, language });
 
-        bringListStore.update(list => {
-            const updatedList = [...list, ...newItems];
-            console.log('[Bert] Updated list:', updatedList);
-            return updatedList;
-        });
-
-        const responseMessage = language === 'de'
-            ? `Ich habe ${items.join(', ')} zu deiner Einkaufsliste hinzugefügt.`
-            : `Added ${items.join(', ')} to your shopping list.`;
-
-        console.log('[Bert] Response:', responseMessage);
-
-        conversationManager.addMessage(
-            responseMessage,
-            'bert',
-            'complete'
-        );
-
-        return {
-            success: true,
-            message: {
-                agent: 'bert',
-                content: responseMessage
-            }
-        };
+        // Handle different operations
+        switch (operation) {
+            case 'add':
+                return handleAddItems(items, language);
+            case 'remove':
+                return handleRemoveItems(items, language);
+            case 'clear':
+                return handleClearList(language);
+            default:
+                throw new Error(`Unknown operation: ${operation}`);
+        }
 
     } catch (error) {
         console.error('[Bert] Error:', error);
@@ -155,4 +129,81 @@ Instructions:
         );
         throw error;
     }
-} 
+}
+
+function handleAddItems(items: string[], language: string) {
+    if (items.length === 0) {
+        throw new Error('No items to add');
+    }
+
+    const newItems = items.map(itemName => {
+        const predefined = preselectedItems.find(
+            item => item.name.toLowerCase() === itemName.toLowerCase()
+        );
+
+        return {
+            id: Date.now() + Math.random(),
+            name: predefined?.name || itemName,
+            icon: predefined?.icon || 'mdi:shopping'
+        };
+    });
+
+    bringListStore.update(list => [...list, ...newItems]);
+
+    const responseMessage = language === 'de'
+        ? `Ich habe ${items.join(', ')} zu deiner Einkaufsliste hinzugefügt.`
+        : `Added ${items.join(', ')} to your shopping list.`;
+
+    conversationManager.addMessage(responseMessage, 'bert', 'complete');
+
+    return {
+        success: true,
+        message: {
+            agent: 'bert',
+            content: responseMessage
+        }
+    };
+}
+
+function handleRemoveItems(items: string[], language: string) {
+    bringListStore.update(list => {
+        const remainingItems = list.filter(item =>
+            !items.some(removeItem =>
+                item.name.toLowerCase() === removeItem.toLowerCase()
+            )
+        );
+        return remainingItems;
+    });
+
+    const responseMessage = language === 'de'
+        ? `Ich habe ${items.join(', ')} von deiner Einkaufsliste entfernt.`
+        : `Removed ${items.join(', ')} from your shopping list.`;
+
+    conversationManager.addMessage(responseMessage, 'bert', 'complete');
+
+    return {
+        success: true,
+        message: {
+            agent: 'bert',
+            content: responseMessage
+        }
+    };
+}
+
+function handleClearList(language: string) {
+    bringListStore.set([]);
+
+    const responseMessage = language === 'de'
+        ? 'Ich habe deine Einkaufsliste geleert.'
+        : 'I have cleared your shopping list.';
+
+    conversationManager.addMessage(responseMessage, 'bert', 'complete');
+
+    return {
+        success: true,
+        message: {
+            agent: 'bert',
+            content: responseMessage
+        }
+    };
+}
