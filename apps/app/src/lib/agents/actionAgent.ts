@@ -1,7 +1,7 @@
 import { conversationManager } from '$lib/stores/intentStore';
 
 const actionViews = {
-    updateName: {
+    updateName: (formId: string) => ({
         id: 'UpdateNameContainer',
         layout: {
             rows: '1fr auto',
@@ -9,10 +9,11 @@ const actionViews = {
         },
         children: [
             {
-                id: 'HominioForm',
+                id: `HominioForm_${formId}`,
                 component: 'HominioForm',
                 slot: 'main',
                 data: {
+                    formId,
                     form: {
                         fields: [
                             {
@@ -28,8 +29,8 @@ const actionViews = {
                 }
             }
         ]
-    },
-    sendMail: {
+    }),
+    sendMail: (formId: string) => ({
         id: 'SendMailContainer',
         layout: {
             rows: '1fr auto',
@@ -38,10 +39,11 @@ const actionViews = {
         },
         children: [
             {
-                id: 'HominioForm',
+                id: `HominioForm_${formId}`,
                 component: 'HominioForm',
                 slot: 'main',
                 data: {
+                    formId,
                     form: {
                         fields: [
                             {
@@ -63,7 +65,7 @@ const actionViews = {
                 }
             }
         ]
-    }
+    })
 };
 
 export const actionAgentTools = [
@@ -207,9 +209,10 @@ Instructions:
         }
 
         const { action, values } = toolCall.input;
+        const formId = crypto.randomUUID();
 
-        // Get the view template and create a deep copy
-        const view = JSON.parse(JSON.stringify(actionViews[action]));
+        // Get the view template with unique ID
+        const view = actionViews[action](formId);
 
         // Enhanced form field value setting with validation
         if (view.children[0].data.form.fields) {

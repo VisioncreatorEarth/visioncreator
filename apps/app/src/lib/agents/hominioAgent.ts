@@ -84,7 +84,11 @@ export class HominioAgent {
 Format all responses as:
 "Ali, [task type]: [structured version of user request]"
 
-Add only essential specifications. Do not implement or expand the content.`;
+Add only essential specifications. Do not implement or expand the content.
+
+Example:
+User: "Can you update my name to Samuel?"
+Response: "Ali, updateName: Please update the user's name to Samuel"`;
 
         try {
             const response = await fetch('/local/api/chat', {
@@ -104,38 +108,38 @@ Add only essential specifications. Do not implement or expand the content.`;
                                 message: {
                                     type: 'string',
                                     description: 'The task definition message'
-                                },
-                                requirements: {
-                                    type: 'object',
-                                    properties: {
-                                        taskType: { type: 'string' },
-                                        validation: { type: 'array', items: { type: 'string' } },
-                                        successCriteria: { type: 'array', items: { type: 'string' } }
-                                    }
                                 }
                             },
                             required: ['message']
                         }
-                    }],
-                    temperature: 0
+                    }]
                 })
             });
 
             const data = await response.json();
             console.log('Claude delegation response:', data);
 
-            const toolCall = data.content?.find(c => c.type === 'tool_use');
+            // Handle both tool_calls and tool_use formats
+            const toolCall = data.content?.find(c => c.type === 'tool_calls' || c.type === 'tool_use');
 
-            if (!toolCall?.input?.message) {
-                throw new Error('Invalid delegation message response');
+            if (toolCall?.input?.message) {
+                return toolCall.input.message;
             }
 
-            return toolCall.input.message;
+            // Fallback to content if no tool call
+            if (data.content?.[0]?.text) {
+                const text = data.content[0].text;
+                if (text.includes('Ali,')) {
+                    return text;
+                }
+            }
+
+            throw new Error('Invalid delegation message response');
 
         } catch (error) {
             console.error('Error generating delegation message:', error);
-            // Fallback message if AI generation fails
-            return `Ali, please help the user with their ${type} request: "${sanitizedMessage}". `;
+            // Improved fallback message
+            return `Ali, ${type}: Please help process the user's request to "${sanitizedMessage}"`;
         }
     }
 

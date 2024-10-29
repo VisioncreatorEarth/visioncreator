@@ -3,11 +3,41 @@
 	import { derived, writable } from 'svelte/store';
 	import { submitForm } from '$lib/composables/flowOperations';
 	import { createEventDispatcher } from 'svelte';
+	import { conversationManager } from '$lib/stores/intentStore';
 
 	const dispatch = createEventDispatcher<{
 		close: void;
 		message: { role: string; content: string; timestamp: number; toolResult?: any };
 	}>();
+
+	export let me: {
+		data: {
+			formId?: string;
+			form: {
+				fields: Array<{
+					name: string;
+					type: string;
+					title: string;
+					value: string;
+				}>;
+				validators: string;
+				submitAction: string;
+			};
+		};
+	};
+
+	// Create derived store from me.data.form
+	$: formStore = derived(me, ($me) => ({
+		formId: $me.data.formId,
+		fields: $me.data.form?.fields || [],
+		validators: $me.data.form?.validators || '',
+		submitAction: $me.data.form?.submitAction || ''
+	}));
+
+	$: fields = $formStore.fields;
+	$: validatorName = $formStore.validators;
+	$: submitAction = $formStore.submitAction;
+	$: formId = $formStore.formId;
 
 	// Define schemas
 	const FORM_SCHEMAS = {
@@ -29,29 +59,14 @@
 		})
 	};
 
-	export let me: any;
-
-	// Create derived store from me.data.form
-	$: formStore = derived(
-		me,
-		($me) =>
-			$me.data.form || {
-				fields: [],
-				validators: '', // Now expects a string
-				submitAction: ''
-			}
-	);
-
-	$: fields = $formStore.fields;
-	$: validatorName = $formStore.validators; // String reference to schema
-	$: submitAction = $formStore.submitAction;
-
 	// Get actual validator schema
 	$: activeSchema = FORM_SCHEMAS[validatorName] || FORM_SCHEMAS.updateName;
 
 	// Store for field values and validation states
 	const fieldStates = writable({});
 	let isLoading = false;
+	let isSubmitted = false;
+	let formError: string | null = null;
 
 	// Initialize field states with pre-filled data
 	$: {
@@ -115,45 +130,126 @@
 	// Check if all fields are valid
 	$: isFormValid = Object.values($fieldStates).every((state) => state.isValid);
 
+	// Add function to check for existing form state
+	function getExistingFormState(formId: string) {
+		const conversation = conversationManager.getCurrentConversation();
+		if (!conversation) return null;
+
+		// Look through messages in reverse order to get the latest state
+		for (const message of [...conversation.messages].reverse()) {
+			if (message.agent === 'walter' && message.payload?.type === 'response') {
+				const formState = message.payload.content?.view?.formState;
+				const matchingFormId = message.payload.view?.formId === formId;
+
+				if (formState && matchingFormId) {
+					return {
+						isSubmitted: formState.isSubmitted,
+						success: formState.success,
+						error: formState.error,
+						timestamp: formState.timestamp
+					};
+				}
+			}
+		}
+		return null;
+	}
+
+	// Initialize form state from conversation history
+	$: {
+		if (formId) {
+			const existingState = getExistingFormState(formId);
+			if (existingState) {
+				isSubmitted = existingState.isSubmitted && existingState.success;
+				formError = existingState.error || null;
+
+				if (formError) {
+					console.error('Previous form error:', formError);
+				}
+			}
+		}
+	}
+
 	// Submit handler
 	async function handleSubmit() {
-		if (!isFormValid) {
-			console.log('Form validation failed:', $fieldStates);
+		if (!isFormValid || isSubmitted) {
 			return;
 		}
 
 		isLoading = true;
+		formError = null;
+
 		try {
-			const values = Object.entries($fieldStates).reduce((acc, [key, state]) => {
+			// Get field values but structure them correctly for the API
+			const formValues = Object.entries($fieldStates).reduce((acc, [key, state]: [string, any]) => {
 				acc[key] = state.value;
 				return acc;
-			}, {});
+			}, {} as Record<string, any>);
+
+			// Create the proper input structure based on the operation
+			let input: Record<string, any> = {};
+
+			switch (submitAction) {
+				case 'updateMe':
+					input = {
+						name: formValues.name // Just send the name field
+					};
+					break;
+				case 'sendMail':
+					input = {
+						subject: formValues.subject,
+						body: formValues.body
+					};
+					break;
+				default:
+					input = formValues;
+			}
+
+			console.log('Submitting form with input:', input); // Debug log
 
 			const result = await submitForm({
 				operation: submitAction,
-				input: values
+				input,
+				view: {
+					formId,
+					action: submitAction,
+					values: formValues,
+					formState: {
+						isSubmitted: true,
+						success: true,
+						timestamp: new Date().toISOString()
+					}
+				}
 			});
 
-			if (!result.error) {
-				console.log('Form submitted successfully:', {
-					action: submitAction
-				});
-
-				// Dispatch success message
-				dispatch('message', {
-					role: 'form',
-					content: `Form submitted successfully: ${submitAction}`,
-					timestamp: Date.now(),
-					toolResult: {
-						type: 'form'
-					}
-				});
+			if (result.success) {
+				isSubmitted = true;
+				// Let the walter message handle the success state
 				dispatch('close');
 			} else {
-				console.error('Form submission error:', result.error);
+				throw new Error(result.message || 'Form submission failed');
 			}
 		} catch (error) {
-			console.error('Form submission exception:', error);
+			formError = error instanceof Error ? error.message : 'Unknown error';
+			console.error('Form submission error:', formError);
+
+			// Add error state to conversation
+			conversationManager.addMessage(formError, 'walter', 'error', {
+				type: 'response',
+				content: {
+					view: {
+						formState: {
+							isSubmitted: false,
+							success: false,
+							error: formError,
+							timestamp: new Date().toISOString()
+						}
+					}
+				},
+				view: {
+					formId,
+					action: submitAction
+				}
+			});
 		} finally {
 			isLoading = false;
 		}
@@ -222,8 +318,10 @@
 	<div class="flex justify-center w-full mt-4">
 		<button
 			on:click={handleSubmit}
-			class="btn btn-md bg-gradient-to-br variant-gradient-secondary-primary"
-			disabled={!isFormValid || isLoading}
+			class="btn btn-md {isSubmitted
+				? 'variant-filled-success'
+				: 'bg-gradient-to-br variant-gradient-secondary-primary'}"
+			disabled={!isFormValid || isLoading || isSubmitted}
 		>
 			{#if isLoading}
 				<div class="flex items-center justify-center gap-2">
@@ -248,6 +346,17 @@
 						/>
 					</svg>
 					<span>Processing...</span>
+				</div>
+			{:else if isSubmitted}
+				<div class="flex items-center justify-center gap-2">
+					<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+						<path
+							fill-rule="evenodd"
+							d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+					<span>Submitted</span>
 				</div>
 			{:else}
 				Sign to confirm

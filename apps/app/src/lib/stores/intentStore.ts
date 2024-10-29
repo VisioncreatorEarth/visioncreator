@@ -10,8 +10,27 @@ export interface Message {
     timestamp: string;
     status?: 'pending' | 'complete' | 'error';
     payload?: {
-        view?: any;
+        view?: {
+            id: string;
+            children: Array<{
+                id: string;
+                component: string;
+                data: {
+                    formId: string;
+                    form: any;
+                    formState?: {
+                        isSubmitted: boolean;
+                        success: boolean;
+                        error?: string;
+                        timestamp: string;
+                    };
+                };
+            }>;
+        };
         action?: string;
+        formId?: string;
+        type?: 'response';
+        content?: any;
     };
 }
 
