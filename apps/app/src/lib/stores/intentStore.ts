@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 
-export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'system';
+export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'vroni' | 'system';
 
 export interface Message {
     id?: string;
@@ -12,24 +12,22 @@ export interface Message {
     payload?: {
         view?: {
             id: string;
+            layout?: {
+                areas: string;
+                rows?: string;
+                columns?: string;
+                gap?: string;
+            };
             children: Array<{
                 id: string;
                 component: string;
-                data: {
-                    formId: string;
-                    form: any;
-                    formState?: {
-                        isSubmitted: boolean;
-                        success: boolean;
-                        error?: string;
-                        timestamp: string;
-                    };
-                };
+                slot?: string;
+                data: any;
             }>;
         };
         action?: string;
         formId?: string;
-        type?: 'response';
+        type?: 'response' | 'view';
         content?: any;
     };
 }

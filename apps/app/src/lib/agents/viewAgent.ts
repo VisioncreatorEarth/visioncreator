@@ -1,39 +1,37 @@
 import { conversationManager } from '$lib/stores/intentStore';
+import type { Message } from '$lib/stores/intentStore';
 
-const SYSTEM_PROMPT = `
-You are an AI assistant specialized in creating view configurations for a dynamic Svelte component system called Composer. Your task is to interpret user requests and generate appropriate JSON configurations for the Composer.svelte component.
+// Helper functions
+function extractViewConfig(text: string): any {
+    try {
+        const match = text.match(/<compose-view>([\s\S]*?)<\/compose-view>/);
+        if (!match) {
+            console.error('No view config found in response');
+            return null;
+        }
+        const config = JSON.parse(match[1]);
+        console.log('Extracted config:', config);
+        return config;
+    } catch (error) {
+        console.error('Error extracting view config:', error);
+        return null;
+    }
+}
 
-Key points about the Composer system:
-1. It uses a hierarchical structure to define layouts and components.
-2. Each component (composer) can have its own layout, children, and associated data.
-3. The system supports dynamic component loading and rendering based on configuration.
-4. It uses CSS Grid for flexible layouts, defined in the 'layout' property.
-5. Data fetching is handled through the 'map' property, which can include static data or dynamic queries.
+// Constants
+const AVAILABLE_COMPONENTS = ['HelloEarth', 'Bring', 'Banking', 'AirBNB', 'Splitwise', 'Kanban'];
 
-When generating a view configuration:
-1. Always include an 'id' for each composer.
-2. Use the 'layout' property to define grid layouts.
-3. Specify components using the 'component' property.
-4. Use the 'slot' property for positioning within parent grids.
-5. Include 'children' for nested components.
-6. Use the 'map' property for data requirements and transformations.
+const viewSystemPrompt = `You are Vroni, the View Agent. Your role is to analyze user requests and return appropriate view configurations.
 
 Available components (always prepend with "o-"):
-- HelloEarth
-- Bring
-- Banking
-- AirBNB
-- Splitwise
-- Kanban
+- o-HelloEarth
+- o-Bring
+- o-Banking
+- o-AirBNB
+- o-Splitwise
+- o-Kanban
 
-Instructions for component selection:
-1. Analyze the user's request to determine which component best fits their needs.
-2. Select the most appropriate component from the available list.
-3. If the user explicitly requests a specific component, use that one.
-4. If the user's request is ambiguous, choose the component that best matches their intent.
-5. Always prepend the selected component name with "o-" in the configuration.
-
-Always return the JSON configuration wrapped in <compose-view> tags, like this, alsways return the o-selectedComponent with one of the above mentioned component names. 
+Always return the JSON configuration wrapped in <compose-view> tags, like this:
 <compose-view>
 {
     "id": "MainContainer",
@@ -42,7 +40,7 @@ Always return the JSON configuration wrapped in <compose-view> tags, like this, 
         "columns": "1fr",
         "rows": "1fr",
         "overflow": "auto",
-        "style": 'p-4 max-w-7xl mx-auto'
+        "style": "p-4 max-w-7xl mx-auto"
     },
     "children": [
         {
@@ -55,118 +53,97 @@ Always return the JSON configuration wrapped in <compose-view> tags, like this, 
 </compose-view>
 
 Replace [SelectedComponent] with the appropriate component name based on the user's request.
-Do not include any explanations or other text outside these tags.
-`;
+Do not include any explanations or other text outside these tags.`;
 
-interface AgentResponse {
-    type: 'tool_result';
-    tool_use_id: string;
-    content: string | null;
-    is_error: boolean;
-    message: Message;
-}
+export const viewAgentTools = [
+    {
+        name: 'extractViewAction',
+        description: 'Extract view navigation intent from user messages',
+        input_schema: {
+            type: 'object',
+            properties: {
+                action: {
+                    type: 'string',
+                    enum: ['showView'],
+                    description: 'The type of view action to perform'
+                },
+                view: {
+                    type: 'string',
+                    enum: AVAILABLE_COMPONENTS,
+                    description: 'The view to navigate to (without o- prefix)'
+                }
+            },
+            required: ['action', 'view']
+        }
+    }
+];
 
-interface Message {
-    role: string;
-    content: string;
-    timestamp: number;
-    toolResult?: {
-        type: 'view' | 'component' | 'action';
-        data: any;
-        tool_use_id: string;
-    };
-}
-
-export async function viewAgent(request: any): Promise<AgentResponse> {
+// Main agent implementation
+export const viewAgent = async (request: { task: string; context: Message[] }) => {
     try {
         const userMessage = request.task;
+        console.log('Processing view request:', userMessage);
 
         conversationManager.addMessage(
-            'Generating view configuration...',
-            'agent',
-            'pending',
-            'walter'
+            "Processing view request...",
+            'vroni',
+            'pending'
         );
 
         const response = await fetch('/local/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [{ role: 'user', content: userMessage }],
-                system: SYSTEM_PROMPT
+                messages: [
+                    { role: 'system', content: viewSystemPrompt },
+                    { role: 'user', content: userMessage }
+                ],
+                temperature: 0
             })
         });
 
         const data = await response.json();
+        console.log('Vroni response:', data);
+
         const viewConfig = extractViewConfig(data.content[0].text);
 
-        if (viewConfig) {
-            conversationManager.addMessage(
-                'View configuration ready',
-                'agent',
-                'complete',
-                'walter',
-                [{
-                    type: 'view',
-                    content: viewConfig
-                }]
-            );
-            return {
-                type: 'tool_result',
-                tool_use_id: request.tool_use_id,
-                content: JSON.stringify(viewConfig),
-                is_error: false,
-                message: {
-                    role: 'viewAgent',
-                    content: 'View configuration generated successfully',
-                    timestamp: Date.now(),
-                    toolResult: {
-                        type: 'view',
-                        data: viewConfig,
-                        tool_use_id: request.tool_use_id
-                    }
-                }
-            };
+        if (!viewConfig) {
+            throw new Error('Invalid view configuration');
         }
 
-        throw new Error('Could not generate view');
+        const message = `Navigating to ${viewConfig.children[0].component} view...`;
+
+        conversationManager.addMessage(
+            message,
+            'vroni',
+            'complete',
+            {
+                type: 'view',
+                view: viewConfig,
+                action: 'showView'
+            }
+        );
+
+        return {
+            success: true,
+            message: {
+                agent: 'vroni',
+                content: message,
+                payload: {
+                    type: 'view',
+                    view: viewConfig,
+                    action: 'showView'
+                }
+            }
+        };
+
     } catch (error) {
         console.error('View Agent Error:', error);
         conversationManager.addMessage(
-            'Sorry, I could not generate that view.',
-            'agent',
-            'error',
-            'walter'
+            'Sorry, I could not process that view request.',
+            'vroni',
+            'error'
         );
-        return {
-            type: 'tool_result',
-            tool_use_id: request.tool_use_id,
-            content: null,
-            is_error: true,
-            message: {
-                role: 'viewAgent',
-                content: 'Failed to generate view',
-                timestamp: Date.now(),
-                toolResult: undefined
-            }
-        };
+        throw error;
     }
-}
-
-function extractViewConfig(text: string) {
-    const match = text.match(/<compose-view>([\s\S]*?)<\/compose-view>/);
-    return match ? JSON.parse(match[1]) : null;
-}
-
-function createAgentMessage(content: string, viewConfig: any, toolUseId: string): Message {
-    return {
-        role: 'viewAgent',
-        content: viewConfig ? 'View configuration generated successfully' : 'Failed to generate view',
-        timestamp: Date.now(),
-        toolResult: viewConfig ? {
-            type: 'view',
-            data: viewConfig,
-            tool_use_id: toolUseId
-        } : undefined
-    };
-}
+};

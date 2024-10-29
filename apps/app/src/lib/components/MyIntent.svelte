@@ -8,6 +8,8 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import MessageItem from './MessageItem.svelte';
 	import { hominioAgent } from '$lib/agents/hominioAgent';
+	import { goto } from '$app/navigation';
+	import { dynamicView } from '$lib/stores';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -49,15 +51,7 @@
 	});
 
 	function handleClose() {
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-		}
-		audioStream = null;
-		mediaRecorder = null;
-		audioChunks = [];
-		modalState = 'idle';
-
-		conversationManager.endCurrentConversation();
+		resetConversationState();
 		dispatch('close');
 	}
 
@@ -209,9 +203,32 @@
 
 	// Add this function to handle voice transcription completion
 	async function handleTranscriptionComplete(text: string) {
-		modalState = 'result';
 		try {
 			const response = await hominioAgent.processRequest(text);
+
+			// Handle view updates
+			if (response?.message?.payload?.type === 'view') {
+				const viewData = response.message.payload.view;
+
+				// Update the dynamicView store directly
+				dynamicView.update((store) => ({
+					...store,
+					view: viewData
+				}));
+
+				// Add a small delay to ensure the view update is processed
+				setTimeout(() => {
+					// Then reset state and close modal
+					resetConversationState();
+					dispatch('close');
+					isOpen = false;
+
+					// Navigate to /me if not already there
+					if (window.location.pathname !== '/me') {
+						goto('/me');
+					}
+				}, 300);
+			}
 
 			// Scroll to bottom after new messages
 			if (messageContainer) {
@@ -231,11 +248,32 @@
 			conversationManager.addMessage(
 				'Sorry, I encountered an error processing your request.',
 				'agent',
-				'error',
-				'system'
+				'error'
 			);
 		}
 	}
+
+	// Add function to reset conversation state
+	function resetConversationState() {
+		// Reset audio state
+		if (audioStream) {
+			audioStream.getTracks().forEach((track) => track.stop());
+		}
+		audioStream = null;
+		mediaRecorder = null;
+		audioChunks = [];
+
+		// Reset modal state
+		modalState = 'idle';
+
+		// Reset conversation
+		conversationManager.endCurrentConversation();
+	}
+
+	// Clean up on component destroy
+	onDestroy(() => {
+		resetConversationState();
+	});
 </script>
 
 {#if isOpen}

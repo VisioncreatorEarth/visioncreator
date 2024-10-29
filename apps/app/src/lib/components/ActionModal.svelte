@@ -9,6 +9,8 @@
 	import LegalMenu from './LegalMenu.svelte';
 	import Auth from './Auth.svelte';
 	import MyIntent from './MyIntent.svelte';
+	import { onMount } from 'svelte';
+	import { dynamicView } from '$lib/stores';
 
 	export let session: any;
 	export let supabase: any;
@@ -142,6 +144,29 @@
 	function handleIntentClose() {
 		isIntentModalOpen = false;
 	}
+
+	// Add event listener for view updates
+	onMount(() => {
+		const handleViewUpdate = (event: CustomEvent) => {
+			const view = event.detail;
+			if (view) {
+				// Stop event propagation
+				event.stopPropagation();
+
+				// Update the dynamicView store directly instead of dispatching another event
+				dynamicView.update((store) => ({
+					...store,
+					view: view
+				}));
+			}
+		};
+
+		window.addEventListener('updateView', handleViewUpdate as EventListener);
+
+		return () => {
+			window.removeEventListener('updateView', handleViewUpdate as EventListener);
+		};
+	});
 </script>
 
 <svelte:window on:openModal={handleModalOpen} />

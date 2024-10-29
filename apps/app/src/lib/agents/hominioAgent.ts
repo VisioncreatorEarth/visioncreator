@@ -1,4 +1,7 @@
 import { conversationManager } from '$lib/stores/intentStore';
+import type { Message } from '$lib/stores/intentStore';
+import { viewAgent } from '$lib/agents/viewAgent';
+import { actionAgent } from '$lib/agents/actionAgent';
 
 export class HominioAgent {
     async processRequest(userMessage: string) {
@@ -10,7 +13,7 @@ export class HominioAgent {
 
             if (!requestAnalysis.understood) {
                 conversationManager.addMessage(
-                    "I'm not quite sure what you'd like me to do. I can help you with writing new emails, editing existing emails, or updating your name. Could you please clarify your request?",
+                    "I'm not quite sure what you'd like me to do. I can help you with writing emails, editing emails, updating your name, or navigating to different views. Could you please clarify your request?",
                     'hominio',
                     'complete'
                 );
@@ -19,7 +22,7 @@ export class HominioAgent {
 
             if (!requestAnalysis.isKnownSkill) {
                 conversationManager.addMessage(
-                    "I can only help with writing emails, editing existing emails, or updating your name. I'm not able to help with other requests yet. Would you like help with any of these?",
+                    "I can help you with writing emails, editing emails, updating your name, or navigating to different views like banking, bring, or splitwise. What would you like to do?",
                     'hominio',
                     'complete'
                 );
@@ -46,7 +49,8 @@ export class HominioAgent {
             conversationManager.addMessage(delegationMessage, 'hominio', 'complete');
 
             try {
-                const result = await this.delegateToAgent('actionAgent', {
+                const agent = requestAnalysis.type === 'view' ? 'view' : 'action';
+                const result = await this.delegateToAgent(agent, {
                     task: userMessage,
                     context: currentContext,
                     type: requestAnalysis.type
@@ -76,70 +80,51 @@ export class HominioAgent {
     private async createDelegationMessage(userMessage: string, type: string, context: any[]): Promise<string> {
         const sanitizedMessage = this.sanitizeRequest(userMessage);
 
-        const systemPrompt = `You are Hominio, a request clarification specialist. Your role is to:
-1. Take user requests and add minimal but crucial structure
-2. Preserve the user's intent while adding necessary context
-3. Keep delegations extremely concise
-
-Format all responses as:
-"Ali, [task type]: [structured version of user request]"
-
-Add only essential specifications. Do not implement or expand the content.
-
-Example:
-User: "Can you update my name to Samuel?"
-Response: "Ali, updateName: Please update the user's name to Samuel"`;
-
         try {
             const response = await fetch('/local/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [
-                        { role: 'system', content: systemPrompt },
+                        {
+                            role: 'system',
+                            content: `You are Hominio, a request clarification specialist. Your role is to:
+1. Take user requests and add minimal but crucial structure
+2. Preserve the user's intent while adding necessary context
+3. Keep delegations extremely concise
+
+Format all responses as:
+"[Agent], [task type]: [structured version of user request]"
+
+For view requests, delegate to Vroni.
+For other actions, delegate to Ali.
+
+Examples:
+User: "Can you update my name to Samuel?"
+Response: "Ali, updateName: Please update the user's name to Samuel"
+
+User: "Show me banking"
+Response: "Vroni, view: Please show the banking view"`
+                        },
                         { role: 'user', content: sanitizedMessage }
                     ],
-                    tools: [{
-                        name: 'createDelegationMessage',
-                        description: 'Create a clear task definition for Ali',
-                        input_schema: {
-                            type: 'object',
-                            properties: {
-                                message: {
-                                    type: 'string',
-                                    description: 'The task definition message'
-                                }
-                            },
-                            required: ['message']
-                        }
-                    }]
+                    temperature: 0
                 })
             });
 
             const data = await response.json();
             console.log('Claude delegation response:', data);
 
-            // Handle both tool_calls and tool_use formats
-            const toolCall = data.content?.find(c => c.type === 'tool_calls' || c.type === 'tool_use');
-
-            if (toolCall?.input?.message) {
-                return toolCall.input.message;
-            }
-
-            // Fallback to content if no tool call
             if (data.content?.[0]?.text) {
-                const text = data.content[0].text;
-                if (text.includes('Ali,')) {
-                    return text;
-                }
+                return data.content[0].text;
             }
 
             throw new Error('Invalid delegation message response');
 
         } catch (error) {
             console.error('Error generating delegation message:', error);
-            // Improved fallback message
-            return `Ali, ${type}: Please help process the user's request to "${sanitizedMessage}"`;
+            const agent = type === 'view' ? 'Vroni' : 'Ali';
+            return `${agent}, ${type}: ${sanitizedMessage}`;
         }
     }
 
@@ -151,33 +136,47 @@ Response: "Ali, updateName: Please update the user's name to Samuel"`;
     }
 
     private async delegateToAgent(selectedAgent: string, params: any) {
-        const agents = {
-            actionAgent: () => import('./actionAgent').then(m => m.actionAgent),
-            viewAgent: () => import('./viewAgent').then(m => m.viewAgent),
-            componentAgent: () => import('./componentAgent').then(m => m.componentAgent)
-        };
-
         try {
-            const agent = await agents[selectedAgent]();
-            const result = await agent(params);
+            console.log('Delegating to agent:', selectedAgent, 'with params:', params);
 
-            if (!result) {
-                throw new Error('Agent returned no result');
+            switch (selectedAgent) {
+                case 'view':
+                    if (!viewAgent) {
+                        throw new Error('viewAgent not loaded');
+                    }
+                    return await viewAgent(params);
+                case 'action':
+                    if (!actionAgent) {
+                        throw new Error('actionAgent not loaded');
+                    }
+                    return await actionAgent(params);
+                default:
+                    throw new Error(`Unknown agent: ${selectedAgent}`);
             }
-
-            return result;
         } catch (error) {
-            console.error(`Error delegating to ${selectedAgent}:`, error);
+            console.error(`Error delegating to ${selectedAgent} agent:`, error);
             throw error;
         }
     }
 
-    private analyzeRequest(message: string, context: any[]): {
-        understood: boolean;
-        isKnownSkill: boolean;
-        type?: 'editEmail' | 'newEmail' | 'updateName' | null;
-    } {
+    private analyzeRequest(message: string, context: Message[]) {
         const msg = message.toLowerCase();
+
+        // Check for view requests first
+        const viewKeywords = [
+            'show', 'open', 'navigate', 'go to', 'switch to', 'display',
+            'banking', 'bring', 'splitwise', 'airbnb', 'kanban', 'helloearth'
+        ];
+
+        // More specific view command detection
+        const isViewRequest = (
+            viewKeywords.some(keyword => msg.includes(keyword)) ||
+            msg.match(/^(show|open|go to|switch to|display)\s+\w+/)
+        );
+
+        if (isViewRequest) {
+            return { understood: true, isKnownSkill: true, type: 'view' };
+        }
 
         if (this.isEmailEditRequest(message, context)) {
             return { understood: true, isKnownSkill: true, type: 'editEmail' };
@@ -193,7 +192,7 @@ Response: "Ali, updateName: Please update the user's name to Samuel"`;
         }
 
         const unknownSkillIndicators = [
-            'create', 'make', 'build', 'show', 'view', 'display',
+            'create', 'make', 'build', 'view', 'display',
             'delete', 'remove', 'add', 'component', 'page', 'feature'
         ];
 
@@ -227,3 +226,4 @@ Response: "Ali, updateName: Please update the user's name to Samuel"`;
 }
 
 export const hominioAgent = new HominioAgent();
+
