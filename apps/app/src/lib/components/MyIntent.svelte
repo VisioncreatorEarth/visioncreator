@@ -199,8 +199,11 @@
 
 	// Auto-scroll messages
 	$: if (currentConversation?.messages?.length && messageContainer) {
+		// Wait for DOM update
 		setTimeout(() => {
-			messageContainer.scrollTop = messageContainer.scrollHeight;
+			if (messageContainer) {
+				messageContainer.scrollTop = messageContainer.scrollHeight;
+			}
 		}, 100);
 	}
 

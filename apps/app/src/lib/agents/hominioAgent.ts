@@ -3,7 +3,7 @@ import { conversationManager } from '$lib/stores/intentStore';
 export const coordinatorTools = [
     {
         name: 'actionAgent',
-        description: 'MUST be used for form-based actions like "update name" or "send mail".',
+        description: 'MUST be used for form-based actions like "update name" or "send mail". Use this for ANY email/mail related requests or name updates.',
         input_schema: {
             type: 'object',
             properties: {
@@ -55,7 +55,16 @@ export class HominioAgent {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     messages: [{ role: 'user', content: userMessage }],
-                    tools: coordinatorTools
+                    system: `You are Hominio, a coordinator agent. Your main tasks:
+                    1. For ANY email/mail/message sending requests -> use actionAgent
+                    2. For name update requests -> use actionAgent
+                    3. For view creation -> use viewAgent
+                    4. For component modifications -> use componentAgent
+                    
+                    IMPORTANT: ANY mention of email, mail, message, or writing should be directed to actionAgent.
+                    Even if the request is informal or in different languages, if it's about sending a message, use actionAgent.`,
+                    tools: coordinatorTools,
+                    temperature: 0
                 })
             });
 
@@ -64,7 +73,7 @@ export class HominioAgent {
 
             if (!toolCall) {
                 conversationManager.addMessage(
-                    "I currently have 2 skills: writing mails to the team and updating your name. Nothing else works for now. Please try again.",
+                    "I can help you send emails or update your name. Would you like to do either of those?",
                     'agent',
                     'complete',
                     'hominio'
@@ -74,13 +83,20 @@ export class HominioAgent {
 
             const selectedAgent = toolCall.name;
             const delegationMessages = {
-                actionAgent: "I understand you want to update your name. I'll delegate this to Ali, our Action Agent.",
+                actionAgent: (userMessage: string) => {
+                    if (userMessage.toLowerCase().includes('name')) {
+                        return "I understand you want to update your name. I'll delegate this to Ali, our Action Agent.";
+                    }
+                    return "I'll have Ali help you send that message.";
+                },
                 viewAgent: "I'll have Walter create a view for you.",
                 componentAgent: "I'll have our Component Agent modify that for you."
             };
 
             conversationManager.addMessage(
-                delegationMessages[selectedAgent],
+                typeof delegationMessages[selectedAgent] === 'function'
+                    ? delegationMessages[selectedAgent](userMessage)
+                    : delegationMessages[selectedAgent],
                 'agent',
                 'complete',
                 'hominio'
@@ -115,23 +131,10 @@ export class HominioAgent {
             const agent = await agents[selectedAgent]();
             const response = await agent(params);
 
-            // Handle the agent response
-            if (response?.success) {
-                if (selectedAgent === 'actionAgent' && response.view) {
-                    conversationManager.addMessage(
-                        "I'll help you update your name. Here's a form to do that:",
-                        'agent',
-                        'complete',
-                        'ali',
-                        [{
-                            type: 'action',
-                            content: {
-                                action: 'updateName',
-                                view: response.view
-                            }
-                        }]
-                    );
-                }
+            // Handle the agent response consistently
+            if (response?.success && response.message?.metadata?.type === 'action') {
+                // The action agent now handles its own message adding
+                return response;
             }
 
             return response;

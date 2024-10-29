@@ -21,7 +21,7 @@
 			subject: z
 				.string()
 				.min(3, 'Please share a topic for your message')
-				.max(40, "Let's keep the subject concise"),
+				.max(75, "Let's keep the subject concise"),
 			body: z
 				.string()
 				.min(10, 'Your message is important to us')
@@ -158,6 +158,15 @@
 			isLoading = false;
 		}
 	}
+
+	// Add this function to handle textarea auto-resize
+	function autoResize(event: Event) {
+		const textarea = event.target as HTMLTextAreaElement;
+		// Reset height to auto to get the correct scrollHeight
+		textarea.style.height = 'auto';
+		// Set the height to match the content
+		textarea.style.height = textarea.scrollHeight + 'px';
+	}
 </script>
 
 <div class="flex flex-col w-full gap-3 p-4">
@@ -175,8 +184,9 @@
 						<textarea
 							id={field.name}
 							bind:value={$fieldStates[field.name].value}
-							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[120px] resize-y"
-							rows="4"
+							on:input={autoResize}
+							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[120px] overflow-hidden"
+							rows="1"
 						/>
 					{:else}
 						<input
@@ -231,3 +241,12 @@
 		</button>
 	</div>
 </div>
+
+<style>
+	textarea {
+		display: block;
+		box-sizing: border-box;
+		max-height: 400px; /* Optional: set a max height if needed */
+		resize: none; /* Prevent manual resizing since we're handling it automatically */
+	}
+</style>

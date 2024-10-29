@@ -79,13 +79,13 @@ export const actionAgentTools = [
                 },
                 action: {
                     type: 'string',
-                    enum: Object.keys(actionViews), // Dynamically use all available actions
-                    description: 'The type of form action'
+                    enum: ['updateName', 'sendMail'],
+                    description: 'The type of form action to perform'
                 },
                 values: {
                     type: 'object',
                     description: 'Dynamic key-value pairs for form fields',
-                    additionalProperties: true // Allow any field names
+                    additionalProperties: true
                 }
             },
             required: ['task', 'action', 'values']
@@ -96,32 +96,39 @@ export const actionAgentTools = [
 const actionSystemPrompts = {
     updateName: `You are Ali, the Action Agent. For name updates:
         1. Extract the desired name from the user's message
-        2. Keep it simple and direct
-        3. Only extract the name value
+        2. Use the updateName action
+        3. Set the name value in the values object
         4. If no clear name is provided, ask for clarification
         
-        Use the updateName action with the appropriate name value.`,
+        Example: For "change name to John", use:
+        {
+            action: "updateName",
+            values: { name: "John" }
+        }`,
 
-    sendMail: `You are Ali, the Action Agent. Your task is to convert any request into an email format:
-        1. Create a clear subject line summarizing the request
-        2. Convert the message content into proper email format
-        3. Ensure the content is in English (translate if necessary)
-        4. Maintain a professional tone
+    sendMail: `You are Ali, the Action Agent. For email requests:
+        1. Create a clear subject line
+        2. Format the message content
+        3. Use the sendMail action
+        4. Set both subject and body in the values object
         
-        Extract these components and use the sendMail action with appropriate subject and body values.
-        If the message is already in English, maintain its original meaning while formatting it as an email.`
-    // Add more action-specific prompts as needed
+        Example: For "send email about meeting", use:
+        {
+            action: "sendMail",
+            values: { 
+                subject: "Meeting Request",
+                body: "..."
+            }
+        }`
 };
 
 export async function actionAgent(request: any) {
     try {
         const userMessage = request.task;
-        const requestedAction = request.action || 'sendMail'; // Default to sendMail if no action specified
 
-        console.log('Action agent processing message:', userMessage, 'Action:', requestedAction);
-
+        // Initial pending message
         conversationManager.addMessage(
-            `Processing your ${requestedAction} request...`,
+            `Processing your request...`,
             'agent',
             'pending',
             'ali'
@@ -135,8 +142,40 @@ export async function actionAgent(request: any) {
                     role: 'user',
                     content: userMessage
                 }],
-                system: actionSystemPrompts[requestedAction],
-                tools: actionAgentTools,
+                system: `You are an action parser. Extract form data from user messages.
+                    For emails/messages (including informal or foreign language requests):
+                    {
+                        "action": "sendMail",
+                        "values": {
+                            "subject": "Extracted or generated subject",
+                            "body": "Extracted or formatted message body"
+                        }
+                    }
+                    For name updates:
+                    {
+                        "action": "updateName",
+                        "values": {
+                            "name": "Extracted name"
+                        }
+                    }`,
+                tools: [{
+                    name: 'extractFormAction',
+                    description: 'Extract form action and values',
+                    input_schema: {
+                        type: 'object',
+                        properties: {
+                            action: {
+                                type: 'string',
+                                enum: ['sendMail', 'updateName']
+                            },
+                            values: {
+                                type: 'object',
+                                additionalProperties: true
+                            }
+                        },
+                        required: ['action', 'values']
+                    }
+                }],
                 temperature: 0
             })
         });
@@ -146,33 +185,49 @@ export async function actionAgent(request: any) {
 
         const toolCall = data.content?.find(c => c.type === 'tool_use');
 
-        if (!toolCall || !toolCall.input) {
+        if (!toolCall?.input?.action || !toolCall?.input?.values) {
             throw new Error('Invalid tool response');
         }
 
         const { action, values } = toolCall.input;
 
-        // Get the view template
+        // Get the view template and create a deep copy
         const view = JSON.parse(JSON.stringify(actionViews[action]));
 
-        // Generic field value update
+        // Enhanced form field value setting
         if (view.children[0].data.form.fields) {
-            view.children[0].data.form.fields = view.children[0].data.form.fields.map(field => ({
-                ...field,
-                value: values[field.name] || ''
-            }));
+            view.children[0].data.form.fields = view.children[0].data.form.fields.map(field => {
+                const fieldValue = values[field.name];
+                return {
+                    ...field,
+                    value: fieldValue ? fieldValue.trim() : ''
+                };
+            });
         }
 
-        // Action-specific messages
         const actionMessages = {
-            updateName: "I've processed your name update request. Please review:",
-            sendMail: "I've formatted your request as an email. Please review and confirm:",
-            // Add more action-specific messages as needed
+            updateName: `I've prepared a form to update your name to "${values.name}". Please review and confirm:`,
+            sendMail: "I've formatted your message. Please review and confirm:"
         };
 
         const message = actionMessages[action] || "Please review your request:";
 
-        // Add message to conversation with the action payload
+        const responsePayload = {
+            success: true,
+            message: {
+                role: 'assistant',
+                content: message,
+                metadata: {
+                    type: 'action',
+                    action,
+                    view,
+                    tool_use_id: request.tool_use_id,
+                    original_message: userMessage,
+                    processed_values: values
+                }
+            }
+        };
+
         conversationManager.addMessage(
             message,
             'agent',
@@ -190,21 +245,7 @@ export async function actionAgent(request: any) {
             }]
         );
 
-        return {
-            success: true,
-            message: {
-                role: 'assistant',
-                content: message,
-                metadata: {
-                    type: 'action',
-                    action,
-                    view,
-                    tool_use_id: request.tool_use_id,
-                    original_message: userMessage,
-                    processed_values: values
-                }
-            }
-        };
+        return responsePayload;
 
     } catch (error) {
         console.error('Action Agent Error:', error);
