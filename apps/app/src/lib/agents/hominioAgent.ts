@@ -42,9 +42,12 @@ export class HominioAgent {
             // Get current conversation context first
             const currentContext = conversationManager.getCurrentConversation()?.messages || [];
 
-            // Add initial analysis message
+            // Add user message to conversation first
+            conversationManager.addMessage(userMessage, 'user', 'complete');
+
+            // Add friendly initial message
             conversationManager.addMessage(
-                "I'm analyzing your request...",
+                "Let me get to work on that for you...",
                 'hominio',
                 'pending'
             );
