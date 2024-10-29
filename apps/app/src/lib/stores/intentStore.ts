@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 
-export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'vroni' | 'system';
+export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'vroni' | 'system' | 'bert';
 
 export interface Message {
     id?: string;
@@ -37,7 +37,15 @@ export const messageStyleConfig = {
         bgColor: 'bg-primary-500',
         textColor: 'text-white'
     },
+    bert: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
     hominio: {
+        bgColor: 'bg-surface-700',
+        textColor: 'text-tertiary-200'
+    },
+    lena: {
         bgColor: 'bg-surface-700',
         textColor: 'text-tertiary-200'
     },

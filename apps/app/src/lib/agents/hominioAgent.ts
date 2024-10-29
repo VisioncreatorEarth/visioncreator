@@ -2,6 +2,7 @@ import { conversationManager } from '$lib/stores/intentStore';
 import type { Message } from '$lib/stores/intentStore';
 import { viewAgent } from '$lib/agents/viewAgent';
 import { actionAgent } from '$lib/agents/actionAgent';
+import { bringAgent } from '$lib/agents/bringAgent';
 
 export class HominioAgent {
     async processRequest(userMessage: string) {
@@ -10,39 +11,72 @@ export class HominioAgent {
             conversationManager.addMessage(userMessage, 'user', 'complete');
 
             const requestAnalysis = this.analyzeRequest(userMessage, currentContext);
-
-            if (!requestAnalysis.understood) {
-                conversationManager.addMessage(
-                    "I'm not quite sure what you'd like me to do. I can help you with writing emails, editing emails, updating your name, or navigating to different views. Could you please clarify your request?",
-                    'hominio',
-                    'complete'
-                );
-                return null;
-            }
-
-            if (!requestAnalysis.isKnownSkill) {
-                conversationManager.addMessage(
-                    "I can help you with writing emails, editing emails, updating your name, or navigating to different views like banking, bring, or splitwise. What would you like to do?",
-                    'hominio',
-                    'complete'
-                );
-                return null;
-            }
-
-            if (!requestAnalysis.type) {
-                conversationManager.addMessage(
-                    "I understand you want help, but could you be more specific about what you'd like me to do?",
-                    'hominio',
-                    'complete'
-                );
-                return null;
-            }
+            console.log('[HominioAgent] Request analysis:', requestAnalysis);
 
             conversationManager.addMessage(
                 "Let me get to work on that for you...",
                 'hominio',
                 'pending'
             );
+
+            if (requestAnalysis.type === 'shopping') {
+                console.log('[HominioAgent] Processing shopping request');
+
+                try {
+                    // First show the bring view
+                    await this.delegateToAgent('view', {
+                        task: 'open bring list view',
+                        context: currentContext,
+                        type: 'view'
+                    });
+
+                    // Then add the items using Bert
+                    const shoppingResult = await this.delegateToAgent('shopping', {
+                        task: userMessage,
+                        context: currentContext,
+                        type: 'shopping'
+                    });
+
+                    return shoppingResult;
+
+                } catch (error) {
+                    console.error('[HominioAgent] Shopping request error:', error);
+                    throw error;
+                }
+            }
+
+            // Handle shopping list requests
+            if (requestAnalysis.type === 'shopping') {
+                console.log('[HominioAgent] Delegating to shopping handler');
+
+                try {
+                    const [viewResult, shoppingResult] = await Promise.all([
+                        this.delegateToAgent('view', {
+                            task: 'open bring list view',
+                            context: currentContext,
+                            type: 'view'
+                        }),
+                        this.delegateToAgent('shopping', {
+                            task: userMessage,
+                            context: currentContext,
+                            type: 'shopping'
+                        })
+                    ]);
+
+                    console.log('[HominioAgent] Shopping results:', { view: viewResult, shopping: shoppingResult });
+                    return {
+                        success: true,
+                        message: {
+                            agent: 'hominio',
+                            content: shoppingResult.message.content,
+                            payload: viewResult.message.payload
+                        }
+                    };
+                } catch (error) {
+                    console.error('[HominioAgent] Shopping request error:', error);
+                    throw error;
+                }
+            }
 
             // Generate AI delegation message using structured approach
             const delegationMessage = await this.createDelegationMessage(userMessage, requestAnalysis.type, currentContext);
@@ -141,20 +175,16 @@ Response: "Vroni, view: Please show the banking view"`
 
             switch (selectedAgent) {
                 case 'view':
-                    if (!viewAgent) {
-                        throw new Error('viewAgent not loaded');
-                    }
                     return await viewAgent(params);
+                case 'shopping':
+                    return await bringAgent(params);
                 case 'action':
-                    if (!actionAgent) {
-                        throw new Error('actionAgent not loaded');
-                    }
                     return await actionAgent(params);
                 default:
                     throw new Error(`Unknown agent: ${selectedAgent}`);
             }
         } catch (error) {
-            console.error(`Error delegating to ${selectedAgent} agent:`, error);
+            console.error(`Error delegating to ${selectedAgent}:`, error);
             throw error;
         }
     }
@@ -162,16 +192,28 @@ Response: "Vroni, view: Please show the banking view"`
     private analyzeRequest(message: string, context: Message[]) {
         const msg = message.toLowerCase();
 
-        // Check for view requests first
-        const viewKeywords = [
-            'show', 'open', 'navigate', 'go to', 'switch to', 'display',
-            'banking', 'bring', 'splitwise', 'airbnb', 'kanban', 'helloearth'
+        // Shopping list related keywords - expanded for both German and English
+        const shoppingKeywords = [
+            'list', 'liste', 'einkauf', 'bring',
+            'add', 'put', 'place', 'hinzufügen', 'füge', 'packe',
+            'kaufen', 'buy', 'purchase', 'get'
         ];
 
-        // More specific view command detection
+        // Check for shopping list requests first
+        if (shoppingKeywords.some(keyword => msg.includes(keyword))) {
+            console.log('[HominioAgent] Detected shopping request');
+            return { understood: true, isKnownSkill: true, type: 'shopping' };
+        }
+
+        // View request detection
+        const viewKeywords = [
+            'show', 'open', 'navigate', 'go to', 'switch to', 'display',
+            'zeige', 'öffne', 'gehe zu', 'wechsle zu'
+        ];
+
         const isViewRequest = (
             viewKeywords.some(keyword => msg.includes(keyword)) ||
-            msg.match(/^(show|open|go to|switch to|display)\s+\w+/)
+            msg.match(/^(show|open|go to|switch to|display|zeige|öffne)\s+\w+/)
         );
 
         if (isViewRequest) {
