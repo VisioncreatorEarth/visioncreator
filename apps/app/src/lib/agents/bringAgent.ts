@@ -4,6 +4,16 @@ import { writable } from 'svelte/store';
 // Create a store for the shopping list
 export const bringListStore = writable<Array<{ id: number; name: string; icon: string }>>([]);
 
+// Add more generic icons for categorizing custom items
+const genericIcons = {
+    food: 'mdi:food',
+    drink: 'mdi:cup',
+    household: 'mdi:home',
+    personal: 'mdi:account',
+    default: 'mdi:shopping'
+} as const;
+
+// Keep preselectedItems for matching when possible
 const preselectedItems = [
     { name: 'Apfel', icon: 'mdi:fruit-apple' },
     { name: 'Banane', icon: 'mdi:fruit-banana' },
@@ -49,7 +59,8 @@ export async function bringAgent(request: any) {
                     {
                         role: 'system',
                         content: `You are Bert, the Shopping List Assistant. Extract shopping items and determine operations.
-Available items: ${preselectedItems.map(item => item.name).join(', ')}`
+You can accept ANY items, but try to match these common items when possible: ${preselectedItems.map(item => item.name).join(', ')}.
+Also try to categorize custom items as: food, drink, household, or personal.`
                     },
                     { role: 'user', content: userMessage }
                 ],
@@ -61,14 +72,20 @@ Available items: ${preselectedItems.map(item => item.name).join(', ')}`
                         properties: {
                             operation: {
                                 type: 'string',
-                                enum: ['add', 'remove', 'clear'],
-                                description: 'Type of operation to perform'
+                                enum: ['add', 'remove', 'clear']
                             },
                             items: {
                                 type: 'array',
                                 items: {
-                                    type: 'string',
-                                    description: 'Item name that matches available items list'
+                                    type: 'object',
+                                    properties: {
+                                        name: { type: 'string' },
+                                        category: {
+                                            type: 'string',
+                                            enum: ['food', 'drink', 'household', 'personal']
+                                        }
+                                    },
+                                    required: ['name']
                                 }
                             },
                             language: {
@@ -131,28 +148,44 @@ Available items: ${preselectedItems.map(item => item.name).join(', ')}`
     }
 }
 
-function handleAddItems(items: string[], language: string) {
+function handleAddItems(items: Array<{ name: string; category?: string }>, language: string) {
     if (items.length === 0) {
         throw new Error('No items to add');
     }
 
-    const newItems = items.map(itemName => {
+    const newItems = items.map(item => {
+        // Try to match with predefined items first
         const predefined = preselectedItems.find(
-            item => item.name.toLowerCase() === itemName.toLowerCase()
+            pre => pre.name.toLowerCase() === item.name.toLowerCase()
         );
+
+        if (predefined) {
+            return {
+                id: Date.now() + Math.random(),
+                name: predefined.name,
+                icon: predefined.icon
+            };
+        }
+
+        // For custom items, use category-based icons
+        let icon = genericIcons.default;
+        if (item.category) {
+            icon = genericIcons[item.category as keyof typeof genericIcons] || genericIcons.default;
+        }
 
         return {
             id: Date.now() + Math.random(),
-            name: predefined?.name || itemName,
-            icon: predefined?.icon || 'mdi:shopping'
+            name: item.name,
+            icon
         };
     });
 
     bringListStore.update(list => [...list, ...newItems]);
 
+    const itemNames = items.map(item => item.name);
     const responseMessage = language === 'de'
-        ? `Ich habe ${items.join(', ')} zu deiner Einkaufsliste hinzugefügt.`
-        : `Added ${items.join(', ')} to your shopping list.`;
+        ? `Ich habe ${itemNames.join(', ')} zu deiner Einkaufsliste hinzugefügt.`
+        : `Added ${itemNames.join(', ')} to your shopping list.`;
 
     conversationManager.addMessage(responseMessage, 'bert', 'complete');
 
@@ -165,19 +198,20 @@ function handleAddItems(items: string[], language: string) {
     };
 }
 
-function handleRemoveItems(items: string[], language: string) {
+function handleRemoveItems(items: Array<{ name: string }>, language: string) {
     bringListStore.update(list => {
         const remainingItems = list.filter(item =>
             !items.some(removeItem =>
-                item.name.toLowerCase() === removeItem.toLowerCase()
+                item.name.toLowerCase() === removeItem.name.toLowerCase()
             )
         );
         return remainingItems;
     });
 
+    const itemNames = items.map(item => item.name);
     const responseMessage = language === 'de'
-        ? `Ich habe ${items.join(', ')} von deiner Einkaufsliste entfernt.`
-        : `Removed ${items.join(', ')} from your shopping list.`;
+        ? `Ich habe ${itemNames.join(', ')} von deiner Einkaufsliste entfernt.`
+        : `Removed ${itemNames.join(', ')} from your shopping list.`;
 
     conversationManager.addMessage(responseMessage, 'bert', 'complete');
 
