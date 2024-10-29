@@ -1,99 +1,149 @@
 import { conversationManager } from '$lib/stores/intentStore';
 
-export const coordinatorTools = [
-    {
-        name: 'actionAgent',
-        description: 'MUST be used for form-based actions like "update name" or "send mail". Use this for ANY email/mail related requests or name updates.',
-        input_schema: {
-            type: 'object',
-            properties: {
-                task: { type: 'string', description: 'The action task to be performed' }
-            },
-            required: ['task']
-        }
-    },
-    {
-        name: 'viewAgent',
-        description: 'Use for showing or creating component views when no form action is required.',
-        input_schema: {
-            type: 'object',
-            properties: {
-                task: { type: 'string', description: 'The view creation task' }
-            },
-            required: ['task']
-        }
-    },
-    {
-        name: 'componentAgent',
-        description: 'Use for modifying or creating new Svelte components.',
-        input_schema: {
-            type: 'object',
-            properties: {
-                task: { type: 'string', description: 'The component modification task' }
-            },
-            required: ['task']
-        }
-    }
-];
-
 export class HominioAgent {
     async processRequest(userMessage: string) {
         try {
-            // Get current conversation context first
             const currentContext = conversationManager.getCurrentConversation()?.messages || [];
-
-            // Add user message to conversation first
             conversationManager.addMessage(userMessage, 'user', 'complete');
 
-            // Add friendly initial message
+            const requestAnalysis = this.analyzeRequest(userMessage, currentContext);
+
+            if (!requestAnalysis.understood) {
+                conversationManager.addMessage(
+                    "I'm not quite sure what you'd like me to do. I can help you with writing new emails, editing existing emails, or updating your name. Could you please clarify your request?",
+                    'hominio',
+                    'complete'
+                );
+                return null;
+            }
+
+            if (!requestAnalysis.isKnownSkill) {
+                conversationManager.addMessage(
+                    "I can only help with writing emails, editing existing emails, or updating your name. I'm not able to help with other requests yet. Would you like help with any of these?",
+                    'hominio',
+                    'complete'
+                );
+                return null;
+            }
+
+            if (!requestAnalysis.type) {
+                conversationManager.addMessage(
+                    "I understand you want help, but could you be more specific about what you'd like me to do?",
+                    'hominio',
+                    'complete'
+                );
+                return null;
+            }
+
             conversationManager.addMessage(
                 "Let me get to work on that for you...",
                 'hominio',
                 'pending'
             );
 
-            // Check if this is a follow-up edit request
-            const isEditRequest = this.isEmailEditRequest(userMessage, currentContext);
-            const lastEmailDraft = currentContext
-                .reverse()
-                .find(msg => msg.payload?.action === 'sendMail');
+            // Generate AI delegation message using structured approach
+            const delegationMessage = await this.createDelegationMessage(userMessage, requestAnalysis.type, currentContext);
+            conversationManager.addMessage(delegationMessage, 'hominio', 'complete');
 
-            // Direct messages to Ali based on request type
-            if (isEditRequest && lastEmailDraft) {
+            try {
+                const result = await this.delegateToAgent('actionAgent', {
+                    task: userMessage,
+                    context: currentContext,
+                    type: requestAnalysis.type
+                });
+                return result;
+            } catch (error) {
+                console.error('Delegation error:', error);
                 conversationManager.addMessage(
-                    "Ali, the user wants to modify their previous email draft. Please help them make the requested changes.",
+                    "I apologize, but I encountered an issue while processing your request. Could you try rephrasing it?",
                     'hominio',
                     'complete'
                 );
-            } else if (userMessage.toLowerCase().includes('mail') || userMessage.toLowerCase().includes('email')) {
-                conversationManager.addMessage(
-                    "Ali, please help compose a new email based on the user's request.",
-                    'hominio',
-                    'complete'
-                );
-            } else if (userMessage.toLowerCase().includes('name')) {
-                conversationManager.addMessage(
-                    "Ali, please prepare a name update form based on the user's request.",
-                    'hominio',
-                    'complete'
-                );
+                return null;
             }
-
-            // Delegate to action agent with full context
-            return await this.delegateToAgent('actionAgent', {
-                task: userMessage,
-                context: currentContext
-            });
 
         } catch (error) {
             console.error('Hominio Agent Error:', error);
             conversationManager.addMessage(
-                'An error occurred while processing your request.',
+                'I apologize, but something went wrong. Please try again.',
                 'hominio',
                 'error'
             );
-            throw error;
+            return null;
         }
+    }
+
+    private async createDelegationMessage(userMessage: string, type: string, context: any[]): Promise<string> {
+        const sanitizedMessage = this.sanitizeRequest(userMessage);
+
+        const systemPrompt = `You are Hominio, a request clarification specialist. Your role is to:
+1. Take user requests and add minimal but crucial structure
+2. Preserve the user's intent while adding necessary context
+3. Keep delegations extremely concise
+
+Format all responses as:
+"Ali, [task type]: [structured version of user request]"
+
+Add only essential specifications. Do not implement or expand the content.`;
+
+        try {
+            const response = await fetch('/local/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: sanitizedMessage }
+                    ],
+                    tools: [{
+                        name: 'createDelegationMessage',
+                        description: 'Create a clear task definition for Ali',
+                        input_schema: {
+                            type: 'object',
+                            properties: {
+                                message: {
+                                    type: 'string',
+                                    description: 'The task definition message'
+                                },
+                                requirements: {
+                                    type: 'object',
+                                    properties: {
+                                        taskType: { type: 'string' },
+                                        validation: { type: 'array', items: { type: 'string' } },
+                                        successCriteria: { type: 'array', items: { type: 'string' } }
+                                    }
+                                }
+                            },
+                            required: ['message']
+                        }
+                    }],
+                    temperature: 0
+                })
+            });
+
+            const data = await response.json();
+            console.log('Claude delegation response:', data);
+
+            const toolCall = data.content?.find(c => c.type === 'tool_use');
+
+            if (!toolCall?.input?.message) {
+                throw new Error('Invalid delegation message response');
+            }
+
+            return toolCall.input.message;
+
+        } catch (error) {
+            console.error('Error generating delegation message:', error);
+            // Fallback message if AI generation fails
+            return `Ali, please help the user with their ${type} request: "${sanitizedMessage}". `;
+        }
+    }
+
+    private sanitizeRequest(message: string): string {
+        return message
+            .replace(/fucking|shit|damn|crap/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     private async delegateToAgent(selectedAgent: string, params: any) {
@@ -105,11 +155,49 @@ export class HominioAgent {
 
         try {
             const agent = await agents[selectedAgent]();
-            return await agent(params);
+            const result = await agent(params);
+
+            if (!result) {
+                throw new Error('Agent returned no result');
+            }
+
+            return result;
         } catch (error) {
             console.error(`Error delegating to ${selectedAgent}:`, error);
             throw error;
         }
+    }
+
+    private analyzeRequest(message: string, context: any[]): {
+        understood: boolean;
+        isKnownSkill: boolean;
+        type?: 'editEmail' | 'newEmail' | 'updateName' | null;
+    } {
+        const msg = message.toLowerCase();
+
+        if (this.isEmailEditRequest(message, context)) {
+            return { understood: true, isKnownSkill: true, type: 'editEmail' };
+        }
+
+        if (msg.includes('mail') || msg.includes('email') ||
+            msg.includes('write') || msg.includes('send')) {
+            return { understood: true, isKnownSkill: true, type: 'newEmail' };
+        }
+
+        if (msg.includes('name') && !msg.includes('mail') && !msg.includes('email')) {
+            return { understood: true, isKnownSkill: true, type: 'updateName' };
+        }
+
+        const unknownSkillIndicators = [
+            'create', 'make', 'build', 'show', 'view', 'display',
+            'delete', 'remove', 'add', 'component', 'page', 'feature'
+        ];
+
+        if (unknownSkillIndicators.some(indicator => msg.includes(indicator))) {
+            return { understood: true, isKnownSkill: false, type: null };
+        }
+
+        return { understood: false, isKnownSkill: false, type: null };
     }
 
     private isEmailEditRequest(message: string, context: any[]): boolean {
