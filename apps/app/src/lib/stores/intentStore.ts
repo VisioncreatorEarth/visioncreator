@@ -83,6 +83,16 @@ const defaultConversationState: ConversationState = {
 
 const storage = createIndexedDBStorage('intentDB', 'conversations');
 
+// Add a debug logging function
+export function logDebug(component: string, message: string, data?: any) {
+    const logMessage = `[${component}] ${message}`;
+    if (data) {
+        console.log(logMessage, data);
+    } else {
+        console.log(logMessage);
+    }
+}
+
 export class ConversationManager {
     constructor() {
         this.initializeStore();
@@ -132,7 +142,7 @@ export class ConversationManager {
             payload
         };
 
-        console.log(`[${agent}] message: "${content}"${payload ? `, payload: ${JSON.stringify(payload)}` : ''}`);
+        logDebug(agent, `message: "${content}"${payload ? `, payload: ${JSON.stringify(payload)}` : ''}`);
 
         const updatedState = get(conversationStore);
         const newState = {

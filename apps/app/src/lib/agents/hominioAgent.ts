@@ -3,6 +3,7 @@ import type { Message } from '$lib/stores/intentStore';
 import { viewAgent } from '$lib/agents/viewAgent';
 import { actionAgent } from '$lib/agents/actionAgent';
 import { bringAgent } from '$lib/agents/bringAgent';
+import { client } from '$lib/wundergraph';
 
 export class HominioAgent {
     async processRequest(userMessage: string) {
@@ -11,8 +12,6 @@ export class HominioAgent {
             conversationManager.addMessage(userMessage, 'user', 'complete');
 
             const requestAnalysis = this.analyzeRequest(userMessage, currentContext);
-            console.log('[HominioAgent] Request analysis:', requestAnalysis);
-
             conversationManager.addMessage(
                 "Let me get to work on that for you...",
                 'hominio',
@@ -20,10 +19,7 @@ export class HominioAgent {
             );
 
             if (requestAnalysis.type === 'shopping') {
-                console.log('[HominioAgent] Processing shopping request');
-
                 try {
-                    // Run both view and shopping actions in parallel
                     const [viewResult, shoppingResult] = await Promise.all([
                         this.delegateToAgent('view', {
                             task: 'open bring list view',
@@ -37,23 +33,17 @@ export class HominioAgent {
                         })
                     ]);
 
-                    console.log('[HominioAgent] Parallel operations completed:', {
-                        view: viewResult,
-                        shopping: shoppingResult
-                    });
-
-                    // Combine the results, prioritizing the shopping message but including view payload
                     return {
                         success: true,
                         message: {
                             agent: 'bert',
                             content: shoppingResult.message.content,
-                            payload: viewResult.message?.payload // Include view payload for UI updates
+                            payload: viewResult.message?.payload
                         }
                     };
 
                 } catch (error) {
-                    console.error('[HominioAgent] Shopping request error:', error);
+                    console.error('Shopping request error:', error);
                     conversationManager.addMessage(
                         "I encountered an issue while processing your request. Please try again.",
                         'hominio',
@@ -63,9 +53,21 @@ export class HominioAgent {
                 }
             }
 
-            // Generate AI delegation message using structured approach
             const delegationMessage = await this.createDelegationMessage(userMessage, requestAnalysis.type, currentContext);
-            conversationManager.addMessage(delegationMessage, 'hominio', 'complete');
+
+            if (typeof delegationMessage === 'object') {
+                conversationManager.addMessage(
+                    delegationMessage.content || JSON.stringify(delegationMessage),
+                    'hominio',
+                    'complete'
+                );
+            } else {
+                conversationManager.addMessage(
+                    delegationMessage,
+                    'hominio',
+                    'complete'
+                );
+            }
 
             try {
                 const agent = requestAnalysis.type === 'view' ? 'view' : 'action';
@@ -86,7 +88,7 @@ export class HominioAgent {
             }
 
         } catch (error) {
-            console.error('Hominio Agent Error:', error);
+            console.error('HominioAgent error:', error);
             conversationManager.addMessage(
                 'I apologize, but something went wrong. Please try again.',
                 'hominio',
@@ -98,52 +100,63 @@ export class HominioAgent {
 
     private async createDelegationMessage(userMessage: string, type: string, context: any[]): Promise<string> {
         const sanitizedMessage = this.sanitizeRequest(userMessage);
-
-        try {
-            const response = await fetch('/local/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are Hominio, a request clarification specialist. Your role is to:
+        const systemPrompt = `You are Hominio, a request clarification specialist. Your role is to:
 1. Take user requests and add minimal but crucial structure
 2. Preserve the user's intent while adding necessary context
 3. Keep delegations extremely concise
 
 Format all responses as:
-"[Agent], [task type]: [structured version of user request]"
+"Hey [Agent], [task type]: [structured version of user request]"
 
 For view requests, delegate to Vroni.
 For other actions, delegate to Ali.
 
 Examples:
 User: "Can you update my name to Samuel?"
-Response: "Ali, updateName: Please update the user's name to Samuel"
+Response: "Hey Ali, updateName: Please update the user's name to Samuel"
 
 User: "Show me banking"
-Response: "Vroni, view: Please show the banking view"`
-                        },
-                        { role: 'user', content: sanitizedMessage }
-                    ],
-                    temperature: 0
-                })
+Response: "Hey Vroni, view: Please show the banking view"`;
+
+        try {
+            // Convert conversation history to proper message format
+            const conversationHistory = context.map(msg => ({
+                role: msg.agent === 'user' ? 'user' : 'assistant',
+                content: msg.content
+            }));
+
+            // Add the current user message
+            conversationHistory.push({
+                role: 'user',
+                content: sanitizedMessage
             });
 
-            const data = await response.json();
-            console.log('Claude delegation response:', data);
+            const response = await client.mutate({
+                operationName: 'askHominio',
+                input: {
+                    messages: conversationHistory,
+                    system: systemPrompt,
+                    temperature: 0
+                }
+            });
 
-            if (data.content?.[0]?.text) {
-                return data.content[0].text;
+            if (response.data?.content) {
+                if (typeof response.data.content === 'object' && 'text' in response.data.content) {
+                    return response.data.content.text;
+                }
+                if (typeof response.data.content === 'string') {
+                    return response.data.content;
+                }
             }
 
-            throw new Error('Invalid delegation message response');
+            // Fallback to a default formatted message
+            const agent = type === 'view' ? 'Vroni' : 'Ali';
+            return `Hey ${agent}, ${type}: ${sanitizedMessage}`;
 
         } catch (error) {
             console.error('Error generating delegation message:', error);
             const agent = type === 'view' ? 'Vroni' : 'Ali';
-            return `${agent}, ${type}: ${sanitizedMessage}`;
+            return `Hey ${agent}, ${type}: ${sanitizedMessage}`;
         }
     }
 
@@ -186,7 +199,6 @@ Response: "Vroni, view: Please show the banking view"`
 
         // Check for shopping list requests first
         if (shoppingKeywords.some(keyword => msg.includes(keyword))) {
-            console.log('[HominioAgent] Detected shopping request');
             return { understood: true, isKnownSkill: true, type: 'shopping' };
         }
 
