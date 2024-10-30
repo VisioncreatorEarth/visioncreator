@@ -43,6 +43,12 @@ export async function bringAgent(request: any) {
         const userMessage = request.task;
         const messageHistory = request.context || [];
 
+        // Get current list state
+        let currentList: Array<{ name: string; icon: string }> = [];
+        bringListStore.subscribe(value => {
+            currentList = value;
+        })();
+
         console.log('[Bert] Processing request:', userMessage);
 
         conversationManager.addMessage(
@@ -51,41 +57,62 @@ export async function bringAgent(request: any) {
             'pending'
         );
 
+        const systemPrompt = `You are Bert, the Shopping List Assistant. Extract shopping items and determine operations.
+
+Current shopping list items:
+${currentList.map(item => item.name).join(', ') || 'List is empty'}
+
+Available predefined items:
+${preselectedItems.map(item => item.name).join(', ')}
+
+You can accept ANY items and handle multiple operations in a single request:
+1. Adding new items ("add tomatoes and milk")
+2. Removing existing items ("remove bread")
+3. Replacing items ("replace milk with almond milk")
+4. Mixed operations ("add tomatoes and remove bread")
+
+Try to categorize custom items as: food, drink, household, or personal.
+Respond with separate arrays for additions and removals.`;
+
         const response = await fetch('/local/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: [
-                    {
-                        role: 'system',
-                        content: `You are Bert, the Shopping List Assistant. Extract shopping items and determine operations.
-You can accept ANY items, but try to match these common items when possible: ${preselectedItems.map(item => item.name).join(', ')}.
-Also try to categorize custom items as: food, drink, household, or personal.`
-                    },
+                    { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage }
                 ],
                 tools: [{
                     name: 'extractShoppingItems',
-                    description: 'Extract shopping items and operation from user message',
+                    description: 'Process shopping list operations',
                     input_schema: {
                         type: 'object',
                         properties: {
-                            operation: {
-                                type: 'string',
-                                enum: ['add', 'remove', 'clear']
-                            },
-                            items: {
+                            operations: {
                                 type: 'array',
                                 items: {
                                     type: 'object',
                                     properties: {
-                                        name: { type: 'string' },
-                                        category: {
+                                        type: {
                                             type: 'string',
-                                            enum: ['food', 'drink', 'household', 'personal']
+                                            enum: ['add', 'remove', 'clear']
+                                        },
+                                        items: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    name: { type: 'string' },
+                                                    category: {
+                                                        type: 'string',
+                                                        enum: ['food', 'drink', 'household', 'personal']
+                                                    }
+                                                },
+                                                required: ['name']
+                                            }
                                         }
                                     },
-                                    required: ['name']
+                                    required: ['type', 'items']
                                 }
                             },
                             language: {
@@ -93,7 +120,7 @@ Also try to categorize custom items as: food, drink, household, or personal.`
                                 enum: ['de', 'en']
                             }
                         },
-                        required: ['operation', 'items', 'language']
+                        required: ['operations', 'language']
                     }
                 }],
                 temperature: 0.1
@@ -103,7 +130,6 @@ Also try to categorize custom items as: food, drink, household, or personal.`
         const data = await response.json();
         console.log('[Bert] Claude response:', data);
 
-        // Improved error handling and response validation
         const toolCall = data.content?.find(c => c.type === 'tool_calls' || c.type === 'tool_use');
         if (!toolCall) {
             console.error('[Bert] No tool call found in response:', data);
@@ -111,31 +137,48 @@ Also try to categorize custom items as: food, drink, household, or personal.`
         }
 
         const toolInput = toolCall.input || toolCall.tool_calls?.[0]?.parameters;
-        if (!toolInput) {
-            console.error('[Bert] No tool input found:', toolCall);
-            throw new Error('No tool input found');
+        if (!toolInput?.operations || !toolInput?.language) {
+            console.error('[Bert] Invalid tool input:', toolInput);
+            throw new Error('Invalid tool input');
         }
 
-        const { operation, items, language } = toolInput;
+        const { operations, language } = toolInput;
 
-        if (!operation || !Array.isArray(items) || !language) {
-            console.error('[Bert] Invalid tool input format:', toolInput);
-            throw new Error('Invalid tool input format');
+        // Process all operations in sequence
+        let responseMessages: string[] = [];
+
+        for (const op of operations) {
+            switch (op.type) {
+                case 'add':
+                    if (op.items.length > 0) {
+                        const addResult = handleAddItems(op.items, language);
+                        responseMessages.push(addResult.message.content);
+                    }
+                    break;
+                case 'remove':
+                    if (op.items.length > 0) {
+                        const removeResult = handleRemoveItems(op.items, language);
+                        responseMessages.push(removeResult.message.content);
+                    }
+                    break;
+                case 'clear':
+                    const clearResult = handleClearList(language);
+                    responseMessages.push(clearResult.message.content);
+                    break;
+            }
         }
 
-        console.log('[Bert] Extracted data:', { operation, items, language });
+        // Combine all response messages
+        const finalMessage = responseMessages.join(' ');
+        conversationManager.addMessage(finalMessage, 'bert', 'complete');
 
-        // Handle different operations
-        switch (operation) {
-            case 'add':
-                return handleAddItems(items, language);
-            case 'remove':
-                return handleRemoveItems(items, language);
-            case 'clear':
-                return handleClearList(language);
-            default:
-                throw new Error(`Unknown operation: ${operation}`);
-        }
+        return {
+            success: true,
+            message: {
+                agent: 'bert',
+                content: finalMessage
+            }
+        };
 
     } catch (error) {
         console.error('[Bert] Error:', error);
