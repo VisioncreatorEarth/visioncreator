@@ -11,6 +11,7 @@
 	import MyIntent from './MyIntent.svelte';
 	import { onMount } from 'svelte';
 	import { dynamicView } from '$lib/stores';
+	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
 
 	export let session: any;
 	export let supabase: any;
@@ -21,7 +22,7 @@
 	let isModalOpen = false;
 	let activeTab = 'actions';
 	let isMenuMode = true;
-	let modalType: 'login' | 'signup' | 'menu' = 'menu';
+	let modalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
 	let isPressed = false;
 	let isRecording = false;
 	let pressStartTime = 0;
@@ -31,7 +32,7 @@
 	const DEBOUNCE_DELAY = 300;
 
 	// Keep track of the initial modal type to prevent unwanted changes
-	let currentModalType: 'login' | 'signup' | 'menu' = 'menu';
+	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
 
 	$: {
 		if (myIntentRef && dev) {
@@ -92,7 +93,7 @@
 		}
 	}
 
-	function toggleModal(type?: 'login' | 'signup' | 'menu') {
+	function toggleModal(type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy') {
 		if (!type) {
 			isModalOpen = false;
 			return;
@@ -211,7 +212,8 @@
 		<div
 			class="relative z-10 w-full bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
 			class:max-w-6xl={currentModalType === 'menu'}
-			class:max-w-md={currentModalType !== 'menu'}
+			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
+			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
@@ -260,6 +262,25 @@
 					</TabMenu>
 					<button
 						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-2 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						on:click={() => toggleModal()}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="w-4 h-4"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+						</svg>
+					</button>
+				</div>
+			{:else if currentModalType === 'legal-and-privacy-policy'}
+				<div class="relative">
+					<LegalAndPrivacyPolicy />
+					<button
+						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-4 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
 					>
 						<svg

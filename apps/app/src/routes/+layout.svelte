@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import ActionModal from '$lib/components/ActionModal.svelte';
 	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
 
 	export let data: LayoutData;
 	let { supabase, session, queryClient } = data;
@@ -60,6 +61,35 @@
 			}
 		}
 	}
+
+	// Function to check and open modal based on URL parameter
+	function checkAndOpenModal() {
+		const modalParam = $page.url.searchParams.get('open');
+		if (modalParam === 'legal-and-privacy-policy') {
+			window.dispatchEvent(
+				new CustomEvent('openModal', {
+					detail: { type: 'legal-and-privacy-policy' }
+				})
+			);
+		}
+	}
+
+	// Handle initial load and URL changes
+	onMount(() => {
+		if (browser) {
+			// Check on initial load
+			checkAndOpenModal();
+
+			// Watch for URL changes
+			const unsubscribe = page.subscribe(() => {
+				checkAndOpenModal();
+			});
+
+			return () => {
+				unsubscribe();
+			};
+		}
+	});
 </script>
 
 <QueryClientProvider client={queryClient}>

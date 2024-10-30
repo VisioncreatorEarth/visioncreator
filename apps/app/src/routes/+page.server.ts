@@ -7,7 +7,13 @@ export const load: PageServerLoad = async ({ url, locals: { safeGetSession } }) 
 
 	// if the user is already logged in return them to the account page
 	if (session) {
-		redirect(303, '/me');
+		// Preserve the URL parameters when redirecting
+		const searchParams = new URLSearchParams(url.search);
+		const redirectUrl = searchParams.get('open')
+			? `/me?${searchParams.toString()}`
+			: '/me';
+
+		throw redirect(303, redirectUrl);
 	}
 
 	return { url: url.origin };
