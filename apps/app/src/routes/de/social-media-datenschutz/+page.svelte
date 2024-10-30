@@ -5,10 +5,10 @@
 	<h3>Unsere Social-Media-Auftritte</h3>
 	<h4>Diese Datenschutzerkl&auml;rung gilt f&uuml;r folgende Social-Media-Auftritte</h4>
 	<ul>
-		<li><a class="underline" href="https://x.com/1BillionVCs">x.com</a></li>
-		<li><a class="underline" href="https://instagram.com/1BillionVCs">Instagram</a></li>
-		<li><a class="underline" href="https://linkedin.com/company/1BillionVCs">LinkedIn</a></li>
-		<li><a class="underline" href="https://youtube.com/@1BillionVCs">Youtube</a></li>
+		<li><a href="https://x.com/1BillionVCs">x.com</a></li>
+		<li><a href="https://instagram.com/1BillionVCs">Instagram</a></li>
+		<li><a href="https://linkedin.com/company/1BillionVCs">LinkedIn</a></li>
+		<li><a href="https://youtube.com/@1BillionVCs">Youtube</a></li>
 	</ul>
 	<h4>Datenverarbeitung durch soziale Netzwerke</h4>
 	<p>

@@ -11,6 +11,7 @@
 	import { onMount } from 'svelte';
 	import { dynamicView } from '$lib/stores';
 	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
+	import { page } from '$app/stores';
 
 	export let session: any;
 	export let supabase: any;
@@ -21,7 +22,6 @@
 	let isModalOpen = false;
 	let activeTab = 'actions';
 	let isMenuMode = true;
-	let modalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
 	let isPressed = false;
 	let isRecording = false;
 	let pressStartTime = 0;
@@ -95,6 +95,13 @@
 	function toggleModal(type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy') {
 		if (!type) {
 			isModalOpen = false;
+
+			// Clean up URL only when closing legal modal
+			if (currentModalType === 'legal-and-privacy-policy' && $page.url.searchParams.has('open')) {
+				const url = new URL(window.location.href);
+				url.searchParams.delete('open');
+				goto(url.pathname + url.search, { replaceState: true });
+			}
 			return;
 		}
 
