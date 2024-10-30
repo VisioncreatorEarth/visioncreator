@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 
 	export let activeTab: string;
-	const tabs = ['actions', 'settings', 'legal'] as const;
+	const tabs = ['actions', 'settings'] as const;
 
 	const dispatch = createEventDispatcher();
 </script>

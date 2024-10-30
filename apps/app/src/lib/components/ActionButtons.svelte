@@ -4,9 +4,6 @@
 	import { view as sendMailView } from '$lib/views/SendMail';
 	import ComposeView from '$lib/components/ComposeView.svelte';
 	import Icon from '@iconify/svelte';
-	import { browser } from '$app/environment';
-	import { invalidate } from '$app/navigation';
-	import { goto } from '$app/navigation';
 
 	export let session: any;
 	export let supabase: any;

@@ -11,16 +11,6 @@
 			<div class="min-h-12" />
 		</div>
 	</main>
-	<footer class="bg-surface-100-800-token fixed bottom-0 left-0 right-0 z-10">
-		<div class="mx-auto w-full px-4 sm:px-6 lg:px-8" style="max-width: 64rem;">
-			<nav class="custom-tabs py-2">
-				<ul class="flex justify-center items-center space-x-4 text-xs">
-					<li><a href="/" class="tab-link">Home</a></li>
-					<slot name="custom-links" />
-				</ul>
-			</nav>
-		</div>
-	</footer>
 </div>
 
 <style>

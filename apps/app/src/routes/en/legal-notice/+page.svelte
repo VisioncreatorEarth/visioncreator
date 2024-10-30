@@ -1,8 +1,4 @@
 <TextWrap>
-	<svelte:fragment slot="custom-links">
-		<a href="/en/imprint">English</a>
-		<a href="/de/impressum">Deutsch</a>
-	</svelte:fragment>
 	<div class="mb-10 image-container w-28">
 		<img src="/impressum-siegel.png" alt="Impressum Siegel" />
 	</div>

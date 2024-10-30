@@ -108,14 +108,6 @@
 				</div>
 			</div>
 		</div>
-		<footer class="py-2 @sm:py-2 text-white">
-			<div class="flex justify-between items-center px-4 @sm:px-4">
-				<div class="flex space-x-2 @sm:space-x-4">
-					<a href="/en/privacy-policy" class="text-2xs @sm:text-xs">Privacy Policy - Datenschutz</a>
-					<a href="/en/imprint" class="text-2xs @sm:text-xs">Site Notice - Impressum</a>
-				</div>
-			</div>
-		</footer>
 	</div>
 </div>
 

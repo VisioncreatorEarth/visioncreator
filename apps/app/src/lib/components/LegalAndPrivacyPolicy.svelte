@@ -4,45 +4,69 @@
 
 	const legalLinks = [
 		{
-			title: 'Terms of Service',
-			content: 'These Terms of Service ("Terms") govern your access to and use of our services...',
-			lastUpdated: '2024-03-15'
+			en: {
+				title: 'Site Notice',
+				link: '/en/legal-notice'
+			},
+			de: {
+				title: 'Impressum',
+				link: '/de/impressum'
+			}
 		},
 		{
-			title: 'Privacy Policy',
-			content:
-				'At our company, we take your privacy seriously. This Privacy Policy explains how we collect...',
-			lastUpdated: '2024-03-10'
+			en: {
+				title: 'Privacy Policy',
+				link: '/en/privacy-policy'
+			},
+			de: {
+				title: 'Datenschutz',
+				link: '/de/datenschutz'
+			}
 		},
 		{
-			title: 'Cookie Policy',
-			content: 'Our Cookie Policy explains how we use cookies and similar tracking technologies...',
-			lastUpdated: '2024-03-01'
-		},
-		{
-			title: 'Data Processing Agreement',
-			content: 'This Data Processing Agreement ("DPA") forms part of the Agreement between...',
-			lastUpdated: '2024-02-28'
+			en: {
+				title: 'Social Media Privacy Policy',
+				link: '/en/social-media-privacy-policy'
+			},
+			de: {
+				title: 'Social Media Datenschutz',
+				link: '/de/social-media-datenschutz'
+			}
 		}
 	];
+
+	function closeModal() {
+		window.dispatchEvent(new CustomEvent('closeModal'));
+	}
 </script>
 
-<div class="p-4 space-y-6">
-	<header class="text-center mb-8">
-		<h2 class="text-2xl font-bold text-tertiary-50">Legal Documents</h2>
+<div class="p-4 space-y-2">
+	<header class="text-center p-4">
+		<h2 class="text-2xl text-tertiary-50 h1">Legal Documents</h2>
 		<p class="text-tertiary-300">Important information about your rights and our policies</p>
 	</header>
-
-	<div class="space-y-6">
+	<div class="grid grid-cols-2 gap-4">
 		{#each legalLinks as link}
-			<div class="p-4 rounded-lg bg-surface-800 border border-surface-700">
-				<h3 class="text-lg font-semibold text-tertiary-100 mb-2">{link.title}</h3>
-				<p class="text-tertiary-300 text-sm mb-3">{link.content}</p>
-				<div class="flex justify-between items-center text-xs">
-					<span class="text-tertiary-400">Last updated: {link.lastUpdated}</span>
-					<button class="btn btn-sm variant-ghost-tertiary">Read More</button>
-				</div>
-			</div>
+			<!-- English Version -->
+			<a
+				href={link.en.link}
+				class="px-3 py-2 rounded-xl bg-surface-800/50 border border-surface-700 hover:bg-surface-700/50 transition-colors flex items-center justify-center min-h-[2.5rem]"
+				on:click={closeModal}
+			>
+				<span class="block text-sm text-tertiary-100 break-words text-center">
+					{link.en.title}
+				</span>
+			</a>
+			<!-- German Version -->
+			<a
+				href={link.de.link}
+				class="px-3 py-2 rounded-xl bg-surface-800/50 border border-surface-700 hover:bg-surface-700/50 transition-colors flex items-center justify-center min-h-[2.5rem]"
+				on:click={closeModal}
+			>
+				<span class="block text-sm text-tertiary-300 break-words text-center">
+					{link.de.title}
+				</span>
+			</a>
 		{/each}
 	</div>
 </div>

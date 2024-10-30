@@ -8,6 +8,7 @@
 	import ActionModal from '$lib/components/ActionModal.svelte';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	export let data: LayoutData;
 	let { supabase, session, queryClient } = data;
@@ -17,13 +18,53 @@
 		client.setAuthorizationToken(session.access_token);
 	}
 
+	let modalOpen = false;
+
+	// Function to check and open modal based on URL parameter
+	function checkAndOpenModal() {
+		const modalParam = $page.url.searchParams.get('open');
+		if (modalParam === 'legal-and-privacy-policy' && !modalOpen) {
+			modalOpen = true;
+			window.dispatchEvent(
+				new CustomEvent('openModal', {
+					detail: { type: 'legal-and-privacy-policy' }
+				})
+			);
+		}
+	}
+
+	// Function to handle modal close
+	function handleModalClose() {
+		modalOpen = false;
+		if (browser) {
+			goto('/', { replaceState: true });
+		}
+	}
+
 	// Listen for auth state changes
 	onMount(() => {
+		if (browser) {
+			// Initial check for modal
+			checkAndOpenModal();
+
+			// Listen for modal close event
+			window.addEventListener('closeModal', handleModalClose);
+
+			// Watch for URL changes
+			const unsubscribe = page.subscribe(() => {
+				checkAndOpenModal();
+			});
+
+			return () => {
+				window.removeEventListener('closeModal', handleModalClose);
+				unsubscribe();
+			};
+		}
+
 		const { data: authData } = supabase.auth.onAuthStateChange(async (event, _session) => {
 			console.log('Auth state change:', event);
 
 			if (event === 'SIGNED_OUT') {
-				// Immediately redirect on signout event
 				if (browser) {
 					window.location.replace('/');
 				}
@@ -45,51 +86,16 @@
 	// Enhanced signout handler
 	async function handleSignOut() {
 		try {
-			// First invalidate auth state
 			await invalidate('supabase:auth');
-
-			// Then sign out from Supabase
 			const { error } = await supabase.auth.signOut();
 			if (error) throw error;
-
-			// The onAuthStateChange listener will handle the redirect
 		} catch (error) {
 			console.error('Error signing out:', error);
-			// Fallback redirect
 			if (browser) {
 				window.location.replace('/');
 			}
 		}
 	}
-
-	// Function to check and open modal based on URL parameter
-	function checkAndOpenModal() {
-		const modalParam = $page.url.searchParams.get('open');
-		if (modalParam === 'legal-and-privacy-policy') {
-			window.dispatchEvent(
-				new CustomEvent('openModal', {
-					detail: { type: 'legal-and-privacy-policy' }
-				})
-			);
-		}
-	}
-
-	// Handle initial load and URL changes
-	onMount(() => {
-		if (browser) {
-			// Check on initial load
-			checkAndOpenModal();
-
-			// Watch for URL changes
-			const unsubscribe = page.subscribe(() => {
-				checkAndOpenModal();
-			});
-
-			return () => {
-				unsubscribe();
-			};
-		}
-	});
 </script>
 
 <QueryClientProvider client={queryClient}>
@@ -100,7 +106,29 @@
 	<ActionModal {session} {supabase} on:signout={handleSignOut} />
 </QueryClientProvider>
 
-<div class="fixed bottom-0 left-0 right-0 z-40 h-24 pointer-events-none">
+<footer class="fixed bottom-0 left-0 py-2 @sm:py-2 text-white z-40">
+	<div class="px-4 @sm:px-4">
+		<div class="flex space-x-2 @sm:space-x-4">
+			<button
+				class="text-2xs @sm:text-xs text-tertiary-500/80 hover:text-tertiary-500 transition-colors"
+				on:click={() => {
+					if (browser) {
+						// Use openModal event with explicit type
+						window.dispatchEvent(
+							new CustomEvent('openModal', {
+								detail: { type: 'legal-and-privacy-policy' }
+							})
+						);
+					}
+				}}
+			>
+				Site Notice & Privacy Policy
+			</button>
+		</div>
+	</div>
+</footer>
+
+<div class="fixed bottom-0 left-0 right-0 z-30 h-24 pointer-events-none">
 	<div
 		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
 	/>

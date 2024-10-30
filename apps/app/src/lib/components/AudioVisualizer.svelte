@@ -7,7 +7,6 @@
 	export let isRecording: boolean;
 	export let audioStream: MediaStream | null;
 
-	// Get the me store from context (similar to Profile.svelte)
 	const me = getContext('me');
 
 	let container: HTMLDivElement;
@@ -18,13 +17,15 @@
 		if (browser) {
 			const AudioMotionAnalyzer = (await import('audiomotion-analyzer')).default;
 			audioMotion = new AudioMotionAnalyzer(container, {
-				mode: 2,
+				mode: 1,
 				channelLayout: 'single',
 				fftSize: 8192,
 				minFreq: 20,
 				maxFreq: 22000,
-				smoothing: 0.85,
-				radius: 0.75,
+				minDecibels: -85,
+				maxDecibels: -30,
+				smoothing: 0.7,
+				radius: 0.4,
 				lineWidth: 2,
 				fillAlpha: 0.5,
 				showBgColor: false,
@@ -38,14 +39,14 @@
 				reflexAlpha: 0,
 				reflexBright: 1,
 				reflexFit: true,
-				showLeds: false,
 				ledBars: false,
 				width: 300,
 				height: 300,
 				overlay: true,
-				outlineBars: true,
+				outlineBars: false,
 				mirror: 0,
-				gradient: 'rainbow'
+				gradient: 'prism',
+				weightingFilter: '468'
 			});
 		}
 	});
@@ -83,14 +84,15 @@
 
 	<!-- Centered avatar - adjusted for perfect centering -->
 	<div class="absolute inset-0 flex items-center justify-center">
-		<div class="flex items-center justify-center w-40 h-40">
-			<Avatar
+		<div class="flex items-center justify-center w-24 h-24">
+			<img src="logo.png" />
+			<!-- <Avatar
 				me={{
 					data: { seed: 'random user' },
 					design: { highlight: true, ring: true },
 					size: 'xl'
 				}}
-			/>
+			/> -->
 		</div>
 	</div>
 </div>

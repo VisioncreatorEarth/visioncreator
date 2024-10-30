@@ -6,7 +6,6 @@
 	import TabMenu from './TabMenu.svelte';
 	import ActionButtons from './ActionButtons.svelte';
 	import Newsletter from './Newsletter.svelte';
-	import LegalMenu from './LegalMenu.svelte';
 	import Auth from './Auth.svelte';
 	import MyIntent from './MyIntent.svelte';
 	import { onMount } from 'svelte';
@@ -99,13 +98,17 @@
 			return;
 		}
 
+		isModalOpen = false;
 		currentModalType = type;
-		isModalOpen = true;
-		isMenuMode = type === 'menu';
 
-		if (type === 'menu') {
-			activeTab = 'actions';
-		}
+		setTimeout(() => {
+			isModalOpen = true;
+			isMenuMode = type === 'menu';
+
+			if (type === 'menu') {
+				activeTab = 'actions';
+			}
+		}, 0);
 	}
 
 	function setActiveTab(event: CustomEvent) {
@@ -134,7 +137,12 @@
 
 	function handleModalOpen(event: CustomEvent) {
 		const { type } = event.detail;
-		toggleModal(type);
+
+		if (type === 'legal-and-privacy-policy') {
+			handleLegalModal();
+		} else {
+			toggleModal(type);
+		}
 	}
 
 	function handleSignOut() {
@@ -146,15 +154,25 @@
 		isIntentModalOpen = false;
 	}
 
-	// Add event listener for view updates
+	// Function to specifically handle legal modal
+	function handleLegalModal() {
+		// Force close any existing modal first
+		isModalOpen = false;
+		currentModalType = 'legal-and-privacy-policy';
+
+		// Small timeout to ensure proper state reset
+		setTimeout(() => {
+			isModalOpen = true;
+			isMenuMode = false;
+		}, 0);
+	}
+
+	// Update onMount to better handle legal modal trigger
 	onMount(() => {
 		const handleViewUpdate = (event: CustomEvent) => {
 			const view = event.detail;
 			if (view) {
-				// Stop event propagation
 				event.stopPropagation();
-
-				// Update the dynamicView store directly instead of dispatching another event
 				dynamicView.update((store) => ({
 					...store,
 					view: view
@@ -162,10 +180,19 @@
 			}
 		};
 
+		// Simplified legal trigger handler
+		const handleLegalTrigger = () => {
+			handleLegalModal();
+		};
+
 		window.addEventListener('updateView', handleViewUpdate as EventListener);
+		window.addEventListener('legalModalTrigger', handleLegalTrigger);
+		window.addEventListener('openModal', handleModalOpen);
 
 		return () => {
 			window.removeEventListener('updateView', handleViewUpdate as EventListener);
+			window.removeEventListener('legalModalTrigger', handleLegalTrigger);
+			window.removeEventListener('openModal', handleModalOpen);
 		};
 	});
 </script>
@@ -255,8 +282,6 @@
 										id: session?.user?.id
 									}}
 								/>
-							{:else if activeTab === 'legal'}
-								<LegalMenu on:navigate={handleLinkClick} />
 							{/if}
 						</svelte:fragment>
 					</TabMenu>
