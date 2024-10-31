@@ -26,16 +26,18 @@
 		| 'result'
 		| 'need-permissions'
 		| 'permissions-denied' = 'idle';
-	let currentConversation: any = null;
+	let currentConversation: any;
 	let audioStream: MediaStream | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
 
 	// Simplified store subscription
-	$: currentConversation = $conversationStore?.conversations?.find(
-		(conv) => conv.id === $conversationStore.currentConversationId
-	);
+	conversationStore.subscribe((state) => {
+		currentConversation = state.conversations.find(
+			(conv) => conv.id === state.currentConversationId
+		);
+	});
 
 	onMount(() => {
 		if (isOpen) {
@@ -204,52 +206,80 @@
 	// Add this function to handle voice transcription completion
 	async function handleTranscriptionComplete(text: string) {
 		try {
-			const response = await hominioAgent.processRequest(text);
+			modalState = 'processing';
 
-			// Handle view updates
-			if (response?.message?.payload?.type === 'view') {
-				const viewData = response.message.payload.view;
+			// Get current context
+			const context = conversationManager.getMessageContext();
 
-				// Update the dynamicView store directly
-				dynamicView.update((store) => ({
-					...store,
-					view: viewData
-				}));
+			// Process through Hominio
+			const response = await hominioAgent.processRequest(text, context);
 
-				// Add a small delay to ensure the view update is processed
-				setTimeout(() => {
-					// Then reset state and close modal
-					resetConversationState();
-					dispatch('close');
-					isOpen = false;
+			modalState = 'result';
 
-					// Navigate to /me if not already there
-					if (window.location.pathname !== '/me') {
-						goto('/me');
-					}
-				}, 300);
+			// Handle different payload types
+			if (response?.message?.payload) {
+				switch (response.message.payload.type) {
+					case 'view':
+						handleViewPayload(response.message.payload);
+						break;
+					case 'form':
+						handleFormPayload(response.message.payload);
+						break;
+					case 'action':
+						handleActionPayload(response.message.payload);
+						break;
+					case 'data':
+						handleDataPayload(response.message.payload);
+						break;
+				}
 			}
 
 			// Scroll to bottom after new messages
-			if (messageContainer) {
-				setTimeout(() => {
-					messageContainer.scrollTop = messageContainer.scrollHeight;
-				}, 100);
-			}
-
-			if (response?.message?.toolResult) {
-				const { type, content } = response.message.toolResult;
-				if (type === 'action' && content.action) {
-					currentAction = content;
-				}
-			}
+			scrollToBottom();
 		} catch (error) {
 			console.error('Error processing request:', error);
+			modalState = 'error';
 			conversationManager.addMessage(
 				'Sorry, I encountered an error processing your request.',
-				'agent',
+				'system',
 				'error'
 			);
+		}
+	}
+
+	function handleViewPayload(payload: ViewPayload) {
+		dynamicView.update((store) => ({
+			...store,
+			view: payload.content
+		}));
+
+		// Close modal after view update
+		setTimeout(() => {
+			resetConversationState();
+			dispatch('close');
+			if (window.location.pathname !== '/me') {
+				goto('/me');
+			}
+		}, 300);
+	}
+
+	function handleFormPayload(payload: FormPayload) {
+		// Handle form rendering logic
+	}
+
+	function handleActionPayload(payload: ActionPayload) {
+		// Handle action execution logic
+	}
+
+	function handleDataPayload(payload: DataPayload) {
+		// Handle data display logic
+	}
+
+	function scrollToBottom() {
+		if (messageContainer) {
+			setTimeout(() => {
+				messageContainer.scrollTop = messageContainer.scrollHeight;
+			}, 100);
 		}
 	}
 
@@ -362,9 +392,9 @@
 								/>
 							</div>
 						{:else if modalState === 'result'}
-							<div class="flex-1 space-y-4" bind:this={messageContainer}>
+							<div class="flex-1 space-y-4 overflow-y-auto" bind:this={messageContainer}>
 								{#if currentConversation?.messages?.length}
-									{#each currentConversation.messages as message, index (message.timestamp + '-' + index)}
+									{#each currentConversation.messages as message (message.id)}
 										<MessageItem {message} {session} on:actionComplete={handleActionComplete} />
 									{/each}
 								{:else}

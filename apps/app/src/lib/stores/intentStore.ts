@@ -1,35 +1,15 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
-
-export type AgentType = 'user' | 'hominio' | 'ali' | 'walter' | 'vroni' | 'system' | 'bert';
+import type { AgentType, AgentPayload } from '../types/agent.types';
 
 export interface Message {
-    id?: string;
+    id: string;
     agent: AgentType;
     content: string;
     timestamp: string;
-    status?: 'pending' | 'complete' | 'error';
-    payload?: {
-        view?: {
-            id: string;
-            layout?: {
-                areas: string;
-                rows?: string;
-                columns?: string;
-                gap?: string;
-            };
-            children: Array<{
-                id: string;
-                component: string;
-                slot?: string;
-                data: any;
-            }>;
-        };
-        action?: string;
-        formId?: string;
-        type?: 'response' | 'view';
-        content?: any;
-    };
+    status: 'pending' | 'complete' | 'error';
+    payload?: AgentPayload;
+    context?: MessageContext;
 }
 
 export const messageStyleConfig = {
@@ -85,7 +65,8 @@ const storage = createIndexedDBStorage('intentDB', 'conversations');
 
 // Add a debug logging function
 export function logDebug(component: string, message: string, data?: any) {
-    const logMessage = `[${component}] ${message}`;
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}][${component}] ${message}`;
     if (data) {
         console.log(logMessage, data);
     } else {
@@ -93,13 +74,108 @@ export function logDebug(component: string, message: string, data?: any) {
     }
 }
 
+export interface MessageContext {
+    previousMessages: Message[];
+    currentView?: string;
+    activeDrafts?: any;
+    userPreferences?: any;
+}
+
 export class ConversationManager {
+    private store = conversationStore;
+    private currentState: ConversationState;
+
     constructor() {
-        this.initializeStore();
+        this.store.subscribe(state => {
+            this.currentState = state;
+        });
     }
 
-    private initializeStore() {
-        conversationStore.set(defaultConversationState);
+    getMessageContext() {
+        const currentConversation = this.getCurrentConversation();
+        return {
+            previousMessages: currentConversation?.messages || [],
+            currentView: currentConversation?.currentView,
+            activeDrafts: currentConversation?.activeDrafts,
+            userPreferences: currentConversation?.userPreferences
+        };
+    }
+
+    getCurrentConversation() {
+        if (!this.currentState.currentConversationId) {
+            // Create new conversation if none exists
+            const newConversation = {
+                id: crypto.randomUUID(),
+                messages: [],
+                isActive: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            this.store.update(state => ({
+                ...state,
+                currentConversationId: newConversation.id,
+                conversations: [...state.conversations, newConversation]
+            }));
+
+            return newConversation;
+        }
+
+        return this.currentState.conversations.find(
+            conv => conv.id === this.currentState.currentConversationId
+        );
+    }
+
+    addMessage(messageData: Partial<Message>) {
+        const message: Message = {
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            ...messageData
+        };
+
+        this.store.update(state => {
+            const currentConversation = this.getCurrentConversation();
+            if (!currentConversation) return state;
+
+            const updatedConversation = {
+                ...currentConversation,
+                messages: [...currentConversation.messages, message],
+                updatedAt: new Date().toISOString()
+            };
+
+            return {
+                ...state,
+                conversations: state.conversations.map(conv =>
+                    conv.id === currentConversation.id ? updatedConversation : conv
+                )
+            };
+        });
+
+        return message;
+    }
+
+    updateMessage(messageId: string, updates: Partial<Message>) {
+        this.store.update(state => {
+            const currentConversation = this.getCurrentConversation();
+            if (!currentConversation) return state;
+
+            const updatedMessages = currentConversation.messages.map(msg =>
+                msg.id === messageId ? { ...msg, ...updates } : msg
+            );
+
+            const updatedConversation = {
+                ...currentConversation,
+                messages: updatedMessages,
+                updatedAt: new Date().toISOString()
+            };
+
+            return {
+                ...state,
+                conversations: state.conversations.map(conv =>
+                    conv.id === currentConversation.id ? updatedConversation : conv
+                )
+            };
+        });
     }
 
     startNewConversation() {
@@ -119,53 +195,6 @@ export class ConversationManager {
 
         conversationStore.set(updatedState);
         return newConversation.id;
-    }
-
-    addMessage(
-        content: string,
-        agent: AgentType,
-        status: 'pending' | 'complete' | 'error' = 'complete',
-        payload?: { view?: any; action?: string; }
-    ) {
-        const currentState = get(conversationStore);
-
-        if (!currentState?.currentConversationId) {
-            this.startNewConversation();
-        }
-
-        const message: Message = {
-            id: crypto.randomUUID(),
-            agent,
-            content,
-            timestamp: new Date().toISOString(),
-            status,
-            payload
-        };
-
-        logDebug(agent, `message: "${content}"${payload ? `, payload: ${JSON.stringify(payload)}` : ''}`);
-
-        const updatedState = get(conversationStore);
-        const newState = {
-            ...updatedState,
-            conversations: updatedState.conversations.map(conv =>
-                conv.id === updatedState.currentConversationId
-                    ? {
-                        ...conv,
-                        messages: [...conv.messages, message],
-                        updatedAt: new Date().toISOString()
-                    }
-                    : conv
-            )
-        };
-
-        conversationStore.set(newState);
-    }
-
-    getCurrentConversation(): AgentConversation | null {
-        const state = get(conversationStore);
-        return state?.conversations?.find(
-            conv => conv.id === state.currentConversationId
-        ) || null;
     }
 
     endCurrentConversation() {

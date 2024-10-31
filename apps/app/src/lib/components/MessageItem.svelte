@@ -3,22 +3,45 @@
 	import AgentAvatar from './AgentAvatar.svelte';
 	import ComposeView from './ComposeView.svelte';
 	import dayjs from 'dayjs';
+	import type { Message } from '$lib/stores/intentStore';
 
 	export let message: Message;
 	export let session: any;
 
-	// Helper function to format timestamp
 	function formatTime(timestamp: string) {
 		return dayjs(timestamp).fromNow();
 	}
 
-	function handleActionComplete(event: CustomEvent) {
-		// Dispatch the event up to parent
-		dispatch('actionComplete', event.detail);
+	function getAgentDisplayName(agent: string) {
+		const agentNames = {
+			hominio: 'Hominio (Delegation)',
+			ali: 'Ali (Actions)',
+			vroni: 'Vroni (Views)',
+			walter: 'Walter (Data)',
+			bert: 'Bert (Lists)',
+			system: 'System',
+			user: 'You'
+		};
+		return agentNames[agent] || agent;
 	}
 
-	import { createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
+	$: formattedPayload = formatPayload(message.payload);
+
+	function formatPayload(payload: any) {
+		if (!payload) return null;
+		try {
+			return {
+				type: 'json',
+				content:
+					typeof payload.content === 'string'
+						? payload.content
+						: JSON.stringify(payload.content, null, 2)
+			};
+		} catch (error) {
+			console.error('Error formatting payload:', error);
+			return null;
+		}
+	}
 </script>
 
 <div
@@ -30,21 +53,20 @@
 		<AgentAvatar agentType={message.agent} seed={message.agent} />
 	{/if}
 
-	<div class="flex flex-col space-y-1 {message.payload?.view ? 'w-full' : 'max-w-[80%]'}">
+	<div class="flex flex-col space-y-1 {message.payload ? 'w-full' : 'max-w-[80%]'}">
 		{#if message.agent !== 'user'}
 			<div class="flex items-center space-x-2">
 				<span class="text-xs font-medium text-tertiary-300">
-					{#if message.agent === 'hominio'}
-						Hominio
-					{:else if message.agent === 'ali'}
-						Ali (Action Agent)
-					{:else if message.agent === 'walter'}
-						Walter (Wunder Agent)
-					{/if}
+					{getAgentDisplayName(message.agent)}
 				</span>
 				<span class="text-xs text-tertiary-600">
 					{formatTime(message.timestamp)}
 				</span>
+				{#if message.status === 'pending'}
+					<span class="text-xs text-warning-500">Processing...</span>
+				{:else if message.status === 'error'}
+					<span class="text-xs text-error-500">Error</span>
+				{/if}
 			</div>
 		{/if}
 
@@ -57,12 +79,11 @@
 			<p class="text-sm whitespace-pre-wrap">{message.content}</p>
 		</div>
 
-		{#if message.payload?.view}
+		{#if formattedPayload}
 			<div
-				class="w-full mt-4 overflow-hidden border rounded-xl bg-surface-800 border-surface-600"
-				transition:slide
+				class="w-full mt-2 p-4 font-mono text-xs border rounded-xl bg-surface-800/50 border-surface-600"
 			>
-				<ComposeView view={message.payload.view} {session} showSpacer={false} on:actionComplete />
+				<pre class="overflow-x-auto">{formattedPayload.content}</pre>
 			</div>
 		{/if}
 	</div>

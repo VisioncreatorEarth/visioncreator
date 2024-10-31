@@ -1,266 +1,196 @@
+import { type AgentResponse, type ClaudeResponse } from '../types/agent.types';
 import { conversationManager } from '$lib/stores/intentStore';
-import type { Message } from '$lib/stores/intentStore';
-import { viewAgent } from '$lib/agents/viewAgent';
-import { actionAgent } from '$lib/agents/actionAgent';
-import { bringAgent } from '$lib/agents/bringAgent';
 import { client } from '$lib/wundergraph';
 
 export class HominioAgent {
-    async processRequest(userMessage: string) {
-        try {
-            const currentContext = conversationManager.getCurrentConversation()?.messages || [];
-            conversationManager.addMessage(userMessage, 'user', 'complete');
-
-            const requestAnalysis = this.analyzeRequest(userMessage, currentContext);
-            conversationManager.addMessage(
-                "Let me get to work on that for you...",
-                'hominio',
-                'pending'
-            );
-
-            if (requestAnalysis.type === 'shopping') {
-                try {
-                    const [viewResult, shoppingResult] = await Promise.all([
-                        this.delegateToAgent('view', {
-                            task: 'open bring list view',
-                            context: currentContext,
-                            type: 'view'
-                        }),
-                        this.delegateToAgent('shopping', {
-                            task: userMessage,
-                            context: currentContext,
-                            type: 'shopping'
-                        })
-                    ]);
-
-                    return {
-                        success: true,
-                        message: {
-                            agent: 'bert',
-                            content: shoppingResult.message.content,
-                            payload: viewResult.message?.payload
-                        }
-                    };
-
-                } catch (error) {
-                    console.error('Shopping request error:', error);
-                    conversationManager.addMessage(
-                        "I encountered an issue while processing your request. Please try again.",
-                        'hominio',
-                        'error'
-                    );
-                    throw error;
-                }
+    private readonly tools: AgentTool[] = [
+        {
+            name: "delegate_task",
+            description: "Delegate a user request to the appropriate agent",
+            input_schema: {
+                type: "object",
+                properties: {
+                    to: {
+                        type: "string",
+                        description: "The agent to delegate to (ali, vroni, walter, bert)",
+                        enum: ["ali", "vroni", "walter", "bert"]
+                    },
+                    task: {
+                        type: "string",
+                        description: "The specific task to be performed"
+                    },
+                    reasoning: {
+                        type: "string",
+                        description: "Why this agent was chosen"
+                    }
+                },
+                required: ["to", "task", "reasoning"]
             }
-
-            const delegationMessage = await this.createDelegationMessage(userMessage, requestAnalysis.type, currentContext);
-
-            if (typeof delegationMessage === 'object') {
-                conversationManager.addMessage(
-                    delegationMessage.content || JSON.stringify(delegationMessage),
-                    'hominio',
-                    'complete'
-                );
-            } else {
-                conversationManager.addMessage(
-                    delegationMessage,
-                    'hominio',
-                    'complete'
-                );
-            }
-
-            try {
-                const agent = requestAnalysis.type === 'view' ? 'view' : 'action';
-                const result = await this.delegateToAgent(agent, {
-                    task: userMessage,
-                    context: currentContext,
-                    type: requestAnalysis.type
-                });
-                return result;
-            } catch (error) {
-                console.error('Delegation error:', error);
-                conversationManager.addMessage(
-                    "I apologize, but I encountered an issue while processing your request. Could you try rephrasing it?",
-                    'hominio',
-                    'complete'
-                );
-                return null;
-            }
-
-        } catch (error) {
-            console.error('HominioAgent error:', error);
-            conversationManager.addMessage(
-                'I apologize, but something went wrong. Please try again.',
-                'hominio',
-                'error'
-            );
-            return null;
         }
-    }
+    ];
 
-    private async createDelegationMessage(userMessage: string, type: string, context: any[]): Promise<string> {
-        const sanitizedMessage = this.sanitizeRequest(userMessage);
-        const systemPrompt = `You are Hominio, a request clarification specialist. Your role is to:
-1. Take user requests and add minimal but crucial structure
-2. Preserve the user's intent while adding necessary context
-3. Keep delegations extremely concise
+    private readonly systemPrompt = `You are Hominio, a friendly delegation agent that helps users by routing their requests to specialized sub-agents. When you need clarification:
+1. Be friendly and helpful
+2. Explain why you need more information
+3. Provide specific examples of what information would help
+4. Format your response in a conversational way
 
-Format all responses as:
-"Hey [Agent], [task type]: [structured version of user request]"
+Your available agents are:
 
-For view requests, delegate to Vroni.
-For other actions, delegate to Ali.
+1. Ali (ali): Actions & Operations
+   - Sending emails
+   - Form submissions
+   - Task execution
 
-Examples:
-User: "Can you update my name to Samuel?"
-Response: "Hey Ali, updateName: Please update the user's name to Samuel"
+2. Vroni (vroni): UI & Navigation
+   - View switching
+   - Page navigation
+   - UI components
 
-User: "Show me banking"
-Response: "Hey Vroni, view: Please show the banking view"`;
+3. Walter (walter): Data & APIs
+   - Database queries
+   - API operations
+   - Data fetching
 
+4. Bert (bert): Lists & Collections
+   - Shopping lists
+   - Task lists
+   - Collection management`;
+
+    async processRequest(userMessage: string): Promise<AgentResponse> {
         try {
-            // Convert conversation history to proper message format
-            const conversationHistory = context.map(msg => ({
-                role: msg.agent === 'user' ? 'user' : 'assistant',
-                content: msg.content
-            }));
+            console.log('HominioAgent - Processing request:', { userMessage });
 
-            // Add the current user message
-            conversationHistory.push({
-                role: 'user',
-                content: sanitizedMessage
+            // Add user message
+            conversationManager.addMessage({
+                agent: 'user',
+                content: userMessage,
+                status: 'complete'
             });
 
-            const response = await client.mutate({
+            // Add pending hominio message
+            const pendingMsg = conversationManager.addMessage({
+                agent: 'hominio',
+                content: 'Let me help you with that...',
+                status: 'pending'
+            });
+
+            const response = await client.mutate<ClaudeResponse>({
                 operationName: 'askHominio',
                 input: {
-                    messages: conversationHistory,
-                    system: systemPrompt,
-                    temperature: 0
+                    messages: [{ role: 'user', content: userMessage }],
+                    system: this.systemPrompt,
+                    tools: this.tools,
+                    temperature: 0.7
                 }
             });
 
-            if (response.data?.content) {
-                if (typeof response.data.content === 'object' && 'text' in response.data.content) {
-                    return response.data.content.text;
-                }
-                if (typeof response.data.content === 'string') {
-                    return response.data.content;
-                }
+            console.log('HominioAgent - Claude response:', response);
+
+            if (!response?.data?.askHominio) {
+                throw new Error('Invalid response from Claude');
             }
 
-            // Fallback to a default formatted message
-            const agent = type === 'view' ? 'Vroni' : 'Ali';
-            return `Hey ${agent}, ${type}: ${sanitizedMessage}`;
+            const claudeResponse = response.data.askHominio;
 
-        } catch (error) {
-            console.error('Error generating delegation message:', error);
-            const agent = type === 'view' ? 'Vroni' : 'Ali';
-            return `Hey ${agent}, ${type}: ${sanitizedMessage}`;
-        }
-    }
+            // Handle clarification requests
+            if (claudeResponse.stop_reason === 'end_turn') {
+                const clarificationMsg = {
+                    agent: 'hominio' as const,
+                    content: claudeResponse.content,
+                    status: 'complete' as const,
+                    payload: {
+                        type: 'clarification',
+                        content: claudeResponse.content,
+                        examples: claudeResponse.content.split('\n').filter(line => line.startsWith('-')),
+                        needsResponse: true
+                    }
+                };
 
-    private sanitizeRequest(message: string): string {
-        return message
-            .replace(/fucking|shit|damn|crap/gi, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
+                // Update pending message with clarification
+                conversationManager.updateMessage(pendingMsg.id, clarificationMsg);
 
-    private async delegateToAgent(selectedAgent: string, params: any) {
-        try {
-            console.log('Delegating to agent:', selectedAgent, 'with params:', params);
-
-            switch (selectedAgent) {
-                case 'view':
-                    return await viewAgent(params);
-                case 'shopping':
-                    return await bringAgent(params);
-                case 'action':
-                    return await actionAgent(params);
-                default:
-                    throw new Error(`Unknown agent: ${selectedAgent}`);
+                return {
+                    success: true,
+                    message: {
+                        id: pendingMsg.id,
+                        ...clarificationMsg
+                    }
+                };
             }
+
+            // Handle tool use
+            if (claudeResponse.stop_reason === 'tool_use') {
+                const toolCall = JSON.parse(claudeResponse.content);
+                console.log('HominioAgent - Tool call:', toolCall);
+
+                const delegation = toolCall.delegate_task;
+
+                // Update hominio message
+                conversationManager.updateMessage(pendingMsg.id, {
+                    content: `I'll help you with that! I'm delegating this to ${delegation.to} who will ${delegation.task}`,
+                    status: 'complete',
+                    payload: {
+                        type: 'delegation',
+                        content: delegation
+                    }
+                });
+
+                // Add delegated agent message
+                const agentMsg = conversationManager.addMessage({
+                    agent: delegation.to,
+                    content: `Working on: ${delegation.task}`,
+                    status: 'pending',
+                    payload: {
+                        type: 'task',
+                        content: {
+                            task: delegation.task,
+                            reasoning: delegation.reasoning
+                        }
+                    }
+                });
+
+                return {
+                    success: true,
+                    message: {
+                        id: agentMsg.id,
+                        agent: delegation.to,
+                        content: delegation.task,
+                        status: 'pending',
+                        payload: { delegation }
+                    }
+                };
+            }
+
+            throw new Error('Unexpected response type from Claude');
+
         } catch (error) {
-            console.error(`Error delegating to ${selectedAgent}:`, error);
-            throw error;
+            console.error('HominioAgent - Error:', error);
+
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+
+            const errorResponse = {
+                success: false,
+                message: {
+                    agent: 'hominio',
+                    content: `I encountered an error: ${errorMsg}. Could you please try again?`,
+                    status: 'error',
+                    payload: {
+                        type: 'error',
+                        content: { error: errorMsg }
+                    }
+                }
+            };
+
+            conversationManager.addMessage({
+                agent: 'hominio',
+                content: errorResponse.message.content,
+                status: 'error',
+                payload: errorResponse.message.payload
+            });
+
+            return errorResponse;
         }
-    }
-
-    private analyzeRequest(message: string, context: Message[]) {
-        const msg = message.toLowerCase();
-
-        // Shopping list related keywords - expanded for both German and English
-        const shoppingKeywords = [
-            'list', 'liste', 'einkauf', 'bring',
-            'add', 'put', 'place', 'hinzufügen', 'füge', 'packe',
-            'kaufen', 'buy', 'purchase', 'get'
-        ];
-
-        // Check for shopping list requests first
-        if (shoppingKeywords.some(keyword => msg.includes(keyword))) {
-            return { understood: true, isKnownSkill: true, type: 'shopping' };
-        }
-
-        // View request detection
-        const viewKeywords = [
-            'show', 'open', 'navigate', 'go to', 'switch to', 'display',
-            'zeige', 'öffne', 'gehe zu', 'wechsle zu'
-        ];
-
-        const isViewRequest = (
-            viewKeywords.some(keyword => msg.includes(keyword)) ||
-            msg.match(/^(show|open|go to|switch to|display|zeige|öffne)\s+\w+/)
-        );
-
-        if (isViewRequest) {
-            return { understood: true, isKnownSkill: true, type: 'view' };
-        }
-
-        if (this.isEmailEditRequest(message, context)) {
-            return { understood: true, isKnownSkill: true, type: 'editEmail' };
-        }
-
-        if (msg.includes('mail') || msg.includes('email') ||
-            msg.includes('write') || msg.includes('send')) {
-            return { understood: true, isKnownSkill: true, type: 'newEmail' };
-        }
-
-        if (msg.includes('name') && !msg.includes('mail') && !msg.includes('email')) {
-            return { understood: true, isKnownSkill: true, type: 'updateName' };
-        }
-
-        const unknownSkillIndicators = [
-            'create', 'make', 'build', 'view', 'display',
-            'delete', 'remove', 'add', 'component', 'page', 'feature'
-        ];
-
-        if (unknownSkillIndicators.some(indicator => msg.includes(indicator))) {
-            return { understood: true, isKnownSkill: false, type: null };
-        }
-
-        return { understood: false, isKnownSkill: false, type: null };
-    }
-
-    private isEmailEditRequest(message: string, context: any[]): boolean {
-        const lastEmailDraft = context
-            .reverse()
-            .find(msg => msg.payload?.action === 'sendMail');
-
-        if (!lastEmailDraft) return false;
-
-        const editKeywords = [
-            'edit', 'update', 'modify', 'change', 'revise',
-            'add', 'include', 'append', 'extend',
-            'remove', 'delete', 'take out',
-            'subject', 'title', 'topic',
-            'signature', 'sign', 'name',
-            'more', 'details', 'points', 'information'
-        ];
-
-        return editKeywords.some(keyword =>
-            message.toLowerCase().includes(keyword)
-        );
     }
 }
 
