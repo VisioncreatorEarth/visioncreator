@@ -193,16 +193,6 @@
 		currentAction = null;
 	}
 
-	// Auto-scroll messages
-	$: if (currentConversation?.messages?.length && messageContainer) {
-		// Wait for DOM update
-		setTimeout(() => {
-			if (messageContainer) {
-				messageContainer.scrollTop = messageContainer.scrollHeight;
-			}
-		}, 100);
-	}
-
 	// Add this function to handle voice transcription completion
 	async function handleTranscriptionComplete(text: string) {
 		try {
@@ -304,11 +294,6 @@
 	onDestroy(() => {
 		resetConversationState();
 	});
-
-	// Add this one reactive statement
-	$: if (currentConversation?.messages?.length) {
-		scrollToBottom();
-	}
 </script>
 
 {#if isOpen}
