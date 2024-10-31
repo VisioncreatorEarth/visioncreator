@@ -277,9 +277,9 @@
 
 	function scrollToBottom() {
 		if (messageContainer) {
-			setTimeout(() => {
+			requestAnimationFrame(() => {
 				messageContainer.scrollTop = messageContainer.scrollHeight;
-			}, 100);
+			});
 		}
 	}
 
@@ -304,6 +304,11 @@
 	onDestroy(() => {
 		resetConversationState();
 	});
+
+	// Add this one reactive statement
+	$: if (currentConversation?.messages?.length) {
+		scrollToBottom();
+	}
 </script>
 
 {#if isOpen}

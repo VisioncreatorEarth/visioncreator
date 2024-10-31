@@ -1,8 +1,9 @@
-export type AgentType = 'user' | 'assistant' | 'hominio' | 'ali' | 'vroni' | 'walter' | 'bert';
+export type AgentType = 'hominio' | 'vroni' | 'ali' | 'walter' | 'bert' | 'user';
 
 export interface AgentPayload {
-    type: 'json';
-    content: any;
+    type: string;
+    data: any;
+    reasoning?: string;
 }
 
 export interface BaseMessage {
@@ -20,13 +21,7 @@ export interface EnhancedMessage extends BaseMessage {
 
 export interface AgentResponse {
     success: boolean;
-    message: {
-        content: string;
-        agent: AgentType;
-        status: 'pending' | 'complete' | 'error';
-        payload?: AgentPayload;
-    };
-    delegation?: AgentDelegation;
+    error?: string;
 }
 
 export interface AgentDelegation {
@@ -73,16 +68,33 @@ export interface DelegationResponse {
 
 export interface ClaudeResponse {
     data: {
-        askHominio: {
-            content: string;
-            status: 'success' | 'error';
-            model: string;
-            type: 'message';
-            stop_reason?: 'end_turn' | 'tool_use';
-            usage?: {
-                input_tokens: number;
-                output_tokens: number;
-            }
+        id: string;
+        model: string;
+        type: string;
+        role: string;
+        content: ClaudeContent[];
+        stop_reason: string;
+        usage: {
+            input_tokens: number;
+            output_tokens: number;
         }
     }
-} 
+}
+
+export interface ClaudeContent {
+    type: 'text' | 'tool_use';
+    text?: string;
+    id?: string;
+    name?: string;
+    input?: {
+        to: AgentType;
+        task: string;
+        reasoning: string;
+    }
+}
+
+export type MockResponse = {
+    type: string;
+    content: string;
+    data: any;
+}; 

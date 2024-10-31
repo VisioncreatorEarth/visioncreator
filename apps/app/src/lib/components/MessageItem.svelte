@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import AgentAvatar from './AgentAvatar.svelte';
-	import ComposeView from './ComposeView.svelte';
 	import dayjs from 'dayjs';
 	import type { Message } from '$lib/stores/intentStore';
 
@@ -19,7 +18,6 @@
 			vroni: 'Vroni (Views)',
 			walter: 'Walter (Data)',
 			bert: 'Bert (Lists)',
-			system: 'System',
 			user: 'You'
 		};
 		return agentNames[agent] || agent;
@@ -31,11 +29,9 @@
 		if (!payload) return null;
 		try {
 			return {
-				type: 'json',
+				type: payload.type,
 				content:
-					typeof payload.content === 'string'
-						? payload.content
-						: JSON.stringify(payload.content, null, 2)
+					typeof payload.data === 'object' ? JSON.stringify(payload.data, null, 2) : payload.data
 			};
 		} catch (error) {
 			console.error('Error formatting payload:', error);
@@ -76,14 +72,34 @@
 				: 'bg-surface-600 text-tertiary-200'} 
             px-4 py-2 rounded-2xl {message.agent === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'}"
 		>
-			<p class="text-sm whitespace-pre-wrap">{message.content}</p>
+			{#if message.payload?.type === 'view'}
+				<div class="flex items-center gap-2">
+					<span class="text-sm">{message.content}</span>
+					<div
+						class="px-2 py-1 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
+					>
+						{message.payload.data.view}
+					</div>
+				</div>
+			{:else}
+				<p class="text-sm whitespace-pre-wrap">{message.content}</p>
+			{/if}
 		</div>
 
-		{#if formattedPayload}
-			<div
-				class="w-full mt-2 p-4 font-mono text-xs border rounded-xl bg-surface-800/50 border-surface-600"
-			>
-				<pre class="overflow-x-auto">{formattedPayload.content}</pre>
+		{#if formattedPayload && message.payload?.type !== 'view'}
+			<div class="w-full mt-2 p-4 rounded-xl bg-surface-800/50 border border-surface-600">
+				<div class="space-y-2">
+					<div class="flex items-center space-x-2">
+						<span
+							class="px-2 py-1 text-xs font-medium rounded-full bg-surface-700 text-tertiary-300"
+						>
+							{formattedPayload.type}
+						</span>
+					</div>
+					<pre class="overflow-x-auto text-xs font-mono text-tertiary-200">
+						{formattedPayload.content}
+					</pre>
+				</div>
 			</div>
 		{/if}
 	</div>

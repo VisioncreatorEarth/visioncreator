@@ -1,4 +1,4 @@
-import { type AgentResponse, type ClaudeResponse } from '../types/agent.types';
+import type { AgentResponse, AgentType, ClaudeResponse, MockResponse } from '../types/agent.types';
 import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 
@@ -58,25 +58,31 @@ Your available agents are:
    - Collection management`;
 
     async processRequest(userMessage: string): Promise<AgentResponse> {
+        let pendingMsgId = crypto.randomUUID();
+
         try {
-            console.log('HominioAgent - Processing request:', { userMessage });
+            console.log('HominioAgent - Starting request processing:', { userMessage });
 
             // Add user message
             conversationManager.addMessage({
+                id: crypto.randomUUID(),
                 agent: 'user',
                 content: userMessage,
+                timestamp: new Date().toISOString(),
                 status: 'complete'
             });
 
-            // Add pending hominio message
-            const pendingMsg = conversationManager.addMessage({
+            // Add pending message
+            conversationManager.addMessage({
+                id: pendingMsgId,
                 agent: 'hominio',
                 content: 'Let me help you with that...',
+                timestamp: new Date().toISOString(),
                 status: 'pending'
             });
 
             const response = await client.mutate<ClaudeResponse>({
-                operationName: 'askHominio',
+                operationName: 'askClaude',
                 input: {
                     messages: [{ role: 'user', content: userMessage }],
                     system: this.systemPrompt,
@@ -85,112 +91,103 @@ Your available agents are:
                 }
             });
 
-            console.log('HominioAgent - Claude response:', response);
-
-            if (!response?.data?.askHominio) {
-                throw new Error('Invalid response from Claude');
+            if (!response?.data?.content?.length) {
+                throw new Error('Invalid or empty Claude response');
             }
 
-            const claudeResponse = response.data.askHominio;
+            const textContent = response.data.content.find(c => c.type === 'text')?.text;
+            const toolUse = response.data.content.find(c => c.type === 'tool_use');
 
-            // Handle clarification requests
-            if (claudeResponse.stop_reason === 'end_turn') {
-                const clarificationMsg = {
-                    agent: 'hominio' as const,
-                    content: claudeResponse.content,
-                    status: 'complete' as const,
-                    payload: {
-                        type: 'clarification',
-                        content: claudeResponse.content,
-                        examples: claudeResponse.content.split('\n').filter(line => line.startsWith('-')),
-                        needsResponse: true
-                    }
-                };
-
-                // Update pending message with clarification
-                conversationManager.updateMessage(pendingMsg.id, clarificationMsg);
-
-                return {
-                    success: true,
-                    message: {
-                        id: pendingMsg.id,
-                        ...clarificationMsg
-                    }
-                };
-            }
-
-            // Handle tool use
-            if (claudeResponse.stop_reason === 'tool_use') {
-                const toolCall = JSON.parse(claudeResponse.content);
-                console.log('HominioAgent - Tool call:', toolCall);
-
-                const delegation = toolCall.delegate_task;
-
-                // Update hominio message
-                conversationManager.updateMessage(pendingMsg.id, {
-                    content: `I'll help you with that! I'm delegating this to ${delegation.to} who will ${delegation.task}`,
+            // Update Hominio's message with text content
+            if (textContent) {
+                conversationManager.updateMessage(pendingMsgId, {
+                    content: textContent,
                     status: 'complete',
                     payload: {
-                        type: 'delegation',
-                        content: delegation
+                        type: 'text',
+                        data: { originalResponse: response.data }
                     }
                 });
-
-                // Add delegated agent message
-                const agentMsg = conversationManager.addMessage({
-                    agent: delegation.to,
-                    content: `Working on: ${delegation.task}`,
-                    status: 'pending',
-                    payload: {
-                        type: 'task',
-                        content: {
-                            task: delegation.task,
-                            reasoning: delegation.reasoning
-                        }
-                    }
-                });
-
-                return {
-                    success: true,
-                    message: {
-                        id: agentMsg.id,
-                        agent: delegation.to,
-                        content: delegation.task,
-                        status: 'pending',
-                        payload: { delegation }
-                    }
-                };
             }
 
-            throw new Error('Unexpected response type from Claude');
+            // Handle delegation
+            if (toolUse?.name === 'delegate_task' && toolUse.input) {
+                const { to, task, reasoning } = toolUse.input;
+                const mockResponse = this.getMockResponse(to, task);
+
+                conversationManager.addMessage({
+                    id: crypto.randomUUID(),
+                    agent: to,
+                    content: mockResponse.content,
+                    timestamp: new Date().toISOString(),
+                    status: 'complete',
+                    payload: {
+                        type: mockResponse.type,
+                        data: mockResponse.data,
+                        reasoning
+                    }
+                });
+            }
+
+            return { success: true };
 
         } catch (error) {
             console.error('HominioAgent - Error:', error);
 
-            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-
-            const errorResponse = {
-                success: false,
-                message: {
-                    agent: 'hominio',
-                    content: `I encountered an error: ${errorMsg}. Could you please try again?`,
-                    status: 'error',
-                    payload: {
-                        type: 'error',
-                        content: { error: errorMsg }
+            conversationManager.updateMessage(pendingMsgId, {
+                content: 'I encountered an error. Could you please try again?',
+                status: 'error',
+                payload: {
+                    type: 'error',
+                    data: {
+                        error: error instanceof Error ? error.message : 'Unknown error'
                     }
                 }
-            };
-
-            conversationManager.addMessage({
-                agent: 'hominio',
-                content: errorResponse.message.content,
-                status: 'error',
-                payload: errorResponse.message.payload
             });
 
-            return errorResponse;
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
         }
+    }
+
+    private getMockResponse(agent: string, task: string): MockResponse {
+        const mockResponses: Record<string, (task: string) => MockResponse> = {
+            vroni: (task: string) => ({
+                type: 'navigation',
+                content: `Navigating to ${task.toLowerCase()}...`,
+                data: {
+                    view: task.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                    action: 'navigate'
+                }
+            }),
+            ali: (task: string) => ({
+                type: 'action',
+                content: `Executing task: ${task}`,
+                data: {
+                    action: 'email',
+                    status: 'completed'
+                }
+            }),
+            banki: (task: string) => ({
+                type: 'banking',
+                content: `Here's your banking information`,
+                data: {
+                    balance: '$5,000',
+                    recentTransactions: [
+                        { date: '2024-03-31', amount: -50, description: 'Coffee Shop' },
+                        { date: '2024-03-30', amount: 1000, description: 'Salary' }
+                    ]
+                }
+            })
+        };
+
+        return mockResponses[agent]?.(task) || {
+            type: 'unknown',
+            content: `Processing: ${task}`,
+            data: null
+        };
     }
 }
 

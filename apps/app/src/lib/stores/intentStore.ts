@@ -86,8 +86,10 @@ export class ConversationManager {
     private currentState: ConversationState;
 
     constructor() {
+        console.log('ConversationManager - Initializing');
         this.store.subscribe(state => {
             this.currentState = state;
+            console.log('ConversationManager - State updated:', state);
         });
     }
 
@@ -127,15 +129,26 @@ export class ConversationManager {
     }
 
     addMessage(messageData: Partial<Message>) {
+        console.log('ConversationManager - Adding message:', messageData);
+
         const message: Message = {
             id: crypto.randomUUID(),
             timestamp: new Date().toISOString(),
+            status: 'complete', // Default status
             ...messageData
-        };
+        } as Message;
 
         this.store.update(state => {
             const currentConversation = this.getCurrentConversation();
-            if (!currentConversation) return state;
+            if (!currentConversation) {
+                console.warn('ConversationManager - No current conversation found');
+                return state;
+            }
+
+            console.log('ConversationManager - Updating conversation with new message:', {
+                conversationId: currentConversation.id,
+                messageId: message.id
+            });
 
             const updatedConversation = {
                 ...currentConversation,
@@ -155,13 +168,26 @@ export class ConversationManager {
     }
 
     updateMessage(messageId: string, updates: Partial<Message>) {
+        console.log('ConversationManager - Updating message:', { messageId, updates });
+
         this.store.update(state => {
             const currentConversation = this.getCurrentConversation();
-            if (!currentConversation) return state;
+            if (!currentConversation) {
+                console.warn('ConversationManager - No current conversation found for message update');
+                return state;
+            }
+
+            const messageExists = currentConversation.messages.some(msg => msg.id === messageId);
+            if (!messageExists) {
+                console.error('ConversationManager - Message not found:', messageId);
+                return state;
+            }
 
             const updatedMessages = currentConversation.messages.map(msg =>
                 msg.id === messageId ? { ...msg, ...updates } : msg
             );
+
+            console.log('ConversationManager - Messages after update:', updatedMessages);
 
             const updatedConversation = {
                 ...currentConversation,
