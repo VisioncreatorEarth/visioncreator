@@ -1,9 +1,42 @@
 import type { AgentResponse, AgentType, ClaudeResponse, MockResponse } from '../types/agent.types';
 import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
+import { vroniAgent } from './agentVroni';
+import { agentLogger } from '$lib/utils/logger';
 
 export class HominioAgent {
-    private readonly tools: AgentTool[] = [
+    private readonly systemPrompt = `You are Hominio, the delegation specialist. Your role is to analyze user requests and delegate tasks to the appropriate specialized agent.
+
+IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to other agents. Never try to handle tasks directly.
+
+Available agents:
+- vroni: UI and Navigation specialist (handles all view-related requests)
+- ali: Task management specialist
+- walter: Data analysis specialist
+- bert: General assistance specialist
+
+For ANY request related to viewing, navigating, or showing UI components, ALWAYS delegate to vroni.
+For task management requests, delegate to ali.
+For data analysis requests, delegate to walter.
+For general assistance, delegate to bert.
+
+When delegating:
+1. Identify the appropriate agent
+2. Use the delegate_task tool
+3. Provide clear reasoning for the delegation
+
+Example delegation for a view request:
+{
+  "type": "tool_use",
+  "name": "delegate_task",
+  "input": {
+    "to": "vroni",
+    "task": "Navigate to the banking view",
+    "reasoning": "This is a UI navigation request that requires Vroni's expertise in handling view transitions"
+  }
+}`;
+
+    private readonly tools = [
         {
             name: "delegate_task",
             description: "Delegate a user request to the appropriate agent",
@@ -29,41 +62,15 @@ export class HominioAgent {
         }
     ];
 
-    private readonly systemPrompt = `You are Hominio, a friendly delegation agent that helps users by routing their requests to specialized sub-agents. When you need clarification:
-1. Be friendly and helpful
-2. Explain why you need more information
-3. Provide specific examples of what information would help
-4. Format your response in a conversational way
-
-Your available agents are:
-
-1. Ali (ali): Actions & Operations
-   - Sending emails
-   - Form submissions
-   - Task execution
-
-2. Vroni (vroni): UI & Navigation
-   - View switching
-   - Page navigation
-   - UI components
-
-3. Walter (walter): Data & APIs
-   - Database queries
-   - API operations
-   - Data fetching
-
-4. Bert (bert): Lists & Collections
-   - Shopping lists
-   - Task lists
-   - Collection management`;
+    private readonly agentName = 'hominio';
 
     async processRequest(userMessage: string): Promise<AgentResponse> {
         let pendingMsgId = crypto.randomUUID();
 
         try {
-            console.log('HominioAgent - Starting request processing:', { userMessage });
+            agentLogger.log(this.agentName, 'Starting request processing', { userMessage });
 
-            // Add user message
+            // Add user message to conversation
             conversationManager.addMessage({
                 id: crypto.randomUUID(),
                 agent: 'user',
@@ -72,70 +79,119 @@ Your available agents are:
                 status: 'complete'
             });
 
-            // Add pending message
+            // Initial Hominio message
             conversationManager.addMessage({
                 id: pendingMsgId,
-                agent: 'hominio',
+                agent: this.agentName,
                 content: 'Let me help you with that...',
                 timestamp: new Date().toISOString(),
                 status: 'pending'
             });
 
+            // First Claude call to get delegation
             const response = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
-                    messages: [{ role: 'user', content: userMessage }],
+                    messages: [{
+                        role: 'user',
+                        content: userMessage
+                    }],
                     system: this.systemPrompt,
                     tools: this.tools,
                     temperature: 0.7
                 }
             });
 
-            if (!response?.data?.content?.length) {
-                throw new Error('Invalid or empty Claude response');
+            agentLogger.log(this.agentName, 'Initial Claude response', {
+                response: response?.data
+            });
+
+            // Extract tool use from response
+            const toolUse = response?.data?.content?.find(c => c.type === 'tool_use')?.tool_use;
+            const textContent = response?.data?.content?.find(c => c.type === 'text')?.text;
+
+            // Update Hominio's message with Claude's text response
+            conversationManager.updateMessage(pendingMsgId, {
+                content: textContent || 'Processing your request...',
+                status: 'complete',
+                payload: {
+                    type: 'text',
+                    data: { originalResponse: response.data }
+                }
+            });
+
+            if (!toolUse) {
+                // If no tool use, try direct view handling
+                if (userMessage.toLowerCase().includes('banking')) {
+                    agentLogger.log(this.agentName, 'Direct banking view request detected');
+                    return await vroniAgent.processRequest('Show the Banking view', {
+                        delegatedFrom: {
+                            agent: this.agentName,
+                            reasoning: 'Direct banking view request'
+                        }
+                    });
+                }
+                throw new Error('No tool use response and no direct view match');
             }
 
-            const textContent = response.data.content.find(c => c.type === 'text')?.text;
-            const toolUse = response.data.content.find(c => c.type === 'tool_use');
+            const { id: toolUseId, name, input } = toolUse;
 
-            // Update Hominio's message with text content
-            if (textContent) {
-                conversationManager.updateMessage(pendingMsgId, {
-                    content: textContent,
-                    status: 'complete',
-                    payload: {
-                        type: 'text',
-                        data: { originalResponse: response.data }
+            agentLogger.log(this.agentName, 'Processing tool use', {
+                toolUseId,
+                name,
+                input
+            });
+
+            if (name === 'delegate_task' && input.to === 'vroni') {
+                // Execute Vroni delegation
+                const vroniResponse = await vroniAgent.processRequest(input.task, {
+                    delegatedFrom: {
+                        agent: this.agentName,
+                        reasoning: input.reasoning
                     }
                 });
-            }
 
-            // Handle delegation
-            if (toolUse?.name === 'delegate_task' && toolUse.input) {
-                const { to, task, reasoning } = toolUse.input;
-                const mockResponse = this.getMockResponse(to, task);
+                agentLogger.log(this.agentName, 'Vroni response received', {
+                    success: vroniResponse.success,
+                    error: vroniResponse.error
+                });
 
-                conversationManager.addMessage({
-                    id: crypto.randomUUID(),
-                    agent: to,
-                    content: mockResponse.content,
-                    timestamp: new Date().toISOString(),
-                    status: 'complete',
-                    payload: {
-                        type: mockResponse.type,
-                        data: mockResponse.data,
-                        reasoning
+                // Send tool result back to Claude
+                const toolResultResponse = await client.mutate<ClaudeResponse>({
+                    operationName: 'askClaude',
+                    input: {
+                        messages: [
+                            {
+                                role: 'user',
+                                content: [
+                                    {
+                                        type: 'tool_result',
+                                        tool_use_id: toolUseId,
+                                        content: vroniResponse.success
+                                            ? 'View successfully displayed'
+                                            : vroniResponse.error,
+                                        is_error: !vroniResponse.success
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 });
+
+                agentLogger.log(this.agentName, 'Tool result sent', {
+                    toolResultResponse
+                });
+
+                return { success: true };
             }
 
-            return { success: true };
+            throw new Error(`Unexpected tool use: ${name}`);
 
         } catch (error) {
-            console.error('HominioAgent - Error:', error);
+            agentLogger.log(this.agentName, 'Error processing request', { error }, 'error');
 
             conversationManager.updateMessage(pendingMsgId, {
-                content: 'I encountered an error. Could you please try again?',
+                content: 'I encountered an error while processing your request. Could you please try again?',
                 status: 'error',
                 payload: {
                     type: 'error',
@@ -150,6 +206,23 @@ Your available agents are:
                 error: error instanceof Error ? error.message : 'Unknown error'
             };
         }
+    }
+
+    private handleMockResponse(agent: string, task: string, reasoning: string) {
+        const mockResponse = this.getMockResponse(agent, task);
+
+        conversationManager.addMessage({
+            id: crypto.randomUUID(),
+            agent: agent as AgentType,
+            content: mockResponse.content,
+            timestamp: new Date().toISOString(),
+            status: 'complete',
+            payload: {
+                type: mockResponse.type,
+                data: mockResponse.data,
+                reasoning
+            }
+        });
     }
 
     private getMockResponse(agent: string, task: string): MockResponse {

@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 import type { AgentType, AgentPayload } from '../types/agent.types';
+import { agentLogger } from '$lib/utils/logger';
 
 export interface Message {
     id: string;
@@ -86,10 +87,8 @@ export class ConversationManager {
     private currentState: ConversationState;
 
     constructor() {
-        console.log('ConversationManager - Initializing');
         this.store.subscribe(state => {
             this.currentState = state;
-            console.log('ConversationManager - State updated:', state);
         });
     }
 
@@ -128,31 +127,26 @@ export class ConversationManager {
         );
     }
 
-    addMessage(messageData: Partial<Message>) {
-        console.log('ConversationManager - Adding message:', messageData);
+    addMessage(message: Partial<Message> & { agent: AgentType; content: string }) {
+        const fullMessage = {
+            id: message.id || crypto.randomUUID(),
+            timestamp: message.timestamp || new Date().toISOString(),
+            status: message.status || 'complete',
+            ...message
+        };
 
-        const message: Message = {
-            id: crypto.randomUUID(),
-            timestamp: new Date().toISOString(),
-            status: 'complete', // Default status
-            ...messageData
-        } as Message;
+        agentLogger.log(fullMessage.agent, 'New message', {
+            content: fullMessage.content,
+            payload: fullMessage.payload
+        });
 
-        this.store.update(state => {
-            const currentConversation = this.getCurrentConversation();
-            if (!currentConversation) {
-                console.warn('ConversationManager - No current conversation found');
-                return state;
-            }
-
-            console.log('ConversationManager - Updating conversation with new message:', {
-                conversationId: currentConversation.id,
-                messageId: message.id
-            });
+        conversationStore.update(state => {
+            const currentConversation = this.getCurrentConversation(state);
+            if (!currentConversation) return state;
 
             const updatedConversation = {
                 ...currentConversation,
-                messages: [...currentConversation.messages, message],
+                messages: [...currentConversation.messages, fullMessage],
                 updatedAt: new Date().toISOString()
             };
 
@@ -164,30 +158,31 @@ export class ConversationManager {
             };
         });
 
-        return message;
+        return fullMessage;
     }
 
     updateMessage(messageId: string, updates: Partial<Message>) {
-        console.log('ConversationManager - Updating message:', { messageId, updates });
+        conversationStore.update(state => {
+            const currentConversation = this.getCurrentConversation(state);
+            if (!currentConversation) return state;
 
-        this.store.update(state => {
-            const currentConversation = this.getCurrentConversation();
-            if (!currentConversation) {
-                console.warn('ConversationManager - No current conversation found for message update');
-                return state;
-            }
+            const messageIndex = currentConversation.messages.findIndex(m => m.id === messageId);
+            if (messageIndex === -1) return state;
 
-            const messageExists = currentConversation.messages.some(msg => msg.id === messageId);
-            if (!messageExists) {
-                console.error('ConversationManager - Message not found:', messageId);
-                return state;
-            }
+            const updatedMessage = {
+                ...currentConversation.messages[messageIndex],
+                ...updates
+            };
+
+            agentLogger.log(updatedMessage.agent, 'Updated message', {
+                content: updatedMessage.content,
+                payload: updatedMessage.payload,
+                status: updatedMessage.status
+            });
 
             const updatedMessages = currentConversation.messages.map(msg =>
-                msg.id === messageId ? { ...msg, ...updates } : msg
+                msg.id === messageId ? updatedMessage : msg
             );
-
-            console.log('ConversationManager - Messages after update:', updatedMessages);
 
             const updatedConversation = {
                 ...currentConversation,
