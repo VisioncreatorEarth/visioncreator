@@ -65,15 +65,8 @@ Always respond with a compose_view tool use that specifies the appropriate compo
             });
 
             const messages = [
-                ...(context?.conversationHistory || [])
-                    .filter(msg => msg.content && msg.status === 'complete')
-                    .map(msg => ({
-                        role: msg.agent === 'user' ? 'user' : 'assistant',
-                        content: msg.content
-                    })),
                 { role: 'user', content: userMessage }
             ];
-
 
             const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',

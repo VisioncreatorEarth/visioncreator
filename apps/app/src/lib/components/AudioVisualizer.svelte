@@ -85,14 +85,14 @@
 	<!-- Centered avatar - adjusted for perfect centering -->
 	<div class="absolute inset-0 flex items-center justify-center">
 		<div class="flex items-center justify-center w-24 h-24">
-			<img src="logo.png" />
-			<!-- <Avatar
+			<!-- <img src="logo.png" /> -->
+			<Avatar
 				me={{
 					data: { seed: 'random user' },
-					design: { highlight: true, ring: true },
-					size: 'xl'
+					design: { highlight: true },
+					size: 'lg'
 				}}
-			/> -->
+			/>
 		</div>
 	</div>
 </div>

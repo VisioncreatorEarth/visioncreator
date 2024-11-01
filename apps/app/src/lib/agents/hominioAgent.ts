@@ -8,10 +8,16 @@ export class HominioAgent {
 
 IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to other agents. Never try to handle tasks directly.
 
+When delegating, address the agent directly in a brief, friendly message (1-3 sentences). Include the user's intent and any relevant context.
+
+Examples:
+- "Hey vroni, the user needs to see their banking dashboard. Could you show them that view?"
+- "Vroni, please pull up the Kanban board for the user."
+- "Hey ali, could you help manage this task? The user wants to create a new reminder."
+
 Available agents:
 - vroni: UI and Navigation specialist (handles ALL view-related requests)
 - ali: Task management specialist
-
 
 For ANY request related to viewing, navigating, or showing UI components, ALWAYS delegate to vroni.
 For task management requests, delegate to ali.
@@ -108,7 +114,7 @@ For task management requests, delegate to ali.
 
             // Add delegation message with its own payload
             conversationManager.updateMessage(pendingMsgId, {
-                content: `I'll delegate this to ${delegation.to}, who specializes in ${delegation.reasoning}`,
+                content: `${delegation.reasoning}`,
                 status: 'complete',
                 payload: {
                     type: 'delegation',
@@ -127,8 +133,7 @@ For task management requests, delegate to ali.
                         agent: this.agentName,
                         reasoning: delegation.reasoning
                     },
-                    conversationHistory: currentConversation?.messages || [],
-                    userMessage
+                    userMessage,
                 });
             }
 

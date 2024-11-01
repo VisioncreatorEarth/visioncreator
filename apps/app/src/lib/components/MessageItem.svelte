@@ -103,9 +103,20 @@
 							class="p-2 mt-2 border rounded bg-surface-800/50 border-surface-700"
 							transition:slide
 						>
-							<pre class="overflow-x-auto font-mono text-xs whitespace-pre-wrap text-tertiary-200">
-								{JSON.stringify(message.payload.data, null, 2)}
-							</pre>
+							{#if message.payload.type === 'delegation'}
+								<div class="space-y-1 text-sm text-tertiary-200">
+									<p><span class="font-medium">Task:</span> {message.payload.data.task}</p>
+									<p>
+										<span class="font-medium">Reasoning:</span>
+										{message.payload.data.reasoning}
+									</p>
+								</div>
+							{:else}
+								<pre
+									class="overflow-x-auto font-mono text-xs whitespace-pre-wrap text-tertiary-200">
+									{JSON.stringify(message.payload.data, null, 2)}
+								</pre>
+							{/if}
 						</div>
 					{/if}
 				</div>
@@ -113,29 +124,6 @@
 				<p class="text-sm whitespace-pre-wrap">{message.content}</p>
 			{/if}
 		</div>
-
-		{#if formattedPayload && message.payload?.type !== 'view'}
-			<div class="w-full mt-2">
-				<div class="flex items-center justify-between mb-2">
-					<span class="px-2 py-1 text-xs font-medium rounded-full bg-surface-700 text-tertiary-300">
-						{formattedPayload.type}
-					</span>
-					<button
-						class="p-1.5 text-xs rounded-lg hover:bg-surface-700/50 text-tertiary-300"
-						on:click={togglePayload}
-					>
-						{isPayloadVisible ? 'Hide Details' : 'Show Details'}
-					</button>
-				</div>
-				{#if isPayloadVisible}
-					<div class="p-4 border rounded-xl bg-surface-800/50 border-surface-600" transition:slide>
-						<pre class="overflow-x-auto font-mono text-xs text-tertiary-200">
-							{formattedPayload.content}
-						</pre>
-					</div>
-				{/if}
-			</div>
-		{/if}
 	</div>
 
 	{#if message.agent === 'user'}
