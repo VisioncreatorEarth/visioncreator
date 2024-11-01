@@ -10,7 +10,7 @@ export class HominioAgent {
 IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to other agents. Never try to handle tasks directly.
 
 Available agents:
-- vroni: UI and Navigation specialist (handles all view-related requests)
+- vroni: UI and Navigation specialist (handles ALL view-related requests)
 - ali: Task management specialist
 - walter: Data analysis specialist
 - bert: General assistance specialist
@@ -18,23 +18,7 @@ Available agents:
 For ANY request related to viewing, navigating, or showing UI components, ALWAYS delegate to vroni.
 For task management requests, delegate to ali.
 For data analysis requests, delegate to walter.
-For general assistance, delegate to bert.
-
-When delegating:
-1. Identify the appropriate agent
-2. Use the delegate_task tool
-3. Provide clear reasoning for the delegation
-
-Example delegation for a view request:
-{
-  "type": "tool_use",
-  "name": "delegate_task",
-  "input": {
-    "to": "vroni",
-    "task": "Navigate to the banking view",
-    "reasoning": "This is a UI navigation request that requires Vroni's expertise in handling view transitions"
-  }
-}`;
+For general assistance, delegate to bert.`;
 
     private readonly tools = [
         {
@@ -96,107 +80,62 @@ Example delegation for a view request:
             });
 
             // First Claude call with conversation history
-            const response = await client.mutate<ClaudeResponse>({
+            const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
-                    messages: [
-                        ...conversationHistory,
-                        { role: 'user', content: userMessage }
-                    ],
+                    messages: [{ role: 'user', content: userMessage }],
                     system: this.systemPrompt,
                     tools: this.tools,
                     temperature: 0.7
                 }
             });
 
-            agentLogger.log(this.agentName, 'Initial Claude response', {
-                response: response?.data
+            // Log the Claude response for debugging
+            agentLogger.log(this.agentName, 'Claude response structure', {
+                hasData: !!claudeResponse?.data,
+                content: claudeResponse?.data?.content,
+                toolUse: claudeResponse?.data?.content?.find(c => c.type === 'tool_use')
             });
 
-            // Extract tool use from response
-            const toolUse = response?.data?.content?.find(c => c.type === 'tool_use')?.tool_use;
-            const textContent = response?.data?.content?.find(c => c.type === 'text')?.text;
+            // Extract tool use from Claude response
+            const toolUseContent = claudeResponse?.data?.content?.find(c => c.type === 'tool_use');
 
-            // Update Hominio's message with Claude's text response
-            conversationManager.updateMessage(pendingMsgId, {
-                content: textContent || 'Processing your request...',
-                status: 'complete',
-                payload: {
-                    type: 'text',
-                    data: { originalResponse: response.data }
-                }
-            });
-
-            if (!toolUse) {
-                // If no tool use, try direct view handling
-                if (userMessage.toLowerCase().includes('banking')) {
-                    agentLogger.log(this.agentName, 'Direct banking view request detected');
-                    return await vroniAgent.processRequest('Show the Banking view', {
-                        delegatedFrom: {
-                            agent: this.agentName,
-                            reasoning: 'Direct banking request detected'
-                        },
-                        conversationHistory
-                    });
-                }
-                throw new Error('No tool use response and no direct view match');
+            if (!toolUseContent) {
+                agentLogger.log(this.agentName, 'No tool use found in response', {
+                    content: claudeResponse?.data?.content
+                });
+                throw new Error('No tool use response found');
             }
 
-            const { id: toolUseId, name, input } = toolUse;
+            // Extract delegation details
+            const delegation = toolUseContent.input;
+            if (!delegation || !delegation.to || !delegation.task) {
+                throw new Error('Invalid delegation structure');
+            }
 
-            agentLogger.log(this.agentName, 'Processing tool use', {
-                toolUseId,
-                name,
-                input
-            });
+            // Handle delegation to Vroni
+            if (delegation.to === 'vroni') {
+                agentLogger.log(this.agentName, 'Delegating to Vroni', {
+                    task: delegation.task,
+                    reasoning: delegation.reasoning
+                });
 
-            if (name === 'delegate_task' && input.to === 'vroni') {
-                // Execute Vroni delegation
-                const vroniResponse = await vroniAgent.processRequest(input.task, {
+                return await vroniAgent.processRequest(delegation.task, {
                     delegatedFrom: {
                         agent: this.agentName,
-                        reasoning: input.reasoning
-                    }
+                        reasoning: delegation.reasoning
+                    },
+                    conversationHistory: []
                 });
-
-                agentLogger.log(this.agentName, 'Vroni response received', {
-                    success: vroniResponse.success,
-                    error: vroniResponse.error
-                });
-
-                // Send tool result back to Claude
-                const toolResultResponse = await client.mutate<ClaudeResponse>({
-                    operationName: 'askClaude',
-                    input: {
-                        messages: [
-                            {
-                                role: 'user',
-                                content: [
-                                    {
-                                        type: 'tool_result',
-                                        tool_use_id: toolUseId,
-                                        content: vroniResponse.success
-                                            ? 'View successfully displayed'
-                                            : vroniResponse.error,
-                                        is_error: !vroniResponse.success
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                });
-
-                agentLogger.log(this.agentName, 'Tool result sent', {
-                    toolResultResponse
-                });
-
-                return { success: true };
             }
 
-            throw new Error(`Unexpected tool use: ${name}`);
+            throw new Error(`Unsupported delegation target: ${delegation.to}`);
 
         } catch (error) {
-            agentLogger.log(this.agentName, 'Error processing request', { error }, 'error');
+            agentLogger.log(this.agentName, 'Error processing request', {
+                error,
+                userMessage
+            }, 'error');
 
             conversationManager.updateMessage(pendingMsgId, {
                 content: 'I encountered an error while processing your request. Could you please try again?',

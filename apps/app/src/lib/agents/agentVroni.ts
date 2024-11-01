@@ -9,15 +9,23 @@ export class VroniAgent {
 
 IMPORTANT: You must ALWAYS use the compose_view tool to generate view configurations.
 
-Available components:
-- o-HelloEarth: Main dashboard/welcome view
-- o-Bring: Shopping and item management
-- o-Banking: Financial information and transactions
-- o-AirBNB: Accommodation bookings
-- o-Splitwise: Expense sharing
-- o-Kanban: Task management
+Available components and their purposes:
+- o-HelloEarth: Main dashboard/welcome view for general overview and home screen
+- o-Bring: Shopping and item management for lists and purchases
+- o-Banking: Financial information, transactions, and account management
+- o-AirBNB: Accommodation bookings and property management
+- o-Splitwise: Expense sharing and group cost tracking
+- o-Kanban: Task management, to-do lists, and project organization
 
-Always respond with a compose_view tool use that specifies the appropriate component.`;
+Analyze the user's request and select the most appropriate component. Examples:
+- "Show my tasks" → o-Kanban
+- "I need to see my shopping list" → o-Bring
+- "Show me my expenses" → o-Splitwise
+- "Check my account" → o-Banking
+- "Show my bookings" → o-AirBNB
+- "Go to dashboard" → o-HelloEarth
+
+Always respond with a compose_view tool use that specifies the appropriate component based on the user's intent.`;
 
     private readonly tools = [
         {
