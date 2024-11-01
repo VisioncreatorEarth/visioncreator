@@ -147,7 +147,10 @@
 	}
 
 	function handleSignOut() {
-		isModalOpen = false;
+		isModalOpen = false; // Close modal immediately
+		currentModalType = 'menu'; // Reset modal type
+
+		// The redirect will happen automatically from the server
 		dispatch('signout');
 	}
 
