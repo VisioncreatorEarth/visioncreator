@@ -2,6 +2,7 @@ import type { AgentResponse, ClaudeResponse } from '../types/agent.types';
 import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { agentLogger } from '$lib/utils/logger';
+import { dynamicView } from '$lib/stores';
 
 export class VroniAgent {
     private readonly agentName = 'vroni';
@@ -161,13 +162,10 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 ]
             };
 
-            agentLogger.log(this.agentName, 'View configuration generated', {
-                viewConfig,
-                selectedComponent,
-                timestamp: new Date().toISOString()
-            });
+            // Update the dynamicView store directly
+            dynamicView.set({ view: viewConfig });
 
-            // Update message with view configuration
+            // Update conversation message
             conversationManager.updateMessage(pendingMsgId, {
                 content: `Navigating to ${selectedComponent}...`,
                 status: 'complete',
@@ -180,7 +178,10 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 }
             });
 
-            return { success: true };
+            return {
+                success: true,
+                view: viewConfig  // Include view in response
+            };
 
         } catch (error) {
             agentLogger.log(this.agentName, 'Error processing view request', {

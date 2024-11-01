@@ -105,7 +105,6 @@
 	function handleViewUpdate(event: CustomEvent) {
 		const viewData = event.detail?.view;
 		if (viewData) {
-			console.log('Page receiving view update:', viewData);
 			dynamicView.set({ view: viewData });
 
 			// Force re-render of ComposeView

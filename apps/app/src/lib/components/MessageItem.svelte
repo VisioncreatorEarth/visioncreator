@@ -7,6 +7,12 @@
 	export let message: Message;
 	export let session: any;
 
+	let isPayloadVisible = false;
+
+	function togglePayload() {
+		isPayloadVisible = !isPayloadVisible;
+	}
+
 	function formatTime(timestamp: string) {
 		return dayjs(timestamp).fromNow();
 	}
@@ -74,18 +80,29 @@
 		>
 			{#if message.payload?.type === 'view'}
 				<div class="space-y-2">
-					<div class="flex items-center gap-2">
-						<span class="text-sm">{message.content}</span>
-						{#if message.payload.data?.view?.children?.[0]?.component}
-							<div
-								class="px-2 py-1 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
-							>
-								{message.payload.data.view.children[0].component}
-							</div>
-						{/if}
+					<div class="flex items-center justify-between gap-2">
+						<div class="flex items-center gap-2">
+							<span class="text-sm">{message.content}</span>
+							{#if message.payload.data?.view?.children?.[0]?.component}
+								<div
+									class="px-2 py-1 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
+								>
+									{message.payload.data.view.children[0].component}
+								</div>
+							{/if}
+						</div>
+						<button
+							class="p-1.5 text-xs rounded-lg hover:bg-surface-700/50 text-tertiary-300"
+							on:click={togglePayload}
+						>
+							{isPayloadVisible ? 'Hide Details' : 'Show Details'}
+						</button>
 					</div>
-					{#if message.payload.data?.view}
-						<div class="p-2 mt-2 border rounded bg-surface-800/50 border-surface-700">
+					{#if isPayloadVisible && message.payload.data?.view}
+						<div
+							class="p-2 mt-2 border rounded bg-surface-800/50 border-surface-700"
+							transition:slide
+						>
 							<pre class="overflow-x-auto font-mono text-xs whitespace-pre-wrap text-tertiary-200">
 								{JSON.stringify(message.payload.data.view, null, 2)}
 							</pre>
@@ -98,19 +115,25 @@
 		</div>
 
 		{#if formattedPayload && message.payload?.type !== 'view'}
-			<div class="w-full p-4 mt-2 border rounded-xl bg-surface-800/50 border-surface-600">
-				<div class="space-y-2">
-					<div class="flex items-center space-x-2">
-						<span
-							class="px-2 py-1 text-xs font-medium rounded-full bg-surface-700 text-tertiary-300"
-						>
-							{formattedPayload.type}
-						</span>
-					</div>
-					<pre class="overflow-x-auto font-mono text-xs text-tertiary-200">
-						{formattedPayload.content}
-					</pre>
+			<div class="w-full mt-2">
+				<div class="flex items-center justify-between mb-2">
+					<span class="px-2 py-1 text-xs font-medium rounded-full bg-surface-700 text-tertiary-300">
+						{formattedPayload.type}
+					</span>
+					<button
+						class="p-1.5 text-xs rounded-lg hover:bg-surface-700/50 text-tertiary-300"
+						on:click={togglePayload}
+					>
+						{isPayloadVisible ? 'Hide Details' : 'Show Details'}
+					</button>
 				</div>
+				{#if isPayloadVisible}
+					<div class="p-4 border rounded-xl bg-surface-800/50 border-surface-600" transition:slide>
+						<pre class="overflow-x-auto font-mono text-xs text-tertiary-200">
+							{formattedPayload.content}
+						</pre>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

@@ -237,20 +237,19 @@
 		}
 	}
 
-	function handleViewPayload(payload: ViewPayload) {
-		dynamicView.update((store) => ({
-			...store,
-			view: payload.content
-		}));
+	async function handleViewPayload(payload: any) {
+		if (payload?.data?.view) {
+			// Directly use dynamicView.set()
+			dynamicView.set({ view: payload.data.view });
 
-		// Close modal after view update
-		setTimeout(() => {
-			resetConversationState();
-			dispatch('close');
-			if (window.location.pathname !== '/me') {
-				goto('/me');
-			}
-		}, 300);
+			setTimeout(() => {
+				resetConversationState();
+				dispatch('close');
+				if (window.location.pathname !== '/me') {
+					goto('/me');
+				}
+			}, 300);
+		}
 	}
 
 	function handleFormPayload(payload: FormPayload) {

@@ -124,22 +124,10 @@ const createLogger = (): LogFunction => {
 
 export const log = createLogger();
 
-// Simplified View interface
+// Keep the simple View interface
 interface View {
-	view: {
-		id: string;
-		layout: {
-			areas: string;
-			rows: string;
-			gap: string;
-			overflow: string;
-			style: string;
-		};
-		children: any[];
-	} | null;
+	view: any | null;
 }
 
-const defaultView: View = { view: meView };
-
-// Regular writable store that will reset to meView on page reload
-export const dynamicView = writable<View>(defaultView);
+// Keep the original dynamicView store
+export const dynamicView = writable<View>({ view: null });
