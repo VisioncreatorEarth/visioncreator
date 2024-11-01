@@ -52,8 +52,8 @@ Always respond with a compose_view tool use that specifies the appropriate compo
         try {
             agentLogger.log(this.agentName, 'Starting view request', {
                 userMessage,
-                context,
-                timestamp: new Date().toISOString()
+                contextPresent: !!context,
+                historyLength: context?.conversationHistory?.length
             });
 
             conversationManager.addMessage({
@@ -64,24 +64,31 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 status: 'pending'
             });
 
-            // Log the request to Claude
+            const messages = [
+                ...(context?.conversationHistory || [])
+                    .filter(msg => msg.content && msg.status === 'complete')
+                    .map(msg => ({
+                        role: msg.agent === 'user' ? 'user' : 'assistant',
+                        content: msg.content
+                    })),
+                { role: 'user', content: userMessage }
+            ];
+
             agentLogger.log(this.agentName, 'Sending request to Claude', {
-                messages: [{ role: 'user', content: userMessage }],
-                systemPromptLength: this.systemPrompt.length,
-                tools: this.tools.map(t => t.name)
+                messagesCount: messages.length,
+                lastMessage: messages[messages.length - 1]
             });
 
             const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
-                    messages: [{ role: 'user', content: userMessage }],
+                    messages,
                     system: this.systemPrompt,
                     tools: this.tools,
                     temperature: 0.7
                 }
             });
 
-            // Detailed logging of Claude response
             agentLogger.log(this.agentName, 'Claude response structure', {
                 hasData: !!claudeResponse?.data,
                 contentLength: claudeResponse?.data?.content?.length,
@@ -94,7 +101,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 }))
             });
 
-            // Validate response structure
             if (!claudeResponse?.data?.content) {
                 agentLogger.log(this.agentName, 'Missing content in Claude response', {
                     response: claudeResponse?.data
@@ -102,7 +108,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 throw new Error('Invalid Claude response structure');
             }
 
-            // Log each content item separately
             claudeResponse.data.content.forEach((item, index) => {
                 agentLogger.log(this.agentName, `Content item ${index}`, {
                     type: item.type,
@@ -112,7 +117,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 });
             });
 
-            // Extract and validate tool use
             const toolUseContent = claudeResponse.data.content.find(c => c.type === 'tool_use');
 
             agentLogger.log(this.agentName, 'Tool use content found', {
@@ -133,7 +137,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
 
             const selectedComponent = toolUseContent.input.component;
 
-            // Validate component name
             const validComponents = ["o-HelloEarth", "o-Bring", "o-Banking", "o-AirBNB", "o-Splitwise", "o-Kanban"];
             if (!validComponents.includes(selectedComponent)) {
                 agentLogger.log(this.agentName, 'Invalid component selected', {
@@ -143,7 +146,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 throw new Error(`Invalid component selected: ${selectedComponent}`);
             }
 
-            // Generate view configuration
             const viewConfig = {
                 id: "MainContainer",
                 layout: {
@@ -162,10 +164,8 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 ]
             };
 
-            // Update the dynamicView store directly
             dynamicView.set({ view: viewConfig });
 
-            // Update conversation message
             conversationManager.updateMessage(pendingMsgId, {
                 content: `Navigating to ${selectedComponent}...`,
                 status: 'complete',
@@ -173,14 +173,22 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                     type: 'view',
                     data: {
                         view: viewConfig,
-                        action: 'showView'
+                        action: 'showView',
+                        context: {
+                            delegatedFrom: context?.delegatedFrom,
+                            originalUserMessage: context?.userMessage
+                        }
                     }
                 }
             });
 
             return {
                 success: true,
-                view: viewConfig  // Include view in response
+                view: viewConfig,
+                context: {
+                    delegatedFrom: context?.delegatedFrom,
+                    originalUserMessage: context?.userMessage
+                }
             };
 
         } catch (error) {

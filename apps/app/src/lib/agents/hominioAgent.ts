@@ -54,7 +54,18 @@ For general assistance, delegate to bert.`;
         try {
             agentLogger.log(this.agentName, 'Starting request processing', { userMessage });
 
-            // First add the user's message to the conversation
+            // Get current conversation before adding new messages
+            const currentConversation = conversationManager.getCurrentConversation();
+
+            // Format conversation history - only include essential content
+            const conversationHistory = currentConversation?.messages
+                ?.filter(msg => msg.content && msg.status === 'complete') // Only include complete messages
+                ?.map(msg => ({
+                    role: msg.agent === 'user' ? 'user' : 'assistant',
+                    content: msg.content
+                })) || [];
+
+            // Add user message to conversation store
             conversationManager.addMessage({
                 id: crypto.randomUUID(),
                 agent: 'user',
@@ -63,7 +74,7 @@ For general assistance, delegate to bert.`;
                 status: 'complete'
             });
 
-            // Then add Hominio's pending message
+            // Add pending message
             conversationManager.addMessage({
                 id: pendingMsgId,
                 agent: this.agentName,
@@ -72,10 +83,22 @@ For general assistance, delegate to bert.`;
                 status: 'pending'
             });
 
+            // Prepare messages for Claude
+            const messages = [
+                ...conversationHistory,
+                { role: 'user', content: userMessage }
+            ];
+
+            agentLogger.log(this.agentName, 'Sending request to Claude', {
+                messagesCount: messages.length,
+                lastMessage: messages[messages.length - 1],
+                historyLength: conversationHistory.length
+            });
+
             const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
-                    messages: [{ role: 'user', content: userMessage }],
+                    messages,
                     system: this.systemPrompt,
                     tools: this.tools,
                     temperature: 0.7
@@ -103,24 +126,20 @@ For general assistance, delegate to bert.`;
             }
 
             // Extract delegation details
-            const delegation = toolUseContent.input;
+            const delegation = toolUseContent?.input;
             if (!delegation || !delegation.to || !delegation.task) {
                 throw new Error('Invalid delegation structure');
             }
 
-            // Handle delegation to Vroni
+            // Handle delegation to Vroni with full context
             if (delegation.to === 'vroni') {
-                agentLogger.log(this.agentName, 'Delegating to Vroni', {
-                    task: delegation.task,
-                    reasoning: delegation.reasoning
-                });
-
                 return await vroniAgent.processRequest(delegation.task, {
                     delegatedFrom: {
                         agent: this.agentName,
                         reasoning: delegation.reasoning
                     },
-                    conversationHistory: []
+                    conversationHistory: currentConversation?.messages || [],
+                    userMessage
                 });
             }
 
