@@ -139,10 +139,9 @@ For task management requests, delegate to ali.
         }
     }
 
-    private prepareMessagesForClaude(conversationHistory: Message[], currentMessage: string) {
-        const messages = [];
+    private prepareMessagesForClaude(conversationHistory: Message[], currentMessage: string): { role: 'user' | 'assistant', content: string }[] {
+        const messages: { role: 'user' | 'assistant', content: string }[] = [];
 
-        // Add conversation history
         for (const msg of conversationHistory) {
             if (msg.status === 'complete') {
                 if (msg.agent === 'user') {
@@ -151,6 +150,7 @@ For task management requests, delegate to ali.
                         content: msg.content
                     });
                 } else {
+                    // Format assistant messages to include agent name and payload
                     let content = `[${msg.agent}] ${msg.content}`;
                     if (msg.payload) {
                         content += `\n<payload type="${msg.payload.type}">${JSON.stringify(msg.payload.data)}</payload>`;
