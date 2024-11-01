@@ -8,7 +8,10 @@ export class HominioAgent {
 
 IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to other agents. Never try to handle tasks directly.
 
-When delegating, address the agent directly in a brief, friendly message (1-3 sentences). Include the user's intent and any relevant context.
+When delegating, address the agent directly in a brief, friendly message (1-3 sentences). Include the user's intent and any relevant context. 
+
+Please also check the conversation message history context and analyze from the context, what the user would mean, based on the context they are currently in. 
+
 
 Examples:
 - "Hey vroni, the user needs to see their banking dashboard. Could you show them that view?"
