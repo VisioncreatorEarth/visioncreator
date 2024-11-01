@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { z } from 'zod';
 	import { derived, writable } from 'svelte/store';
-	import { submitForm } from '$lib/composables/flowOperations';
 	import { createEventDispatcher } from 'svelte';
 	import { conversationManager } from '$lib/stores/intentStore';
+	import { AgentWalter } from '$lib/agents/agentWalter';
 
 	const dispatch = createEventDispatcher<{
 		close: void;
@@ -174,9 +174,7 @@
 
 	// Submit handler
 	async function handleSubmit() {
-		if (!isFormValid || isSubmitted) {
-			return;
-		}
+		if (!isFormValid || isLoading || isSubmitted) return;
 
 		isLoading = true;
 		formError = null;
@@ -187,86 +185,42 @@
 				return acc;
 			}, {} as Record<string, any>);
 
-			let input: Record<string, any> = {};
-			switch (submitAction) {
-				case 'updateMe':
-					input = { name: formValues.name };
-					break;
-				case 'sendMail':
-					input = {
-						subject: formValues.subject,
-						body: formValues.body
-					};
-					break;
-				default:
-					input = formValues;
-			}
-
-			const result = await submitForm({
+			// Let Walter handle the form submission
+			const walter = new AgentWalter();
+			const result = await walter.processRequest('form_submission', {
 				operation: submitAction,
-				input,
-				view: {
-					formId,
-					action: submitAction,
-					values: formValues,
-					formState: {
-						isSubmitted: true,
-						success: true,
-						timestamp: new Date().toISOString()
-					}
-				}
+				input: formValues
 			});
 
-			if (result.success) {
+			if (result.success && result.message) {
 				isSubmitted = true;
-				// Add success state to conversation with proper structure
-				conversationManager.addMessage(
-					result.message || 'Form submitted successfully',
-					'walter',
-					'complete',
-					{
-						type: 'response',
-						content: {
-							success: true,
-							message: result.message,
-							data: result.data
-						},
-						view: {
-							formId,
-							action: submitAction,
-							values: formValues,
-							formState: {
-								isSubmitted: true,
-								success: true,
-								timestamp: new Date().toISOString()
-							}
-						}
-					}
-				);
+
+				// Add the message to conversation
+				conversationManager.addMessage({
+					id: crypto.randomUUID(),
+					agent: result.message.agent,
+					content: result.message.content,
+					status: 'complete',
+					payload: result.message.payload
+				});
+
 				dispatch('close');
 			} else {
-				throw new Error(result.message || 'Form submission failed');
+				throw new Error(result.error || 'Form submission failed');
 			}
 		} catch (error) {
 			formError = error instanceof Error ? error.message : 'Unknown error';
 			console.error('Form submission error:', formError);
 
-			// Add error state to conversation
-			conversationManager.addMessage(formError, 'walter', 'error', {
-				type: 'response',
-				content: {
-					view: {
-						formState: {
-							isSubmitted: false,
-							success: false,
-							error: formError,
-							timestamp: new Date().toISOString()
-						}
-					}
-				},
-				view: {
-					formId,
-					action: submitAction
+			// Add error message to conversation
+			conversationManager.addMessage({
+				id: crypto.randomUUID(),
+				agent: 'walter',
+				content: formError,
+				status: 'error',
+				payload: {
+					type: 'error',
+					data: { error: formError }
 				}
 			});
 		} finally {

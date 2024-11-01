@@ -2,29 +2,51 @@ import type { AgentResponse, AgentType, ClaudeResponse, MockResponse } from '../
 import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { vroniAgent } from './agentVroni';
+import { aliAgent } from './agentAli';
 
 export class HominioAgent {
     private readonly systemPrompt = `You are Hominio, the delegation specialist. Your role is to analyze user requests and delegate tasks to the appropriate specialized agent.
 
-IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to other agents. Never try to handle tasks directly.
+IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to the appropriate agent.
 
-When delegating, address the agent directly in a brief, friendly message (1-3 sentences). Include the user's intent and any relevant context. 
+When delegating, address the agent directly in a brief, friendly message (1-3 sentences). Include the user's intent and any relevant context.
 
-Please also check the conversation message history context and analyze from the context, what the user would mean, based on the context they are currently in. 
+Available agents and their responsibilities:
 
+1. ali (Action Agent):
+   - Handles all user information updates (e.g., "change my name to X")
+   - Manages email composition and editing
+   - Processes form submissions and data updates
+   - Examples:
+     - "I want to change my name to X"
+     - "Update my name"
+     - "Write an email"
+     - "Edit the last email"
 
-Examples:
-- "Hey vroni, the user needs to see their banking dashboard. Could you show them that view?"
-- "Vroni, please pull up the Kanban board for the user."
-- "Hey ali, could you help manage this task? The user wants to create a new reminder."
+2. vroni (UI/Navigation Agent):
+   - Handles navigation requests
+   - Shows dashboards and views
+   - Manages UI components and layouts
+   - Examples:
+     - "Show me the dashboard"
+     - "Open the Kanban board"
+     - "Take me to settings"
 
-Available agents:
-- vroni: UI and Navigation specialist (handles ALL view-related requests)
-- ali: Task management specialist
+DELEGATION RULES:
+- For name changes or email tasks → ALWAYS delegate to ali
+- For viewing or navigation requests → ALWAYS delegate to vroni
 
-For ANY request related to viewing, navigating, or showing UI components, ALWAYS delegate to vroni.
-For task management requests, delegate to ali.
-`;
+Examples of correct delegation:
+1. User: "I want to change my name to John"
+   → Delegate to ali: "Hey ali, please help update the user's name to John"
+
+2. User: "Show me the settings"
+   → Delegate to vroni: "Vroni, please show the user their settings view"
+
+3. User: "I need to write an email"
+   → Delegate to ali: "Hey ali, please help the user compose a new email"
+
+Please analyze the conversation context carefully to understand the user's true intent before delegating.`;
 
     private readonly tools = [
         {
@@ -132,6 +154,14 @@ For task management requests, delegate to ali.
             // Handle delegation to Vroni with clean context
             if (delegation.to === 'vroni') {
                 return await vroniAgent.processRequest(delegation.task, {
+                    delegatedFrom: {
+                        agent: this.agentName,
+                        reasoning: delegation.reasoning
+                    },
+                    userMessage,
+                });
+            } else if (delegation.to === 'ali') {
+                return await aliAgent.processRequest(delegation.task, {
                     delegatedFrom: {
                         agent: this.agentName,
                         reasoning: delegation.reasoning
