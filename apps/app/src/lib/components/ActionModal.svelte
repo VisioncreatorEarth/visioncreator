@@ -20,7 +20,7 @@
 
 	// State management
 	let isModalOpen = false;
-	let activeTab = 'actions';
+	let activeTab = 'views';
 	let isMenuMode = true;
 	let isPressed = false;
 	let isRecording = false;
@@ -107,7 +107,7 @@
 			isMenuMode = type === 'menu';
 
 			if (type === 'menu') {
-				activeTab = 'actions';
+				activeTab = 'views';
 			}
 		}, 0);
 	}
@@ -270,7 +270,7 @@
 				</div>
 			{:else if currentModalType === 'menu'}
 				<div class="relative">
-					<TabMenu {activeTab} on:setActiveTab={setActiveTab}>
+					<TabMenu {activeTab} on:setActiveTab={setActiveTab} on:closeModal={() => toggleModal()}>
 						<svelte:fragment slot="content">
 							{#if activeTab === 'actions'}
 								<ActionButtons
