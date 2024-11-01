@@ -218,12 +218,15 @@
 	async function handleTranscriptionComplete(text: string) {
 		try {
 			modalState = 'processing';
+			const response = await hominioAgent.processRequest(text);
 
-			// Get current context safely
-			const context = conversationManager.getMessageContext() || [];
-
-			// Process through Hominio
-			const response = await hominioAgent.processRequest(text, context);
+			if (response?.success && response?.viewUpdated) {
+				// Close modal after successful view update
+				setTimeout(() => {
+					resetConversationState();
+					dispatch('close');
+				}, 300);
+			}
 
 			modalState = 'result';
 
@@ -231,7 +234,7 @@
 			if (response?.message?.payload) {
 				switch (response.message.payload.type) {
 					case 'view':
-						handleViewPayload(response.message.payload);
+						await handleViewPayload(response.message.payload);
 						break;
 					case 'form':
 						handleFormPayload(response.message.payload);
@@ -260,16 +263,26 @@
 
 	async function handleViewPayload(payload: any) {
 		if (payload?.data?.view) {
-			// Directly use dynamicView.set()
-			dynamicView.set({ view: payload.data.view });
+			try {
+				// Update the view
+				dynamicView.set({ view: payload.data.view });
 
-			setTimeout(() => {
-				resetConversationState();
-				dispatch('close');
-				if (window.location.pathname !== '/me') {
-					goto('/me');
+				// Wait a brief moment to ensure view update is processed
+				await new Promise((resolve) => setTimeout(resolve, 100));
+
+				// Close the modal and reset state
+				if (payload.data.success) {
+					resetConversationState();
+					dispatch('close');
+
+					// Navigate if needed
+					if (window.location.pathname !== '/me') {
+						await goto('/me');
+					}
 				}
-			}, 300);
+			} catch (error) {
+				console.error('Error handling view payload:', error);
+			}
 		}
 	}
 
@@ -318,7 +331,9 @@
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-40 bg-surface-800/50 backdrop-blur-sm"
+		class="fixed inset-0 z-40 bg-surface-800/50 {!currentAction?.type?.includes('ai')
+			? 'backdrop-blur-sm'
+			: ''}"
 		class:hidden={!isOpen}
 		on:click|self={() => dispatch('close')}
 		transition:fade={{ duration: 200 }}

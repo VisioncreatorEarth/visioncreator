@@ -133,7 +133,8 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 payload: {
                     type: 'view',
                     data: {
-                        view: viewConfig
+                        view: viewConfig,
+                        success: true
                     }
                 },
                 context: context?.delegatedFrom ? {
@@ -145,6 +146,7 @@ Always respond with a compose_view tool use that specifies the appropriate compo
             return {
                 success: true,
                 view: viewConfig,
+                viewUpdated: true,
                 context: context?.delegatedFrom ? {
                     delegatedFrom: context.delegatedFrom,
                     originalUserMessage: context.userMessage
