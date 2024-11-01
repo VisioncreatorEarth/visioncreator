@@ -11,13 +11,11 @@ IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to other a
 Available agents:
 - vroni: UI and Navigation specialist (handles ALL view-related requests)
 - ali: Task management specialist
-- walter: Data analysis specialist
-- bert: General assistance specialist
+
 
 For ANY request related to viewing, navigating, or showing UI components, ALWAYS delegate to vroni.
 For task management requests, delegate to ali.
-For data analysis requests, delegate to walter.
-For general assistance, delegate to bert.`;
+`;
 
     private readonly tools = [
         {
@@ -28,8 +26,8 @@ For general assistance, delegate to bert.`;
                 properties: {
                     to: {
                         type: "string",
-                        description: "The agent to delegate to (ali, vroni, walter, bert)",
-                        enum: ["ali", "vroni", "walter", "bert"]
+                        description: "The agent to delegate to (ali, vroni)",
+                        enum: ["ali", "vroni"]
                     },
                     task: {
                         type: "string",

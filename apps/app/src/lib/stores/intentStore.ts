@@ -1,7 +1,6 @@
 import { writable, get } from 'svelte/store';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 import type { AgentType, AgentPayload } from '../types/agent.types';
-import { agentLogger } from '$lib/utils/logger';
 
 export interface Message {
     id: string;
@@ -88,43 +87,39 @@ export class ConversationManager {
 
     constructor() {
         this.store.subscribe(state => {
-            this.currentState = state;
+            this.currentState = state || defaultConversationState;
         });
     }
 
-    getMessageContext() {
+    getMessageContext(): Message[] {
         const currentConversation = this.getCurrentConversation();
-        return {
-            previousMessages: currentConversation?.messages || [],
-            currentView: currentConversation?.currentView,
-            activeDrafts: currentConversation?.activeDrafts,
-            userPreferences: currentConversation?.userPreferences
-        };
-    }
-
-    getCurrentConversation() {
-        if (!this.currentState.currentConversationId) {
-            // Create new conversation if none exists
-            const newConversation = {
-                id: crypto.randomUUID(),
-                messages: [],
-                isActive: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            };
-
-            this.store.update(state => ({
-                ...state,
-                currentConversationId: newConversation.id,
-                conversations: [...state.conversations, newConversation]
-            }));
-
-            return newConversation;
+        if (!currentConversation) {
+            return [];
         }
 
-        return this.currentState.conversations.find(
-            conv => conv.id === this.currentState.currentConversationId
+        return currentConversation.messages.filter(msg =>
+            msg.status === 'complete' &&
+            msg.agent !== 'system'
         );
+    }
+
+    getCurrentConversation(state = this.currentState): AgentConversation | undefined {
+        // Ensure state and conversations exist
+        if (!state || !state.conversations) {
+            const newState = {
+                ...defaultConversationState,
+                conversations: []
+            };
+            this.store.set(newState);
+            return this.startNewConversation();
+        }
+
+        // If no current conversation, start a new one
+        if (!state.currentConversationId || !state.conversations.find(c => c.id === state.currentConversationId)) {
+            return this.startNewConversation();
+        }
+
+        return state.conversations.find(conv => conv.id === state.currentConversationId);
     }
 
     addMessage(message: Partial<Message> & { agent: AgentType; content: string }) {
@@ -135,30 +130,54 @@ export class ConversationManager {
             ...message
         };
 
+        // Ensure we have a valid conversation
+        let currentConversation = this.getCurrentConversation();
+        if (!currentConversation) {
+            currentConversation = this.startNewConversation();
+        }
+
         console.log(`[${fullMessage.agent}] ${fullMessage.content}${fullMessage.payload ?
                 `\n<payload type="${fullMessage.payload.type}">${JSON.stringify(fullMessage.payload.data)}</payload>` :
                 ''
             }`);
 
-        conversationStore.update(state => {
-            const currentConversation = this.getCurrentConversation(state);
-            if (!currentConversation) return state;
+        this.store.update(state => {
+            if (!state.conversations) {
+                state.conversations = [];
+            }
 
             const updatedConversation = {
-                ...currentConversation,
-                messages: [...currentConversation.messages, fullMessage],
+                ...currentConversation!,
+                messages: [...(currentConversation?.messages || []), fullMessage],
                 updatedAt: new Date().toISOString()
             };
 
             return {
                 ...state,
                 conversations: state.conversations.map(conv =>
-                    conv.id === currentConversation.id ? updatedConversation : conv
+                    conv.id === currentConversation!.id ? updatedConversation : conv
                 )
             };
         });
 
         return fullMessage;
+    }
+
+    startNewConversation(): AgentConversation {
+        const newConversation: AgentConversation = {
+            id: crypto.randomUUID(),
+            messages: [],
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        this.store.update(state => ({
+            currentConversationId: newConversation.id,
+            conversations: [...(state?.conversations || []), newConversation]
+        }));
+
+        return newConversation;
     }
 
     updateMessage(messageId: string, updates: Partial<Message>) {
@@ -176,8 +195,8 @@ export class ConversationManager {
 
             if (updatedMessage.content) {
                 console.log(`[${updatedMessage.agent}] ${updatedMessage.content}${updatedMessage.payload ?
-                        `\n<payload type="${updatedMessage.payload.type}">${JSON.stringify(updatedMessage.payload.data)}</payload>` :
-                        ''
+                    `\n<payload type="${updatedMessage.payload.type}">${JSON.stringify(updatedMessage.payload.data)}</payload>` :
+                    ''
                     }`);
             }
 
@@ -200,39 +219,42 @@ export class ConversationManager {
         });
     }
 
-    startNewConversation() {
-        const newConversation: AgentConversation = {
-            id: crypto.randomUUID(),
-            messages: [],
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-
-        const currentState = get(conversationStore) || defaultConversationState;
-        const updatedState = {
-            currentConversationId: newConversation.id,
-            conversations: [...(currentState.conversations || []), newConversation]
-        };
-
-        conversationStore.set(updatedState);
-        return newConversation.id;
-    }
-
     endCurrentConversation() {
         const currentState = get(conversationStore);
+
+        // Handle empty or undefined state
+        if (!currentState || !currentState.conversations) {
+            this.store.set(defaultConversationState);
+            return;
+        }
+
         const updatedState = {
             ...currentState,
             currentConversationId: null,
-            conversations: currentState.conversations.map(conv =>
-                conv.isActive ? { ...conv, isActive: false } : conv
-            )
+            conversations: Array.isArray(currentState.conversations)
+                ? currentState.conversations.map(conv =>
+                    conv.isActive ? { ...conv, isActive: false } : conv
+                )
+                : []
         };
-        conversationStore.set(updatedState);
+
+        this.store.set(updatedState);
     }
 
     resetAll() {
-        conversationStore.set(defaultConversationState);
+        this.store.set(defaultConversationState);
+    }
+
+    // Helper method to ensure valid state
+    private ensureValidState(state: ConversationState | null): ConversationState {
+        if (!state) {
+            return defaultConversationState;
+        }
+
+        return {
+            currentConversationId: state.currentConversationId || null,
+            conversations: Array.isArray(state.conversations) ? state.conversations : []
+        };
     }
 }
 
