@@ -5,17 +5,31 @@ import { agentLogger } from '$lib/utils/logger';
 
 export class VroniAgent {
     private readonly agentName = 'vroni';
+    private readonly systemPrompt = `You are Vroni, the UI and Navigation specialist. Your role is to handle all view-related requests.
+
+IMPORTANT: You must ALWAYS use the compose_view tool to generate view configurations.
+
+Available components:
+- o-HelloEarth: Main dashboard/welcome view
+- o-Bring: Shopping and item management
+- o-Banking: Financial information and transactions
+- o-AirBNB: Accommodation bookings
+- o-Splitwise: Expense sharing
+- o-Kanban: Task management
+
+Always respond with a compose_view tool use that specifies the appropriate component.`;
+
     private readonly tools = [
         {
             name: "compose_view",
-            description: "Generate a view configuration based on user request",
+            description: "Generate a view configuration for the UI",
             input_schema: {
                 type: "object",
                 properties: {
                     component: {
                         type: "string",
-                        enum: ["o-HelloEarth", "o-Bring", "o-Banking", "o-AirBNB", "o-Splitwise", "o-Kanban"],
-                        description: "The main component to display"
+                        description: "The component to display",
+                        enum: ["o-HelloEarth", "o-Bring", "o-Banking", "o-AirBNB", "o-Splitwise", "o-Kanban"]
                     }
                 },
                 required: ["component"]
@@ -23,48 +37,16 @@ export class VroniAgent {
         }
     ];
 
-    private readonly systemPrompt = `You are Vroni, the View Agent. Your role is to analyze user requests and return appropriate view configurations.
-
-Available components (always prepend with "o-"):
-- o-HelloEarth: Main dashboard/welcome view
-- o-Bring: Shopping and item management
-- o-Banking: Financial information and transactions
-- o-AirBNB: Accommodation bookings and management
-- o-Splitwise: Expense sharing and tracking
-- o-Kanban: Task and project management
-
-Always generate a view configuration with this exact structure:
-{
-    "id": "MainContainer",
-    "layout": {
-        "areas": "'content'",
-        "columns": "1fr",
-        "rows": "1fr",
-        "overflow": "auto",
-        "style": "p-4 max-w-7xl mx-auto"
-    },
-    "children": [
-        {
-            "id": "ContentArea",
-            "component": "o-[SelectedComponent]",
-            "slot": "content"
-        }
-    ]
-}
-
-Maintain context awareness by considering previous messages in the conversation.
-Respond in a friendly, helpful manner and explain your view choices when appropriate.`;
-
     async processRequest(userMessage: string, context?: any): Promise<AgentResponse> {
         const pendingMsgId = crypto.randomUUID();
 
         try {
             agentLogger.log(this.agentName, 'Starting view request', {
                 userMessage,
-                context
+                context,
+                timestamp: new Date().toISOString()
             });
 
-            // Add Vroni's message
             conversationManager.addMessage({
                 id: pendingMsgId,
                 agent: this.agentName,
@@ -73,59 +55,135 @@ Respond in a friendly, helpful manner and explain your view choices when appropr
                 status: 'pending'
             });
 
-            // For Banking view
-            if (userMessage.toLowerCase().includes('banking')) {
-                agentLogger.log(this.agentName, 'Preparing Banking view configuration');
+            // Log the request to Claude
+            agentLogger.log(this.agentName, 'Sending request to Claude', {
+                messages: [{ role: 'user', content: userMessage }],
+                systemPromptLength: this.systemPrompt.length,
+                tools: this.tools.map(t => t.name)
+            });
 
-                const viewConfig = {
-                    id: "MainContainer",
-                    layout: {
-                        areas: "'content'",
-                        columns: "1fr",
-                        rows: "1fr",
-                        overflow: "auto",
-                        style: "p-4 max-w-7xl mx-auto"
-                    },
-                    children: [
-                        {
-                            id: "ContentArea",
-                            component: "o-Banking",
-                            slot: "content"
-                        }
-                    ]
-                };
+            const claudeResponse = await client.mutate<ClaudeResponse>({
+                operationName: 'askClaude',
+                input: {
+                    messages: [{ role: 'user', content: userMessage }],
+                    system: this.systemPrompt,
+                    tools: this.tools,
+                    temperature: 0.7
+                }
+            });
 
-                agentLogger.log(this.agentName, 'View configuration generated', {
-                    viewConfig
+            // Detailed logging of Claude response
+            agentLogger.log(this.agentName, 'Claude response structure', {
+                hasData: !!claudeResponse?.data,
+                contentLength: claudeResponse?.data?.content?.length,
+                contentTypes: claudeResponse?.data?.content?.map(c => ({
+                    type: c.type,
+                    hasText: !!c.text,
+                    hasToolUse: !!c.tool_use,
+                    toolUseName: c.tool_use?.name,
+                    toolUseInput: c.tool_use?.input
+                }))
+            });
+
+            // Validate response structure
+            if (!claudeResponse?.data?.content) {
+                agentLogger.log(this.agentName, 'Missing content in Claude response', {
+                    response: claudeResponse?.data
                 });
-
-                // Update message with view configuration
-                conversationManager.updateMessage(pendingMsgId, {
-                    content: 'Navigating to Banking view...',
-                    status: 'complete',
-                    payload: {
-                        type: 'view',
-                        data: {
-                            view: viewConfig,
-                            action: 'showView'
-                        }
-                    }
-                });
-
-                return { success: true };
+                throw new Error('Invalid Claude response structure');
             }
 
-            agentLogger.log(this.agentName, 'Unsupported view request', {
-                userMessage
-            }, 'warn');
+            // Log each content item separately
+            claudeResponse.data.content.forEach((item, index) => {
+                agentLogger.log(this.agentName, `Content item ${index}`, {
+                    type: item.type,
+                    text: item.text,
+                    toolUse: item.tool_use,
+                    hasToolUse: !!item.tool_use
+                });
+            });
 
-            throw new Error(`Unsupported view request: ${userMessage}`);
+            // Extract and validate tool use
+            const toolUseContent = claudeResponse.data.content.find(c => c.type === 'tool_use');
+
+            agentLogger.log(this.agentName, 'Tool use content found', {
+                toolUseContent,
+                hasToolUse: !!toolUseContent,
+                properties: toolUseContent ? Object.keys(toolUseContent) : []
+            });
+
+            if (!toolUseContent || toolUseContent.name !== 'compose_view' || !toolUseContent.input?.component) {
+                agentLogger.log(this.agentName, 'Invalid tool use validation', {
+                    hasToolUseContent: !!toolUseContent,
+                    name: toolUseContent?.name,
+                    hasComponent: !!toolUseContent?.input?.component,
+                    rawContent: claudeResponse.data.content
+                });
+                throw new Error('Invalid view configuration response');
+            }
+
+            const selectedComponent = toolUseContent.input.component;
+
+            // Validate component name
+            const validComponents = ["o-HelloEarth", "o-Bring", "o-Banking", "o-AirBNB", "o-Splitwise", "o-Kanban"];
+            if (!validComponents.includes(selectedComponent)) {
+                agentLogger.log(this.agentName, 'Invalid component selected', {
+                    selectedComponent,
+                    validComponents
+                });
+                throw new Error(`Invalid component selected: ${selectedComponent}`);
+            }
+
+            // Generate view configuration
+            const viewConfig = {
+                id: "MainContainer",
+                layout: {
+                    areas: "'content'",
+                    columns: "1fr",
+                    rows: "1fr",
+                    overflow: "auto",
+                    style: "p-4 max-w-7xl mx-auto"
+                },
+                children: [
+                    {
+                        id: "ContentArea",
+                        component: selectedComponent,
+                        slot: "content"
+                    }
+                ]
+            };
+
+            agentLogger.log(this.agentName, 'View configuration generated', {
+                viewConfig,
+                selectedComponent,
+                timestamp: new Date().toISOString()
+            });
+
+            // Update message with view configuration
+            conversationManager.updateMessage(pendingMsgId, {
+                content: `Navigating to ${selectedComponent}...`,
+                status: 'complete',
+                payload: {
+                    type: 'view',
+                    data: {
+                        view: viewConfig,
+                        action: 'showView'
+                    }
+                }
+            });
+
+            return { success: true };
 
         } catch (error) {
             agentLogger.log(this.agentName, 'Error processing view request', {
-                error,
+                error: error instanceof Error ? {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                } : error,
                 userMessage,
-                context
+                context,
+                timestamp: new Date().toISOString()
             }, 'error');
 
             conversationManager.updateMessage(pendingMsgId, {

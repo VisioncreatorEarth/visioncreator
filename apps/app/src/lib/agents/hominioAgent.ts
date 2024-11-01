@@ -65,12 +65,19 @@ Example delegation for a view request:
     private readonly agentName = 'hominio';
 
     async processRequest(userMessage: string): Promise<AgentResponse> {
-        let pendingMsgId = crypto.randomUUID();
+        const pendingMsgId = crypto.randomUUID();
 
         try {
             agentLogger.log(this.agentName, 'Starting request processing', { userMessage });
 
-            // Add user message to conversation
+            // Get current conversation state
+            const currentState = conversationManager.getCurrentConversation();
+            const conversationHistory = currentState?.messages.map(msg => ({
+                role: msg.agent === 'user' ? 'user' : 'assistant',
+                content: msg.content
+            })) || [];
+
+            // Add user message
             conversationManager.addMessage({
                 id: crypto.randomUUID(),
                 agent: 'user',
@@ -79,7 +86,7 @@ Example delegation for a view request:
                 status: 'complete'
             });
 
-            // Initial Hominio message
+            // Add initial Hominio message
             conversationManager.addMessage({
                 id: pendingMsgId,
                 agent: this.agentName,
@@ -88,14 +95,14 @@ Example delegation for a view request:
                 status: 'pending'
             });
 
-            // First Claude call to get delegation
+            // First Claude call with conversation history
             const response = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
-                    messages: [{
-                        role: 'user',
-                        content: userMessage
-                    }],
+                    messages: [
+                        ...conversationHistory,
+                        { role: 'user', content: userMessage }
+                    ],
                     system: this.systemPrompt,
                     tools: this.tools,
                     temperature: 0.7
@@ -127,8 +134,9 @@ Example delegation for a view request:
                     return await vroniAgent.processRequest('Show the Banking view', {
                         delegatedFrom: {
                             agent: this.agentName,
-                            reasoning: 'Direct banking view request'
-                        }
+                            reasoning: 'Direct banking request detected'
+                        },
+                        conversationHistory
                     });
                 }
                 throw new Error('No tool use response and no direct view match');

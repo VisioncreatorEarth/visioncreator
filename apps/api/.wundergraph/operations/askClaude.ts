@@ -47,6 +47,9 @@ export default createOperation.mutation({
         temperature: z.number().optional().default(0.7)
     }),
     requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated"],
+    },
     handler: async ({ input, context }) => {
         console.log('askClaude - Starting operation with input:', {
             messages: input.messages,
@@ -63,7 +66,7 @@ export default createOperation.mutation({
         try {
             console.log('askClaude - Calling Anthropic API');
             const response = await context.anthropic.messages.create({
-                model: "claude-3-5-sonnet-20240620",
+                model: "claude-3-5-sonnet-20241022",
                 max_tokens: 1024,
                 temperature: input.temperature,
                 system: input.system,
