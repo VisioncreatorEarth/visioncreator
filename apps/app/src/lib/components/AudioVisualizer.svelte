@@ -6,6 +6,8 @@
 
 	export let isRecording: boolean;
 	export let audioStream: MediaStream | null;
+	export let mode: 'user' | 'hominio' = 'user';
+	export let audioElement: HTMLAudioElement | null = null;
 
 	const me = getContext('me');
 
@@ -51,10 +53,14 @@
 		}
 	});
 
-	$: if (browser && audioMotion && isRecording && audioStream) {
-		connectMicrophone(audioStream);
-	} else if (browser && audioMotion && !isRecording) {
-		disconnectMicrophone();
+	$: if (browser && audioMotion) {
+		if (isRecording && audioStream) {
+			connectMicrophone(audioStream);
+		} else if (audioElement) {
+			connectAudioElement(audioElement);
+		} else {
+			disconnectInput();
+		}
 	}
 
 	function connectMicrophone(stream: MediaStream) {
@@ -65,7 +71,14 @@
 		}
 	}
 
-	function disconnectMicrophone() {
+	function connectAudioElement(audio: HTMLAudioElement) {
+		if (audioMotion) {
+			const source = audioMotion.audioCtx.createMediaElementSource(audio);
+			audioMotion.connectInput(source);
+		}
+	}
+
+	function disconnectInput() {
 		if (audioMotion && micStream) {
 			audioMotion.disconnectInput(micStream, true);
 		}
@@ -85,14 +98,17 @@
 	<!-- Centered avatar - adjusted for perfect centering -->
 	<div class="absolute inset-0 flex items-center justify-center">
 		<div class="flex items-center justify-center w-24 h-24">
-			<!-- <img src="logo.png" /> -->
-			<Avatar
-				me={{
-					data: { seed: 'random user' },
-					design: { highlight: true },
-					size: 'lg'
-				}}
-			/>
+			{#if mode === 'hominio'}
+				<img src="/logo.png" alt="Hominio" class="w-full h-full" />
+			{:else}
+				<Avatar
+					me={{
+						data: { seed: 'random user' },
+						design: { highlight: true },
+						size: 'lg'
+					}}
+				/>
+			{/if}
 		</div>
 	</div>
 </div>

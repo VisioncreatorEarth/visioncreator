@@ -32,6 +32,9 @@
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
 
+	let hominioAudio: HTMLAudioElement | null = null;
+	let visualizerMode: 'user' | 'hominio' = 'user';
+
 	// Type definitions
 	interface Message {
 		id: string;
@@ -214,27 +217,44 @@
 		currentAction = null;
 	}
 
-	// Add this function to handle voice transcription completion
+	// Add this helper function at the top with other functions
+	function getRandomWorkingAudio() {
+		const audioNum = Math.floor(Math.random() * 5) + 1;
+		return `/audio/workingonit${audioNum}.mp3`;
+	}
+
+	async function playHominioResponse() {
+		visualizerMode = 'hominio';
+		hominioAudio = new Audio(getRandomWorkingAudio());
+
+		hominioAudio.play();
+		return new Promise((resolve) => {
+			hominioAudio!.addEventListener('ended', () => {
+				resolve(true);
+			});
+		});
+	}
+
+	// Update the handleTranscriptionComplete function
 	async function handleTranscriptionComplete(text: string) {
 		try {
 			modalState = 'processing';
-			const response = await hominioAgent.processRequest(text);
+			visualizerMode = 'hominio';
 
-			if (response?.success && response?.viewUpdated) {
-				// Close modal after successful view update
-				setTimeout(() => {
-					resetConversationState();
-					dispatch('close');
-				}, 300);
-			}
+			// Start both the audio playback and request processing in parallel
+			const [response] = await Promise.all([
+				hominioAgent.processRequest(text, conversationManager.getMessageContext() || []),
+				playHominioResponse()
+			]);
 
 			modalState = 'result';
+			visualizerMode = 'user';
 
 			// Handle different payload types
 			if (response?.message?.payload) {
 				switch (response.message.payload.type) {
 					case 'view':
-						await handleViewPayload(response.message.payload);
+						handleViewPayload(response.message.payload);
 						break;
 					case 'form':
 						handleFormPayload(response.message.payload);
@@ -248,7 +268,6 @@
 				}
 			}
 
-			// Scroll to bottom after new messages
 			scrollToBottom();
 		} catch (error) {
 			console.error('Error processing request:', error);
@@ -258,6 +277,12 @@
 				'system',
 				'error'
 			);
+		} finally {
+			// Cleanup audio
+			if (hominioAudio) {
+				hominioAudio.pause();
+				hominioAudio = null;
+			}
 		}
 	}
 
@@ -406,9 +431,14 @@
 									</ol>
 								</div>
 							</div>
-						{:else if modalState === 'recording'}
+						{:else if modalState === 'recording' || modalState === 'processing'}
 							<div class="flex items-center justify-center flex-1">
-								<AudioVisualizer isRecording={true} {audioStream} />
+								<AudioVisualizer
+									isRecording={modalState === 'recording'}
+									audioStream={modalState === 'recording' ? audioStream : null}
+									mode={visualizerMode}
+									audioElement={modalState === 'processing' ? hominioAudio : null}
+								/>
 							</div>
 						{:else if modalState === 'transcribing'}
 							<div class="flex items-center justify-center flex-1">
