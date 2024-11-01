@@ -54,7 +54,16 @@ For general assistance, delegate to bert.`;
         try {
             agentLogger.log(this.agentName, 'Starting request processing', { userMessage });
 
-            // Add initial pending message
+            // First add the user's message to the conversation
+            conversationManager.addMessage({
+                id: crypto.randomUUID(),
+                agent: 'user',
+                content: userMessage,
+                timestamp: new Date().toISOString(),
+                status: 'complete'
+            });
+
+            // Then add Hominio's pending message
             conversationManager.addMessage({
                 id: pendingMsgId,
                 agent: this.agentName,
