@@ -135,10 +135,10 @@ export class ConversationManager {
             ...message
         };
 
-        agentLogger.log(fullMessage.agent, 'New message', {
-            content: fullMessage.content,
-            payload: fullMessage.payload
-        });
+        console.log(`[${fullMessage.agent}] ${fullMessage.content}${fullMessage.payload ?
+                `\n<payload type="${fullMessage.payload.type}">${JSON.stringify(fullMessage.payload.data)}</payload>` :
+                ''
+            }`);
 
         conversationStore.update(state => {
             const currentConversation = this.getCurrentConversation(state);
@@ -174,11 +174,12 @@ export class ConversationManager {
                 ...updates
             };
 
-            agentLogger.log(updatedMessage.agent, 'Updated message', {
-                content: updatedMessage.content,
-                payload: updatedMessage.payload,
-                status: updatedMessage.status
-            });
+            if (updatedMessage.content) {
+                console.log(`[${updatedMessage.agent}] ${updatedMessage.content}${updatedMessage.payload ?
+                        `\n<payload type="${updatedMessage.payload.type}">${JSON.stringify(updatedMessage.payload.data)}</payload>` :
+                        ''
+                    }`);
+            }
 
             const updatedMessages = currentConversation.messages.map(msg =>
                 msg.id === messageId ? updatedMessage : msg

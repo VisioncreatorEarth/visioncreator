@@ -2,7 +2,6 @@ import type { AgentResponse, AgentType, ClaudeResponse, MockResponse } from '../
 import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { vroniAgent } from './agentVroni';
-import { agentLogger } from '$lib/utils/logger';
 
 export class HominioAgent {
     private readonly systemPrompt = `You are Hominio, the delegation specialist. Your role is to analyze user requests and delegate tasks to the appropriate specialized agent.
@@ -52,20 +51,9 @@ For general assistance, delegate to bert.`;
         const pendingMsgId = crypto.randomUUID();
 
         try {
-            agentLogger.log(this.agentName, 'Starting request processing', { userMessage });
-
-            // Get current conversation before adding new messages
             const currentConversation = conversationManager.getCurrentConversation();
 
-            // Format conversation history - only include essential content
-            const conversationHistory = currentConversation?.messages
-                ?.filter(msg => msg.content && msg.status === 'complete') // Only include complete messages
-                ?.map(msg => ({
-                    role: msg.agent === 'user' ? 'user' : 'assistant',
-                    content: msg.content
-                })) || [];
-
-            // Add user message to conversation store
+            // Add user message
             conversationManager.addMessage({
                 id: crypto.randomUUID(),
                 agent: 'user',
@@ -78,30 +66,22 @@ For general assistance, delegate to bert.`;
             conversationManager.addMessage({
                 id: pendingMsgId,
                 agent: this.agentName,
-                content: 'Let me help you with that...',
-                timestamp: new Date().toISOString(),
-                status: 'pending'
+                content: 'Analyzing your request...',
+                status: 'pending',
+                timestamp: new Date().toISOString()
             });
 
-            // Prepare messages for Claude
-            const messages = [
-                ...conversationHistory,
-                { role: 'user', content: userMessage }
-            ];
-
-            agentLogger.log(this.agentName, 'Sending request to Claude', {
-                messagesCount: messages.length,
-                lastMessage: messages[messages.length - 1],
-                historyLength: conversationHistory.length
-            });
+            const messages = this.prepareMessagesForClaude(
+                currentConversation?.messages || [],
+                userMessage
+            );
 
             const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
                     messages,
                     system: this.systemPrompt,
-                    tools: this.tools,
-                    temperature: 0.7
+                    tools: this.tools
                 }
             });
 
@@ -119,9 +99,6 @@ For general assistance, delegate to bert.`;
             const toolUseContent = claudeResponse?.data?.content?.find(c => c.type === 'tool_use');
 
             if (!toolUseContent) {
-                agentLogger.log(this.agentName, 'No tool use found in response', {
-                    content: claudeResponse?.data?.content
-                });
                 throw new Error('No tool use response found');
             }
 
@@ -146,13 +123,8 @@ For general assistance, delegate to bert.`;
             throw new Error(`Unsupported delegation target: ${delegation.to}`);
 
         } catch (error) {
-            agentLogger.log(this.agentName, 'Error processing request', {
-                error,
-                userMessage
-            }, 'error');
-
             conversationManager.updateMessage(pendingMsgId, {
-                content: 'I encountered an error while processing your request. Could you please try again?',
+                content: 'Sorry, I could not process that request.',
                 status: 'error',
                 payload: {
                     type: 'error',
@@ -167,6 +139,41 @@ For general assistance, delegate to bert.`;
                 error: error instanceof Error ? error.message : 'Unknown error'
             };
         }
+    }
+
+    private prepareMessagesForClaude(conversationHistory: Message[], currentMessage: string) {
+        const messages = [];
+
+        // Add conversation history
+        for (const msg of conversationHistory) {
+            if (msg.status === 'complete') {
+                if (msg.agent === 'user') {
+                    messages.push({
+                        role: 'user',
+                        content: msg.content
+                    });
+                } else {
+                    let content = `[${msg.agent}] ${msg.content}`;
+                    if (msg.payload) {
+                        content += `\n<payload type="${msg.payload.type}">${JSON.stringify(msg.payload.data)}</payload>`;
+                    }
+                    messages.push({
+                        role: 'assistant',
+                        content
+                    });
+                }
+            }
+        }
+
+        // Add current message if not already in history
+        if (!messages.some(m => m.role === 'user' && m.content === currentMessage)) {
+            messages.push({
+                role: 'user',
+                content: currentMessage
+            });
+        }
+
+        return messages;
     }
 
     private handleMockResponse(agent: string, task: string, reasoning: string) {

@@ -74,10 +74,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 { role: 'user', content: userMessage }
             ];
 
-            agentLogger.log(this.agentName, 'Sending request to Claude', {
-                messagesCount: messages.length,
-                lastMessage: messages[messages.length - 1]
-            });
 
             const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
@@ -87,34 +83,6 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                     tools: this.tools,
                     temperature: 0.7
                 }
-            });
-
-            agentLogger.log(this.agentName, 'Claude response structure', {
-                hasData: !!claudeResponse?.data,
-                contentLength: claudeResponse?.data?.content?.length,
-                contentTypes: claudeResponse?.data?.content?.map(c => ({
-                    type: c.type,
-                    hasText: !!c.text,
-                    hasToolUse: !!c.tool_use,
-                    toolUseName: c.tool_use?.name,
-                    toolUseInput: c.tool_use?.input
-                }))
-            });
-
-            if (!claudeResponse?.data?.content) {
-                agentLogger.log(this.agentName, 'Missing content in Claude response', {
-                    response: claudeResponse?.data
-                });
-                throw new Error('Invalid Claude response structure');
-            }
-
-            claudeResponse.data.content.forEach((item, index) => {
-                agentLogger.log(this.agentName, `Content item ${index}`, {
-                    type: item.type,
-                    text: item.text,
-                    toolUse: item.tool_use,
-                    hasToolUse: !!item.tool_use
-                });
             });
 
             const toolUseContent = claudeResponse.data.content.find(c => c.type === 'tool_use');
