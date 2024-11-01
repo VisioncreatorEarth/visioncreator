@@ -32,11 +32,32 @@
 	let audioChunks: Blob[] = [];
 	let messageContainer: HTMLDivElement;
 
-	// Simplified store subscription
+	// Type definitions
+	interface Message {
+		id: string;
+		// Add other message properties as needed
+	}
+
+	interface Conversation {
+		id: string;
+		messages: Message[];
+	}
+
+	// Safe store subscription with proper typing
 	conversationStore.subscribe((state) => {
-		currentConversation = state.conversations.find(
-			(conv) => conv.id === state.currentConversationId
-		);
+		if (!state) {
+			currentConversation = null;
+			return;
+		}
+
+		const conversations = state.conversations || [];
+		const currentConversationId = state.currentConversationId;
+
+		if (currentConversationId && Array.isArray(conversations)) {
+			currentConversation = conversations.find((conv) => conv.id === currentConversationId) || null;
+		} else {
+			currentConversation = null;
+		}
 	});
 
 	onMount(() => {
@@ -198,8 +219,8 @@
 		try {
 			modalState = 'processing';
 
-			// Get current context
-			const context = conversationManager.getMessageContext();
+			// Get current context safely
+			const context = conversationManager.getMessageContext() || [];
 
 			// Process through Hominio
 			const response = await hominioAgent.processRequest(text, context);
