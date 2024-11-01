@@ -33,13 +33,6 @@
 	// Keep track of the initial modal type to prevent unwanted changes
 	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
 
-	$: {
-		if (myIntentRef && dev) {
-			// Keep only if absolutely necessary for debugging in development
-			console.error('[Error] MyIntent reference issue:', myIntentRef);
-		}
-	}
-
 	function handleClose(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			isModalOpen = false;
@@ -55,17 +48,18 @@
 		pressStartTime = performance.now();
 
 		setTimeout(() => {
-			if (isPressed && performance.now() - pressStartTime >= 500) {
-				isIntentModalOpen = true;
-				if (isIntentModalOpen && myIntentRef) {
-					myIntentRef.handleLongPressStart();
-				}
-			}
-			if (isPressed && performance.now() - pressStartTime < 500) {
-				if (session) {
-					toggleModal('menu');
-				} else {
-					toggleModal('login');
+			if (isPressed) {
+				if (dev && isPressed && performance.now() - pressStartTime >= 500) {
+					isIntentModalOpen = true;
+					if (isIntentModalOpen && myIntentRef) {
+						myIntentRef.handleLongPressStart();
+					}
+				} else if (performance.now() - pressStartTime < 500) {
+					if (session) {
+						toggleModal('menu');
+					} else {
+						toggleModal('login');
+					}
 				}
 			}
 		}, 500);
@@ -77,7 +71,7 @@
 
 		if (isPressed) {
 			isPressed = false;
-			if (pressDuration >= 500) {
+			if (dev && pressDuration >= 500) {
 				if (isIntentModalOpen && myIntentRef) {
 					myIntentRef.handleLongPressEnd();
 				}
@@ -206,25 +200,25 @@
 
 <svelte:window on:openModal={handleModalOpen} />
 
-{#if session}
+{#if session && dev}
 	<MyIntent
 		bind:this={myIntentRef}
 		isOpen={isIntentModalOpen}
 		{session}
 		on:close={handleIntentClose}
 	/>
+{/if}
 
-	{#if !isModalOpen || !isMenuMode}
-		<button
-			class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
-			class:recording-border={isRecording}
-			on:mousedown={handleMouseDown}
-			on:mouseup={handleMouseUp}
-			on:mouseleave={handleMouseUp}
-		>
-			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-		</button>
-	{/if}
+{#if session}
+	<button
+		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
+		class:recording-border={isRecording}
+		on:mousedown={handleMouseDown}
+		on:mouseup={handleMouseUp}
+		on:mouseleave={handleMouseUp}
+	>
+		<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+	</button>
 {:else if !isModalOpen}
 	<button
 		class="fixed z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary bottom-4 left-1/2"

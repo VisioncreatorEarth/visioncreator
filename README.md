@@ -176,6 +176,7 @@ for db backup dumps to digital ocean
 - `NEXT_PUBLIC_WG_API`="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
 - `NEXT_PUBLIC_WG_ALLOW_CORS`="frontend app domain f.e. https://xyz.com (vercel hosted)"
 - `NEXT_PUBLIC_WG_AUTH_INFO`="frontend app domain https://xyz.com/auth/userinfo"
+- `ANTHROPIC_API_KEY`="copy-from-anthropic-console-dashboard"
 
 
 ### Frontend
@@ -188,5 +189,6 @@ for db backup dumps to digital ocean
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
 - NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
+- SECRET_OPENAI_API_KEY
 
 3. Connect your domain.

@@ -1,5 +1,4 @@
 import type { AgentResponse } from '../types/agent.types';
-import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { get } from 'svelte/store';
 import { Me } from '$lib/stores';

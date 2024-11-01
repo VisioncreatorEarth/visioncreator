@@ -48,7 +48,7 @@ export default createOperation.mutation({
     }),
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated"],
+        requireMatchAll: ["authenticated", "admin"],
     },
     handler: async ({ input, context }) => {
         console.log('askClaude - Starting operation with input:', {
