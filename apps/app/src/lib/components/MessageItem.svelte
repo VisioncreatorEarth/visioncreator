@@ -78,12 +78,12 @@
 				: 'bg-surface-600 text-tertiary-200'} 
             px-4 py-2 rounded-2xl {message.agent === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'}"
 		>
-			{#if message.payload?.type === 'view'}
+			{#if message.payload}
 				<div class="space-y-2">
 					<div class="flex items-center justify-between gap-2">
 						<div class="flex items-center gap-2">
 							<span class="text-sm">{message.content}</span>
-							{#if message.payload.data?.view?.children?.[0]?.component}
+							{#if message.payload.type === 'view' && message.payload.data?.view?.children?.[0]?.component}
 								<div
 									class="px-2 py-1 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
 								>
@@ -98,13 +98,13 @@
 							{isPayloadVisible ? 'Hide Details' : 'Show Details'}
 						</button>
 					</div>
-					{#if isPayloadVisible && message.payload.data?.view}
+					{#if isPayloadVisible}
 						<div
 							class="p-2 mt-2 border rounded bg-surface-800/50 border-surface-700"
 							transition:slide
 						>
 							<pre class="overflow-x-auto font-mono text-xs whitespace-pre-wrap text-tertiary-200">
-								{JSON.stringify(message.payload.data.view, null, 2)}
+								{JSON.stringify(message.payload.data, null, 2)}
 							</pre>
 						</div>
 					{/if}

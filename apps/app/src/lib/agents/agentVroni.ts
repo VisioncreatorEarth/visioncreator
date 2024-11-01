@@ -140,23 +140,22 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 payload: {
                     type: 'view',
                     data: {
-                        view: viewConfig,
-                        action: 'showView',
-                        context: {
-                            delegatedFrom: context?.delegatedFrom,
-                            originalUserMessage: context?.userMessage
-                        }
+                        view: viewConfig
                     }
-                }
+                },
+                context: context?.delegatedFrom ? {
+                    delegatedFrom: context.delegatedFrom,
+                    originalUserMessage: context.userMessage
+                } : undefined
             });
 
             return {
                 success: true,
                 view: viewConfig,
-                context: {
-                    delegatedFrom: context?.delegatedFrom,
-                    originalUserMessage: context?.userMessage
-                }
+                context: context?.delegatedFrom ? {
+                    delegatedFrom: context.delegatedFrom,
+                    originalUserMessage: context.userMessage
+                } : undefined
             };
 
         } catch (error) {

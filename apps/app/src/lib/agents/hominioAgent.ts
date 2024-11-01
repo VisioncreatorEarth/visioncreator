@@ -106,7 +106,21 @@ For task management requests, delegate to ali.
                 throw new Error('Invalid delegation structure');
             }
 
-            // Handle delegation to Vroni with full context
+            // Add delegation message with its own payload
+            conversationManager.updateMessage(pendingMsgId, {
+                content: `I'll delegate this to ${delegation.to}, who specializes in ${delegation.reasoning}`,
+                status: 'complete',
+                payload: {
+                    type: 'delegation',
+                    data: {
+                        to: delegation.to,
+                        task: delegation.task,
+                        reasoning: delegation.reasoning
+                    }
+                }
+            });
+
+            // Handle delegation to Vroni with clean context
             if (delegation.to === 'vroni') {
                 return await vroniAgent.processRequest(delegation.task, {
                     delegatedFrom: {
