@@ -54,23 +54,7 @@ For general assistance, delegate to bert.`;
         try {
             agentLogger.log(this.agentName, 'Starting request processing', { userMessage });
 
-            // Get current conversation state
-            const currentState = conversationManager.getCurrentConversation();
-            const conversationHistory = currentState?.messages.map(msg => ({
-                role: msg.agent === 'user' ? 'user' : 'assistant',
-                content: msg.content
-            })) || [];
-
-            // Add user message
-            conversationManager.addMessage({
-                id: crypto.randomUUID(),
-                agent: 'user',
-                content: userMessage,
-                timestamp: new Date().toISOString(),
-                status: 'complete'
-            });
-
-            // Add initial Hominio message
+            // Add initial pending message
             conversationManager.addMessage({
                 id: pendingMsgId,
                 agent: this.agentName,
@@ -79,7 +63,6 @@ For general assistance, delegate to bert.`;
                 status: 'pending'
             });
 
-            // First Claude call with conversation history
             const claudeResponse = await client.mutate<ClaudeResponse>({
                 operationName: 'askClaude',
                 input: {
@@ -90,12 +73,15 @@ For general assistance, delegate to bert.`;
                 }
             });
 
-            // Log the Claude response for debugging
-            agentLogger.log(this.agentName, 'Claude response structure', {
-                hasData: !!claudeResponse?.data,
-                content: claudeResponse?.data?.content,
-                toolUse: claudeResponse?.data?.content?.find(c => c.type === 'tool_use')
-            });
+            // Extract the text response from Claude
+            const textContent = claudeResponse?.data?.content?.find(c => c.type === 'text');
+            if (textContent?.text) {
+                // Update the pending message with Claude's delegation text
+                conversationManager.updateMessage(pendingMsgId, {
+                    content: textContent.text,
+                    status: 'processing'
+                });
+            }
 
             // Extract tool use from Claude response
             const toolUseContent = claudeResponse?.data?.content?.find(c => c.type === 'tool_use');

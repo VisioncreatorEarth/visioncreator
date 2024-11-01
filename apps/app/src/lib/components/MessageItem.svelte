@@ -13,11 +13,11 @@
 
 	function getAgentDisplayName(agent: string) {
 		const agentNames = {
-			hominio: 'Hominio (Delegation)',
-			ali: 'Ali (Actions)',
-			vroni: 'Vroni (Views)',
-			walter: 'Walter (Data)',
-			bert: 'Bert (Lists)',
+			hominio: 'Hominio',
+			ali: 'Ali',
+			vroni: 'Vroni',
+			walter: 'Walter',
+			bert: 'Bert',
 			user: 'You'
 		};
 		return agentNames[agent] || agent;
@@ -76,17 +76,21 @@
 				<div class="space-y-2">
 					<div class="flex items-center gap-2">
 						<span class="text-sm">{message.content}</span>
-						<div
-							class="px-2 py-1 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
-						>
-							{message.payload.data.component}
+						{#if message.payload.data?.view?.children?.[0]?.component}
+							<div
+								class="px-2 py-1 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
+							>
+								{message.payload.data.view.children[0].component}
+							</div>
+						{/if}
+					</div>
+					{#if message.payload.data?.view}
+						<div class="p-2 mt-2 border rounded bg-surface-800/50 border-surface-700">
+							<pre class="overflow-x-auto font-mono text-xs whitespace-pre-wrap text-tertiary-200">
+								{JSON.stringify(message.payload.data.view, null, 2)}
+							</pre>
 						</div>
-					</div>
-					<div class="mt-2 p-2 rounded bg-surface-800/50 border border-surface-700">
-						<pre class="text-xs font-mono text-tertiary-200 overflow-x-auto whitespace-pre-wrap">
-							{JSON.stringify(message.payload.data.view, null, 2)}
-						</pre>
-					</div>
+					{/if}
 				</div>
 			{:else}
 				<p class="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -94,7 +98,7 @@
 		</div>
 
 		{#if formattedPayload && message.payload?.type !== 'view'}
-			<div class="w-full mt-2 p-4 rounded-xl bg-surface-800/50 border border-surface-600">
+			<div class="w-full p-4 mt-2 border rounded-xl bg-surface-800/50 border-surface-600">
 				<div class="space-y-2">
 					<div class="flex items-center space-x-2">
 						<span
@@ -103,7 +107,7 @@
 							{formattedPayload.type}
 						</span>
 					</div>
-					<pre class="overflow-x-auto text-xs font-mono text-tertiary-200">
+					<pre class="overflow-x-auto font-mono text-xs text-tertiary-200">
 						{formattedPayload.content}
 					</pre>
 				</div>
