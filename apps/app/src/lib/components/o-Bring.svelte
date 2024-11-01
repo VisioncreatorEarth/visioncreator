@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { bringListStore } from '$lib/agents/bringAgent';
 	import { onMount } from 'svelte';
 
@@ -124,4 +124,4 @@
 			on:click={() => (showDropdown = false)}
 		/>
 	{/if}
-</div>
+</div> -->
