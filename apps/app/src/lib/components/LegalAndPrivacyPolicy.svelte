@@ -38,10 +38,21 @@
 	function closeModal() {
 		window.dispatchEvent(new CustomEvent('closeModal'));
 	}
+
+	// Handle click with a small delay to ensure modal closes
+	function handleClick(e: Event) {
+		e.preventDefault();
+		closeModal();
+		// Use requestAnimationFrame for smoother transition
+		requestAnimationFrame(() => {
+			const target = e.currentTarget as HTMLAnchorElement;
+			window.location.href = target.href;
+		});
+	}
 </script>
 
 <div class="p-4 space-y-2">
-	<header class="text-center p-4">
+	<header class="p-4 text-center">
 		<h2 class="text-2xl text-tertiary-50 h1">Legal Documents</h2>
 		<p class="text-tertiary-300">Important information about your rights and our policies</p>
 	</header>
@@ -50,20 +61,24 @@
 			<!-- English Version -->
 			<a
 				href={link.en.link}
+				data-sveltekit-preload-data="hover"
+				data-sveltekit-noscroll
 				class="px-3 py-2 rounded-xl bg-surface-800/50 border border-surface-700 hover:bg-surface-700/50 transition-colors flex items-center justify-center min-h-[2.5rem]"
-				on:click={closeModal}
+				on:click={handleClick}
 			>
-				<span class="block text-sm text-tertiary-100 break-words text-center">
+				<span class="block text-sm text-center break-words text-tertiary-100">
 					{link.en.title}
 				</span>
 			</a>
 			<!-- German Version -->
 			<a
 				href={link.de.link}
+				data-sveltekit-preload-data="hover"
+				data-sveltekit-noscroll
 				class="px-3 py-2 rounded-xl bg-surface-800/50 border border-surface-700 hover:bg-surface-700/50 transition-colors flex items-center justify-center min-h-[2.5rem]"
-				on:click={closeModal}
+				on:click={handleClick}
 			>
-				<span class="block text-sm text-tertiary-300 break-words text-center">
+				<span class="block text-sm text-center break-words text-tertiary-300">
 					{link.de.title}
 				</span>
 			</a>
