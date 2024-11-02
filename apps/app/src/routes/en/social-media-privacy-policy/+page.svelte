@@ -1,14 +1,17 @@
 <TextWrap>
-	<div class="image-container mb-10 w-28">
+	<div class="mb-10 image-container w-28">
 		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
 	</div>
 	<h3>Our social media appearances</h3>
 	<h4>This privacy policy applies to the following social media presence</h4>
 	<ul>
-		<li><a class="underline" href="https://x.com/1BillionVCs">x.com</a></li>
-		<li><a class="underline" href="https://instagram.com/1BillionVCs">Instagram</a></li>
-		<li><a class="underline" href="https://linkedin.com/company/1BillionVCs">LinkedIn</a></li>
-		<li><a class="underline" href="https://youtube.com/@1BillionVCs">Youtube</a></li>
+		<li><a href="https://x.com/1BillionVCs">https://x.com/1BillionVCs</a></li>
+		<li><a href="https://instagram.com/1BillionVCs">https://instagram.com/1BillionVCs</a></li>
+		<li>
+			<a href="https://linkedin.com/company/1BillionVCs">https://linkedin.com/company/1BillionVCs</a
+			>
+		</li>
+		<li><a href="https://youtube.com/@1BillionVCs">https://youtube.com/@1BillionVCs</a></li>
 	</ul>
 	<h4>Data processing through social networks</h4>
 	<p>
