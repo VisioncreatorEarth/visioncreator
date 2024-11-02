@@ -4,6 +4,7 @@ content: '@{{ template "content" . }}'
 name: "@{{ .Subscriber.Name }}"
 unsubscribeUrl: "@{{ UnsubscribeURL }}"
 emailUnsub: '@{{ L.T "email.unsub" }}'
+trackView: "@{{ TrackView }}"
 ---
 
 <x-main>
@@ -11,7 +12,7 @@ emailUnsub: '@{{ L.T "email.unsub" }}'
     <div class="-mx-8 -mt-8 overflow-hidden rounded-t-3xl sm:-mx-4 sm:-mt-4">
       <div style="max-width: 600px; margin: 0 auto; position: relative">
         <img
-          src="https://visioncreator.earth/images/visionletter/002_cover.png"
+          src="https://listmonk.visioncreator.earth/uploads/004_poster_uY6Nx4.png"
           alt="Episode cover"
           style="display: block; width: 100%; max-width: 100%; height: auto"
         />
@@ -29,7 +30,7 @@ emailUnsub: '@{{ L.T "email.unsub" }}'
             <tr>
               <td align="center" valign="middle">
                 <x-button
-                  href="https://visioncreator.earth/episodes?video=002@TrackLink"
+                  href="https://visioncreator.earth/episodes?video=003@TrackLink"
                   class="w-auto mx-auto"
                 >
                   Watch Video &rarr;
@@ -52,4 +53,5 @@ emailUnsub: '@{{ L.T "email.unsub" }}'
       </a>
     </div>
   </div>
+  {{{ page.trackView }}}
 </x-main>
