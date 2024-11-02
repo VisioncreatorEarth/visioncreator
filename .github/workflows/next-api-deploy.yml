@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy app (Next)
+    name: Deploy API (Next)
     runs-on: ubuntu-latest
     environment: Next
 
@@ -48,9 +48,11 @@ jobs:
             NANGO_SECRET_KEY="${{ secrets.NANGO_SECRET_KEY }}" \
             NANGO_HOST="${{ secrets.NANGO_HOST }}" \
             POSTMARK_SERVER_TOKEN="${{ secrets.POSTMARK_SERVER_TOKEN }}" \
+            POLAR_ACCESS_TOKEN="${{ secrets.POLAR_ACCESS_TOKEN }}" \
             NEXT_PUBLIC_WG_API="${{ secrets.NEXT_PUBLIC_WG_API }}" \
             NEXT_PUBLIC_WG_ALLOW_CORS="${{ secrets.NEXT_PUBLIC_WG_ALLOW_CORS }}" \
-            NEXT_PUBLIC_WG_AUTH_INFO="${{ secrets.NEXT_PUBLIC_WG_AUTH_INFO }}"
+            NEXT_PUBLIC_WG_AUTH_INFO="${{ secrets.NEXT_PUBLIC_WG_AUTH_INFO }}" \
+            ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
 
           # Deploy the app
           flyctl deploy --config fly.next.toml --remote-only

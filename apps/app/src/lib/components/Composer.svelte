@@ -18,7 +18,6 @@
 		gap?: string;
 		style?: string;
 		overflow?: 'hidden' | 'auto';
-		scale?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 	}
 
 	interface IComposer {
@@ -37,9 +36,6 @@
 	export let showSpacer = true;
 
 	let queryClient;
-
-	let spacerHeight = '100px'; // You can make this a prop if you want to customize it
-	let isTopLevel = !composer.slot;
 
 	let layoutStyle = '';
 	let unsubscribers = [];
@@ -113,39 +109,6 @@
         `;
 	}
 
-	function getScaleStyle(scale?: string): string {
-		if (!scale) return '';
-		const scaleMap = {
-			xs: '320px',
-			sm: '480px',
-			md: '768px',
-			lg: '1024px',
-			xl: '1280px',
-			'2xl': '1600px'
-		};
-		return scaleMap[scale] || '';
-	}
-
-	function createScaledContainer(node: HTMLElement, scale: string) {
-		const resizeObserver = new ResizeObserver(() => {
-			const containerWidth = node.offsetWidth;
-			const fakeWidth = parseInt(getScaleStyle(scale));
-			const scaleFactor = containerWidth / fakeWidth;
-			node.style.transform = `scale(${scaleFactor})`;
-			node.style.transformOrigin = 'top left';
-			node.style.width = `${fakeWidth}px`;
-			node.style.height = `${node.offsetHeight / scaleFactor}px`;
-		});
-
-		resizeObserver.observe(node.parentElement);
-
-		return {
-			destroy() {
-				resizeObserver.disconnect();
-			}
-		};
-	}
-
 	onDestroy(() => {
 		unsubscribers.forEach((unsub) => unsub());
 	});
@@ -158,17 +121,15 @@
 		} ${composer?.layout?.style || ''}`}
 		style={layoutStyle}
 	>
-		<div use:createScaledContainer={composer?.layout?.scale}>
-			{#await loadComponentAndInitializeState(composer) then WrappedComponent}
-				{#if WrappedComponent}
-					<svelte:component
-						this={WrappedComponent}
-						me={getComposerStore(composer.id)}
-						ChildComponent={composer.component}
-					/>
-				{/if}
-			{/await}
-		</div>
+		{#await loadComponentAndInitializeState(composer) then WrappedComponent}
+			{#if WrappedComponent}
+				<svelte:component
+					this={WrappedComponent}
+					me={getComposerStore(composer.id)}
+					ChildComponent={composer.component}
+				/>
+			{/if}
+		{/await}
 		{#if composer?.children}
 			{#each composer.children as child (child.id)}
 				<div
@@ -177,20 +138,18 @@
 					} ${child.layout?.style || ''}`}
 					style={`grid-area: ${child.slot};`}
 				>
-					<div use:createScaledContainer={child.layout?.scale}>
-						{#await loadComponentAndInitializeState(child) then WrappedChildComponent}
-							{#if WrappedChildComponent}
-								<svelte:component
-									this={WrappedChildComponent}
-									me={getComposerStore(child.id)}
-									ChildComponent={child.component}
-								/>
-								{#if child.children && child.children.length}
-									<Composer composer={child} {session} />
-								{/if}
+					{#await loadComponentAndInitializeState(child) then WrappedChildComponent}
+						{#if WrappedChildComponent}
+							<svelte:component
+								this={WrappedChildComponent}
+								me={getComposerStore(child.id)}
+								ChildComponent={child.component}
+							/>
+							{#if child.children && child.children.length}
+								<Composer composer={child} {session} />
 							{/if}
-						{/await}
-					</div>
+						{/if}
+					{/await}
 				</div>
 			{/each}
 		{/if}

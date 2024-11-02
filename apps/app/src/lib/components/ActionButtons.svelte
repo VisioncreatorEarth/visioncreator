@@ -1,26 +1,48 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import type { SubmitFunction } from '@sveltejs/kit';
+	import { goto } from '$app/navigation';
 	import { createEventDispatcher } from 'svelte';
 	import { view as updateNameView } from '$lib/views/UpdateName';
 	import { view as sendMailView } from '$lib/views/SendMail';
 	import ComposeView from '$lib/components/ComposeView.svelte';
+	import Icon from '@iconify/svelte';
+
+	export let session: any;
+	export let supabase: any;
 
 	let loading = false;
+	let logoutStatus = '';
 	let showComposeView = false;
 	let showContactUs = false;
 	const dispatch = createEventDispatcher();
 
 	let currentView = updateNameView;
 
-	const handleSignOut: SubmitFunction = () => {
+	async function handleSignOut() {
+		if (loading) return;
 		loading = true;
-		return async ({ update }) => {
-			loading = false;
-			update();
+		logoutStatus = 'Signing out...';
+
+		try {
+			const response = await fetch('/auth/logout', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (!response.ok) {
+				const data = await response.json();
+				throw new Error(data.message || 'Failed to sign out');
+			}
+
 			dispatch('signout');
-		};
-	};
+			window.location.href = '/';
+		} catch (error) {
+			console.error('Error during logout:', error);
+			logoutStatus = `Error signing out: ${error.message}`;
+			loading = false;
+		}
+	}
 
 	const toggleComposeView = (view: typeof updateNameView | typeof sendMailView) => {
 		currentView = view;
@@ -35,13 +57,40 @@
 </script>
 
 <div class="@container">
-	{#if showComposeView}
+	{#if loading}
+		<div class="flex flex-col items-center justify-center p-6 text-center">
+			<div class="flex items-center justify-center gap-2 mb-4">
+				<svg
+					class="w-8 h-8 animate-spin"
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+				>
+					<circle
+						class="opacity-25"
+						cx="12"
+						cy="12"
+						r="10"
+						stroke="currentColor"
+						stroke-width="4"
+					/>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					/>
+				</svg>
+				<span class="text-lg">{logoutStatus}</span>
+			</div>
+		</div>
+	{:else if showComposeView}
 		<div class="px-4">
 			<ComposeView
 				view={currentView}
 				on:close={() => (showComposeView = false)}
+				on:updateView
 				showSpacer={false}
-				session={null}
+				{session}
 			/>
 		</div>
 	{:else if showContactUs}
@@ -49,23 +98,21 @@
 			<ComposeView
 				view={sendMailView}
 				on:close={toggleContactUs}
+				on:updateView
 				showSpacer={false}
-				session={null}
+				{session}
 			/>
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 @sm:grid-cols-2 @md:grid-cols-3 gap-2 mb-2">
-			<form
-				method="post"
-				action="?/signout"
-				use:enhance={handleSignOut}
-				class="@sm:col-span-2 @md:col-span-1"
+			<button
+				on:click={handleSignOut}
+				class="btn @sm:btn-sm @lg:btn-md variant-ghost-error w-full"
+				disabled={loading}
 			>
-				<button class="btn @sm:btn-sm @lg:btn-md variant-ghost-error w-full" disabled={loading}>
-					<Icon icon="mdi:logout" class="mr-2" />
-					Sign Out
-				</button>
-			</form>
+				<Icon icon="mdi:logout" class="mr-2" />
+				Sign Out
+			</button>
 			<button
 				class="btn @sm:btn-sm @lg:btn-md variant-ghost-secondary w-full"
 				on:click={() => toggleComposeView(updateNameView)}
@@ -85,3 +132,13 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* Optional: Add styles for status messages */
+	.text-error-400 {
+		color: rgb(248, 113, 113);
+	}
+	.text-success-400 {
+		color: rgb(74, 222, 128);
+	}
+</style>

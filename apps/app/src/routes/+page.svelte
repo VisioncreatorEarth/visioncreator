@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { getDrawerStore } from '@skeletonlabs/skeleton';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
+	import { createEventDispatcher } from 'svelte';
 
-	const drawerStore = getDrawerStore();
+	const dispatch = createEventDispatcher();
+
 	let videoElement: HTMLVideoElement;
 	let contentWrapper: HTMLDivElement;
 
@@ -47,12 +49,23 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
-			drawerStore.open({ position: 'bottom' });
+			window.dispatchEvent(
+				new CustomEvent('openModal', {
+					detail: { type: 'signup' },
+					bubbles: true
+				})
+			);
 		}
 	}
 
-	function openSignUpDrawer() {
-		drawerStore.open({ position: 'bottom', action: 'signup' });
+	function openSignUp() {
+		// Create a custom event that bubbles up through the DOM
+		window.dispatchEvent(
+			new CustomEvent('openModal', {
+				detail: { type: 'signup' },
+				bubbles: true
+			})
+		);
 	}
 </script>
 
@@ -70,13 +83,13 @@
 		<source src="wald.mp4" type="video/mp4" />
 	</video>
 
-	<div class="overlay flex flex-col">
-		<div class="flex-grow flex flex-col justify-center items-center p-4 overflow-y-auto">
-			<div class="w-full max-w-3xl text-center flex flex-col space-y-4 mb-4">
+	<div class="flex flex-col overlay">
+		<div class="flex flex-col items-center justify-center flex-grow p-4 overflow-y-auto">
+			<div class="flex flex-col w-full max-w-3xl mb-4 space-y-4 text-center">
 				<img
 					src="/logo.png"
 					alt="Visioncreator logo"
-					class="w-20 lg:w-28 mx-auto mb-4 opacity-70"
+					class="w-20 mx-auto mb-4 lg:w-28 opacity-70"
 				/>
 
 				<div class="w-full max-w-3xl video-wrapper">
@@ -87,7 +100,7 @@
 				</p>
 				<div class="flex justify-center mt-4">
 					<button
-						on:click={openSignUpDrawer}
+						on:click={openSignUp}
 						class="signup-btn btn bg-gradient-to-br variant-gradient-secondary-primary"
 					>
 						Sign Up Now
@@ -95,20 +108,6 @@
 				</div>
 			</div>
 		</div>
-		<footer class="py-2 @sm:py-2 text-white">
-			<div class="flex justify-between items-center px-4 @sm:px-4">
-				<div class="flex space-x-2 @sm:space-x-4">
-					<a href="/en/privacy-policy" class="text-2xs @sm:text-xs">Privacy Policy - Datenschutz</a>
-					<a href="/en/imprint" class="text-2xs @sm:text-xs">Site Notice - Impressum</a>
-				</div>
-				<button
-					class="btn btn-sm variant-ghost-tertiary text-xs"
-					on:click={() => drawerStore.open({ position: 'bottom', action: 'login' })}
-				>
-					Login
-				</button>
-			</div>
-		</footer>
 	</div>
 </div>
 

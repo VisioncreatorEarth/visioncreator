@@ -4,6 +4,7 @@ content: '@{{ template "content" . }}'
 name: "@{{ .Subscriber.Name }}"
 unsubscribeUrl: "@{{ UnsubscribeURL }}"
 emailUnsub: '@{{ L.T "email.unsub" }}'
+trackview: "@{{ TrackView }}"
 ---
 
 <x-main>
@@ -29,7 +30,7 @@ emailUnsub: '@{{ L.T "email.unsub" }}'
             <tr>
               <td align="center" valign="middle">
                 <x-button
-                  href="https://visioncreator.earth/episodes?video=001"
+                  href="https://visioncreator.earth/episodes?video=001@TrackLink"
                   class="w-auto mx-auto"
                 >
                   Watch Video &rarr;
@@ -53,3 +54,4 @@ emailUnsub: '@{{ L.T "email.unsub" }}'
     </div>
   </div>
 </x-main>
+{{{ page.trackview }}}

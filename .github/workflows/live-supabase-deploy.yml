@@ -8,6 +8,7 @@ on:
 
 jobs:
   deploy:
+    name: Deploy Supabase Migration (Production)
     runs-on: ubuntu-latest
     environment: Production
 

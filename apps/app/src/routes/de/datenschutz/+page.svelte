@@ -1,8 +1,7 @@
 <TextWrap>
-	<svelte:fragment slot="custom-links">
-		<a href="/en/privacy-policy">English</a>
-		<a href="/de/datenschutz">Deutsch</a>
-	</svelte:fragment>
+	<div class="image-container mb-10 w-28">
+		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
+	</div>
 
 	<h1>Datenschutz&shy;erkl&auml;rung</h1>
 	<h2>1. Datenschutz auf einen Blick</h2>

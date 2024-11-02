@@ -1,74 +1,144 @@
 <script lang="ts">
-	import { view as initialView } from '$lib/views/Default';
-	import { writable } from 'svelte/store';
+	import { onMount } from 'svelte';
+	import type { ComponentType } from 'svelte';
+	import Icon from '@iconify/svelte';
 
-	let selectedChildren = { ...initialView.children[0] };
-	let view = { ...initialView };
-
-	let components = writable([]);
-
-	async function loadComponentNames() {
-		const componentFiles = import.meta.glob('$lib/components/*.svelte');
-		const componentNames = [];
-		for (const path in componentFiles) {
-			const name = path.split('/').pop().replace('.svelte', '');
-			if (name.startsWith('o-') || name === 'Claude') {
-				componentNames.push({ name, value: name });
-			}
-		}
-		components.set(componentNames);
+	interface ViewChild {
+		id: string;
+		component: string;
+		slot: string;
 	}
 
-	onMount(() => {
-		loadComponentNames();
+	interface View {
+		layout: {
+			areas: string;
+			overflow: 'auto';
+		};
+		children: ViewChild[];
+	}
+
+	let selectedChildren: ViewChild = {
+		id: '',
+		component: 'Claude',
+		slot: 'main'
+	};
+
+	let view: View = {
+		layout: {
+			areas: `
+				"main"
+			`,
+			overflow: 'auto'
+		},
+		children: [selectedChildren]
+	};
+
+	let ComposeView: ComponentType;
+	onMount(async () => {
+		const module = await import('$lib/components/ComposeView.svelte');
+		ComposeView = module.default;
 	});
 
-	function updateChildren(component, slot) {
-		view.children = [{ ...selectedChildren, component, slot }];
+	let screenWidth = '100%';
+	let screenHeight = 'calc(100% - 5.5rem)';
+	let isSimulatedDevice = false;
+	let hasTopMargin = true;
+
+	function setScreenSize(width: string, height: string, isPortrait: boolean) {
+		screenWidth = width;
+		screenHeight = isPortrait ? `calc(${height} - 0.5rem)` : height;
+		isSimulatedDevice = true;
+		hasTopMargin = isPortrait;
 	}
 
-	async function saveComponent() {
-		let name = prompt('Enter the name for the new component:');
-		if (!name) return;
-
-		name = name.charAt(0).toUpperCase() + name.slice(1);
-
-		const response = await fetch('/api/save-component', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({ name })
-		});
-
-		if (response.ok) {
-			alert('Component saved successfully!');
-			loadComponentNames(); // Refresh the component list
-		} else {
-			alert('Error saving component.');
-		}
+	function resetScreenSize() {
+		screenWidth = '100%';
+		screenHeight = 'calc(100% - 5.5rem)';
+		isSimulatedDevice = false;
+		hasTopMargin = true;
 	}
 </script>
 
-<div class="flex w-full h-full">
-	<div class="w-48 h-full py-10 pr-5 overflow-y-scroll bg-surface-900">
-		{#each $components as component}
-			<button
-				class="block w-full p-1 text-left hover:bg-gray-200"
-				on:click={() => updateChildren(component.value, selectedChildren.slot)}
-			>
-				{component.name}
-			</button>
-		{/each}
-		<button
-			on:click={saveComponent}
-			type="submit"
-			class="w-full p-2 rounded-full text-surface-800 bg-primary-500">Save</button
+<div
+	class="fixed inset-0 flex flex-col items-center overflow-hidden preview-container bg-surface-900 dark:bg-surface-950"
+>
+	<div
+		class="flex-grow mx-2 mb-20 overflow-hidden transition-all duration-300 ease-in-out border-2 shadow-xl preview-screen bg-surface-700 dark:bg-surface-800 rounded-3xl border-surface-500 dark:border-surface-600"
+		class:simulated-device={isSimulatedDevice}
+		class:mt-2={hasTopMargin}
+		style="width: {screenWidth}; height: {screenHeight}; max-width: calc(100% - 1rem);"
+	>
+		<div
+			class="grid w-full h-full overflow-hidden bg-tertiary-200 dark:bg-surface-900"
+			style="grid-template-areas: {view.layout.areas}"
 		>
-	</div>
-	<div class="w-full h-full p-4 bg-surface-900">
-		<div class="w-full h-full overflow-hidden rounded-2xl">
-			<ComposeView {view} />
+			{#if ComposeView}
+				<svelte:component this={ComposeView} {view} />
+			{/if}
 		</div>
 	</div>
+
+	<div class="fixed flex space-x-2 screen-buttons bottom-6 left-4">
+		<button
+			on:click={() => setScreenSize('375px', '667px', true)}
+			class="btn btn-icon variant-ghost-secondary"
+			title="Mobile Portrait"
+		>
+			<Icon icon="system-uicons:iphone-portrait" />
+		</button>
+		<button
+			on:click={() => setScreenSize('667px', '375px', false)}
+			class="btn btn-icon variant-ghost-secondary"
+			title="Mobile Landscape"
+		>
+			<Icon icon="system-uicons:iphone-landscape" />
+		</button>
+		<button
+			on:click={() => setScreenSize('768px', '1024px', true)}
+			class="btn btn-icon variant-ghost-secondary"
+			title="Tablet Portrait"
+		>
+			<Icon icon="bi:tablet" />
+		</button>
+		<button
+			on:click={() => setScreenSize('1024px', '768px', false)}
+			class="btn btn-icon variant-ghost-secondary"
+			title="Tablet Landscape"
+		>
+			<Icon icon="bi:tablet-landscape" />
+		</button>
+		<button on:click={resetScreenSize} class="btn btn-icon variant-ghost-secondary" title="Reset">
+			<Icon icon="mdi:restore" />
+		</button>
+	</div>
 </div>
+
+<style>
+	:global(body, html) {
+		margin: 0;
+		padding: 0;
+		height: 100%;
+		overflow: hidden;
+	}
+
+	.simulated-device {
+		flex-grow: 0 !important;
+		margin-top: auto !important;
+	}
+
+	@media (max-width: 640px) {
+		.preview-container {
+			padding: 0 !important;
+		}
+
+		.preview-screen {
+			width: calc(100% - 1rem) !important;
+			margin: 0.5rem !important;
+			margin-bottom: 5rem !important;
+		}
+
+		.screen-buttons {
+			display: none !important;
+		}
+	}
+</style>

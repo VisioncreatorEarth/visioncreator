@@ -7,7 +7,7 @@ import {
 export default createOperation.mutation({
   input: z.object({
     id: z.string(),
-    subject: z.string().min(3).max(40),
+    subject: z.string().min(3).max(75),
     body: z.string().min(10).max(2000),
   }),
   requireAuthentication: true,

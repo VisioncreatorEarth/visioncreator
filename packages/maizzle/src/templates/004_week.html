@@ -1,0 +1,57 @@
+---
+title: "@{{ .Campaign.Subject }}"
+content: '@{{ template "content" . }}'
+name: "@{{ .Subscriber.Name }}"
+unsubscribeUrl: "@{{ UnsubscribeURL }}"
+emailUnsub: '@{{ L.T "email.unsub" }}'
+trackView: "@{{ TrackView }}"
+---
+
+<x-main>
+  <div class="w-full mx-auto">
+    <div class="-mx-8 -mt-8 overflow-hidden rounded-t-3xl sm:-mx-4 sm:-mt-4">
+      <div style="max-width: 600px; margin: 0 auto; position: relative">
+        <img
+          src="https://listmonk.visioncreator.earth/uploads/004_poster_uY6Nx4.png"
+          alt="Episode cover"
+          style="display: block; width: 100%; max-width: 100%; height: auto"
+        />
+        <div
+          style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+          "
+        >
+          <table width="100%" height="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td align="center" valign="middle">
+                <x-button
+                  href="https://visioncreator.earth/episodes?video=003@TrackLink"
+                  class="w-auto mx-auto"
+                >
+                  Watch Video &rarr;
+                </x-button>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-0 mt-8 leading-6">
+      <p class="mb-4 text-base sm:text-sm">Hey {{ page.name }},</p>
+      <div class="text-base sm:text-sm">{{{ page.content }}}</div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <a class="text-sm text-primary-500" href="{{ page.unsubscribeUrl }}">
+        {{{ page.emailUnsub }}}
+      </a>
+    </div>
+  </div>
+  {{{ page.trackView }}}
+</x-main>

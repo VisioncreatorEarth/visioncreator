@@ -12,10 +12,12 @@ Before getting started, ensure you have the following installed and set up:
 - Listmonk (self-hosted)
 
 ## Launch Development Environment
+
 ```
 npm i
 npm run dev
 ```
+
 npm run dev will launch all apps and packages in our turbo monorepo. The supacreator package is our supabase postgres service. It has an external dependency to docker, which needs to be installed on the system in order for 'npx supabase start' to be able to launch the supabase services.
 
 Now the following services are running:
@@ -53,6 +55,7 @@ POSTMARK_SERVER_TOKEN="copy-from-postmark-dashboard"
 POSTMARK_WEBHOOK_USERNAME="set-inbound-webhook-in-postmark-dashboard"
 POSTMARK_WEBHOOK_PASSWORD="set-inbound-webhook-in-postmark-dashboard"
 POSTMARK_INBOUND_MAIL="copy-from-postmark-dashboard"
+POLAR_ACCESS_TOKEN="copy-from-polar.sh-sandbox-dashboard"
 ```
 
 Also go to the nango dashboard 127.0.0.1:3003 and setup your listmonk (listmonk-vc) and coda (codavc) credentials.
@@ -90,9 +93,11 @@ npx supabase migration up
 ```
 
 Reset Database (be carful with --linked as this resets the remote production db)
+
 ```
 npx supabase db reset (without argument local db, with --linked remote production db)
 ```
+
 ## Deployment to production
 
 ### Nango 3rd-Party API Gateway
@@ -114,6 +119,7 @@ npx supabase db reset (without argument local db, with --linked remote productio
 
 3. Seed your database before first push manually (ATTENTION: only do this the first time, otherwise you loose data)
 In your local environment:
+
 ```
 cd packages/supacreator/supabase
 npx supabase link --project-ref "project_id"
@@ -166,9 +172,12 @@ for db backup dumps to digital ocean
 - `POSTMARK_WEBHOOK_USERNAME`="set-inbound-webhook-in-postmark-dashboard"
 - `POSTMARK_WEBHOOK_PASSWORD`="set-inbound-webhook-in-postmark-dashboard"
 - `POSTMARK_INBOUND_MAIL`="copy-from-postmark-dashboard"
+- `POLAR_ACCESS_TOKEN`="copy-from-polar.sh-dashboard"
 - `NEXT_PUBLIC_WG_API`="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
 - `NEXT_PUBLIC_WG_ALLOW_CORS`="frontend app domain f.e. https://xyz.com (vercel hosted)"
 - `NEXT_PUBLIC_WG_AUTH_INFO`="frontend app domain https://xyz.com/auth/userinfo"
+- `ANTHROPIC_API_KEY`="copy-from-anthropic-console-dashboard"
+
 
 ### Frontend
 1. Go to vercel, connect your repo and deploy the svelte frontend apps/app.
@@ -180,5 +189,6 @@ for db backup dumps to digital ocean
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
 - NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
+- SECRET_OPENAI_API_KEY
 
 3. Connect your domain.

@@ -3,12 +3,13 @@ export const view = {
     layout: {
         areas: `
 			"main"
-		`
+		`,
+        overflow: 'auto',
     },
     children: [
         {
             id: 'xyz1',
-            component: 'Logger',
+            component: 'HelloEarth',
             slot: 'main',
         }
     ]
