@@ -5,9 +5,8 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ url, locals: { safeGetSession } }) => {
 	const { session } = await safeGetSession();
 
-	// if the user is already logged in return them to the account page
-	if (session) {
-		// Preserve the URL parameters when redirecting
+	// Only redirect if user is logged in AND we're exactly at the root path
+	if (session && url.pathname === '/') {
 		const searchParams = new URLSearchParams(url.search);
 		const redirectUrl = searchParams.get('open')
 			? `/me?${searchParams.toString()}`
