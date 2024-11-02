@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -37,17 +38,30 @@
 
 	function closeModal() {
 		window.dispatchEvent(new CustomEvent('closeModal'));
+		dispatch('close');
 	}
 
-	// Handle click with a small delay to ensure modal closes
-	function handleClick(e: Event) {
+	async function handleNavigation(e: Event, path: string) {
 		e.preventDefault();
+
+		// Close modal first
 		closeModal();
-		// Use requestAnimationFrame for smoother transition
-		requestAnimationFrame(() => {
-			const target = e.currentTarget as HTMLAnchorElement;
-			window.location.href = target.href;
-		});
+
+		try {
+			// Small delay to ensure modal is closed
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Navigate using goto with specific options
+			await goto(path, {
+				replaceState: false,
+				noScroll: true,
+				invalidateAll: true
+			});
+		} catch (error) {
+			// Fallback to direct navigation if goto fails
+			console.error('Navigation failed, using fallback:', error);
+			window.location.href = path;
+		}
 	}
 </script>
 
@@ -62,9 +76,8 @@
 			<a
 				href={link.en.link}
 				data-sveltekit-preload-data="hover"
-				data-sveltekit-noscroll
 				class="px-3 py-2 rounded-xl bg-surface-800/50 border border-surface-700 hover:bg-surface-700/50 transition-colors flex items-center justify-center min-h-[2.5rem]"
-				on:click={handleClick}
+				on:click={(e) => handleNavigation(e, link.en.link)}
 			>
 				<span class="block text-sm text-center break-words text-tertiary-100">
 					{link.en.title}
@@ -74,9 +87,8 @@
 			<a
 				href={link.de.link}
 				data-sveltekit-preload-data="hover"
-				data-sveltekit-noscroll
 				class="px-3 py-2 rounded-xl bg-surface-800/50 border border-surface-700 hover:bg-surface-700/50 transition-colors flex items-center justify-center min-h-[2.5rem]"
-				on:click={handleClick}
+				on:click={(e) => handleNavigation(e, link.de.link)}
 			>
 				<span class="block text-sm text-center break-words text-tertiary-300">
 					{link.de.title}

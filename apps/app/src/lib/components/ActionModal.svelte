@@ -189,14 +189,20 @@
 			handleLegalModal();
 		};
 
+		const handleCloseModal = () => {
+			toggleModal();
+		};
+
 		window.addEventListener('updateView', handleViewUpdate as EventListener);
 		window.addEventListener('legalModalTrigger', handleLegalTrigger);
 		window.addEventListener('openModal', handleModalOpen);
+		window.addEventListener('closeModal', handleCloseModal);
 
 		return () => {
 			window.removeEventListener('updateView', handleViewUpdate as EventListener);
 			window.removeEventListener('legalModalTrigger', handleLegalTrigger);
 			window.removeEventListener('openModal', handleModalOpen);
+			window.removeEventListener('closeModal', handleCloseModal);
 		};
 	});
 </script>
@@ -307,7 +313,7 @@
 				</div>
 			{:else if currentModalType === 'legal-and-privacy-policy'}
 				<div class="relative">
-					<LegalAndPrivacyPolicy />
+					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 					<button
 						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-4 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
