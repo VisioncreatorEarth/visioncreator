@@ -68,7 +68,7 @@
 <div class="p-4 space-y-2">
 	<header class="p-4 text-center">
 		<h2 class="text-2xl text-tertiary-50 h1">Legal Documents</h2>
-		<p class="text-tertiary-300">Important information about your rights and our policies</p>
+		<p class="text-tertiary-300">Important information about us, your rights and our policies</p>
 	</header>
 	<div class="grid grid-cols-2 gap-4">
 		{#each legalLinks as link}
