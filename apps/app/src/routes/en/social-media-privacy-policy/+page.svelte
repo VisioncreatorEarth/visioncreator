@@ -5,13 +5,31 @@
 	<h3>Our social media appearances</h3>
 	<h4>This privacy policy applies to the following social media presence</h4>
 	<ul>
-		<li><a href="https://x.com/1BillionVCs">https://x.com/1BillionVCs</a></li>
-		<li><a href="https://instagram.com/1BillionVCs">https://instagram.com/1BillionVCs</a></li>
 		<li>
-			<a href="https://linkedin.com/company/1BillionVCs">https://linkedin.com/company/1BillionVCs</a
+			<a href="https://www.facebook.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://www.facebook.com/1BillionVCs</a
 			>
 		</li>
-		<li><a href="https://youtube.com/@1BillionVCs">https://youtube.com/@1BillionVCs</a></li>
+		<li>
+			<a href="https://x.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://x.com/1BillionVCs</a
+			>
+		</li>
+		<li>
+			<a href="https://instagram.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://instagram.com/1BillionVCs</a
+			>
+		</li>
+		<li>
+			<a href="https://linkedin.com/company/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://linkedin.com/company/1BillionVCs</a
+			>
+		</li>
+		<li>
+			<a href="https://youtube.com/@1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://youtube.com/@1BillionVCs</a
+			>
+		</li>
 	</ul>
 	<h4>Data processing through social networks</h4>
 	<p>
@@ -85,6 +103,64 @@
 		circumstances, the restriction of the processing of your personal data.
 	</p>
 	<h4>Individual social networks</h4>
+	<h5>Facebook</h5>
+	<p>
+		We have a profile on Facebook. The provider of this service is Meta Platforms Ireland Limited,
+		Merrion Road, Dublin 4, D04 X2K5, Ireland (hereinafter Meta). According to Meta&rsquo;s
+		statement the collected data will also be transferred to the USA and to other third-party
+		countries.
+	</p>
+	<p>
+		We have signed an agreement with Meta on shared responsibility for the processing of data
+		(Controller Addendum). This agreement determines which data processing operations we or Meta are
+		responsible for when you visit our Facebook Fanpage. This agreement can be viewed at the
+		following link: <a
+			href="https://www.facebook.com/legal/terms/page_controller_addendum"
+			target="_blank"
+			rel="noopener noreferrer">https://www.facebook.com/legal/terms/page_controller_addendum</a
+		>.
+	</p>
+	<p>
+		<strong
+			>You can customize your advertising settings independently in your user account. Click on the
+			following link and log in:</strong
+		>
+		<a href="https://www.facebook.com/settings?tab=ads" target="_blank" rel="noopener noreferrer"
+			>https://www.facebook.com/settings?tab=ads</a
+		>.
+	</p>
+	<p>
+		Data transmission to the US is based on the Standard Contractual Clauses (SCC) of the European
+		Commission. Details can be found here: <a
+			href="https://www.facebook.com/legal/EU_data_transfer_addendum"
+			target="_blank"
+			rel="noopener noreferrer">https://www.facebook.com/legal/EU_data_transfer_addendum</a
+		>
+		and
+		<a
+			href="https://de-de.facebook.com/help/566994660333381"
+			target="_blank"
+			rel="noopener noreferrer">https://de-de.facebook.com/help/566994660333381</a
+		>.
+	</p>
+	<p>
+		Details can be found in the Facebook privacy policy: <a
+			href="https://www.facebook.com/about/privacy/"
+			target="_blank"
+			rel="noopener noreferrer">https://www.facebook.com/about/privacy/</a
+		>.
+	</p>
+	<p>
+		The company is certified in accordance with the &ldquo;EU-US Data Privacy Framework&rdquo;
+		(DPF). The DPF is an agreement between the European Union and the US, which is intended to
+		ensure compliance with European data protection standards for data processing in the US. Every
+		company certified under the DPF is obliged to comply with these data protection standards. For
+		more information, please contact the provider under the following link: <a
+			href="https://www.dataprivacyframework.gov/participant/4452"
+			target="_blank"
+			rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/4452</a
+		>
+	</p>
 	<h5>X (formerly Twitter)</h5>
 	<p>
 		We use the short message service X (formerly Twitter). The provider is the parent company X
