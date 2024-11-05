@@ -3,10 +3,43 @@ import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { agentLogger } from '$lib/utils/logger';
 import { dynamicView } from '$lib/stores';
+import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
+import { writable } from 'svelte/store';
 
 export class VroniAgent {
     private readonly agentName = 'vroni';
-    private readonly systemPrompt = `You are Vroni, the UI and Navigation specialist. Your role is to handle all view-related requests.
+    private navigationStore = persist(
+        writable<Record<string, any>[]>([]),
+        createIndexedDBStorage(),
+        'vroni-navigation-context'
+    );
+
+    private getSystemPrompt(context?: any): string {
+        let navigationContext = '';
+        let conversationHistory = '';
+
+        // Get navigation history from persistent store
+        this.navigationStore.subscribe(navHistory => {
+            if (navHistory.length > 0) {
+                navigationContext = `\nNavigation History:\n${JSON.stringify(navHistory, null, 2)}`;
+            }
+        })();
+
+        // Get conversation history from hominio
+        if (context?.delegatedFrom) {
+            const messages = conversationManager.getMessageContext();
+            conversationHistory = messages
+                .map(msg => `[${msg.agent}]: ${msg.content}${msg.payload ? `\n<payload>${JSON.stringify(msg.payload)}</payload>` : ''
+                    }`)
+                .join('\n');
+        }
+
+        return `You are Vroni, the UI and Navigation specialist. Your role is to handle all view-related requests.
+
+${navigationContext}
+
+CONVERSATION HISTORY:
+${conversationHistory}
 
 IMPORTANT: You must ALWAYS use the compose_view tool to generate view configurations.
 
@@ -27,6 +60,7 @@ Analyze the user's request and select the most appropriate component. Examples:
 - "Go to dashboard" → o-HelloEarth
 
 Always respond with a compose_view tool use that specifies the appropriate component based on the user's intent.`;
+    }
 
     private readonly tools = [
         {
@@ -48,8 +82,19 @@ Always respond with a compose_view tool use that specifies the appropriate compo
 
     async processRequest(userMessage: string, context?: any): Promise<AgentResponse> {
         const pendingMsgId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
 
         try {
+            // Store navigation request
+            this.navigationStore.update(history => {
+                const newHistory = [...history, {
+                    requestId,
+                    userMessage,
+                    timestamp: new Date().toISOString()
+                }];
+                return newHistory.slice(-5); // Keep last 5 navigation requests
+            });
+
             agentLogger.log(this.agentName, 'Starting view request', {
                 userMessage,
                 contextPresent: !!context,
@@ -72,7 +117,7 @@ Always respond with a compose_view tool use that specifies the appropriate compo
                 operationName: 'askClaude',
                 input: {
                     messages,
-                    system: this.systemPrompt,
+                    system: this.getSystemPrompt(context),
                     tools: this.tools,
                     temperature: 0.7
                 }

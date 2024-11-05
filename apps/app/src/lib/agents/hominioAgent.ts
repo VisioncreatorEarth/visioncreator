@@ -3,9 +3,41 @@ import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { vroniAgent } from './agentVroni';
 import { aliAgent } from './agentAli';
+import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
+import { writable } from 'svelte/store';
 
 export class HominioAgent {
-    private readonly systemPrompt = `You are Hominio, the delegation specialist. Your role is to analyze user requests and delegate tasks to the appropriate specialized agent.
+    private readonly agentName = 'hominio';
+    private delegationStore = persist(
+        writable<Record<string, any>[]>([]),
+        createIndexedDBStorage(),
+        'hominio-delegation-context'
+    );
+
+    private getSystemPrompt(context?: any): string {
+        let delegationHistory = '';
+        let conversationHistory = '';
+
+        // Get delegation history from persistent store
+        this.delegationStore.subscribe(history => {
+            if (history.length > 0) {
+                delegationHistory = `\nDelegation History:\n${JSON.stringify(history, null, 2)}`;
+            }
+        })();
+
+        // Get full conversation history
+        const messages = conversationManager.getMessageContext();
+        conversationHistory = messages
+            .map(msg => `[${msg.agent}]: ${msg.content}${msg.payload ? `\n<payload>${JSON.stringify(msg.payload)}</payload>` : ''
+                }`)
+            .join('\n');
+
+        return `You are Hominio, the delegation specialist. Your role is to analyze user requests and delegate tasks to the appropriate specialized agent.
+
+${delegationHistory}
+
+CONVERSATION HISTORY:
+${conversationHistory}
 
 IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to the appropriate agent.
 
@@ -60,6 +92,7 @@ Examples of correct delegation:
    → Delegate to ali: "Hey ali, please help the user compose a new email"
 
 Please analyze the conversation context carefully to understand the user's true intent before delegating.`;
+    }
 
     private readonly tools = [
         {
@@ -91,12 +124,20 @@ Please analyze the conversation context carefully to understand the user's true 
         }
     ];
 
-    private readonly agentName = 'hominio';
-
     async processRequest(userMessage: string): Promise<AgentResponse> {
-        const pendingMsgId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
 
         try {
+            // Store delegation request
+            this.delegationStore.update(history => {
+                const newHistory = [...history, {
+                    requestId,
+                    userMessage,
+                    timestamp: new Date().toISOString()
+                }];
+                return newHistory.slice(-5); // Keep last 5 delegation requests
+            });
+
             const currentConversation = conversationManager.getCurrentConversation();
 
             // Add user message
@@ -110,7 +151,7 @@ Please analyze the conversation context carefully to understand the user's true 
 
             // Add pending message
             conversationManager.addMessage({
-                id: pendingMsgId,
+                id: requestId,
                 agent: this.agentName,
                 content: 'Analyzing your request...',
                 status: 'pending',
@@ -126,7 +167,7 @@ Please analyze the conversation context carefully to understand the user's true 
                 operationName: 'askClaude',
                 input: {
                     messages,
-                    system: this.systemPrompt,
+                    system: this.getSystemPrompt(),
                     tools: this.tools
                 }
             });
@@ -145,7 +186,7 @@ Please analyze the conversation context carefully to understand the user's true 
             }
 
             // Update message with Claude's generated friendly message
-            conversationManager.updateMessage(pendingMsgId, {
+            conversationManager.updateMessage(requestId, {
                 content: delegation.userMessage,
                 status: 'complete',
                 payload: {
@@ -180,7 +221,7 @@ Please analyze the conversation context carefully to understand the user's true 
             throw new Error(`Unsupported delegation target: ${delegation.to}`);
 
         } catch (error) {
-            conversationManager.updateMessage(pendingMsgId, {
+            conversationManager.updateMessage(requestId, {
                 content: "I'm sorry, I couldn't process that request right now. Could you try asking in a different way? 🙏",
                 status: 'error',
                 payload: {
