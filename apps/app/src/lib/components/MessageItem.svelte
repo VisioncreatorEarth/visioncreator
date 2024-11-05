@@ -31,8 +31,12 @@
 		dispatch('actionComplete', event.detail);
 	}
 
-	// Helper to determine if we should show the compose view
-	$: showComposeView = message.payload?.type === 'action';
+	// Helper to determine if we should show full width
+	$: isFullWidth =
+		message.payload?.type === 'view' ||
+		message.payload?.type === 'action' ||
+		message.payload?.type === 'delegation' ||
+		message.payload?.type === 'error';
 </script>
 
 <div
@@ -44,7 +48,7 @@
 		<AgentAvatar agentType={message.agent} seed={message.agent} />
 	{/if}
 
-	<div class="flex flex-col space-y-1 {showComposeView ? 'w-full' : 'max-w-[80%]'}">
+	<div class="flex flex-col space-y-1 {isFullWidth ? 'w-full' : 'max-w-[80%]'}">
 		{#if message.agent !== 'user'}
 			<div class="flex items-center space-x-2">
 				<span class="text-xs font-medium text-tertiary-300">
@@ -95,7 +99,10 @@
 				/>
 			</div>
 		{:else if message.payload?.type === 'delegation'}
-			<div class="p-8 mt-2 border rounded bg-surface-800/50 border-surface-700" transition:slide>
+			<div
+				class="w-full p-8 mt-2 border rounded bg-surface-800/50 border-surface-700"
+				transition:slide
+			>
 				<div class="space-y-1 text-sm text-tertiary-200">
 					<p><span class="font-medium">Task:</span> {message.payload.data.task}</p>
 					<p>
@@ -105,7 +112,10 @@
 				</div>
 			</div>
 		{:else if message.payload?.type === 'error'}
-			<div class="p-2 mt-2 border rounded bg-surface-800/50 border-surface-700" transition:slide>
+			<div
+				class="w-full p-2 mt-2 border rounded bg-surface-800/50 border-surface-700"
+				transition:slide
+			>
 				<pre class="overflow-x-auto font-mono text-xs whitespace-pre-wrap text-tertiary-200">
 					{JSON.stringify(message.payload.data, null, 2)}
 				</pre>

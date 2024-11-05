@@ -9,7 +9,20 @@ export class HominioAgent {
 
 IMPORTANT: You must ALWAYS use the delegate_task tool to assign tasks to the appropriate agent.
 
-When delegating, address the agent directly in a brief, friendly message (1-3 sentences). Include the user's intent and any relevant context.
+When delegating:
+1. Create a warm, friendly message for the user (1-2 sentences)
+   - Use a personal, empathetic tone
+   - Include relevant emojis
+   - Focus on what you're going to help them with
+   - Examples:
+     - "I'll help you update your name right away! ✨"
+     - "Let me show you your banking information! 🏦"
+     - "I'll get that email started for you! 📧"
+
+2. Provide technical reasoning for the system (not shown to user)
+   - Explain why this agent was chosen
+   - Include relevant context
+   - Be precise and technical
 
 Available agents and their responsibilities:
 
@@ -64,12 +77,16 @@ Please analyze the conversation context carefully to understand the user's true 
                         type: "string",
                         description: "The specific task to be performed"
                     },
+                    userMessage: {
+                        type: "string",
+                        description: "A friendly, personal message to show to the user"
+                    },
                     reasoning: {
                         type: "string",
-                        description: "Why this agent was chosen"
+                        description: "Technical explanation of why this agent was chosen"
                     }
                 },
-                required: ["to", "task", "reasoning"]
+                required: ["to", "task", "userMessage", "reasoning"]
             }
         }
     ];
@@ -114,16 +131,6 @@ Please analyze the conversation context carefully to understand the user's true 
                 }
             });
 
-            // Extract the text response from Claude
-            const textContent = claudeResponse?.data?.content?.find(c => c.type === 'text');
-            if (textContent?.text) {
-                // Update the pending message with Claude's delegation text
-                conversationManager.updateMessage(pendingMsgId, {
-                    content: textContent.text,
-                    status: 'processing'
-                });
-            }
-
             // Extract tool use from Claude response
             const toolUseContent = claudeResponse?.data?.content?.find(c => c.type === 'tool_use');
 
@@ -133,13 +140,13 @@ Please analyze the conversation context carefully to understand the user's true 
 
             // Extract delegation details
             const delegation = toolUseContent?.input;
-            if (!delegation || !delegation.to || !delegation.task) {
+            if (!delegation || !delegation.to || !delegation.task || !delegation.userMessage) {
                 throw new Error('Invalid delegation structure');
             }
 
-            // Add delegation message with its own payload
+            // Update message with Claude's generated friendly message
             conversationManager.updateMessage(pendingMsgId, {
-                content: `${delegation.reasoning}`,
+                content: delegation.userMessage,
                 status: 'complete',
                 payload: {
                     type: 'delegation',
@@ -151,7 +158,7 @@ Please analyze the conversation context carefully to understand the user's true 
                 }
             });
 
-            // Handle delegation to Vroni with clean context
+            // Handle delegation
             if (delegation.to === 'vroni') {
                 return await vroniAgent.processRequest(delegation.task, {
                     delegatedFrom: {
@@ -174,7 +181,7 @@ Please analyze the conversation context carefully to understand the user's true 
 
         } catch (error) {
             conversationManager.updateMessage(pendingMsgId, {
-                content: 'Sorry, I could not process that request.',
+                content: "I'm sorry, I couldn't process that request right now. Could you try asking in a different way? 🙏",
                 status: 'error',
                 payload: {
                     type: 'error',
