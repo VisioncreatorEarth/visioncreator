@@ -21,6 +21,7 @@ export type OperationErrors = {
 	sendMail: SendMailErrors;
 	sendMailWIP: SendMailWIPErrors;
 	toggleOnboarded: ToggleOnboardedErrors;
+	transcribeAudio: TranscribeAudioErrors;
 	updateMe: UpdateMeErrors;
 };
 
@@ -42,4 +43,5 @@ export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
+export type TranscribeAudioErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;

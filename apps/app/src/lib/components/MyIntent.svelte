@@ -10,6 +10,7 @@
 	import { hominioAgent } from '$lib/agents/hominioAgent';
 	import { goto } from '$app/navigation';
 	import { dynamicView } from '$lib/stores';
+	import { client, createMutation } from '$lib/wundergraph';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -129,6 +130,11 @@
 		}
 	}
 
+	// Create the mutation
+	const transcribeAudioMutation = createMutation({
+		operationName: 'transcribeAudio'
+	});
+
 	export async function handleLongPressStart() {
 		// First check/request permissions
 		if (!hasPermissions) {
@@ -175,44 +181,47 @@
 		modalState = 'processing';
 		visualizerMode = 'hominio';
 
-		// Start playing audio during processing
+		// Start playing Hominio's working audio
 		hominioAudio = new Audio(getRandomWorkingAudio());
 		hominioAudio.play();
 
 		try {
-			// Stop the media recorder
+			console.log('🎤 Starting transcription process...');
 			mediaRecorder.stop();
 
-			// Wait for the data to be available
 			await new Promise<void>((resolve) => {
 				mediaRecorder!.onstop = () => resolve();
 			});
+			console.log('🛑 Media recorder stopped');
 
-			// Create blob from recorded chunks
 			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-			const formData = new FormData();
-			formData.append('audio', audioBlob, 'recording.webm');
+			console.log('📦 Audio blob created:', audioBlob.size, 'bytes');
 
-			// Send to transcription API
-			const response = await fetch('/local/api/speech-to-text', {
-				method: 'POST',
-				body: formData
+			const base64 = await new Promise<string>((resolve) => {
+				const reader = new FileReader();
+				reader.onloadend = () => resolve(reader.result as string);
+				reader.readAsDataURL(audioBlob);
+			});
+			console.log('📝 Base64 conversion complete');
+
+			// Use mutateAsync like in the example
+			const response = await $transcribeAudioMutation.mutateAsync({
+				audioBase64: base64
 			});
 
-			const data = await response.json();
-			if (data.text) {
-				await handleTranscriptionComplete(data.text);
+			console.log('📥 Mutation response:', response);
+
+			if (response.data?.text) {
+				await handleTranscriptionComplete(response.data.text);
 			}
 		} catch (error) {
-			console.error('[Error] Audio processing failed:', error);
-			modalState = 'idle';
-			// Clean up audio if there's an error
+			console.error('❌ Error:', error);
+			modalState = 'error';
+		} finally {
 			if (hominioAudio) {
 				hominioAudio.pause();
 				hominioAudio = null;
 			}
-		} finally {
-			// Cleanup
 			if (audioStream) {
 				audioStream.getTracks().forEach((track) => track.stop());
 			}
