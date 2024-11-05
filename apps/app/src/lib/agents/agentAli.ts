@@ -2,11 +2,28 @@ import type { AgentResponse, ClaudeResponse } from '../types/agent.types';
 import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { agentLogger } from '$lib/utils/logger';
+import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
+import { writable } from 'svelte/store';
 
 export class AliAgent {
     private readonly agentName = 'ali';
+    private formContextStore = persist(
+        writable<Record<string, any>[]>([]),
+        createIndexedDBStorage(),
+        'ali-form-context'
+    );
 
-    private readonly systemPrompt = `You are Ali, the Action Agent. Your role is to handle action-based requests like updating user information and managing emails.
+    private getSystemPrompt(context?: any): string {
+        let formContext = '';
+
+        // Subscribe to the store to get the latest form context
+        this.formContextStore.subscribe(forms => {
+            if (forms.length > 0) {
+                formContext = `\nCurrent Form Context:\n${JSON.stringify(forms, null, 2)}`;
+            }
+        })();
+
+        return `You are Ali, the Action Agent. Your role is to handle action-based requests like updating user information and managing emails.
 
 IMPORTANT GUIDELINES:
 
@@ -26,6 +43,8 @@ IMPORTANT GUIDELINES:
 - Handle name changes professionally
 - Confirm the new name clearly
 - Keep it simple and direct
+
+${formContext}
 
 ALWAYS use the extractFormAction tool with this format:
 
@@ -47,6 +66,7 @@ For name updates:
 }
 
 Remember: Keep the core message intact while adapting style and language as needed.`;
+    }
 
     private readonly tools = [
         {
@@ -134,6 +154,13 @@ Remember: Keep the core message intact while adapting style and language as need
             const { action, values } = toolUseResult.data;
             const formId = crypto.randomUUID();
 
+            // Store the form context
+            this.formContextStore.update(forms => {
+                const newForms = [...forms, { action, values, formId, timestamp: new Date().toISOString() }];
+                // Keep only the last 5 forms
+                return newForms.slice(-5);
+            });
+
             agentLogger.log(this.agentName, `[${requestId}] Creating form configuration`, {
                 action,
                 values,
@@ -190,7 +217,7 @@ Remember: Keep the core message intact while adapting style and language as need
     private async getClaudeResponse(userMessage: string, requestId: string) {
         agentLogger.log(this.agentName, `[${requestId}] Calling Claude API`, {
             userMessage,
-            systemPromptLength: this.systemPrompt.length,
+            systemPromptLength: this.getSystemPrompt().length,
             toolsCount: this.tools.length
         });
 
@@ -198,7 +225,7 @@ Remember: Keep the core message intact while adapting style and language as need
             operationName: 'askClaude',
             input: {
                 messages: [{ role: 'user', content: userMessage }],
-                system: this.systemPrompt,
+                system: this.getSystemPrompt(),
                 tools: this.tools,
                 temperature: 0.7
             }
