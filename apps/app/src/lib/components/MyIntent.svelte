@@ -10,7 +10,7 @@
 	import { hominioAgent } from '$lib/agents/hominioAgent';
 	import { goto } from '$app/navigation';
 	import { dynamicView } from '$lib/stores';
-	import { client, createMutation } from '$lib/wundergraph';
+	import { createMutation } from '$lib/wundergraph';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -26,7 +26,8 @@
 		| 'processing'
 		| 'result'
 		| 'need-permissions'
-		| 'permissions-denied' = 'idle';
+		| 'permissions-denied'
+		| 'pioneer-list' = 'idle';
 	let currentConversation: any;
 	let audioStream: MediaStream | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
@@ -88,7 +89,8 @@
 		| 'processing'
 		| 'result'
 		| 'need-permissions'
-		| 'permissions-denied';
+		| 'permissions-denied'
+		| 'pioneer-list';
 
 	let hasPermissions = false;
 	let permissionRequesting = false;
@@ -211,12 +213,25 @@
 
 			console.log('📥 Mutation response:', response);
 
-			if (response.data?.text) {
+			if (response.data?.error === 'pioneer-list') {
+				modalState = 'pioneer-list';
+				return; // Exit early
+			} else if (response.data?.text) {
 				await handleTranscriptionComplete(response.data.text);
 			}
-		} catch (error) {
+		} catch (error: any) {
 			console.error('❌ Error:', error);
-			modalState = 'error';
+
+			// Check for authorization error
+			if (
+				error.message?.includes('Not authorized') ||
+				error.message?.includes('Authorization') ||
+				error.response?.error === 'pioneer-list'
+			) {
+				modalState = 'pioneer-list';
+			} else {
+				modalState = 'error';
+			}
 		} finally {
 			if (hominioAudio) {
 				hominioAudio.pause();
@@ -410,6 +425,8 @@
 								Microphone Access
 							{:else if modalState === 'permissions-denied'}
 								Access Denied
+							{:else if modalState === 'pioneer-list'}
+								Authentication Error
 							{:else}
 								Your Message
 							{/if}
@@ -495,6 +512,16 @@
 										<p class="text-lg text-tertiary-200">Press and hold to record your message</p>
 									</div>
 								{/if}
+							</div>
+						{:else if modalState === 'pioneer-list'}
+							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
+								<div class="text-4xl">🚀</div>
+								<h3 class="text-xl font-semibold text-tertiary-200">Coming Soon!</h3>
+								<p class="text-surface-200">Voice commands are currently in beta testing.</p>
+								<p class="text-surface-300">
+									Get early access by moving up the Visioncreator list! The higher your rank, the
+									sooner you'll be invited.
+								</p>
 							</div>
 						{:else}
 							<div class="flex items-center justify-center flex-1">
