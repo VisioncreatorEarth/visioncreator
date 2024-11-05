@@ -55,7 +55,6 @@ export default createOperation.mutation({
         if (!user?.customClaims?.id) {
             throw new AuthorizationError({
                 message: "User not authenticated or missing ID.",
-                code: "UNAUTHORIZED"
             });
         }
 
@@ -63,7 +62,6 @@ export default createOperation.mutation({
         if (!user.roles?.includes("admin")) {
             throw new AuthorizationError({
                 message: "User does not have required permissions.",
-                code: "FORBIDDEN"
             });
         }
 

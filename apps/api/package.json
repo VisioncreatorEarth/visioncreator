@@ -16,6 +16,7 @@
     "@nangohq/node": "^0.39.32",
     "@polar-sh/sdk": "^0.13.1",
     "@supabase/supabase-js": "^2.43.2",
+    "@web-std/file": "^3.0.3",
     "@wundergraph/sdk": "^0.184.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
@@ -24,6 +25,7 @@
     "ipfs-only-hash": "^4.0.0",
     "multiformats": "^13.2.1",
     "node-fetch": "^3.3.2",
+    "openai": "^4.71.0",
     "postmark": "^4.0.5"
   },
   "devDependencies": {
