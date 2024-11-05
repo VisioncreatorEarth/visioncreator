@@ -3,18 +3,8 @@ import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import { agentLogger } from '$lib/utils/logger';
 
-interface FormContext {
-    formId: string;
-    action: string;
-    timestamp: string;
-    values: Record<string, any>;
-    component: string;
-}
-
 export class AliAgent {
     private readonly agentName = 'ali';
-    private formContexts: FormContext[] = [];
-    private readonly MAX_CONTEXTS = 5;
 
     private readonly systemPrompt = `You are Ali, the Action Agent. Your role is to handle action-based requests like updating user information and managing emails.
 
@@ -81,17 +71,6 @@ Remember: Keep the core message intact while adapting style and language as need
         }
     ];
 
-    private addFormContext(context: FormContext) {
-        this.formContexts.unshift(context);
-        if (this.formContexts.length > this.MAX_CONTEXTS) {
-            this.formContexts.pop();
-        }
-    }
-
-    private getLatestFormContext(action: string) {
-        return this.formContexts.find(ctx => ctx.action === action);
-    }
-
     private getFieldsForAction(action: string, values: Record<string, any>) {
         switch (action) {
             case 'updateName':
@@ -128,12 +107,13 @@ Remember: Keep the core message intact while adapting style and language as need
 
     async processRequest(userMessage: string, context?: any): Promise<AgentResponse> {
         const pendingMsgId = crypto.randomUUID();
+        const requestId = crypto.randomUUID();
 
         try {
-            agentLogger.log(this.agentName, 'Starting action request', {
+            agentLogger.log(this.agentName, `[${requestId}] Starting action request`, {
                 userMessage,
                 contextPresent: !!context,
-                formContexts: this.formContexts
+                timestamp: new Date().toISOString()
             });
 
             conversationManager.addMessage({
@@ -144,62 +124,30 @@ Remember: Keep the core message intact while adapting style and language as need
                 status: 'pending'
             });
 
-            const claudeResponse = await client.mutate<ClaudeResponse>({
-                operationName: 'askClaude',
-                input: {
-                    messages: [{ role: 'user', content: userMessage }],
-                    system: this.systemPrompt,
-                    tools: this.tools,
-                    temperature: 0.7
-                }
-            });
+            const claudeResponse = await this.getClaudeResponse(userMessage, requestId);
+            const toolUseResult = this.extractToolUse(claudeResponse, requestId);
 
-            const toolUseContent = claudeResponse.data.content.find(c => c.type === 'tool_use');
-            if (!toolUseContent?.input) throw new Error('No valid response from Claude');
+            if (!toolUseResult.success) {
+                throw new Error(toolUseResult.error);
+            }
 
-            const { action, values } = toolUseContent.input;
+            const { action, values } = toolUseResult.data;
             const formId = crypto.randomUUID();
 
-            const viewConfig = {
-                id: "MainContainer",
-                layout: {
-                    areas: "'content'",
-                    columns: "1fr",
-                    rows: "1fr",
-                    overflow: "auto",
-                    style: "p-4 max-w-7xl mx-auto"
-                },
-                children: [
-                    {
-                        id: `${action}Container`,
-                        component: 'HominioForm',
-                        slot: 'content',
-                        data: {
-                            formId,
-                            form: {
-                                fields: this.getFieldsForAction(action, values),
-                                validators: action,
-                                submitAction: action === 'updateName' ? 'updateMe' : 'sendMail'
-                            }
-                        }
-                    }
-                ]
-            };
-
-            this.addFormContext({
-                formId,
+            agentLogger.log(this.agentName, `[${requestId}] Creating form configuration`, {
                 action,
-                timestamp: new Date().toISOString(),
                 values,
-                component: 'HominioForm'
+                formId
             });
 
-            const messages = {
-                updateName: `I've prepared a name update form with "${values.name}". Please review:`,
-                sendMail: "I've prepared an email for you. Please review:"
-            };
+            const viewConfig = this.createViewConfig(action, values, formId);
+            const message = this.createResponseMessage(action, values);
 
-            const message = messages[action] || "Please review your request:";
+            agentLogger.log(this.agentName, `[${requestId}] Request processed successfully`, {
+                action,
+                formId,
+                messageId: pendingMsgId
+            });
 
             conversationManager.updateMessage(pendingMsgId, {
                 content: message,
@@ -223,6 +171,12 @@ Remember: Keep the core message intact while adapting style and language as need
             };
 
         } catch (error) {
+            agentLogger.error(this.agentName, `[${requestId}] Request failed`, {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                userMessage,
+                timestamp: new Date().toISOString()
+            });
+
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             conversationManager.updateMessage(pendingMsgId, {
                 content: `Sorry, I couldn't process that: ${errorMessage}`,
@@ -232,32 +186,109 @@ Remember: Keep the core message intact while adapting style and language as need
             return { success: false, error: errorMessage };
         }
     }
+
+    private async getClaudeResponse(userMessage: string, requestId: string) {
+        agentLogger.log(this.agentName, `[${requestId}] Calling Claude API`, {
+            userMessage,
+            systemPromptLength: this.systemPrompt.length,
+            toolsCount: this.tools.length
+        });
+
+        const response = await client.mutate<ClaudeResponse>({
+            operationName: 'askClaude',
+            input: {
+                messages: [{ role: 'user', content: userMessage }],
+                system: this.systemPrompt,
+                tools: this.tools,
+                temperature: 0.7
+            }
+        });
+
+        agentLogger.log(this.agentName, `[${requestId}] Claude API response received`, {
+            responseId: response.data.id,
+            contentTypes: response.data.content.map(c => c.type)
+        });
+
+        return response;
+    }
+
+    private extractToolUse(response: ClaudeResponse, requestId: string): {
+        success: boolean;
+        data?: { action: string; values: Record<string, any> };
+        error?: string
+    } {
+        const toolUseContent = response.data.content.find(c => c.type === 'tool_use');
+
+        agentLogger.log(this.agentName, `[${requestId}] Extracting tool use`, {
+            hasToolUse: !!toolUseContent,
+            toolUseContent: toolUseContent ? JSON.stringify(toolUseContent) : 'none'
+        });
+
+        if (!toolUseContent?.input) {
+            return {
+                success: false,
+                error: 'No valid tool use response from Claude'
+            };
+        }
+
+        try {
+            const { action, values } = toolUseContent.input;
+
+            if (!action || !values) {
+                return {
+                    success: false,
+                    error: 'Invalid tool use format: missing action or values'
+                };
+            }
+
+            return {
+                success: true,
+                data: { action, values }
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: 'Failed to parse tool use response'
+            };
+        }
+    }
+
+    private createViewConfig(action: string, values: Record<string, any>, formId: string) {
+        return {
+            id: "MainContainer",
+            layout: {
+                areas: "'content'",
+                columns: "1fr",
+                rows: "1fr",
+                overflow: "auto",
+                style: "p-4 max-w-7xl mx-auto"
+            },
+            children: [
+                {
+                    id: `${action}Container`,
+                    component: 'HominioForm',
+                    slot: 'content',
+                    data: {
+                        formId,
+                        form: {
+                            fields: this.getFieldsForAction(action, values),
+                            validators: action,
+                            submitAction: action === 'updateName' ? 'updateMe' : 'sendMail'
+                        }
+                    }
+                }
+            ]
+        };
+    }
+
+    private createResponseMessage(action: string, values: Record<string, any>): string {
+        const messages = {
+            updateName: `I've prepared a name update form with "${values.name}". Please review:`,
+            sendMail: "I've prepared an email for you. Please review:"
+        };
+
+        return messages[action] || "Please review your request:";
+    }
 }
 
 export const aliAgent = new AliAgent();
-
-export const aliAgentView = {
-    id: "MainContainer",
-    layout: {
-        areas: "'content'",
-        columns: "1fr",
-        rows: "1fr",
-        overflow: "auto",
-        style: "p-4 max-w-7xl mx-auto"
-    },
-    children: [
-        {
-            id: "FormContainer",
-            component: 'HominioForm',
-            slot: 'content',
-            data: {
-                formId: crypto.randomUUID(),
-                form: {
-                    fields: [], // Will be populated dynamically
-                    validators: '', // Will be set based on action
-                    submitAction: '' // Will be set based on action
-                }
-            }
-        }
-    ]
-};
