@@ -5,11 +5,14 @@ import { client } from '$lib/wundergraph';
 import type { AgentResponse } from '../types/agent.types';
 import { dynamicView } from '$lib/stores';
 
-// Define the ShoppingItem interface
-interface ShoppingItem {
+// Define a shared type for icons
+export type CategoryType = 'fruits' | 'vegetables' | 'dairy' | 'meat' | 'bakery' | 'beverages' | 'snacks' | 'household' | 'other';
+
+export interface ShoppingItem {
     id: number;
     name: string;
-    icon: string;
+    category: CategoryType;
+    icon?: string;
 }
 
 // Persistent store for shopping list
@@ -19,83 +22,101 @@ export const shoppingListStore = persist(
     'bert-shopping-list'
 );
 
-// Generic icons for categorizing items
-const genericIcons = {
-    food: 'mdi:food',
-    drink: 'mdi:cup',
-    household: 'mdi:home',
-    personal: 'mdi:account',
-    default: 'mdi:shopping'
+// Categories are defined here for the agent to use
+export const categories = {
+    fruits: 'Fruits',
+    vegetables: 'Vegetables',
+    dairy: 'Dairy & Eggs',
+    meat: 'Meat & Fish',
+    bakery: 'Bakery',
+    beverages: 'Beverages',
+    snacks: 'Snacks',
+    household: 'Household',
+    other: 'Other'
 } as const;
 
-// Update preselectedItems to English
+// Export the category icons for reuse
+export const categoryIcons = {
+    fruits: 'mdi:fruit-cherries',
+    vegetables: 'mdi:carrot',
+    dairy: 'mdi:cheese',
+    meat: 'mdi:food-steak',
+    bakery: 'mdi:baguette',
+    beverages: 'mdi:cup',
+    snacks: 'mdi:cookie',
+    household: 'mdi:home',
+    other: 'mdi:shopping'
+} as const;
+
+// Update preselectedItems to use the shared icons
 export const preselectedItems = [
-    { name: 'Apple', icon: 'mdi:fruit-apple' },
-    { name: 'Banana', icon: 'mdi:fruit-banana' },
-    { name: 'Bread', icon: 'mdi:bread-slice' },
-    { name: 'Carrot', icon: 'mdi:carrot' },
-    { name: 'Cheese', icon: 'mdi:cheese' },
-    { name: 'Egg', icon: 'mdi:egg' },
-    { name: 'Fish', icon: 'mdi:fish' },
-    { name: 'Milk', icon: 'mdi:bottle-soda' },
-    { name: 'Tomato', icon: 'mdi:fruit-tomato' },
-    { name: 'Chicken', icon: 'mdi:food-drumstick' },
-    { name: 'Potato', icon: 'mdi:potato' },
-    { name: 'Onion', icon: 'mdi:onion' },
-    { name: 'Garlic', icon: 'mdi:garlic' },
-    { name: 'Paper Towels', icon: 'mdi:paper-roll' },
-    { name: 'Toilet Paper', icon: 'mdi:toilet-paper' },
-    { name: 'Shampoo', icon: 'mdi:shampoo' },
-    { name: 'Toothpaste', icon: 'mdi:toothpaste' },
-    { name: 'Coffee Beans', icon: 'mdi:coffee' },
-    { name: 'Tea', icon: 'mdi:tea' },
-    { name: 'Wine', icon: 'mdi:wine' }
+    { name: 'Apple', icon: 'mdi:fruit-apple', category: 'fruits' },
+    { name: 'Banana', icon: 'mdi:fruit-banana', category: 'fruits' },
+    { name: 'Orange', icon: 'mdi:fruit-orange', category: 'fruits' },
+    { name: 'Pear', icon: 'mdi:fruit-pear', category: 'fruits' },
+    { name: 'Mango', icon: categoryIcons.fruits, category: 'fruits' },
+    { name: 'Carrot', icon: 'mdi:carrot', category: 'vegetables' },
+    { name: 'Potato', icon: 'mdi:potato', category: 'vegetables' },
+    { name: 'Garlic', icon: categoryIcons.vegetables, category: 'vegetables' },
+    { name: 'Milk', icon: 'mdi:bottle-soda', category: 'dairy' },
+    { name: 'Cheese', icon: 'mdi:cheese', category: 'dairy' },
+    { name: 'Bread', icon: 'mdi:bread-slice', category: 'bakery' },
+    { name: 'Water', icon: 'mdi:bottle-water', category: 'beverages' },
+    { name: 'Coca-Cola', icon: 'simple-icons:coca-cola', category: 'beverages' },
+    { name: 'Beer', icon: 'mdi:beer', category: 'beverages' },
+    { name: 'Chips', icon: 'emojione-monotone:potato-chips', category: 'snacks' },
+    { name: 'Soap', icon: 'mdi:soap', category: 'household' },
+    { name: 'Salt', icon: 'mdi:shaker-outline', category: 'household' },
+    { name: 'Hammer', icon: 'mdi:hammer', category: 'household' },
+    { name: 'Nails', icon: 'mdi:nail', category: 'household' },
+    { name: 'Tape', icon: 'mdi:tape-measure', category: 'household' }
 ] as const;
 
 export class BertAgent {
     private readonly agentName = 'bert';
 
     private getSystemPrompt(): string {
-        return `You are Bert, the Shopping List Assistant. Your task is to manage shopping lists intelligently.
-IMPORTANT: Always process requests in English, regardless of input language.
+        return `You are Bert, the Smart Shopping List Assistant. Your task is to manage and categorize shopping lists intelligently. 
 
 Current shopping list items:
 ${this.getCurrentListItems()}
 
-Available predefined items:
+Available predefined items and categories:
 ${preselectedItems.map(item => item.name).join(', ')}
 
 IMPORTANT RULES:
-1. Always check for and handle similar items:
-   - Detect singular/plural variations (e.g., "apple" vs "apples")
-   - Identify similar items (e.g., "coconut" and "coconuts" should be merged)
-   - Use the more common or predefined form when merging items
-   - Avoid creating duplicate entries
+1. Always categorize items into these specific categories:
+   - fruits: Fresh fruits and fruit products
+   - vegetables: Fresh vegetables and vegetable products
+   - dairy: Dairy products, eggs, milk, cheese
+   - meat: Meat, poultry, fish, seafood
+   - bakery: Bread, pastries, baked goods
+   - beverages: All drinks including water, soda, alcohol
+   - snacks: Chips, nuts, candies, sweets
+   - household: Cleaning supplies, paper products
+   - other: Items that don't fit above categories
 
-2. Standardize item names:
-   - Always capitalize the first letter of each word
+2. Handle similar items and variations:
+   - Merge singular/plural forms
+   - Identify brand names (e.g., "Coca-Cola" → beverages)
    - Use predefined names when available
-   - Maintain consistent naming across the list
+   - Avoid duplicates
 
-3. Handle operations intelligently:
-   - When adding items, merge with existing similar items
-   - When removing items, remove all similar variations
-   - When clearing, remove all items
+3. Smart categorization examples:
+   - "Cola" or "Pepsi" → beverages
+   - "Apple" or "Bananas" → fruits
+   - "Toilet paper" or "Soap" → household
+   - "Chips" or "Cookies" → snacks
 
-4. Categorize new items appropriately:
-   - food: edible items
-   - drink: beverages
-   - household: cleaning and home supplies
-   - personal: hygiene and personal care items
-
-Always respond using the shopping_list_operation tool with detailed operations.
-Always set language to "en" in your response.
-Include merge and update operations in your response when handling similar items.`;
+Always respond using the smart_shopping_list tool with categorized operations.
+Include detailed categorization in your response.
+please always translate everything to english, no matter the input lagnauge. 
+`;
     }
 
     private readonly tools = [{
-        name: "shopping_list_operation",
-        description: "Process shopping list operations intelligently",
+        name: "smart_shopping_list",
+        description: "Intelligently manage shopping list with automatic categorization",
         input_schema: {
             type: "object",
             properties: {
@@ -114,27 +135,29 @@ Include merge and update operations in your response when handling similar items
                                     type: "object",
                                     properties: {
                                         name: { type: "string" },
-                                        similarTo: { type: "string" },
                                         category: {
                                             type: "string",
-                                            enum: ["food", "drink", "household", "personal"]
+                                            enum: [
+                                                "fruits",
+                                                "vegetables",
+                                                "dairy",
+                                                "meat",
+                                                "bakery",
+                                                "beverages",
+                                                "snacks",
+                                                "household",
+                                                "other"
+                                            ]
                                         },
-                                        reason: {
-                                            type: "string",
-                                            description: "Reason for merge or update"
-                                        }
+                                        similarTo: { type: "string" },
+                                        reason: { type: "string" }
                                     },
-                                    required: ["name"]
+                                    required: ["name", "category"]
                                 }
                             }
                         },
                         required: ["type", "items"]
                     }
-                },
-                language: {
-                    type: "string",
-                    enum: ["en"],
-                    default: "en"
                 }
             },
             required: ["operations"]
@@ -282,33 +305,14 @@ Include merge and update operations in your response when handling similar items
         }
     }
 
-    private handleAddItems(items: Array<{ name: string; category?: string }>, language: string): string {
-        const newItems = items.map(item => {
-            // Try to match with predefined items (case-insensitive)
-            const predefined = preselectedItems.find(
-                pre => pre.name.toLowerCase() === item.name.toLowerCase()
-            );
-
-            if (predefined) {
-                return {
-                    id: Date.now() + Math.random(),
-                    name: predefined.name, // Use predefined capitalization
-                    icon: predefined.icon
-                };
-            }
-
-            // For custom items, capitalize first letter and use category-based icons
-            return {
-                id: Date.now() + Math.random(),
-                name: this.capitalizeFirstLetter(item.name),
-                icon: item.category ?
-                    genericIcons[item.category as keyof typeof genericIcons] :
-                    genericIcons.default
-            };
-        });
+    private handleAddItems(items: Array<{ name: string; category: string }>, language: string): string {
+        const newItems = items.map(item => ({
+            id: Date.now() + Math.random(),
+            name: this.capitalizeFirstLetter(item.name),
+            category: item.category as CategoryType
+        }));
 
         shoppingListStore.update(list => [...list, ...newItems]);
-
         return `Added ${newItems.map(i => i.name).join(', ')} to your shopping list.`;
     }
 
