@@ -1,4 +1,4 @@
-import { createOperation, z } from "../generated/wundergraph.factory";
+import { createOperation, z, AuthorizationError } from "../generated/wundergraph.factory";
 
 // Define tool schema
 const ToolSchema = z.object({
@@ -50,16 +50,32 @@ export default createOperation.mutation({
     rbac: {
         requireMatchAll: ["authenticated", "admin"],
     },
-    handler: async ({ input, context }) => {
+    handler: async ({ input, context, user }) => {
+        // Check if user is authenticated and has valid ID
+        if (!user?.customClaims?.id) {
+            throw new AuthorizationError({
+                message: "User not authenticated or missing ID.",
+                code: "UNAUTHORIZED"
+            });
+        }
+
+        // Check if user has required roles
+        if (!user.roles?.includes("admin")) {
+            throw new AuthorizationError({
+                message: "User does not have required permissions.",
+                code: "FORBIDDEN"
+            });
+        }
+
         console.log('askClaude - Starting operation with input:', {
             messages: input.messages,
             systemPromptLength: input.system.length,
             toolsCount: input.tools?.length,
-            temperature: input.temperature
+            temperature: input.temperature,
+            userId: user.customClaims.id
         });
 
         if (!context.anthropic) {
-            console.error('askClaude - Anthropic client missing in context');
             throw new Error('Anthropic client not configured');
         }
 
@@ -119,6 +135,15 @@ export default createOperation.mutation({
             return structuredResponse;
 
         } catch (error) {
+            // Enhanced error handling
+            if (error instanceof AuthorizationError) {
+                return {
+                    success: false,
+                    message: error.message,
+                    code: error.code
+                };
+            }
+
             console.error('askClaude - Operation failed:', {
                 error: error instanceof Error ? {
                     name: error.name,
@@ -129,14 +154,15 @@ export default createOperation.mutation({
                     messageCount: input.messages.length,
                     systemPromptLength: input.system.length,
                     toolsCount: input.tools?.length
-                }
+                },
+                userId: user.customClaims.id
             });
 
-            // Rethrow with more context
-            if (error instanceof Error) {
-                throw new Error(`Claude API error: ${error.message}`);
-            }
-            throw new Error('Unknown error occurred while calling Claude API');
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : 'Unknown error occurred while calling Claude API',
+                code: 'INTERNAL_ERROR'
+            };
         }
     }
 });
