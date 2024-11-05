@@ -13,10 +13,8 @@ interface FormContext {
 
 export class AliAgent {
     private readonly agentName = 'ali';
-
-    // Generic form context tracking
     private formContexts: FormContext[] = [];
-    private readonly MAX_CONTEXTS = 5; // Keep track of last 5 forms
+    private readonly MAX_CONTEXTS = 5;
 
     private readonly systemPrompt = `You are Ali, the Action Agent. Your role is to handle action-based requests like updating user information and managing emails.
 
@@ -94,106 +92,6 @@ Remember: Keep the core message intact while adapting style and language as need
         return this.formContexts.find(ctx => ctx.action === action);
     }
 
-    async processRequest(userMessage: string, context?: any): Promise<AgentResponse> {
-        const pendingMsgId = crypto.randomUUID();
-
-        try {
-            agentLogger.log(this.agentName, 'Starting action request', {
-                userMessage,
-                contextPresent: !!context,
-                formContexts: this.formContexts
-            });
-
-            conversationManager.addMessage({
-                id: pendingMsgId,
-                agent: this.agentName,
-                content: 'Processing your request...',
-                timestamp: new Date().toISOString(),
-                status: 'pending'
-            });
-
-            // Get Claude's response
-            const claudeResponse = await client.mutate<ClaudeResponse>({
-                operationName: 'askClaude',
-                input: {
-                    messages: [{ role: 'user', content: userMessage }],
-                    system: this.systemPrompt,
-                    tools: this.tools,
-                    temperature: 0.7
-                }
-            });
-
-            const toolUseContent = claudeResponse.data.content.find(c => c.type === 'tool_use');
-            if (!toolUseContent?.input) throw new Error('No valid response from Claude');
-
-            const { action, values } = toolUseContent.input;
-            const formId = crypto.randomUUID();
-
-            // Simple form configuration
-            const viewConfig = {
-                id: "MainContainer",
-                layout: {
-                    areas: "'content'",
-                    columns: "1fr",
-                    rows: "1fr",
-                    overflow: "auto",
-                    style: "p-4 max-w-7xl mx-auto"
-                },
-                children: [
-                    {
-                        id: `${action}Container`,
-                        component: 'HominioForm',
-                        slot: 'content',
-                        data: {
-                            formId,
-                            form: {
-                                fields: this.getFieldsForAction(action, values),
-                                validators: action,
-                                submitAction: action === 'updateName' ? 'updateMe' : 'sendMail'
-                            }
-                        }
-                    }
-                ]
-            };
-
-            // Store context for future reference
-            this.addFormContext({
-                formId,
-                action,
-                timestamp: new Date().toISOString(),
-                values,
-                component: 'HominioForm'
-            });
-
-            const messages = {
-                updateName: `I've prepared a name update form with "${values.name}". Please review:`,
-                sendMail: "I've prepared an email for you. Please review:"
-            };
-
-            const message = messages[action] || "Please review your request:";
-
-            conversationManager.updateMessage(pendingMsgId, {
-                content: message,
-                status: 'complete',
-                payload: {
-                    type: 'action',
-                    data: viewConfig
-                }
-            });
-
-            return { success: true, message: { agent: this.agentName, content: message, payload: { type: 'action', data: viewConfig } } };
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            conversationManager.updateMessage(pendingMsgId, {
-                content: `Sorry, I couldn't process that: ${errorMessage}`,
-                status: 'error',
-                payload: { type: 'error', data: { error: errorMessage } }
-            });
-            return { success: false, error: errorMessage };
-        }
-    }
-
     private getFieldsForAction(action: string, values: Record<string, any>) {
         switch (action) {
             case 'updateName':
@@ -227,6 +125,139 @@ Remember: Keep the core message intact while adapting style and language as need
                 }));
         }
     }
+
+    async processRequest(userMessage: string, context?: any): Promise<AgentResponse> {
+        const pendingMsgId = crypto.randomUUID();
+
+        try {
+            agentLogger.log(this.agentName, 'Starting action request', {
+                userMessage,
+                contextPresent: !!context,
+                formContexts: this.formContexts
+            });
+
+            conversationManager.addMessage({
+                id: pendingMsgId,
+                agent: this.agentName,
+                content: 'Processing your request...',
+                timestamp: new Date().toISOString(),
+                status: 'pending'
+            });
+
+            const claudeResponse = await client.mutate<ClaudeResponse>({
+                operationName: 'askClaude',
+                input: {
+                    messages: [{ role: 'user', content: userMessage }],
+                    system: this.systemPrompt,
+                    tools: this.tools,
+                    temperature: 0.7
+                }
+            });
+
+            const toolUseContent = claudeResponse.data.content.find(c => c.type === 'tool_use');
+            if (!toolUseContent?.input) throw new Error('No valid response from Claude');
+
+            const { action, values } = toolUseContent.input;
+            const formId = crypto.randomUUID();
+
+            const viewConfig = {
+                id: "MainContainer",
+                layout: {
+                    areas: "'content'",
+                    columns: "1fr",
+                    rows: "1fr",
+                    overflow: "auto",
+                    style: "p-4 max-w-7xl mx-auto"
+                },
+                children: [
+                    {
+                        id: `${action}Container`,
+                        component: 'HominioForm',
+                        slot: 'content',
+                        data: {
+                            formId,
+                            form: {
+                                fields: this.getFieldsForAction(action, values),
+                                validators: action,
+                                submitAction: action === 'updateName' ? 'updateMe' : 'sendMail'
+                            }
+                        }
+                    }
+                ]
+            };
+
+            this.addFormContext({
+                formId,
+                action,
+                timestamp: new Date().toISOString(),
+                values,
+                component: 'HominioForm'
+            });
+
+            const messages = {
+                updateName: `I've prepared a name update form with "${values.name}". Please review:`,
+                sendMail: "I've prepared an email for you. Please review:"
+            };
+
+            const message = messages[action] || "Please review your request:";
+
+            conversationManager.updateMessage(pendingMsgId, {
+                content: message,
+                status: 'complete',
+                payload: {
+                    type: 'action',
+                    data: viewConfig
+                }
+            });
+
+            return {
+                success: true,
+                message: {
+                    agent: this.agentName,
+                    content: message,
+                    payload: {
+                        type: 'action',
+                        data: viewConfig
+                    }
+                }
+            };
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            conversationManager.updateMessage(pendingMsgId, {
+                content: `Sorry, I couldn't process that: ${errorMessage}`,
+                status: 'error',
+                payload: { type: 'error', data: { error: errorMessage } }
+            });
+            return { success: false, error: errorMessage };
+        }
+    }
 }
 
 export const aliAgent = new AliAgent();
+
+export const aliAgentView = {
+    id: "MainContainer",
+    layout: {
+        areas: "'content'",
+        columns: "1fr",
+        rows: "1fr",
+        overflow: "auto",
+        style: "p-4 max-w-7xl mx-auto"
+    },
+    children: [
+        {
+            id: "FormContainer",
+            component: 'HominioForm',
+            slot: 'content',
+            data: {
+                formId: crypto.randomUUID(),
+                form: {
+                    fields: [], // Will be populated dynamically
+                    validators: '', // Will be set based on action
+                    submitAction: '' // Will be set based on action
+                }
+            }
+        }
+    ]
+};
