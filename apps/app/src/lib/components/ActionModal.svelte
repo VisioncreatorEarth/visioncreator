@@ -49,7 +49,7 @@
 
 		setTimeout(() => {
 			if (isPressed) {
-				if (dev && isPressed && performance.now() - pressStartTime >= 500) {
+				if (performance.now() - pressStartTime >= 500) {
 					isIntentModalOpen = true;
 					if (isIntentModalOpen && myIntentRef) {
 						myIntentRef.handleLongPressStart();
@@ -71,7 +71,7 @@
 
 		if (isPressed) {
 			isPressed = false;
-			if (dev && pressDuration >= 500) {
+			if (pressDuration >= 500) {
 				if (isIntentModalOpen && myIntentRef) {
 					myIntentRef.handleLongPressEnd();
 				}
@@ -209,7 +209,7 @@
 
 <svelte:window on:openModal={handleModalOpen} />
 
-{#if session && dev}
+{#if session}
 	<MyIntent
 		bind:this={myIntentRef}
 		isOpen={isIntentModalOpen}

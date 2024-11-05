@@ -10,18 +10,15 @@ export default createOperation.mutation({
     },
     handler: async ({ user, input, context }) => {
         console.log('🎤 Transcription API called');
-        // Check if user is authenticated and has valid ID
-        if (!user?.customClaims?.id) {
-            throw new AuthorizationError({
-                message: "User not authenticated or missing ID.",
-            });
-        }
 
-        // Check if user has required roles
-        if (!user.roles?.includes("admin")) {
-            throw new AuthorizationError({
-                message: "User does not have required permissions.",
-            });
+        // Return special response for non-admin users
+        if (!user?.roles?.includes("admin")) {
+            return {
+                data: {
+                    error: 'pioneer-list',
+                    text: null
+                }
+            };
         }
 
         try {
