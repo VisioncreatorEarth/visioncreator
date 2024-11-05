@@ -22,7 +22,7 @@
 	let modalState:
 		| 'idle'
 		| 'recording'
-		| 'transcribing'
+		| 'processing'
 		| 'result'
 		| 'need-permissions'
 		| 'permissions-denied' = 'idle';
@@ -84,7 +84,7 @@
 	type ModalState =
 		| 'idle'
 		| 'recording'
-		| 'transcribing'
+		| 'processing'
 		| 'result'
 		| 'need-permissions'
 		| 'permissions-denied';
@@ -172,7 +172,12 @@
 	export async function handleLongPressEnd() {
 		if (!mediaRecorder || !audioStream || mediaRecorder.state === 'inactive') return;
 
-		modalState = 'transcribing';
+		modalState = 'processing';
+		visualizerMode = 'hominio';
+
+		// Start playing audio during processing
+		hominioAudio = new Audio(getRandomWorkingAudio());
+		hominioAudio.play();
 
 		try {
 			// Stop the media recorder
@@ -196,12 +201,16 @@
 
 			const data = await response.json();
 			if (data.text) {
-				modalState = 'result';
 				await handleTranscriptionComplete(data.text);
 			}
 		} catch (error) {
 			console.error('[Error] Audio processing failed:', error);
 			modalState = 'idle';
+			// Clean up audio if there's an error
+			if (hominioAudio) {
+				hominioAudio.pause();
+				hominioAudio = null;
+			}
 		} finally {
 			// Cleanup
 			if (audioStream) {
@@ -235,16 +244,17 @@
 		});
 	}
 
-	// Update the handleTranscriptionComplete function
+	// Modify handleTranscriptionComplete to not start a new audio playback if one is already playing
 	async function handleTranscriptionComplete(text: string) {
 		try {
-			modalState = 'processing';
 			visualizerMode = 'hominio';
 
-			// Start both the audio playback and request processing in parallel
+			// Only start new audio playback if none is currently playing
+			const audioPromise = hominioAudio?.paused ? playHominioResponse() : Promise.resolve(true);
+
 			const [response] = await Promise.all([
 				hominioAgent.processRequest(text, conversationManager.getMessageContext() || []),
-				playHominioResponse()
+				audioPromise
 			]);
 
 			modalState = 'result';
@@ -268,8 +278,7 @@
 				}
 			}
 
-			// Ensure scroll after message is added
-			await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay to ensure DOM update
+			await new Promise((resolve) => setTimeout(resolve, 100));
 			scrollToBottom();
 		} catch (error) {
 			console.error('Error processing request:', error);
@@ -386,8 +395,8 @@
 						<h2 class="text-lg font-semibold text-tertiary-200">
 							{#if modalState === 'recording'}
 								Recording...
-							{:else if modalState === 'transcribing'}
-								Transcribing...
+							{:else if modalState === 'processing'}
+								Processing...
 							{:else if modalState === 'need-permissions'}
 								Microphone Access
 							{:else if modalState === 'permissions-denied'}
@@ -444,19 +453,22 @@
 									</ol>
 								</div>
 							</div>
-						{:else if modalState === 'recording' || modalState === 'processing'}
+						{:else if modalState === 'recording'}
 							<div class="flex items-center justify-center flex-1">
 								<AudioVisualizer
-									isRecording={modalState === 'recording'}
-									audioStream={modalState === 'recording' ? audioStream : null}
+									isRecording={true}
+									{audioStream}
 									mode={visualizerMode}
-									audioElement={modalState === 'processing' ? hominioAudio : null}
+									audioElement={null}
 								/>
 							</div>
-						{:else if modalState === 'transcribing'}
+						{:else if modalState === 'processing'}
 							<div class="flex items-center justify-center flex-1">
-								<div
-									class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
+								<AudioVisualizer
+									isRecording={false}
+									audioStream={null}
+									mode={visualizerMode}
+									audioElement={hominioAudio}
 								/>
 							</div>
 						{:else if modalState === 'result'}
