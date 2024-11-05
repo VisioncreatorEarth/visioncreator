@@ -15,13 +15,23 @@ export class AliAgent {
 
     private getSystemPrompt(context?: any): string {
         let formContext = '';
+        let conversationHistory = '';
 
-        // Subscribe to the store to get the latest form context
+        // Get form context from persistent store
         this.formContextStore.subscribe(forms => {
             if (forms.length > 0) {
                 formContext = `\nCurrent Form Context:\n${JSON.stringify(forms, null, 2)}`;
             }
         })();
+
+        // Get conversation history from hominio
+        if (context?.delegatedFrom) {
+            const messages = conversationManager.getMessageContext();
+            conversationHistory = messages
+                .map(msg => `[${msg.agent}]: ${msg.content}${msg.payload ? `\n<payload>${JSON.stringify(msg.payload)}</payload>` : ''
+                    }`)
+                .join('\n');
+        }
 
         return `You are Ali, the Action Agent. Your role is to handle action-based requests like updating user information and managing emails.
 
@@ -45,6 +55,9 @@ IMPORTANT GUIDELINES:
 - Keep it simple and direct
 
 ${formContext}
+
+CONVERSATION HISTORY:
+${conversationHistory}
 
 ALWAYS use the extractFormAction tool with this format:
 
@@ -132,8 +145,18 @@ Remember: Keep the core message intact while adapting style and language as need
         try {
             agentLogger.log(this.agentName, `[${requestId}] Starting action request`, {
                 userMessage,
-                contextPresent: !!context,
-                timestamp: new Date().toISOString()
+                contextPresent: !!context
+            });
+
+            // Add the current request to the form context store
+            this.formContextStore.update(forms => {
+                const newForms = [...forms, {
+                    requestId,
+                    userMessage,
+                    timestamp: new Date().toISOString()
+                }];
+                // Keep only last 5 requests
+                return newForms.slice(-5);
             });
 
             conversationManager.addMessage({
