@@ -268,6 +268,8 @@
 				}
 			}
 
+			// Ensure scroll after message is added
+			await new Promise((resolve) => setTimeout(resolve, 100)); // Small delay to ensure DOM update
 			scrollToBottom();
 		} catch (error) {
 			console.error('Error processing request:', error);
@@ -323,12 +325,23 @@
 		// Handle data display logic
 	}
 
+	// Update the scrollToBottom function to be more robust
 	function scrollToBottom() {
 		if (messageContainer) {
+			// Use requestAnimationFrame to ensure DOM is updated
 			requestAnimationFrame(() => {
-				messageContainer.scrollTop = messageContainer.scrollHeight;
+				// Smooth scroll to bottom
+				messageContainer.scrollTo({
+					top: messageContainer.scrollHeight,
+					behavior: 'smooth'
+				});
 			});
 		}
+	}
+
+	// Add scroll handling when messages update
+	$: if (currentConversation?.messages?.length) {
+		scrollToBottom();
 	}
 
 	// Add function to reset conversation state
@@ -447,7 +460,11 @@
 								/>
 							</div>
 						{:else if modalState === 'result'}
-							<div class="flex-1 space-y-4 overflow-y-auto" bind:this={messageContainer}>
+							<div
+								class="flex-1 space-y-4 overflow-y-auto scroll-smooth"
+								bind:this={messageContainer}
+								style="scroll-behavior: smooth;"
+							>
 								{#if currentConversation?.messages?.length}
 									{#each currentConversation.messages as message (message.id)}
 										<MessageItem {message} {session} on:actionComplete={handleActionComplete} />
