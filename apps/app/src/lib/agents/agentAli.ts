@@ -69,24 +69,13 @@ Remember: Keep the core message intact while adapting style and language as need
                 properties: {
                     action: {
                         type: 'string',
-                        enum: ['updateName', 'sendMail', 'updateMail'],
+                        enum: ['updateName', 'sendMail'],
                         description: 'The type of form action to perform'
                     },
                     values: {
                         type: 'object',
                         description: 'Form field values',
                         additionalProperties: true
-                    },
-                    update: {
-                        type: 'object',
-                        properties: {
-                            position: {
-                                type: 'string',
-                                enum: ['start', 'end', 'replace'],
-                                description: 'Where to add new content in existing forms'
-                            }
-                        },
-                        required: ['position']
                     }
                 },
                 required: ['action', 'values']
@@ -103,29 +92,6 @@ Remember: Keep the core message intact while adapting style and language as need
 
     private getLatestFormContext(action: string) {
         return this.formContexts.find(ctx => ctx.action === action);
-    }
-
-    private updateFormValues(existingValues: Record<string, any>, newValues: Record<string, any>, updateConfig?: { position?: 'start' | 'end' | 'replace' }): Record<string, any> {
-        const result = { ...existingValues };
-
-        for (const [key, value] of Object.entries(newValues)) {
-            if (typeof value === 'string' && typeof existingValues[key] === 'string' && updateConfig?.position) {
-                switch (updateConfig.position) {
-                    case 'start':
-                        result[key] = `${value}\n\n${existingValues[key]}`;
-                        break;
-                    case 'end':
-                        result[key] = `${existingValues[key]}\n\n${value}`;
-                        break;
-                    default:
-                        result[key] = value;
-                }
-            } else {
-                result[key] = value;
-            }
-        }
-
-        return result;
     }
 
     async processRequest(userMessage: string, context?: any): Promise<AgentResponse> {
