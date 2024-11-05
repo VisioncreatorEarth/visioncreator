@@ -225,6 +225,10 @@
 		on:mousedown={handleMouseDown}
 		on:mouseup={handleMouseUp}
 		on:mouseleave={handleMouseUp}
+		on:touchstart|preventDefault={handleMouseDown}
+		on:touchend|preventDefault={handleMouseUp}
+		on:touchcancel|preventDefault={handleMouseUp}
+		style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
 	>
 		<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
 	</button>
