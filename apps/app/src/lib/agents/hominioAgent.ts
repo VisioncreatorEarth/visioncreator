@@ -5,6 +5,7 @@ import { vroniAgent } from './agentVroni';
 import { aliAgent } from './agentAli';
 import { persist, createIndexedDBStorage } from '@macfja/svelte-persistent-store';
 import { writable } from 'svelte/store';
+import { bertAgent } from './agentBert';
 
 export class HominioAgent {
     private readonly agentName = 'hominio';
@@ -77,9 +78,19 @@ Available agents and their responsibilities:
      - "Open the Kanban board"
      - "Take me to settings"
 
+3. bert (Shopping List Agent):
+   - Manages shopping lists
+   - Adds and removes items
+   - Handles list operations
+   - Examples:
+     - "Add milk to my shopping list"
+     - "Remove bread from the list"
+     - "Clear my shopping list"
+
 DELEGATION RULES:
 - For name changes or email tasks → ALWAYS delegate to ali
 - For viewing or navigation requests → ALWAYS delegate to vroni
+- For shopping list operations → ALWAYS delegate to bert
 
 Examples of correct delegation:
 1. User: "I want to change my name to John"
@@ -90,6 +101,9 @@ Examples of correct delegation:
 
 3. User: "I need to write an email"
    → Delegate to ali: "Hey ali, please help the user compose a new email"
+
+4. User: "Add milk to my shopping list"
+   → Delegate to bert: "Bert, please add milk to my shopping list"
 
 Please analyze the conversation context carefully to understand the user's true intent before delegating.`;
     }
@@ -103,8 +117,8 @@ Please analyze the conversation context carefully to understand the user's true 
                 properties: {
                     to: {
                         type: "string",
-                        description: "The agent to delegate to (ali, vroni)",
-                        enum: ["ali", "vroni"]
+                        description: "The agent to delegate to (ali, vroni, bert)",
+                        enum: ["ali", "vroni", "bert"]
                     },
                     task: {
                         type: "string",
@@ -210,6 +224,14 @@ Please analyze the conversation context carefully to understand the user's true 
                 });
             } else if (delegation.to === 'ali') {
                 return await aliAgent.processRequest(delegation.task, {
+                    delegatedFrom: {
+                        agent: this.agentName,
+                        reasoning: delegation.reasoning
+                    },
+                    userMessage,
+                });
+            } else if (delegation.to === 'bert') {
+                return await bertAgent.processRequest(delegation.task, {
                     delegatedFrom: {
                         agent: this.agentName,
                         reasoning: delegation.reasoning

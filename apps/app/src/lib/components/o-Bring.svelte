@@ -1,47 +1,22 @@
-<!-- <script lang="ts">
-	import { bringListStore } from '$lib/agents/bringAgent';
-	import { onMount } from 'svelte';
+<script lang="ts">
+	import { shoppingListStore, preselectedItems } from '$lib/agents/agentBert';
+	import Icon from '@iconify/svelte';
 
 	// Remove any unused props
 	export let slot: string | undefined = undefined;
 
-	interface ShoppingItem {
-		id: number;
-		name: string;
-		icon: string;
-	}
-
-	const preselectedItems = [
-		{ name: 'Apfel', icon: 'mdi:fruit-apple' },
-		{ name: 'Banane', icon: 'mdi:fruit-banana' },
-		{ name: 'Brot', icon: 'mdi:bread-slice' },
-		{ name: 'Karotte', icon: 'mdi:carrot' },
-		{ name: 'Käse', icon: 'mdi:cheese' },
-		{ name: 'Ei', icon: 'mdi:egg' },
-		{ name: 'Fisch', icon: 'mdi:fish' },
-		{ name: 'Milch', icon: 'mdi:bottle-soda' },
-		{ name: 'Tomate', icon: 'mdi:fruit-tomato' },
-		{ name: 'Hühnchen', icon: 'mdi:food-drumstick' },
-		{ name: 'Kartoffel', icon: 'mdi:potato' },
-		{ name: 'Zwiebel', icon: 'mdi:onion' },
-		{ name: 'Knoblauch', icon: 'mdi:garlic' },
-		{ name: 'Küchentücher', icon: 'mdi:paper-roll' },
-		{ name: 'Toilettenpapier', icon: 'mdi:toilet-paper' },
-		{ name: 'Shampoo', icon: 'mdi:shampoo' },
-		{ name: 'Zahnpasta', icon: 'mdi:toothpaste' },
-		{ name: 'Kaffeebohnen', icon: 'mdi:coffee' },
-		{ name: 'Tee', icon: 'mdi:tea' },
-		{ name: 'Wein', icon: 'mdi:wine' }
-	];
-
-	$: shoppingList = bringListStore;
+	$: shoppingList = shoppingListStore;
 
 	let newItemName = '';
 	let showDropdown = false;
 
+	$: filteredItems = preselectedItems.filter((item) =>
+		item.name.toLowerCase().includes(newItemName.toLowerCase())
+	);
+
 	function addItem(name: string, icon: string = '') {
 		if (name.trim()) {
-			shoppingList.update((items) => [
+			shoppingListStore.update((items) => [
 				...items,
 				{
 					id: Date.now(),
@@ -55,12 +30,8 @@
 	}
 
 	function removeItem(id: number) {
-		shoppingList.update((items) => items.filter((item) => item.id !== id));
+		shoppingListStore.update((items) => items.filter((item) => item.id !== id));
 	}
-
-	$: filteredItems = preselectedItems.filter((item) =>
-		item.name.toLowerCase().includes(newItemName.toLowerCase())
-	);
 </script>
 
 <div class="relative flex flex-col w-full h-full bg-surface-50-900-token">
@@ -124,4 +95,4 @@
 			on:click={() => (showDropdown = false)}
 		/>
 	{/if}
-</div> -->
+</div>
