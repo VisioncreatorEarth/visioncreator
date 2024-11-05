@@ -5,13 +5,31 @@
 	<h3>Unsere Social-Media-Auftritte</h3>
 	<h4>Diese Datenschutzerkl&auml;rung gilt f&uuml;r folgende Social-Media-Auftritte</h4>
 	<ul>
-		<li><a href="https://x.com/1BillionVCs">https://x.com/1BillionVCs</a></li>
-		<li><a href="https://instagram.com/1BillionVCs">https://instagram.com/1BillionVCs</a></li>
 		<li>
-			<a href="https://linkedin.com/company/1BillionVCs">https://linkedin.com/company/1BillionVCs</a
+			<a href="https://www.facebook.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://www.facebook.com/1BillionVCs</a
 			>
 		</li>
-		<li><a href="https://youtube.com/@1BillionVCs">https://youtube.com/@1BillionVCs</a></li>
+		<li>
+			<a href="https://x.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://x.com/1BillionVCs</a
+			>
+		</li>
+		<li>
+			<a href="https://instagram.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://instagram.com/1BillionVCs</a
+			>
+		</li>
+		<li>
+			<a href="https://linkedin.com/company/1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://linkedin.com/company/1BillionVCs</a
+			>
+		</li>
+		<li>
+			<a href="https://youtube.com/@1BillionVCs" target="_blank" rel="noopener noreferrer"
+				>https://youtube.com/@1BillionVCs</a
+			>
+		</li>
 	</ul>
 	<h4>Datenverarbeitung durch soziale Netzwerke</h4>
 	<p>
@@ -95,6 +113,65 @@
 		personenbezogenen Daten verlangen.
 	</p>
 	<h4>Soziale Netzwerke im Einzelnen</h4>
+	<h5>Facebook</h5>
+	<p>
+		Wir verf&uuml;gen &uuml;ber ein Profil bei Facebook. Anbieter dieses Dienstes ist die Meta
+		Platforms Ireland Limited, Merrion Road, Dublin 4, D04 X2K5, Irland (nachfolgend Meta). Die
+		erfassten Daten werden nach Aussage von Meta auch in die USA und in andere Drittl&auml;nder
+		&uuml;bertragen.
+	</p>
+	<p>
+		Wir haben mit Meta eine Vereinbarung &uuml;ber gemeinsame Verarbeitung (Controller Addendum)
+		geschlossen. In dieser Vereinbarung wird festgelegt, f&uuml;r welche
+		Datenverarbeitungsvorg&auml;nge wir bzw. Meta verantwortlich ist, wenn Sie unsere Facebook-Page
+		besuchen. Diese Vereinbarung k&ouml;nnen Sie unter folgendem Link einsehen: <a
+			href="https://www.facebook.com/legal/terms/page_controller_addendum"
+			target="_blank"
+			rel="noopener noreferrer">https://www.facebook.com/legal/terms/page_controller_addendum</a
+		>.
+	</p>
+	<p>
+		<strong
+			>Sie k&ouml;nnen Ihre Werbeeinstellungen selbstst&auml;ndig in Ihrem Nutzer-Account anpassen.
+			Klicken Sie hierzu auf folgenden Link und loggen Sie sich ein:</strong
+		>
+		<a href="https://www.facebook.com/settings?tab=ads" target="_blank" rel="noopener noreferrer"
+			>https://www.facebook.com/settings?tab=ads</a
+		>.
+	</p>
+	<p>
+		Die Daten&uuml;bertragung in die USA wird auf die Standardvertragsklauseln der EU-Kommission
+		gest&uuml;tzt. Details finden Sie hier: <a
+			href="https://www.facebook.com/legal/EU_data_transfer_addendum"
+			target="_blank"
+			rel="noopener noreferrer">https://www.facebook.com/legal/EU_data_transfer_addendum</a
+		>
+		und
+		<a
+			href="https://de-de.facebook.com/help/566994660333381"
+			target="_blank"
+			rel="noopener noreferrer">https://de-de.facebook.com/help/566994660333381</a
+		>.
+	</p>
+	<p>
+		Details entnehmen Sie der Datenschutzerkl&auml;rung von Facebook: <a
+			href="https://www.facebook.com/about/privacy/"
+			target="_blank"
+			rel="noopener noreferrer">https://www.facebook.com/about/privacy/</a
+		>.
+	</p>
+	<p>
+		Das Unternehmen verf&uuml;gt &uuml;ber eine Zertifizierung nach dem &bdquo;EU-US Data Privacy
+		Framework&ldquo; (DPF). Der DPF ist ein &Uuml;bereinkommen zwischen der Europ&auml;ischen Union
+		und den USA, der die Einhaltung europ&auml;ischer Datenschutzstandards bei Datenverarbeitungen
+		in den USA gew&auml;hrleisten soll. Jedes nach dem DPF zertifizierte Unternehmen verpflichtet
+		sich, diese Datenschutzstandards einzuhalten. Weitere Informationen hierzu erhalten Sie vom
+		Anbieter unter folgendem Link: <a
+			href="https://www.dataprivacyframework.gov/participant/4452"
+			target="_blank"
+			rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/4452</a
+		>
+	</p>
 	<h5>X (ehemals Twitter)</h5>
 	<p>
 		Wir nutzen den Kurznachrichtendienst X (ehemals Twitter). Anbieter ist der Mutterkonzern X
