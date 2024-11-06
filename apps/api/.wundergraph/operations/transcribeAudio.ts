@@ -24,7 +24,7 @@ export default createOperation.mutation({
             };
         }
 
-        // Create unique temp file path
+        // Create unique temp file path with explicit .webm extension
         const tempFile = join(tmpdir(), `audio-${Date.now()}-${Math.random().toString(36).slice(2)}.webm`);
 
         try {
@@ -32,19 +32,34 @@ export default createOperation.mutation({
                 throw new Error('OpenAI client not initialized');
             }
 
-            // Convert base64 to buffer
-            const binaryData = Buffer.from(input.audioBase64.split(',')[1], 'base64');
+            // Clean the base64 string and convert to buffer
+            const base64Data = input.audioBase64.replace(/^data:audio\/webm;base64,/, '');
+            const binaryData = Buffer.from(base64Data, 'base64');
 
             // Write to temp file
             writeFileSync(tempFile, binaryData);
 
-            // Create file stream for OpenAI
+            // Create file stream for OpenAI with proper metadata
             const fileStream = createReadStream(tempFile);
+            Object.assign(fileStream, {
+                name: 'audio.webm',
+                contentType: 'audio/webm',
+                filepath: tempFile,
+                fieldname: 'file'
+            });
 
-            // Use OpenAI's SDK with the file stream
+            // Log file details for debugging
+            console.log('📁 File details:', {
+                size: binaryData.length,
+                path: tempFile,
+                type: 'audio/webm'
+            });
+
+            // Use OpenAI's SDK with the enhanced file stream
             const transcript = await context.openai.audio.transcriptions.create({
-                file: fileStream,
-                model: 'whisper-1'
+                file: fileStream as any,
+                model: 'whisper-1',
+                response_format: 'json'
             });
 
             console.log('📝 Received transcript:', transcript.text);
@@ -57,9 +72,18 @@ export default createOperation.mutation({
 
         } catch (error) {
             console.error('❌ Transcription error:', error);
+
+            // Enhanced error handling
+            const errorMessage = error instanceof Error ? error.message : 'Failed to transcribe audio';
+            console.error('Detailed error:', {
+                message: errorMessage,
+                type: error instanceof Error ? error.constructor.name : typeof error,
+                details: error
+            });
+
             return {
                 data: {
-                    error: error instanceof Error ? error.message : 'Failed to transcribe audio',
+                    error: errorMessage,
                     text: null
                 }
             };
@@ -67,7 +91,7 @@ export default createOperation.mutation({
             // Always clean up the temp file
             try {
                 unlinkSync(tempFile);
-                console.log('🧹 Cleaned up temporary file');
+                console.log('🧹 Cleaned up temporary file:', tempFile);
             } catch (e) {
                 console.error('Failed to clean up temp file:', e);
             }
