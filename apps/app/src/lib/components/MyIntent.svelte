@@ -119,13 +119,21 @@
 
 			console.log('🎤 Microphone permission status:', permissionStatus.state);
 
+			// Immediately update states based on current permission
+			if (permissionStatus.state === 'granted') {
+				hasPermissions = true;
+				modalState = 'idle';
+				permissionRequesting = false;
+				return true;
+			}
+
 			// Set up permission change listener
 			permissionStatus.addEventListener('change', () => {
 				console.log('🔄 Permission state changed to:', permissionStatus.state);
 				switch (permissionStatus.state) {
 					case 'granted':
 						hasPermissions = true;
-						modalState = 'idle'; // Show "press to start" message
+						modalState = 'idle';
 						permissionRequesting = false;
 						break;
 					case 'denied':
@@ -161,23 +169,25 @@
 		isPressed = true;
 
 		try {
-			// If we don't have permissions yet
+			// Check if we already have permissions first
 			if (!hasPermissions) {
 				console.log('🎤 Requesting microphone permission...');
 				modalState = 'need-permissions';
 				permissionRequesting = true;
 
-				// This triggers the browser permission prompt
 				try {
 					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 					// Immediately stop the test stream
 					stream.getTracks().forEach((track) => track.stop());
 
-					// Wait for permission status to update
-					await checkMicrophonePermission();
+					// Update permission status
+					hasPermissions = true;
+					modalState = 'idle';
+					permissionRequesting = false;
 				} catch (error) {
 					console.error('❌ Permission request failed:', error);
 					modalState = 'permissions-denied';
+					permissionRequesting = false;
 				}
 
 				isPressed = false;
@@ -189,7 +199,7 @@
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
 			const options = {
-				mimeType: 'audio/webm;codecs=opus',
+				mimeType: 'audio/mp4', // Use mp4 for best compatibility
 				audioBitsPerSecond: 128000
 			};
 			console.log('🎙️ Initializing recorder with options:', options);
@@ -264,7 +274,7 @@
 			stopAndCleanupRecording();
 
 			// Process the audio data
-			const audioBlob = new Blob(audioData, { type: 'audio/webm' });
+			const audioBlob = new Blob(audioData, { type: 'audio/mp4' });
 			console.log('📦 Audio blob details:', {
 				size: audioBlob.size,
 				type: audioBlob.type,
@@ -483,27 +493,6 @@
 		} catch (error) {
 			console.error('❌ Audio initialization failed:', error);
 		}
-	}
-
-	// Add logging helper at the top
-	function logAudioSupport() {
-		console.group('🎵 Audio Support Details');
-		console.log('📱 User Agent:', navigator.userAgent);
-		console.log('🌐 Platform:', navigator.platform);
-
-		const mimeTypes = [
-			'audio/webm',
-			'audio/webm;codecs=opus',
-			'audio/mp4',
-			'audio/mpeg',
-			'audio/ogg',
-			'audio/wav'
-		];
-
-		mimeTypes.forEach((type) => {
-			console.log(`🎤 MIME type ${type} supported:`, MediaRecorder.isTypeSupported(type));
-		});
-		console.groupEnd();
 	}
 </script>
 
