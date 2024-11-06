@@ -1,5 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import { writeFileSync, unlinkSync, createReadStream } from 'fs';
+import { writeFileSync, createReadStream, unlinkSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -24,8 +24,8 @@ export default createOperation.mutation({
             };
         }
 
-        // Create a temporary file path with explicit .webm extension
-        const tempFilePath = join(tmpdir(), `audio-${Date.now()}.webm`);
+        // Create unique temp file path
+        const tempFile = join(tmpdir(), `audio-${Date.now()}-${Math.random().toString(36).slice(2)}.webm`);
 
         try {
             if (!context.openai) {
@@ -35,20 +35,15 @@ export default createOperation.mutation({
             // Convert base64 to buffer
             const binaryData = Buffer.from(input.audioBase64.split(',')[1], 'base64');
 
-            // Write buffer to temporary file
-            writeFileSync(tempFilePath, binaryData);
+            // Write to temp file
+            writeFileSync(tempFile, binaryData);
 
-            // Create a read stream with explicit mime type
-            const fileStream = createReadStream(tempFilePath);
-            // Add necessary properties to the stream
-            Object.assign(fileStream, {
-                name: 'audio.webm',
-                contentType: 'audio/webm'
-            });
+            // Create file stream for OpenAI
+            const fileStream = createReadStream(tempFile);
 
-            // Use the OpenAI SDK with the enhanced file stream
+            // Use OpenAI's SDK with the file stream
             const transcript = await context.openai.audio.transcriptions.create({
-                file: fileStream as any,
+                file: fileStream,
                 model: 'whisper-1'
             });
 
@@ -62,13 +57,19 @@ export default createOperation.mutation({
 
         } catch (error) {
             console.error('❌ Transcription error:', error);
-            throw new Error(error instanceof Error ? error.message : 'Failed to transcribe audio');
+            return {
+                data: {
+                    error: error instanceof Error ? error.message : 'Failed to transcribe audio',
+                    text: null
+                }
+            };
         } finally {
-            // Clean up: delete the temporary file
+            // Always clean up the temp file
             try {
-                unlinkSync(tempFilePath);
+                unlinkSync(tempFile);
+                console.log('🧹 Cleaned up temporary file');
             } catch (e) {
-                console.error('Failed to delete temporary file:', e);
+                console.error('Failed to clean up temp file:', e);
             }
         }
     }
