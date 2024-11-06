@@ -137,62 +137,96 @@
 		operationName: 'transcribeAudio'
 	});
 
-	export async function handleLongPressStart() {
-		// First check/request permissions
-		if (!hasPermissions) {
-			const granted = await requestMicrophonePermissions();
-			if (!granted) {
-				return; // Exit early if permissions weren't granted
-			}
-			// Don't automatically start recording after getting permissions
-			return;
-		}
-
-		// Only start recording if we already had permissions
-		modalState = 'recording';
+	async function setupRecording() {
 		try {
-			// Clean up any existing stream
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => track.stop());
-			}
+			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+			// Force WebM format for all platforms
+			const options = {
+				mimeType: 'audio/webm;codecs=opus',
+				audioBitsPerSecond: 128000
+			};
+
+			mediaRecorder = new MediaRecorder(stream, options);
+
+			mediaRecorder.ondataavailable = (event) => {
+				if (event.data.size > 0) {
+					audioChunks.push(event.data);
+				}
+			};
+
+			return true;
+		} catch (err) {
+			console.error('Recording setup failed:', err);
+			return false;
+		}
+	}
+
+	async function handleRecordingComplete() {
+		if (!mediaRecorder) return;
+
+		try {
+			// Create blob
+			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+			// Convert to base64
+			const base64 = await new Promise<string>((resolve) => {
+				const reader = new FileReader();
+				reader.onloadend = () => resolve(reader.result as string);
+				reader.readAsDataURL(audioBlob);
+			});
+
+			// Send to API
+			const response = await $transcribeAudioMutation.mutateAsync({
+				audioBase64: base64
+			});
+
+			// Handle response
+			if (response.data.text) {
+				// Success handling
+			} else {
+				// Error handling
+			}
+		} catch (error) {
+			console.error('Processing failed:', error);
+		} finally {
+			// Cleanup
+			audioChunks = [];
+			mediaRecorder = null;
+		}
+	}
+
+	export async function handleLongPressStart() {
+		try {
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-			// Define supported MIME types for different platforms
-			const mimeType = getSupportedMimeType();
+			// Force WebM with Opus codec for best compatibility
 			mediaRecorder = new MediaRecorder(audioStream, {
-				mimeType: mimeType
+				mimeType: 'audio/webm;codecs=opus',
+				audioBitsPerSecond: 128000
 			});
+
 			audioChunks = [];
 
-			mediaRecorder.ondataavailable = (e) => {
-				if (e.data.size > 0) {
-					audioChunks.push(e.data);
+			mediaRecorder.ondataavailable = (event) => {
+				if (event.data.size > 0) {
+					audioChunks.push(event.data);
 				}
 			};
 
 			mediaRecorder.start();
+			modalState = 'recording';
 		} catch (error) {
-			console.error('[Error] Recording failed:', error);
+			console.error('Recording setup failed:', error);
 			modalState = 'idle';
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => track.stop());
-				audioStream = null;
-			}
 		}
 	}
 
 	export async function handleLongPressEnd() {
-		if (!mediaRecorder || !audioStream || mediaRecorder.state === 'inactive') return;
-
-		modalState = 'processing';
-		visualizerMode = 'hominio';
-
-		// Start playing Hominio's working audio
-		hominioAudio = new Audio(getRandomWorkingAudio());
-		hominioAudio.play();
+		if (!mediaRecorder) return;
 
 		try {
+			modalState = 'working';
 			console.log('🎤 Starting transcription process...');
 			mediaRecorder.stop();
 
@@ -201,69 +235,40 @@
 			});
 			console.log('🛑 Media recorder stopped');
 
-			const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-			console.log('📦 Audio blob details:', {
-				size: audioBlob.size,
-				type: audioBlob.type,
-				mimeType: mediaRecorder.mimeType,
-				chunksLength: audioChunks.length
-			});
+			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+			console.log('📦 Audio blob created:', audioBlob.size, 'bytes');
 
+			const reader = new FileReader();
 			const base64 = await new Promise<string>((resolve) => {
-				const reader = new FileReader();
-				reader.onloadend = () => {
-					console.log('📝 Base64 conversion details:', {
-						resultLength: reader.result?.toString().length,
-						startsWith: reader.result?.toString().substring(0, 50) + '...'
-					});
-					resolve(reader.result as string);
-				};
+				reader.onloadend = () => resolve(reader.result as string);
 				reader.readAsDataURL(audioBlob);
 			});
-
-			// Log the first and last 50 chars of base64 string
-			console.log('🔍 Base64 string check:', {
-				length: base64.length,
-				start: base64.substring(0, 50),
-				end: base64.substring(base64.length - 50)
-			});
+			console.log('📝 Base64 conversion complete');
 
 			const response = await $transcribeAudioMutation.mutateAsync({
 				audioBase64: base64
 			});
 
-			console.log('📥 Mutation response:', response);
-
-			if (response.data?.error === 'pioneer-list') {
-				modalState = 'pioneer-list';
-				return; // Exit early
-			} else if (response.data?.text) {
-				await handleTranscriptionComplete(response.data.text);
-			}
-		} catch (error: any) {
-			console.error('❌ Error:', error);
-
-			// Check for authorization error
-			if (
-				error.message?.includes('Not authorized') ||
-				error.message?.includes('Authorization') ||
-				error.response?.error === 'pioneer-list'
-			) {
+			if (response.data.text) {
+				handleTranscriptionComplete(response.data.text);
+			} else if (response.data.error === 'pioneer-list') {
 				modalState = 'pioneer-list';
 			} else {
-				modalState = 'error';
+				throw new Error(response.data.error);
 			}
+		} catch (error) {
+			console.error('❌ Processing failed:', error);
+			modalState = 'error';
 		} finally {
-			if (hominioAudio) {
-				hominioAudio.pause();
-				hominioAudio = null;
+			// Only stop the audio stream after we're completely done
+			if (modalState !== 'working') {
+				if (audioStream) {
+					audioStream.getTracks().forEach((track) => track.stop());
+				}
+				audioChunks = [];
+				mediaRecorder = null;
+				audioStream = null;
 			}
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => track.stop());
-			}
-			audioStream = null;
-			mediaRecorder = null;
-			audioChunks = [];
 		}
 	}
 
@@ -422,17 +427,21 @@
 
 	// Add this helper function near your other utility functions
 	function getSupportedMimeType() {
-		const types = ['audio/webm', 'audio/mp4', 'audio/wav', 'audio/ogg'];
+		// Order matters - try most compatible formats first
+		const types = [
+			'audio/webm;codecs=opus', // Chrome/Firefox
+			'audio/mp4', // Safari/iOS
+			'audio/ogg;codecs=opus', // Fallback
+			'audio/webm' // Last resort
+		];
 
 		for (const type of types) {
 			if (MediaRecorder.isTypeSupported(type)) {
-				console.log('🎤 Using MIME type:', type);
 				return type;
 			}
 		}
 
-		// Fallback for iOS
-		return ''; // Let the browser choose its default
+		throw new Error('No supported audio format found');
 	}
 </script>
 
