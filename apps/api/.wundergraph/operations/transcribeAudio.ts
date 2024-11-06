@@ -1,5 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import { writeFileSync, unlinkSync } from 'fs';
+import { writeFileSync, unlinkSync, createReadStream } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -24,7 +24,7 @@ export default createOperation.mutation({
             };
         }
 
-        // Create a temporary file path
+        // Create a temporary file path with explicit .webm extension
         const tempFilePath = join(tmpdir(), `audio-${Date.now()}.webm`);
 
         try {
@@ -38,9 +38,17 @@ export default createOperation.mutation({
             // Write buffer to temporary file
             writeFileSync(tempFilePath, binaryData);
 
-            // Use the OpenAI SDK with the file path
+            // Create a read stream with explicit mime type
+            const fileStream = createReadStream(tempFilePath);
+            // Add necessary properties to the stream
+            Object.assign(fileStream, {
+                name: 'audio.webm',
+                contentType: 'audio/webm'
+            });
+
+            // Use the OpenAI SDK with the enhanced file stream
             const transcript = await context.openai.audio.transcriptions.create({
-                file: await import('fs').then(fs => fs.createReadStream(tempFilePath)),
+                file: fileStream as any,
                 model: 'whisper-1'
             });
 
