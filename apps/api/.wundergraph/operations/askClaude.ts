@@ -80,7 +80,7 @@ export default createOperation.mutation({
         try {
             console.log('askClaude - Calling Anthropic API');
             const response = await context.anthropic.messages.create({
-                model: "claude-3-5-sonnet-20241022",
+                model: "claude-3-5-haiku-20241022",
                 max_tokens: 1024,
                 temperature: input.temperature,
                 system: input.system,
