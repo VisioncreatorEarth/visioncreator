@@ -64,7 +64,6 @@
 	});
 
 	onMount(async () => {
-		logAudioSupport();
 		await checkMicrophonePermission();
 		if (isOpen) {
 			conversationManager.startNewConversation();
