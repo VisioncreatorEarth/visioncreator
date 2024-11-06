@@ -40,6 +40,7 @@
 
 	// Add new type for audio context
 	let audioContext: AudioContext | null = null;
+	let audioInitialized = false;
 
 	// Safe store subscription with proper typing
 	conversationStore.subscribe((state) => {
@@ -157,16 +158,31 @@
 	// Add state for tracking press
 	let isPressed = false;
 
+	async function initializeAudioContext() {
+		if (!audioInitialized) {
+			try {
+				audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+				await audioContext.resume();
+				audioInitialized = true;
+				console.log('🎵 Audio context initialized');
+			} catch (error) {
+				console.error('❌ Audio context initialization failed:', error);
+			}
+		}
+	}
+
 	export async function handleLongPressStart() {
 		if (isPressed) return;
-		isPressed = true;
-
-		// Set visualizer mode to user immediately
-		visualizerMode = 'user';
 
 		try {
-			// Initialize audio context for playback
-			await initializeAudioPlayback();
+			// Initialize audio context on first interaction
+			await initializeAudioContext();
+
+			isPressed = true;
+			visualizerMode = 'user';
+
+			// Set visualizer mode to user immediately
+			visualizerMode = 'user';
 
 			if (!hasPermissions) {
 				modalState = 'need-permissions';
@@ -342,15 +358,53 @@
 	}
 
 	async function playHominioResponse() {
-		visualizerMode = 'hominio';
-		hominioAudio = new Audio(getRandomWorkingAudio());
+		try {
+			visualizerMode = 'hominio';
 
-		hominioAudio.play();
-		return new Promise((resolve) => {
-			hominioAudio!.addEventListener('ended', () => {
-				resolve(true);
+			await initializeAudioContext();
+
+			if (hominioAudio) {
+				hominioAudio.pause();
+				hominioAudio = null;
+			}
+
+			const audioFile = getRandomWorkingAudio();
+			hominioAudio = new Audio(audioFile);
+
+			// iOS-specific attributes
+			hominioAudio.setAttribute('playsinline', '');
+			hominioAudio.setAttribute('webkit-playsinline', '');
+			hominioAudio.muted = false;
+			hominioAudio.preload = 'auto';
+
+			await new Promise((resolve, reject) => {
+				if (!hominioAudio) return reject('No audio instance');
+
+				hominioAudio.addEventListener('canplaythrough', resolve, { once: true });
+				hominioAudio.addEventListener('error', reject, { once: true });
+				hominioAudio.load();
 			});
-		});
+
+			const playAttempt = hominioAudio.play();
+
+			if (playAttempt !== undefined) {
+				await playAttempt;
+			}
+
+			return new Promise((resolve) => {
+				hominioAudio!.addEventListener(
+					'ended',
+					() => {
+						hominioAudio = null;
+						resolve(true);
+					},
+					{ once: true }
+				);
+			});
+		} catch (error) {
+			console.warn('⚠️ Audio playback not available:', error);
+			return Promise.resolve(true);
+		}
 	}
 
 	// Modify handleTranscriptionComplete to close the modal instead of showing messages
@@ -476,22 +530,13 @@
 		}
 	});
 
-	// Modify audio playback initialization
-	async function initializeAudioPlayback() {
-		// Create AudioContext on user interaction
-		if (!audioContext) {
-			audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-			await audioContext.resume();
-		}
-	}
-
 	// Update playHominioWorkingAudio to handle iOS
 	async function playHominioWorkingAudio() {
 		try {
-			// Set visualizer mode immediately before any audio operations
 			visualizerMode = 'hominio';
 
-			await initializeAudioPlayback();
+			// Initialize audio context if needed
+			await initializeAudioContext();
 
 			if (hominioAudio) {
 				hominioAudio.pause();
@@ -499,32 +544,40 @@
 			}
 
 			const audioFile = getRandomWorkingAudio();
-			console.log('🔊 Starting Hominio audio:', audioFile);
-
 			hominioAudio = new Audio(audioFile);
 
-			// Enable inline playback for iOS
+			// iOS-specific attributes
 			hominioAudio.setAttribute('playsinline', '');
 			hominioAudio.setAttribute('webkit-playsinline', '');
+			hominioAudio.muted = false;
+			hominioAudio.preload = 'auto';
 
-			// Preload audio
-			await new Promise((resolve) => {
-				hominioAudio!.addEventListener('canplaythrough', resolve, { once: true });
-				hominioAudio!.load();
+			// Wait for audio to be loaded
+			await new Promise((resolve, reject) => {
+				if (!hominioAudio) return reject('No audio instance');
+
+				hominioAudio.addEventListener('canplaythrough', resolve, { once: true });
+				hominioAudio.addEventListener('error', reject, { once: true });
+				hominioAudio.load();
 			});
 
-			await hominioAudio.play();
+			// Create a user interaction promise
+			const playAttempt = hominioAudio.play();
 
-			// Remove the event listener that switches back to user mode
+			if (playAttempt !== undefined) {
+				await playAttempt;
+				console.log('🔊 Audio playback started successfully');
+			}
+
+			// Add ended event listener
 			hominioAudio.addEventListener('ended', () => {
-				console.log('🔊 Audio completed naturally');
-				// Don't switch back to user mode, keep hominio visible
+				console.log('🔊 Audio completed');
 				hominioAudio = null;
 			});
 		} catch (error) {
-			console.error('❌ Audio playback failed:', error);
-			// Only reset visualizer mode on error
-			visualizerMode = 'user';
+			console.warn('⚠️ Audio playback not available:', error);
+			// Continue without audio but keep hominio mode
+			hominioAudio = null;
 		}
 	}
 
