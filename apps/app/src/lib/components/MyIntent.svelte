@@ -201,17 +201,33 @@
 			});
 			console.log('🛑 Media recorder stopped');
 
-			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-			console.log('📦 Audio blob created:', audioBlob.size, 'bytes');
+			const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+			console.log('📦 Audio blob details:', {
+				size: audioBlob.size,
+				type: audioBlob.type,
+				mimeType: mediaRecorder.mimeType,
+				chunksLength: audioChunks.length
+			});
 
 			const base64 = await new Promise<string>((resolve) => {
 				const reader = new FileReader();
-				reader.onloadend = () => resolve(reader.result as string);
+				reader.onloadend = () => {
+					console.log('📝 Base64 conversion details:', {
+						resultLength: reader.result?.toString().length,
+						startsWith: reader.result?.toString().substring(0, 50) + '...'
+					});
+					resolve(reader.result as string);
+				};
 				reader.readAsDataURL(audioBlob);
 			});
-			console.log('📝 Base64 conversion complete');
 
-			// Use mutateAsync like in the example
+			// Log the first and last 50 chars of base64 string
+			console.log('🔍 Base64 string check:', {
+				length: base64.length,
+				start: base64.substring(0, 50),
+				end: base64.substring(base64.length - 50)
+			});
+
 			const response = await $transcribeAudioMutation.mutateAsync({
 				audioBase64: base64
 			});
