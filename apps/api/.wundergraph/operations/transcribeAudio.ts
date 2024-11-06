@@ -51,8 +51,8 @@ export default createOperation.mutation({
                 throw new Error('Audio data too small');
             }
 
-            // Always use .webm for consistency
-            tempFile = join(tmpdir(), `audio-${Date.now()}.webm`);
+            // Always use .mp4 for consistency
+            tempFile = join(tmpdir(), `audio-${Date.now()}.mp4`);
             writeFileSync(tempFile, binaryData);
 
             // Log file details
@@ -60,8 +60,8 @@ export default createOperation.mutation({
             console.log('📁 File details:', {
                 size: stats.size,
                 path: tempFile,
-                type: 'audio/webm',
-                extension: 'webm',
+                type: 'audio/mp4',
+                extension: 'mp4',
                 exists: true,
                 permissions: stats.mode,
                 created: stats.birthtime
@@ -70,12 +70,12 @@ export default createOperation.mutation({
             // Create file stream with detailed logging
             const fileStream = createReadStream(tempFile);
             Object.assign(fileStream, {
-                name: 'audio.webm',
-                contentType: 'audio/webm',
+                name: 'audio.mp4',
+                contentType: 'audio/mp4',
             });
             console.log('📤 Created file stream with metadata:', {
-                name: 'audio.webm',
-                contentType: 'audio/webm',
+                name: 'audio.mp4',
+                contentType: 'audio/mp4',
                 path: tempFile
             });
 
