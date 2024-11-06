@@ -119,42 +119,31 @@
 
 			console.log('🎤 Microphone permission status:', permissionStatus.state);
 
+			// Set up permission change listener
 			permissionStatus.addEventListener('change', () => {
 				console.log('🔄 Permission state changed to:', permissionStatus.state);
 				switch (permissionStatus.state) {
 					case 'granted':
 						hasPermissions = true;
-						modalState = 'idle';
-						stopAndCleanupRecording();
+						modalState = 'idle'; // Show "press to start" message
+						permissionRequesting = false;
 						break;
 					case 'denied':
 						hasPermissions = false;
 						modalState = 'permissions-denied';
+						permissionRequesting = false;
 						break;
 					case 'prompt':
 						hasPermissions = false;
 						modalState = 'need-permissions';
+						permissionRequesting = false;
 						break;
 				}
 			});
 
-			switch (permissionStatus.state) {
-				case 'granted':
-					hasPermissions = true;
-					modalState = 'idle';
-					return true;
-				case 'denied':
-					hasPermissions = false;
-					modalState = 'permissions-denied';
-					return false;
-				case 'prompt':
-					hasPermissions = false;
-					modalState = 'need-permissions';
-					return false;
-			}
+			return permissionStatus.state === 'granted';
 		} catch (error) {
 			console.error('❌ Permission check failed:', error);
-			modalState = 'need-permissions';
 			return false;
 		}
 	}
@@ -168,18 +157,35 @@
 	let isPressed = false;
 
 	export async function handleLongPressStart() {
-		if (!hasPermissions || isPressed) return;
-
-		if (!hasPermissions) {
-			await checkMicrophonePermission();
-			return;
-		}
+		if (isPressed) return;
+		isPressed = true;
 
 		try {
-			isPressed = true;
-			console.log('🎤 Starting recording setup...');
+			// If we don't have permissions yet
+			if (!hasPermissions) {
+				console.log('🎤 Requesting microphone permission...');
+				modalState = 'need-permissions';
+				permissionRequesting = true;
 
-			// Get fresh audio stream for each recording session
+				// This triggers the browser permission prompt
+				try {
+					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+					// Immediately stop the test stream
+					stream.getTracks().forEach((track) => track.stop());
+
+					// Wait for permission status to update
+					await checkMicrophonePermission();
+				} catch (error) {
+					console.error('❌ Permission request failed:', error);
+					modalState = 'permissions-denied';
+				}
+
+				isPressed = false;
+				return; // Don't start recording yet
+			}
+
+			// If we have permissions, start recording
+			console.log('🎤 Starting recording setup...');
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
 			const options = {
@@ -189,7 +195,7 @@
 			console.log('🎙️ Initializing recorder with options:', options);
 
 			mediaRecorder = new MediaRecorder(audioStream, options);
-			audioChunks = []; // Reset chunks
+			audioChunks = [];
 
 			mediaRecorder.ondataavailable = (event) => {
 				if (event.data.size > 0) {
@@ -205,7 +211,6 @@
 			console.error('❌ Recording setup failed:', error);
 			modalState = 'error';
 			isPressed = false;
-			// Cleanup on error
 			stopAndCleanupRecording();
 		}
 	}
@@ -461,7 +466,7 @@
 			}
 
 			const audioFile = getRandomWorkingAudio();
-			console.log('��� Starting Homnio audio:', audioFile);
+			console.log(' Starting Homnio audio:', audioFile);
 
 			hominioAudio = new Audio(audioFile);
 			visualizerMode = 'user';
@@ -559,10 +564,15 @@
 						{#if modalState === 'need-permissions'}
 							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
 								<div class="text-4xl">🎤</div>
-								<h3 class="text-xl font-semibold text-tertiary-200">Microphone Access Needed</h3>
-								<p class="text-surface-200">
-									Please allow microphone access to start making voice requests.
-								</p>
+								{#if permissionRequesting}
+									<h3 class="text-xl font-semibold text-tertiary-200">
+										Requesting Microphone Access
+									</h3>
+									<p class="text-surface-200">Please allow microphone access in your browser.</p>
+								{:else}
+									<h3 class="text-xl font-semibold text-tertiary-200">Ready to Start</h3>
+									<p class="text-surface-200">Press and hold to start your first request!</p>
+								{/if}
 							</div>
 						{:else if modalState === 'permissions-denied'}
 							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
