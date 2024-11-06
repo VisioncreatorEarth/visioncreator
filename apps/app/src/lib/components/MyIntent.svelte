@@ -28,7 +28,7 @@
 		| 'result'
 		| 'need-permissions'
 		| 'permissions-denied'
-		| 'pioneer-list' = 'idle';
+		| 'paywall' = 'idle';
 	let currentConversation: any;
 	let audioStream: MediaStream | null = null;
 	let mediaRecorder: MediaRecorder | null = null;
@@ -40,12 +40,6 @@
 
 	// Add new type for audio context
 	let audioContext: AudioContext | null = null;
-
-	// Type definitions
-	interface Message {
-		id: string;
-		// Add other message properties as needed
-	}
 
 	// Safe store subscription with proper typing
 	conversationStore.subscribe((state) => {
@@ -81,6 +75,7 @@
 	function handleClose() {
 		isPressed = false;
 		modalState = 'idle';
+		visualizerMode = 'user';
 
 		// Clean up audio playback
 		if (hominioAudio) {
@@ -104,7 +99,7 @@
 		| 'result'
 		| 'need-permissions'
 		| 'permissions-denied'
-		| 'pioneer-list';
+		| 'paywall';
 
 	let hasPermissions = false;
 	let permissionRequesting = false;
@@ -166,6 +161,9 @@
 		if (isPressed) return;
 		isPressed = true;
 
+		// Set visualizer mode to user immediately
+		visualizerMode = 'user';
+
 		try {
 			// Initialize audio context for playback
 			await initializeAudioPlayback();
@@ -211,11 +209,10 @@
 			mediaRecorder.ondataavailable = (event) => {
 				if (event.data.size > 0) {
 					audioChunks.push(event.data);
-					console.log('📝 Received audio chunk:', event.data.size);
 				}
 			};
 
-			mediaRecorder.start(50); // Reduced from 100ms to 50ms for more granular chunks
+			mediaRecorder.start(50);
 			modalState = 'recording';
 		} catch (error) {
 			console.error('❌ Recording setup failed:', error);
@@ -254,7 +251,9 @@
 
 		try {
 			modalState = 'processing';
-			playHominioWorkingAudio();
+			// Set hominio mode before starting audio
+			visualizerMode = 'hominio';
+			await playHominioWorkingAudio();
 
 			// Add a small delay before stopping to ensure we capture the full audio
 			await new Promise((resolve) => setTimeout(resolve, 200));
@@ -263,20 +262,16 @@
 			const audioData = await new Promise<Blob[]>((resolve) => {
 				const chunks = [...audioChunks];
 
-				// Ensure we capture the final chunk
 				mediaRecorder!.addEventListener('dataavailable', (event) => {
 					if (event.data.size > 0) {
 						chunks.push(event.data);
 					}
 				});
 
-				// Only resolve after we're sure recording has stopped
 				mediaRecorder!.addEventListener('stop', () => {
-					console.log('📝 Recording stopped, finalizing chunks:', chunks.length);
 					resolve(chunks);
 				});
 
-				// Request final chunk and stop
 				mediaRecorder!.requestData();
 				mediaRecorder!.stop();
 			});
@@ -319,15 +314,17 @@
 			if (response.data.text) {
 				console.log('📝 Transcription successful:', response.data.text);
 				handleTranscriptionComplete(response.data.text);
-			} else if (response.data.error === 'pioneer-list') {
-				console.log('ℹ️ Pioneer list response received');
-				modalState = 'pioneer-list';
+			} else if (response.data.error === 'paywall') {
+				console.log('ℹ️ Paywall response received');
+				modalState = 'paywall';
 			} else {
 				throw new Error(response.data.error);
 			}
 		} catch (error) {
 			console.error('❌ Processing failed:', error);
 			modalState = 'error';
+			// Reset to user mode on error
+			visualizerMode = 'user';
 		} finally {
 			// Ensure cleanup happens
 			stopAndCleanupRecording();
@@ -359,6 +356,7 @@
 	// Modify handleTranscriptionComplete to close the modal instead of showing messages
 	async function handleTranscriptionComplete(text: string) {
 		try {
+			// Set hominio mode immediately
 			visualizerMode = 'hominio';
 
 			const audioPromise = hominioAudio?.paused ? playHominioResponse() : Promise.resolve(true);
@@ -391,7 +389,8 @@
 		} catch (error) {
 			console.error('Error processing request:', error);
 			modalState = 'error';
-
+			// Reset to user mode on error
+			visualizerMode = 'user';
 			conversationManager.addMessage(
 				'Sorry, I encountered an error processing your request.',
 				'system',
@@ -402,6 +401,8 @@
 				hominioAudio.pause();
 				hominioAudio = null;
 			}
+			// Reset to user mode when done
+			visualizerMode = 'user';
 		}
 	}
 
@@ -487,6 +488,9 @@
 	// Update playHominioWorkingAudio to handle iOS
 	async function playHominioWorkingAudio() {
 		try {
+			// Set visualizer mode immediately before any audio operations
+			visualizerMode = 'hominio';
+
 			await initializeAudioPlayback();
 
 			if (hominioAudio) {
@@ -498,7 +502,6 @@
 			console.log('🔊 Starting Hominio audio:', audioFile);
 
 			hominioAudio = new Audio(audioFile);
-			visualizerMode = 'user';
 
 			// Enable inline playback for iOS
 			hominioAudio.setAttribute('playsinline', '');
@@ -512,13 +515,16 @@
 
 			await hominioAudio.play();
 
+			// Remove the event listener that switches back to user mode
 			hominioAudio.addEventListener('ended', () => {
 				console.log('🔊 Audio completed naturally');
+				// Don't switch back to user mode, keep hominio visible
 				hominioAudio = null;
 			});
 		} catch (error) {
 			console.error('❌ Audio playback failed:', error);
-			// Continue without audio if playback fails
+			// Only reset visualizer mode on error
+			visualizerMode = 'user';
 		}
 	}
 
@@ -548,8 +554,8 @@
 								Microphone Access
 							{:else if modalState === 'permissions-denied'}
 								Access Denied
-							{:else if modalState === 'pioneer-list'}
-								Authentication Error
+							{:else if modalState === 'paywall'}
+								Subscription Required
 							{:else}
 								Your Message
 							{/if}
@@ -641,7 +647,7 @@
 									</div>
 								{/if}
 							</div>
-						{:else if modalState === 'pioneer-list'}
+						{:else if modalState === 'paywall'}
 							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
 								<div class="text-4xl">🚀</div>
 								<h3 class="text-xl font-semibold text-tertiary-200">Coming Soon!</h3>
