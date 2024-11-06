@@ -35,7 +35,7 @@ export const categories = {
     other: 'Other'
 } as const;
 
-// Export the category icons for reuse
+// Update the categoryIcons to include more specific icons
 export const categoryIcons = {
     fruits: 'mdi:fruit-cherries',
     vegetables: 'mdi:carrot',
@@ -47,6 +47,11 @@ export const categoryIcons = {
     household: 'mdi:home',
     other: 'mdi:shopping'
 } as const;
+
+// Add a function to get category icon
+export function getCategoryIcon(category: CategoryType): string {
+    return categoryIcons[category] || categoryIcons.other;
+}
 
 // Update preselectedItems to use the shared icons
 export const preselectedItems = [
@@ -309,7 +314,8 @@ please always translate everything to english, no matter the input lagnauge.
         const newItems = items.map(item => ({
             id: Date.now() + Math.random(),
             name: this.capitalizeFirstLetter(item.name),
-            category: item.category as CategoryType
+            category: item.category as CategoryType,
+            icon: undefined // Let o-Bring handle the icon fallback
         }));
 
         shoppingListStore.update(list => [...list, ...newItems]);

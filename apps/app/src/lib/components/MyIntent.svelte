@@ -12,6 +12,7 @@
 	import { dynamicView } from '$lib/stores';
 	import { createMutation } from '$lib/wundergraph';
 	import MessageView from './MessageView.svelte';
+	import MicrophonePermissions, { permissionState } from './MicrophonePermissions.svelte';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -74,7 +75,6 @@
 	});
 
 	function handleClose() {
-		isPressed = false;
 		modalState = 'idle';
 		visualizerMode = 'user';
 
@@ -93,71 +93,6 @@
 		dispatch('close');
 	}
 
-	type ModalState =
-		| 'idle'
-		| 'recording'
-		| 'processing'
-		| 'result'
-		| 'need-permissions'
-		| 'permissions-denied'
-		| 'paywall';
-
-	let hasPermissions = false;
-	let permissionRequesting = false;
-
-	async function checkMicrophonePermission() {
-		try {
-			const permissionStatus = await navigator.permissions.query({
-				name: 'microphone' as PermissionName
-			});
-
-			console.log('🎤 Microphone permission status:', permissionStatus.state);
-
-			// Immediately update states based on current permission
-			if (permissionStatus.state === 'granted') {
-				hasPermissions = true;
-				modalState = 'idle';
-				permissionRequesting = false;
-				return true;
-			}
-
-			// Set up permission change listener
-			permissionStatus.addEventListener('change', () => {
-				console.log('🔄 Permission state changed to:', permissionStatus.state);
-				switch (permissionStatus.state) {
-					case 'granted':
-						hasPermissions = true;
-						modalState = 'idle';
-						permissionRequesting = false;
-						break;
-					case 'denied':
-						hasPermissions = false;
-						modalState = 'permissions-denied';
-						permissionRequesting = false;
-						break;
-					case 'prompt':
-						hasPermissions = false;
-						modalState = 'need-permissions';
-						permissionRequesting = false;
-						break;
-				}
-			});
-
-			return permissionStatus.state === 'granted';
-		} catch (error) {
-			console.error('❌ Permission check failed:', error);
-			return false;
-		}
-	}
-
-	// Create the mutation
-	const transcribeAudioMutation = createMutation({
-		operationName: 'transcribeAudio'
-	});
-
-	// Add state for tracking press
-	let isPressed = false;
-
 	async function initializeAudioContext() {
 		if (!audioInitialized) {
 			try {
@@ -171,38 +106,33 @@
 		}
 	}
 
+	// Create mutation
+	const transcribeAudioMutation = createMutation({
+		operationName: 'transcribeAudio'
+	});
+
 	export async function handleLongPressStart() {
-		if (isPressed) return;
-
 		try {
-			// Initialize audio context on first interaction
 			await initializeAudioContext();
-
-			isPressed = true;
 			visualizerMode = 'user';
 
-			// Set visualizer mode to user immediately
-			visualizerMode = 'user';
-
-			if (!hasPermissions) {
+			if ($permissionState !== 'granted') {
 				modalState = 'need-permissions';
-				permissionRequesting = true;
-
-				try {
-					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-					stream.getTracks().forEach((track) => track.stop());
-					hasPermissions = true;
-					modalState = 'idle';
-					permissionRequesting = false;
-				} catch (error) {
-					console.error('❌ Permission request failed:', error);
-					modalState = 'permissions-denied';
-					permissionRequesting = false;
-					isPressed = false;
-					return;
-				}
+				return;
 			}
 
+			// Only start recording if we have permissions
+			await startRecording();
+			modalState = 'recording';
+		} catch (error) {
+			console.error('❌ Recording setup failed:', error);
+			modalState = 'error';
+			stopAndCleanupRecording();
+		}
+	}
+
+	async function startRecording() {
+		try {
 			// Add a small delay before starting recording on mobile
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -231,10 +161,7 @@
 			mediaRecorder.start(50);
 			modalState = 'recording';
 		} catch (error) {
-			console.error('❌ Recording setup failed:', error);
-			modalState = 'error';
-			isPressed = false;
-			stopAndCleanupRecording();
+			throw new Error('Failed to start recording: ' + error.message);
 		}
 	}
 
@@ -260,90 +187,71 @@
 	}
 
 	export async function handleLongPressEnd() {
-		if (!mediaRecorder || !isPressed) return;
-
-		isPressed = false;
-		console.log('🎤 Long press released, stopping recording...');
+		if (!mediaRecorder) return;
 
 		try {
 			modalState = 'processing';
-			// Set hominio mode before starting audio
 			visualizerMode = 'hominio';
-			await playHominioWorkingAudio();
 
-			// Add a small delay before stopping to ensure we capture the full audio
-			await new Promise((resolve) => setTimeout(resolve, 200));
-
-			// Collect final audio chunks with proper promise handling
-			const audioData = await new Promise<Blob[]>((resolve) => {
-				const chunks = [...audioChunks];
-
-				mediaRecorder!.addEventListener('dataavailable', (event) => {
-					if (event.data.size > 0) {
-						chunks.push(event.data);
-					}
-				});
-
-				mediaRecorder!.addEventListener('stop', () => {
-					resolve(chunks);
-				});
-
-				mediaRecorder!.requestData();
-				mediaRecorder!.stop();
-			});
-
-			// Immediately cleanup recording resources
-			stopAndCleanupRecording();
-
-			// Process the audio data
-			const audioBlob = new Blob(audioData, { type: 'audio/mp4' });
-			console.log('📦 Audio blob details:', {
-				size: audioBlob.size,
-				type: audioBlob.type,
-				mimeType: audioBlob.type,
-				chunksLength: audioData.length
-			});
-
-			if (audioBlob.size < 100) {
-				throw new Error('Audio recording too short');
-			}
-
-			// Convert to base64
-			const base64 = await new Promise<string>((resolve) => {
-				const reader = new FileReader();
-				reader.onloadend = () => {
-					const result = reader.result as string;
-					console.log('📝 Base64 conversion details:', {
-						resultLength: result.length,
-						startWith: result.substring(0, 50) + '...'
-					});
-					resolve(result);
-				};
-				reader.readAsDataURL(audioBlob);
-			});
-
-			console.log('🚀 Sending to API...');
-			const response = await $transcribeAudioMutation.mutateAsync({
-				audioBase64: base64
-			});
-
-			if (response.data.text) {
-				console.log('📝 Transcription successful:', response.data.text);
-				handleTranscriptionComplete(response.data.text);
-			} else if (response.data.error === 'paywall') {
-				console.log('ℹ️ Paywall response received');
-				modalState = 'paywall';
-			} else {
-				throw new Error(response.data.error);
-			}
+			const audioData = await stopRecording();
+			await processAudioData(audioData);
 		} catch (error) {
 			console.error('❌ Processing failed:', error);
 			modalState = 'error';
-			// Reset to user mode on error
 			visualizerMode = 'user';
 		} finally {
-			// Ensure cleanup happens
 			stopAndCleanupRecording();
+		}
+	}
+
+	async function stopRecording(): Promise<Blob[]> {
+		return new Promise((resolve) => {
+			if (!mediaRecorder) return resolve([]);
+
+			mediaRecorder.onstop = () => {
+				console.log('🎤 MediaRecorder stopped');
+				resolve(audioChunks);
+			};
+
+			mediaRecorder.stop();
+		});
+	}
+
+	async function processAudioData(audioData: Blob[]) {
+		const audioBlob = new Blob(audioData, { type: 'audio/mp4' });
+		console.log('📦 Audio blob details:', {
+			size: audioBlob.size,
+			type: audioBlob.type,
+			mimeType: audioBlob.type,
+			chunksLength: audioData.length
+		});
+
+		if (audioBlob.size < 100) {
+			throw new Error('Audio recording too short');
+		}
+
+		const base64 = await new Promise<string>((resolve) => {
+			const reader = new FileReader();
+			reader.onloadend = () => {
+				const result = reader.result as string;
+				resolve(result);
+			};
+			reader.readAsDataURL(audioBlob);
+		});
+
+		console.log('🚀 Sending to transcription API...');
+		const response = await $transcribeAudioMutation.mutateAsync({
+			audioBase64: base64
+		});
+
+		if (response.data.text) {
+			console.log('📝 Transcription successful:', response.data.text);
+			handleTranscriptionComplete(response.data.text);
+		} else if (response.data.error === 'paywall') {
+			console.log('ℹ️ Paywall response received');
+			modalState = 'paywall';
+		} else {
+			throw new Error(response.data.error);
 		}
 	}
 
@@ -416,7 +324,8 @@
 			const audioPromise = hominioAudio?.paused ? playHominioResponse() : Promise.resolve(true);
 
 			const [response] = await Promise.all([
-				hominioAgent.processRequest(text, conversationManager.getMessageContext() || []),
+				// Use processRequest instead of sendUserMessage
+				hominioAgent.processRequest(text),
 				audioPromise
 			]);
 
@@ -443,82 +352,13 @@
 		} catch (error) {
 			console.error('Error processing request:', error);
 			modalState = 'error';
-			// Reset to user mode on error
 			visualizerMode = 'user';
-			conversationManager.addMessage(
-				'Sorry, I encountered an error processing your request.',
-				'system',
-				'error'
-			);
-		} finally {
-			if (hominioAudio) {
-				hominioAudio.pause();
-				hominioAudio = null;
-			}
-			// Reset to user mode when done
-			visualizerMode = 'user';
-		}
-	}
-
-	async function handleViewPayload(payload: any) {
-		if (payload?.data?.view) {
-			try {
-				// Update the view
-				dynamicView.set({ view: payload.data.view });
-
-				// Wait a brief moment to ensure view update is processed
-				await new Promise((resolve) => setTimeout(resolve, 100));
-
-				// Close the modal and reset state
-				if (payload.data.success) {
-					resetConversationState();
-					dispatch('close');
-
-					// Navigate if needed
-					if (window.location.pathname !== '/me') {
-						await goto('/me');
-					}
-				}
-			} catch (error) {
-				console.error('Error handling view payload:', error);
-			}
-		}
-	}
-
-	// Update the scrollToBottom function to be more robust
-	function scrollToBottom() {
-		if (messageContainer) {
-			// Use requestAnimationFrame to ensure DOM is updated
-			requestAnimationFrame(() => {
-				// Smooth scroll to bottom
-				messageContainer.scrollTo({
-					top: messageContainer.scrollHeight,
-					behavior: 'smooth'
-				});
+			conversationManager.addMessage({
+				role: 'system',
+				content: 'Sorry, I encountered an error processing your request.',
+				timestamp: new Date().toISOString()
 			});
 		}
-	}
-
-	// Add scroll handling when messages update
-	$: if (currentConversation?.messages?.length) {
-		scrollToBottom();
-	}
-
-	// Add function to reset conversation state
-	function resetConversationState() {
-		// Reset audio state
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-		}
-		audioStream = null;
-		mediaRecorder = null;
-		audioChunks = [];
-
-		// Reset modal state
-		modalState = 'idle';
-
-		// Reset conversation
-		conversationManager.endCurrentConversation();
 	}
 
 	// Clean up on component destroy
@@ -582,6 +422,26 @@
 	}
 
 	let showMessages = false;
+
+	// Update MicrophonePermissions handling
+	function handlePermissionGranted() {
+		modalState = 'idle'; // Just set to idle, don't start recording
+	}
+
+	// Make sure we're properly handling the conversation state
+	onMount(async () => {
+		if (isOpen && !currentConversation) {
+			await conversationManager.startNewConversation();
+		}
+	});
+
+	// Cleanup function
+	function resetConversationState() {
+		currentAction = null;
+		if (!currentConversation?.messages?.length) {
+			conversationManager.clearCurrentConversation();
+		}
+	}
 </script>
 
 {#if isOpen}
@@ -637,18 +497,16 @@
 					<!-- Content -->
 					<div class="flex flex-col min-h-[200px] max-h-[60vh] overflow-y-auto p-6">
 						{#if modalState === 'need-permissions'}
-							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
-								<div class="text-4xl">🎤</div>
-								{#if permissionRequesting}
-									<h3 class="text-xl font-semibold text-tertiary-200">
-										Requesting Microphone Access
-									</h3>
-									<p class="text-surface-200">Please allow microphone access in your browser.</p>
-								{:else}
-									<h3 class="text-xl font-semibold text-tertiary-200">Ready to Start</h3>
-									<p class="text-surface-200">Press and hold to start your first request!</p>
-								{/if}
-							</div>
+							<MicrophonePermissions
+								onPermissionGranted={handlePermissionGranted}
+								on:permissionChange={({ detail }) => {
+									if (detail.granted) {
+										modalState = 'idle'; // Just set to idle, don't start recording
+									} else if (detail.state === 'denied') {
+										modalState = 'permissions-denied';
+									}
+								}}
+							/>
 						{:else if modalState === 'permissions-denied'}
 							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
 								<div class="text-4xl">🚫</div>
