@@ -1,4 +1,7 @@
-import { createOperation, AuthorizationError, z } from '../generated/wundergraph.factory';
+import { createOperation, z } from '../generated/wundergraph.factory';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 
 export default createOperation.mutation({
     input: z.object({
@@ -21,19 +24,23 @@ export default createOperation.mutation({
             };
         }
 
+        // Create a temporary file path
+        const tempFilePath = join(tmpdir(), `audio-${Date.now()}.webm`);
+
         try {
             if (!context.openai) {
                 throw new Error('OpenAI client not initialized');
             }
 
-            // Convert base64 to File object
+            // Convert base64 to buffer
             const binaryData = Buffer.from(input.audioBase64.split(',')[1], 'base64');
-            const audioBlob = new Blob([binaryData], { type: 'audio/webm' });
-            const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
 
-            // Use OpenAI Whisper API
+            // Write buffer to temporary file
+            writeFileSync(tempFilePath, binaryData);
+
+            // Use the OpenAI SDK with the file path
             const transcript = await context.openai.audio.transcriptions.create({
-                file: audioFile,
+                file: await import('fs').then(fs => fs.createReadStream(tempFilePath)),
                 model: 'whisper-1'
             });
 
@@ -48,6 +55,13 @@ export default createOperation.mutation({
         } catch (error) {
             console.error('❌ Transcription error:', error);
             throw new Error(error instanceof Error ? error.message : 'Failed to transcribe audio');
+        } finally {
+            // Clean up: delete the temporary file
+            try {
+                unlinkSync(tempFilePath);
+            } catch (e) {
+                console.error('Failed to delete temporary file:', e);
+            }
         }
     }
 }); 
