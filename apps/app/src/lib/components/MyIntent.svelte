@@ -37,6 +37,9 @@
 	let hominioAudio: HTMLAudioElement | null = null;
 	let visualizerMode: 'user' | 'hominio' = 'user';
 
+	// Add new type for audio context
+	let audioContext: AudioContext | null = null;
+
 	// Type definitions
 	interface Message {
 		id: string;
@@ -77,26 +80,21 @@
 
 	function handleClose() {
 		isPressed = false;
+		modalState = 'idle';
+
+		// Clean up audio playback
 		if (hominioAudio) {
-			// Let any playing audio finish naturally
-			hominioAudio.addEventListener('ended', () => {
-				hominioAudio = null;
-				dispatch('close');
-			});
-		} else {
-			dispatch('close');
+			hominioAudio.pause();
+			hominioAudio = null;
 		}
-		// Clean up other resources
-		if (mediaRecorder) {
-			mediaRecorder.stop();
-			mediaRecorder = null;
-		}
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-			audioStream = null;
-		}
-		audioChunks = [];
+
+		// Clean up recording
+		stopAndCleanupRecording();
+
+		// Reset conversation
 		resetConversationState();
+
+		dispatch('close');
 	}
 
 	type ModalState =
@@ -169,18 +167,16 @@
 		isPressed = true;
 
 		try {
-			// Check if we already have permissions first
+			// Initialize audio context for playback
+			await initializeAudioPlayback();
+
 			if (!hasPermissions) {
-				console.log('🎤 Requesting microphone permission...');
 				modalState = 'need-permissions';
 				permissionRequesting = true;
 
 				try {
 					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-					// Immediately stop the test stream
 					stream.getTracks().forEach((track) => track.stop());
-
-					// Update permission status
 					hasPermissions = true;
 					modalState = 'idle';
 					permissionRequesting = false;
@@ -188,35 +184,39 @@
 					console.error('❌ Permission request failed:', error);
 					modalState = 'permissions-denied';
 					permissionRequesting = false;
+					isPressed = false;
+					return;
 				}
-
-				isPressed = false;
-				return; // Don't start recording yet
 			}
 
-			// If we have permissions, start recording
-			console.log('🎤 Starting recording setup...');
-			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			// Add a small delay before starting recording on mobile
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			audioStream = await navigator.mediaDevices.getUserMedia({
+				audio: {
+					echoCancellation: true,
+					noiseSuppression: true,
+					autoGainControl: true
+				}
+			});
 
 			const options = {
-				mimeType: 'audio/mp4', // Use mp4 for best compatibility
+				mimeType: 'audio/mp4',
 				audioBitsPerSecond: 128000
 			};
-			console.log('🎙️ Initializing recorder with options:', options);
 
 			mediaRecorder = new MediaRecorder(audioStream, options);
 			audioChunks = [];
 
 			mediaRecorder.ondataavailable = (event) => {
 				if (event.data.size > 0) {
-					console.log('📊 Received audio chunk:', event.data.size, 'bytes');
 					audioChunks.push(event.data);
+					console.log('📝 Received audio chunk:', event.data.size);
 				}
 			};
 
-			mediaRecorder.start();
+			mediaRecorder.start(50); // Reduced from 100ms to 50ms for more granular chunks
 			modalState = 'recording';
-			console.log('🎤 Recording started with MIME type:', mediaRecorder.mimeType);
 		} catch (error) {
 			console.error('❌ Recording setup failed:', error);
 			modalState = 'error';
@@ -256,18 +256,29 @@
 			modalState = 'processing';
 			playHominioWorkingAudio();
 
-			// Collect final audio chunks
+			// Add a small delay before stopping to ensure we capture the full audio
+			await new Promise((resolve) => setTimeout(resolve, 200));
+
+			// Collect final audio chunks with proper promise handling
 			const audioData = await new Promise<Blob[]>((resolve) => {
 				const chunks = [...audioChunks];
 
-				mediaRecorder.ondataavailable = (event) => {
+				// Ensure we capture the final chunk
+				mediaRecorder!.addEventListener('dataavailable', (event) => {
 					if (event.data.size > 0) {
 						chunks.push(event.data);
 					}
-				};
+				});
 
-				mediaRecorder.onstop = () => resolve(chunks);
-				mediaRecorder.stop();
+				// Only resolve after we're sure recording has stopped
+				mediaRecorder!.addEventListener('stop', () => {
+					console.log('📝 Recording stopped, finalizing chunks:', chunks.length);
+					resolve(chunks);
+				});
+
+				// Request final chunk and stop
+				mediaRecorder!.requestData();
+				mediaRecorder!.stop();
 			});
 
 			// Immediately cleanup recording resources
@@ -286,8 +297,9 @@
 				throw new Error('Audio recording too short');
 			}
 
-			const reader = new FileReader();
+			// Convert to base64
 			const base64 = await new Promise<string>((resolve) => {
+				const reader = new FileReader();
 				reader.onloadend = () => {
 					const result = reader.result as string;
 					console.log('📝 Base64 conversion details:', {
@@ -467,45 +479,62 @@
 		}
 	});
 
-	// Update the playHominioWorkingAudio function
-	function playHominioWorkingAudio() {
+	// Modify audio playback initialization
+	async function initializeAudioPlayback() {
+		// Create AudioContext on user interaction
+		if (!audioContext) {
+			audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+			await audioContext.resume();
+		}
+	}
+
+	// Update playHominioWorkingAudio to handle iOS
+	async function playHominioWorkingAudio() {
 		try {
+			await initializeAudioPlayback();
+
 			if (hominioAudio) {
 				hominioAudio.pause();
 				hominioAudio = null;
 			}
 
 			const audioFile = getRandomWorkingAudio();
-			console.log(' Starting Homnio audio:', audioFile);
+			console.log('🔊 Starting Hominio audio:', audioFile);
 
 			hominioAudio = new Audio(audioFile);
 			visualizerMode = 'user';
 
-			// Let audio complete naturally
+			// Enable inline playback for iOS
+			hominioAudio.setAttribute('playsinline', '');
+			hominioAudio.setAttribute('webkit-playsinline', '');
+
+			// Preload audio
+			await new Promise((resolve) => {
+				hominioAudio!.addEventListener('canplaythrough', resolve, { once: true });
+				hominioAudio!.load();
+			});
+
+			await hominioAudio.play();
+
 			hominioAudio.addEventListener('ended', () => {
 				console.log('🔊 Audio completed naturally');
 				hominioAudio = null;
 			});
-
-			hominioAudio.play().catch((error) => {
-				console.error('❌ Audio playback failed:', error);
-			});
 		} catch (error) {
-			console.error('❌ Audio initialization failed:', error);
+			console.error('❌ Audio playback failed:', error);
+			// Continue without audio if playback fails
 		}
 	}
 </script>
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-40 bg-surface-800/50 {!currentAction?.type?.includes('ai')
-			? 'backdrop-blur-sm'
-			: ''}"
-		class:hidden={!isOpen}
-		on:click|self={() => dispatch('close')}
+		class="fixed inset-0 z-40 bg-surface-800/50 backdrop-blur-sm"
+		on:click|self={handleClose}
 		transition:fade={{ duration: 200 }}
 	>
 		<div class="container h-full max-w-2xl mx-auto" on:click|stopPropagation>
+			<!-- Single modal structure -->
 			<div class="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 mb-16">
 				<div
 					class="w-full max-w-6xl overflow-hidden border shadow-xl rounded-xl bg-surface-700 border-surface-600"
