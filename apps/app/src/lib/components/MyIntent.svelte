@@ -157,7 +157,12 @@
 			}
 
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			mediaRecorder = new MediaRecorder(audioStream);
+
+			// Define supported MIME types for different platforms
+			const mimeType = getSupportedMimeType();
+			mediaRecorder = new MediaRecorder(audioStream, {
+				mimeType: mimeType
+			});
 			audioChunks = [];
 
 			mediaRecorder.ondataavailable = (e) => {
@@ -398,6 +403,21 @@
 	onDestroy(() => {
 		resetConversationState();
 	});
+
+	// Add this helper function near your other utility functions
+	function getSupportedMimeType() {
+		const types = ['audio/webm', 'audio/mp4', 'audio/wav', 'audio/ogg'];
+
+		for (const type of types) {
+			if (MediaRecorder.isTypeSupported(type)) {
+				console.log('🎤 Using MIME type:', type);
+				return type;
+			}
+		}
+
+		// Fallback for iOS
+		return ''; // Let the browser choose its default
+	}
 </script>
 
 {#if isOpen}
