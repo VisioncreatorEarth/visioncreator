@@ -11,6 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { dynamicView } from '$lib/stores';
 	import { createMutation } from '$lib/wundergraph';
+	import MessageView from './MessageView.svelte';
 
 	// Initialize dayjs relative time plugin
 	dayjs.extend(relativeTime);
@@ -355,12 +356,11 @@
 		});
 	}
 
-	// Modify handleTranscriptionComplete to not start a new audio playback if one is already playing
+	// Modify handleTranscriptionComplete to close the modal instead of showing messages
 	async function handleTranscriptionComplete(text: string) {
 		try {
 			visualizerMode = 'hominio';
 
-			// Only start new audio playback if none is currently playing
 			const audioPromise = hominioAudio?.paused ? playHominioResponse() : Promise.resolve(true);
 
 			const [response] = await Promise.all([
@@ -368,8 +368,8 @@
 				audioPromise
 			]);
 
-			modalState = 'result';
-			visualizerMode = 'user';
+			// Close the modal after processing
+			handleClose();
 
 			// Handle different payload types
 			if (response?.message?.payload) {
@@ -388,19 +388,16 @@
 						break;
 				}
 			}
-
-			await new Promise((resolve) => setTimeout(resolve, 100));
-			scrollToBottom();
 		} catch (error) {
 			console.error('Error processing request:', error);
 			modalState = 'error';
+
 			conversationManager.addMessage(
 				'Sorry, I encountered an error processing your request.',
 				'system',
 				'error'
 			);
 		} finally {
-			// Cleanup audio
 			if (hominioAudio) {
 				hominioAudio.pause();
 				hominioAudio = null;
@@ -524,6 +521,8 @@
 			// Continue without audio if playback fails
 		}
 	}
+
+	let showMessages = false;
 </script>
 
 {#if isOpen}
@@ -663,6 +662,30 @@
 		</div>
 	</div>
 {/if}
+
+<!-- Messages Toggle Button -->
+<button
+	class="fixed z-30 p-3 transition-colors rounded-full shadow-lg bottom-4 right-4 text-tertiary-200 bg-surface-700 hover:bg-surface-600"
+	on:click={() => (showMessages = !showMessages)}
+>
+	<svg
+		class="w-6 h-6"
+		xmlns="http://www.w3.org/2000/svg"
+		fill="none"
+		viewBox="0 0 24 24"
+		stroke="currentColor"
+	>
+		<path
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			stroke-width="2"
+			d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+		/>
+	</svg>
+</button>
+
+<!-- Messages Modal -->
+<MessageView isOpen={showMessages} {session} on:close={() => (showMessages = false)} />
 
 <style>
 	/* Add some styles for better interaction feedback */
