@@ -1,5 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import { writeFileSync, createReadStream, unlinkSync } from 'fs';
+import { writeFileSync, createReadStream, unlinkSync, statSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -20,13 +20,31 @@ export default createOperation.mutation({
                 throw new Error('OpenAI client not initialized');
             }
 
+            // Log input details (safely)
+            console.log('📥 Input base64 details:', {
+                length: input.audioBase64.length,
+                startsWith: input.audioBase64.substring(0, 50) + '...',
+                containsHeader: input.audioBase64.startsWith('data:'),
+                mimeType: input.audioBase64.match(/^data:([^;]+);/)?.[1] || 'no mime type'
+            });
+
             // Handle both data URL and raw base64
             let binaryData: Buffer;
             if (input.audioBase64.startsWith('data:')) {
-                binaryData = Buffer.from(input.audioBase64.split(',')[1], 'base64');
+                const base64Data = input.audioBase64.split(',')[1];
+                binaryData = Buffer.from(base64Data, 'base64');
+                console.log('📦 Decoded from data URL, binary length:', binaryData.length);
             } else {
                 binaryData = Buffer.from(input.audioBase64, 'base64');
+                console.log('📦 Decoded from raw base64, binary length:', binaryData.length);
             }
+
+            // Log binary data details
+            console.log('📦 Binary data details:', {
+                length: binaryData.length,
+                firstBytes: binaryData.slice(0, 16).toString('hex'),
+                lastBytes: binaryData.slice(-16).toString('hex')
+            });
 
             // Validate audio data
             if (binaryData.length < 100) {
@@ -37,28 +55,50 @@ export default createOperation.mutation({
             tempFile = join(tmpdir(), `audio-${Date.now()}.webm`);
             writeFileSync(tempFile, binaryData);
 
-            console.log('📁 Processing audio file:', {
-                size: binaryData.length,
-                path: tempFile
+            // Log file details
+            const stats = statSync(tempFile);
+            console.log('📁 File details:', {
+                size: stats.size,
+                path: tempFile,
+                type: 'audio/webm',
+                extension: 'webm',
+                exists: true,
+                permissions: stats.mode,
+                created: stats.birthtime
             });
 
-            // Create file stream
+            // Create file stream with detailed logging
             const fileStream = createReadStream(tempFile);
             Object.assign(fileStream, {
                 name: 'audio.webm',
                 contentType: 'audio/webm',
             });
+            console.log('📤 Created file stream with metadata:', {
+                name: 'audio.webm',
+                contentType: 'audio/webm',
+                path: tempFile
+            });
 
-            // Transcribe
+            // Log OpenAI request
+            console.log('🤖 Calling OpenAI transcription API...');
             const transcript = await context.openai.audio.transcriptions.create({
                 file: fileStream as any,
                 model: 'whisper-1',
             });
 
+            console.log('📝 Received transcript:', transcript.text);
             return { data: { text: transcript.text } };
 
         } catch (error) {
             console.error('❌ Transcription error:', error);
+            // Detailed error logging
+            console.error('Error details:', {
+                name: error instanceof Error ? error.name : 'Unknown',
+                message: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                type: typeof error,
+                details: error
+            });
             return {
                 data: {
                     error: error instanceof Error ? error.message : 'Transcription failed',
@@ -69,6 +109,7 @@ export default createOperation.mutation({
             if (tempFile) {
                 try {
                     unlinkSync(tempFile);
+                    console.log('🧹 Cleaned up temporary file:', tempFile);
                 } catch (e) {
                     console.error('Cleanup error:', e);
                 }

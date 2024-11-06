@@ -198,26 +198,36 @@
 
 	export async function handleLongPressStart() {
 		try {
+			console.log('🎤 Starting recording setup...');
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-			// Force WebM with Opus codec for best compatibility
-			mediaRecorder = new MediaRecorder(audioStream, {
-				mimeType: 'audio/webm;codecs=opus',
-				audioBitsPerSecond: 128000
+			// Log available MIME types
+			const types = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'];
+			types.forEach((type) => {
+				console.log(`🎤 MIME type ${type} supported:`, MediaRecorder.isTypeSupported(type));
 			});
 
+			const options = {
+				mimeType: 'audio/webm;codecs=opus',
+				audioBitsPerSecond: 128000
+			};
+			console.log('🎙️ Initializing recorder with options:', options);
+
+			mediaRecorder = new MediaRecorder(audioStream, options);
 			audioChunks = [];
 
 			mediaRecorder.ondataavailable = (event) => {
 				if (event.data.size > 0) {
+					console.log('📊 Received audio chunk:', event.data.size, 'bytes');
 					audioChunks.push(event.data);
 				}
 			};
 
 			mediaRecorder.start();
+			console.log('🎤 Recording started with MIME type:', mediaRecorder.mimeType);
 			modalState = 'recording';
 		} catch (error) {
-			console.error('Recording setup failed:', error);
+			console.error('❌ Recording setup failed:', error);
 			modalState = 'idle';
 		}
 	}
@@ -228,6 +238,12 @@
 		try {
 			modalState = 'working';
 			console.log('🎤 Starting transcription process...');
+			console.log('📊 Current recorder state:', {
+				state: mediaRecorder.state,
+				mimeType: mediaRecorder.mimeType,
+				chunksCount: audioChunks.length
+			});
+
 			mediaRecorder.stop();
 
 			await new Promise<void>((resolve) => {
@@ -236,34 +252,58 @@
 			console.log('🛑 Media recorder stopped');
 
 			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-			console.log('📦 Audio blob created:', audioBlob.size, 'bytes');
+			console.log('📦 Audio blob details:', {
+				size: audioBlob.size,
+				type: audioBlob.type,
+				mimeType: audioBlob.type,
+				chunksLength: audioChunks.length
+			});
 
 			const reader = new FileReader();
 			const base64 = await new Promise<string>((resolve) => {
-				reader.onloadend = () => resolve(reader.result as string);
+				reader.onloadend = () => {
+					const result = reader.result as string;
+					console.log('📝 Base64 conversion details:', {
+						resultLength: result.length,
+						startsWith: result.substring(0, 50) + '...',
+						containsHeader: result.includes('data:audio/')
+					});
+					resolve(result);
+				};
 				reader.readAsDataURL(audioBlob);
 			});
-			console.log('📝 Base64 conversion complete');
 
+			console.log('🚀 Sending to API...');
 			const response = await $transcribeAudioMutation.mutateAsync({
 				audioBase64: base64
 			});
+			console.log('✅ API Response:', response);
 
 			if (response.data.text) {
+				console.log('📝 Transcription successful:', response.data.text);
 				handleTranscriptionComplete(response.data.text);
 			} else if (response.data.error === 'pioneer-list') {
+				console.log('ℹ️ Pioneer list response received');
 				modalState = 'pioneer-list';
 			} else {
 				throw new Error(response.data.error);
 			}
 		} catch (error) {
 			console.error('❌ Processing failed:', error);
+			console.error('Error details:', {
+				name: error instanceof Error ? error.name : 'Unknown',
+				message: error instanceof Error ? error.message : 'Unknown error',
+				stack: error instanceof Error ? error.stack : undefined
+			});
 			modalState = 'error';
 		} finally {
-			// Only stop the audio stream after we're completely done
 			if (modalState !== 'working') {
+				console.log('🧹 Cleaning up audio resources');
 				if (audioStream) {
-					audioStream.getTracks().forEach((track) => track.stop());
+					audioStream.getTracks().forEach((track) => {
+						track.stop();
+						console.log('🎤 Audio track stopped:', track.kind);
+					});
 				}
 				audioChunks = [];
 				mediaRecorder = null;
