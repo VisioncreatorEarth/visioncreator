@@ -76,6 +76,7 @@
 	});
 
 	function handleClose() {
+		isPressed = false;
 		if (hominioAudio) {
 			// Let any playing audio finish naturally
 			hominioAudio.addEventListener('ended', () => {
@@ -112,20 +113,19 @@
 
 	async function checkMicrophonePermission() {
 		try {
-			// Use the Permissions API to query current state
 			const permissionStatus = await navigator.permissions.query({
 				name: 'microphone' as PermissionName
 			});
 
 			console.log('🎤 Microphone permission status:', permissionStatus.state);
 
-			// Set up a listener for permission changes
 			permissionStatus.addEventListener('change', () => {
 				console.log('🔄 Permission state changed to:', permissionStatus.state);
 				switch (permissionStatus.state) {
 					case 'granted':
 						hasPermissions = true;
 						modalState = 'idle';
+						stopAndCleanupRecording();
 						break;
 					case 'denied':
 						hasPermissions = false;
@@ -138,7 +138,6 @@
 				}
 			});
 
-			// Initial state setup
 			switch (permissionStatus.state) {
 				case 'granted':
 					hasPermissions = true;
@@ -165,9 +164,22 @@
 		operationName: 'transcribeAudio'
 	});
 
+	// Add state for tracking press
+	let isPressed = false;
+
 	export async function handleLongPressStart() {
+		if (!hasPermissions || isPressed) return;
+
+		if (!hasPermissions) {
+			await checkMicrophonePermission();
+			return;
+		}
+
 		try {
+			isPressed = true;
 			console.log('🎤 Starting recording setup...');
+
+			// Get fresh audio stream for each recording session
 			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
 			const options = {
@@ -177,6 +189,7 @@
 			console.log('🎙️ Initializing recorder with options:', options);
 
 			mediaRecorder = new MediaRecorder(audioStream, options);
+			audioChunks = []; // Reset chunks
 
 			mediaRecorder.ondataavailable = (event) => {
 				if (event.data.size > 0) {
@@ -191,46 +204,61 @@
 		} catch (error) {
 			console.error('❌ Recording setup failed:', error);
 			modalState = 'error';
+			isPressed = false;
+			// Cleanup on error
+			stopAndCleanupRecording();
 		}
 	}
 
-	export async function handleLongPressEnd() {
-		if (!mediaRecorder) return;
+	// Add helper function for recording cleanup
+	function stopAndCleanupRecording() {
+		console.log('🧹 Cleaning up recording resources...');
 
+		if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+			mediaRecorder.stop();
+			console.log('🎤 MediaRecorder stopped');
+		}
+
+		if (audioStream) {
+			audioStream.getTracks().forEach((track) => {
+				track.stop();
+				console.log('🎤 Audio track stopped:', track.kind);
+			});
+			audioStream = null;
+		}
+
+		mediaRecorder = null;
+		audioChunks = [];
+	}
+
+	export async function handleLongPressEnd() {
+		if (!mediaRecorder || !isPressed) return;
+
+		isPressed = false;
 		console.log('🎤 Long press released, stopping recording...');
 
 		try {
 			modalState = 'processing';
 			playHominioWorkingAudio();
 
-			// Collect all audio chunks before stopping
+			// Collect final audio chunks
 			const audioData = await new Promise<Blob[]>((resolve) => {
 				const chunks = [...audioChunks];
 
 				mediaRecorder.ondataavailable = (event) => {
 					if (event.data.size > 0) {
-						console.log('📊 Received final audio chunk:', event.data.size, 'bytes');
 						chunks.push(event.data);
 					}
 				};
 
-				mediaRecorder.onstop = () => {
-					console.log('🎤 MediaRecorder stopped, chunks collected:', chunks.length);
-					resolve(chunks);
-				};
-
+				mediaRecorder.onstop = () => resolve(chunks);
 				mediaRecorder.stop();
 			});
 
-			// Clean up recording resources
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => {
-					track.stop();
-					console.log('🎤 Audio track stopped:', track.kind);
-				});
-				audioStream = null;
-			}
+			// Immediately cleanup recording resources
+			stopAndCleanupRecording();
 
+			// Process the audio data
 			const audioBlob = new Blob(audioData, { type: 'audio/webm' });
 			console.log('📦 Audio blob details:', {
 				size: audioBlob.size,
@@ -274,10 +302,8 @@
 			console.error('❌ Processing failed:', error);
 			modalState = 'error';
 		} finally {
-			// Only cleanup recording resources, let audio play
-			mediaRecorder = null;
-			audioChunks = [];
-			console.log('🧹 Recording resources cleaned up');
+			// Ensure cleanup happens
+			stopAndCleanupRecording();
 		}
 	}
 
@@ -419,30 +445,12 @@
 
 	// Clean up on component destroy
 	onDestroy(() => {
+		stopAndCleanupRecording();
 		if (hominioAudio) {
 			hominioAudio.pause();
 			hominioAudio = null;
 		}
-		cleanupAudioResources();
 	});
-
-	// Add a cleanup function that can be called from anywhere
-	function cleanupAudioResources() {
-		if (mediaRecorder) {
-			mediaRecorder.stop();
-			mediaRecorder = null;
-		}
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-			audioStream = null;
-		}
-		audioChunks = [];
-		// Only force audio stop if component is being unmounted
-		if (hominioAudio && isOpen === false) {
-			hominioAudio.pause();
-			hominioAudio = null;
-		}
-	}
 
 	// Update the playHominioWorkingAudio function
 	function playHominioWorkingAudio() {
@@ -453,7 +461,7 @@
 			}
 
 			const audioFile = getRandomWorkingAudio();
-			console.log('🔊 Starting Homnio audio:', audioFile);
+			console.log('��� Starting Homnio audio:', audioFile);
 
 			hominioAudio = new Audio(audioFile);
 			visualizerMode = 'user';
