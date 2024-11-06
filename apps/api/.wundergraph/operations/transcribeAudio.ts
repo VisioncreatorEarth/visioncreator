@@ -1,5 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import { writeFileSync, createReadStream, unlinkSync } from 'fs';
+import { writeFileSync, createReadStream, unlinkSync, statSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -32,11 +32,37 @@ export default createOperation.mutation({
                 throw new Error('OpenAI client not initialized');
             }
 
+            // Log input details
+            console.log('📥 Input base64 details:', {
+                length: input.audioBase64.length,
+                startsWith: input.audioBase64.substring(0, 50),
+                containsHeader: input.audioBase64.includes('data:audio/'),
+                mimeType: input.audioBase64.match(/^data:([^;]+);/)?.[1] || 'unknown'
+            });
+
             // Convert base64 to buffer
             const binaryData = Buffer.from(input.audioBase64.split(',')[1], 'base64');
 
+            // Log binary data details
+            console.log('📦 Binary data details:', {
+                length: binaryData.length,
+                firstBytes: binaryData.slice(0, 16).toString('hex'),
+                lastBytes: binaryData.slice(-16).toString('hex')
+            });
+
             // Write to temp file
             writeFileSync(tempFile, binaryData);
+
+            // Log file stats
+            const stats = statSync(tempFile);
+            console.log('📁 File details:', {
+                size: stats.size,
+                path: tempFile,
+                type: 'audio/webm',
+                exists: true,
+                permissions: stats.mode,
+                created: stats.birthtime
+            });
 
             // Create file stream for OpenAI
             const fileStream = createReadStream(tempFile);
@@ -45,13 +71,6 @@ export default createOperation.mutation({
                 contentType: 'audio/webm',
                 filepath: tempFile,
                 fieldname: 'file'
-            });
-
-            // Log file details for debugging
-            console.log('📁 File details:', {
-                size: binaryData.length,
-                path: tempFile,
-                type: 'audio/webm'
             });
 
             // Use OpenAI's SDK with the file stream
@@ -70,6 +89,15 @@ export default createOperation.mutation({
 
         } catch (error) {
             console.error('❌ Transcription error:', error);
+            // Enhanced error logging
+            if (error instanceof Error) {
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    cause: error.cause
+                });
+            }
             return {
                 data: {
                     error: error instanceof Error ? error.message : 'Failed to transcribe audio',
