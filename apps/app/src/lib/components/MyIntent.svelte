@@ -2,7 +2,6 @@
 	import { fade } from 'svelte/transition';
 	import { writable, derived } from 'svelte/store';
 	import { createEventDispatcher } from 'svelte';
-	import { permissionState, permissionRequesting } from './MicrophonePermissions.svelte';
 
 	const dispatch = createEventDispatcher();
 	let isLongPressActive = false;
@@ -10,6 +9,10 @@
 	const stateMachineConfig = {
 		id: 'intentMachine',
 		initial: 'idle',
+		context: {
+			permissionState: 'prompt',
+			permissionRequesting: false
+		},
 		states: {
 			idle: {
 				on: {
@@ -77,21 +80,17 @@
 	function createMachineStore(config) {
 		const { subscribe, set, update } = writable({
 			value: config.initial,
-			context: {},
+			context: config.context,
 			config
 		});
 
 		const actions = {
-			checkPermissions: () => {
-				if ($permissionState === 'granted') {
-					send('PERMISSION_GRANTED');
-				} else {
-					send('CHECK_PERMISSION');
-				}
-			},
 			checkMicrophonePermission: async () => {
 				try {
-					permissionRequesting.set(true);
+					update((state) => {
+						state.context.permissionRequesting = true;
+						return state;
+					});
 					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 					stream.getTracks().forEach((track) => track.stop());
 					send('PERMISSION_GRANTED');
@@ -99,7 +98,10 @@
 					console.error('❌ Permission request failed:', error);
 					send('PERMISSION_DENIED');
 				} finally {
-					permissionRequesting.set(false);
+					update((state) => {
+						state.context.permissionRequesting = false;
+						return state;
+					});
 				}
 			},
 			openModal: () => {
@@ -127,7 +129,7 @@
 				isOpen = false;
 				set({
 					value: config.initial,
-					context: {},
+					context: config.context,
 					config
 				});
 			}
@@ -172,7 +174,7 @@
 				})();
 				return currentState;
 			},
-			reset: () => set({ value: config.initial, context: {}, config })
+			reset: () => set({ value: config.initial, context: config.context, config })
 		};
 	}
 
@@ -181,6 +183,7 @@
 
 	const machine = createMachineStore(stateMachineConfig);
 	const currentState = derived(machine, ($machine) => $machine.value);
+	const context = derived(machine, ($machine) => $machine.context);
 
 	$: if ($currentState) {
 		const isRecording = $currentState === 'recording';
