@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import TabMenu from './TabMenu.svelte';
 	import ActionButtons from './ActionButtons.svelte';
 	import Newsletter from './Newsletter.svelte';
 	import Auth from './Auth.svelte';
 	import MyIntent from './MyIntent.svelte';
-	import { onMount, tick } from 'svelte';
 	import { dynamicView } from '$lib/stores';
 	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
 	import { page } from '$app/stores';
@@ -224,10 +223,9 @@
 			isProcessing = proc;
 		}}
 		on:close={handleIntentClose}
+		style="display: none;"
 	/>
-{/if}
 
-{#if session}
 	<button
 		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 hover:shadow-xl hover:scale-105"
 		class:bg-error-500={isRecording}
@@ -362,20 +360,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	.recording-border {
-		@apply border-primary-500 scale-110;
-		box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
-		animation: pulse-red 0.3s infinite alternate;
-	}
-
-	@keyframes pulse-red {
-		0% {
-			box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
-		}
-		100% {
-			box-shadow: 0 0 0 2px red, 0 0 0 8px rgba(255, 0, 0, 0);
-		}
-	}
-</style>
