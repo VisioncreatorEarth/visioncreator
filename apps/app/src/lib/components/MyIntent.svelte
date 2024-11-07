@@ -7,11 +7,7 @@
 	import { hominioAgent } from '$lib/agents/hominioAgent';
 	import { conversationManager } from '$lib/stores/intentStore';
 
-	const dispatch = createEventDispatcher();
 	let isLongPressActive = false;
-
-	// Add state for current transcription
-	let currentTranscription: string | null = null;
 
 	interface IntentContext {
 		permissionState: 'prompt' | 'granted' | 'denied';
@@ -24,6 +20,7 @@
 		visualizerMode: 'user' | 'hominio';
 		hominioAudio: HTMLAudioElement | null;
 		currentTranscription: string | null;
+		isStartingRecording: boolean;
 	}
 
 	const intentConfig: MachineConfig<IntentContext, string, string> = {
@@ -39,7 +36,8 @@
 			audioData: null,
 			visualizerMode: 'user',
 			hominioAudio: null,
-			currentTranscription: null
+			currentTranscription: null,
+			isStartingRecording: false
 		},
 		states: {
 			init: {
@@ -182,7 +180,24 @@
 		},
 
 		startRecording: async (context: IntentContext) => {
+			if (context.isStartingRecording) {
+				console.log('[AudioDebug] Recording already starting, ignoring duplicate request');
+				return;
+			}
+
+			context.isStartingRecording = true;
+			console.log('[AudioDebug] Starting recording, existing stream:', !!context.audioStream);
+
 			try {
+				if (context.audioStream) {
+					console.log('[AudioDebug] Found existing stream, cleaning up first');
+					context.audioStream.getTracks().forEach((track) => {
+						console.log('[AudioDebug] Stopping existing track:', track.kind, track.id);
+						track.stop();
+					});
+				}
+
+				console.log('[AudioDebug] Requesting new media stream');
 				context.audioStream = await navigator.mediaDevices.getUserMedia({
 					audio: {
 						echoCancellation: true,
@@ -190,6 +205,11 @@
 						autoGainControl: true
 					}
 				});
+
+				console.log(
+					'[AudioDebug] New stream created with tracks:',
+					context.audioStream.getTracks().map((t) => ({ kind: t.kind, id: t.id }))
+				);
 
 				const options = {
 					mimeType: 'audio/mp4',
@@ -207,34 +227,46 @@
 				};
 
 				// Start recording with frequent chunks
-				context.mediaRecorder.start(50); // Match the legacy 50ms interval
+				context.mediaRecorder.start(50);
 				context.visualizerMode = 'user';
 
-				console.log('Recording started with format:', context.mediaRecorder.mimeType);
+				console.log('[AudioDebug] MediaRecorder started:', {
+					state: context.mediaRecorder.state,
+					mimeType: context.mediaRecorder.mimeType
+				});
 			} catch (error) {
-				console.error('Error starting recording:', error);
+				console.error('[AudioDebug] Error starting recording:', error);
 				machine.send('TRANSCRIPTION_ERROR');
+			} finally {
+				context.isStartingRecording = false;
 			}
 		},
 
 		stopRecording: (context: IntentContext) => {
-			console.log('Stopping recording, current state:', context.mediaRecorder?.state);
+			console.log('[AudioDebug] Stopping recording:', {
+				recorderState: context.mediaRecorder?.state,
+				hasStream: !!context.audioStream,
+				streamTracks: context.audioStream?.getTracks().length
+			});
 
 			// Always stop recording and cleanup stream
 			if (context.mediaRecorder?.state === 'recording') {
 				try {
 					context.mediaRecorder.stop();
+					console.log('[AudioDebug] MediaRecorder stopped');
 				} catch (error) {
-					console.error('Error stopping recording:', error);
+					console.error('[AudioDebug] Error stopping recording:', error);
 				}
 			}
 
 			// Always clean up the stream
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
+					console.log('[AudioDebug] Stopping track:', track.kind, track.id, track.enabled);
 					track.stop();
 				});
 				context.audioStream = null;
+				console.log('[AudioDebug] Audio stream cleaned up');
 			}
 		},
 
@@ -419,18 +451,34 @@
 		},
 
 		cleanup: (context: IntentContext) => {
-			console.log('Running cleanup');
+			console.log('[AudioDebug] Running cleanup', {
+				recorderState: context.mediaRecorder?.state,
+				hasStream: !!context.audioStream,
+				streamTracks: context.audioStream?.getTracks().length
+			});
 
 			// Stop recording if still active
 			if (context.mediaRecorder?.state === 'recording') {
-				context.mediaRecorder.stop();
+				try {
+					context.mediaRecorder.stop();
+					console.log('[AudioDebug] MediaRecorder stopped during cleanup');
+				} catch (error) {
+					console.error('[AudioDebug] Error stopping recording during cleanup:', error);
+				}
 			}
 
 			// Clean up audio stream
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
+					console.log(
+						'[AudioDebug] Stopping track during cleanup:',
+						track.kind,
+						track.id,
+						track.enabled
+					);
 					track.stop();
 				});
+				console.log('[AudioDebug] Audio stream cleaned up during cleanup');
 			}
 
 			// Reset all context values
@@ -441,6 +489,9 @@
 			context.currentTranscription = null;
 			context.visualizerMode = 'user';
 			context.isOpen = false;
+			context.isStartingRecording = false;
+
+			console.log('[AudioDebug] Cleanup complete, context reset');
 		}
 	};
 
@@ -459,6 +510,14 @@
 		const isRecording = $currentState === 'recording';
 		const isProcessing = $currentState === 'processing';
 		onRecordingStateChange(isRecording, isProcessing);
+	}
+
+	// Add this to track state changes
+	$: if ($currentState) {
+		console.log('[AudioDebug] State changed:', $currentState, {
+			hasStream: !!$context.audioStream,
+			recorderState: $context.mediaRecorder?.state
+		});
 	}
 
 	export const handleLongPressStart = () => {
