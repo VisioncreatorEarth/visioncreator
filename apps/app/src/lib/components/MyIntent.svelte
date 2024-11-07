@@ -6,7 +6,6 @@
 	import { createMutation } from '$lib/wundergraph';
 	import { hominioAgent } from '$lib/agents/hominioAgent';
 	import { conversationManager } from '$lib/stores/intentStore';
-	import AudioVisualizer from './AudioVisualizer.svelte';
 
 	let isLongPressActive = false;
 
@@ -203,8 +202,8 @@
 					context.audioStream = null;
 				}
 
-				// Create new stream with simplified options (like in AudioRecorder.svelte)
-				context.audioStream = await navigator.mediaDevices.getUserMedia({
+				// Get audio stream
+				const stream = await navigator.mediaDevices.getUserMedia({
 					audio: {
 						echoCancellation: true,
 						noiseSuppression: true,
@@ -212,28 +211,32 @@
 					}
 				});
 
-				// Create MediaRecorder with simpler options
-				context.mediaRecorder = new MediaRecorder(context.audioStream, {
-					mimeType: 'audio/webm;codecs=opus' // Use the same format as AudioRecorder
+				context.audioStream = stream;
+				context.visualizerMode = 'user';
+
+				// Use correct MIME type for iOS compatibility
+				const recorder = new MediaRecorder(stream, {
+					mimeType: 'video/mp4; codecs=mp4a.40.2'
 				});
 
 				context.audioChunks = [];
-				context.mediaRecorder.ondataavailable = (event) => {
+				recorder.ondataavailable = (event) => {
 					if (event.data.size > 0) {
 						context.audioChunks.push(event.data);
 					}
 				};
 
-				// Start recording with the same chunk size as AudioRecorder
-				context.mediaRecorder.start(50);
-				context.visualizerMode = 'user';
+				recorder.start(50);
+				context.mediaRecorder = recorder;
 
 				console.log('[AudioDebug] Recording started successfully', {
-					streamActive: context.audioStream.active,
-					recorderState: context.mediaRecorder.state
+					streamActive: stream.active,
+					streamTracks: stream.getTracks().length,
+					recorderState: recorder.state,
+					mimeType: recorder.mimeType
 				});
 			} catch (error) {
-				console.error('[AudioDebug] Error starting recording:', error);
+				console.error('[AudioDebug] Recording setup failed:', error);
 				machine.send('TRANSCRIPTION_ERROR');
 			} finally {
 				context.isStartingRecording = false;
@@ -575,9 +578,12 @@
 				</div>
 			{:else if $currentState === 'recording'}
 				<div class="text-center">
-					<div class="flex justify-center mb-4">
-						<AudioVisualizer isRecording={true} audioStream={$context.audioStream} mode="user" />
+					<div class="mb-4">
+						<!-- Replace AudioVisualizer with a simple recording indicator -->
+						<div class="w-12 h-12 mx-auto bg-red-500 rounded-full animate-pulse" />
 					</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
+					<p class="mt-2 text-tertiary-200/80">Release to process your request</p>
 				</div>
 			{:else if $currentState === 'transcribing'}
 				<div class="text-center">
