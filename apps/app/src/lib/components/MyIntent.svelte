@@ -1,617 +1,165 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher } from 'svelte';
-	import AudioVisualizer from './AudioVisualizer.svelte';
-	import { onMount, onDestroy } from 'svelte';
-	import { conversationManager, conversationStore } from '$lib/stores/intentStore';
-	import dayjs from 'dayjs';
-	import relativeTime from 'dayjs/plugin/relativeTime';
-	import MessageItem from './MessageItem.svelte';
-	import { hominioAgent } from '$lib/agents/hominioAgent';
-	import { goto } from '$app/navigation';
-	import { dynamicView } from '$lib/stores';
+	import { createEventDispatcher, onMount } from 'svelte';
+	import AudioRecorder from './AudioRecorder.svelte';
 	import { createMutation } from '$lib/wundergraph';
-	import MessageView from './MessageView.svelte';
-	import MicrophonePermissions, { permissionState } from './MicrophonePermissions.svelte';
-
-	// Initialize dayjs relative time plugin
-	dayjs.extend(relativeTime);
+	import AudioVisualizer from './AudioVisualizer.svelte';
 
 	export let isOpen = false;
-	export let session: any;
+	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
 	const dispatch = createEventDispatcher();
-	let currentAction: { action: string; view: any } | null = null;
-	let modalState:
-		| 'idle'
-		| 'recording'
-		| 'processing'
-		| 'result'
-		| 'need-permissions'
-		| 'permissions-denied'
-		| 'paywall' = 'idle';
-	let currentConversation: any;
+
+	let audioRecorderComponent: AudioRecorder;
 	let audioStream: MediaStream | null = null;
-	let mediaRecorder: MediaRecorder | null = null;
-	let audioChunks: Blob[] = [];
-	let messageContainer: HTMLDivElement;
+	let isRecording = false;
+	let transcription = '';
+	let isProcessing = false;
 
-	let hominioAudio: HTMLAudioElement | null = null;
-	let visualizerMode: 'user' | 'hominio' = 'user';
-
-	// Add new type for audio context
-	let audioContext: AudioContext | null = null;
-	let audioInitialized = false;
-
-	// Safe store subscription with proper typing
-	conversationStore.subscribe((state) => {
-		if (!state) {
-			currentConversation = null;
-			return;
-		}
-
-		const conversations = state.conversations || [];
-		const currentConversationId = state.currentConversationId;
-
-		if (currentConversationId && Array.isArray(conversations)) {
-			currentConversation = conversations.find((conv) => conv.id === currentConversationId) || null;
-		} else {
-			currentConversation = null;
-		}
-	});
-
-	onMount(async () => {
-		await checkMicrophonePermission();
-		if (isOpen) {
-			conversationManager.startNewConversation();
-		}
-	});
-
-	onDestroy(() => {
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-			audioStream = null;
-		}
-	});
-
-	function handleClose() {
-		modalState = 'idle';
-		visualizerMode = 'user';
-
-		// Clean up audio playback
-		if (hominioAudio) {
-			hominioAudio.pause();
-			hominioAudio = null;
-		}
-
-		// Clean up recording
-		stopAndCleanupRecording();
-
-		// Reset conversation
-		resetConversationState();
-
-		dispatch('close');
-	}
-
-	async function initializeAudioContext() {
-		if (!audioInitialized) {
-			try {
-				audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-				await audioContext.resume();
-				audioInitialized = true;
-				console.log('🎵 Audio context initialized');
-			} catch (error) {
-				console.error('❌ Audio context initialization failed:', error);
-			}
-		}
-	}
-
-	// Create mutation
+	// Create the mutation instance
 	const transcribeAudioMutation = createMutation({
 		operationName: 'transcribeAudio'
 	});
 
-	export async function handleLongPressStart() {
-		try {
-			await initializeAudioContext();
-			visualizerMode = 'user';
-
-			if ($permissionState !== 'granted') {
-				modalState = 'need-permissions';
-				return;
+	onMount(() => {
+		return () => {
+			if (isRecording && audioRecorderComponent) {
+				audioRecorderComponent.stopRecording();
 			}
+		};
+	});
 
-			// Only start recording if we have permissions
-			await startRecording();
-			modalState = 'recording';
-		} catch (error) {
-			console.error('❌ Recording setup failed:', error);
-			modalState = 'error';
-			stopAndCleanupRecording();
-		}
-	}
-
-	async function startRecording() {
+	export const handleLongPressStart = async () => {
+		console.log('🎤 Long press started');
 		try {
-			// Add a small delay before starting recording on mobile
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
-			audioStream = await navigator.mediaDevices.getUserMedia({
-				audio: {
-					echoCancellation: true,
-					noiseSuppression: true,
-					autoGainControl: true
-				}
-			});
-
-			const options = {
-				mimeType: 'audio/mp4',
-				audioBitsPerSecond: 128000
-			};
-
-			mediaRecorder = new MediaRecorder(audioStream, options);
-			audioChunks = [];
-
-			mediaRecorder.ondataavailable = (event) => {
-				if (event.data.size > 0) {
-					audioChunks.push(event.data);
-				}
-			};
-
-			mediaRecorder.start(50);
-			modalState = 'recording';
+			if (audioRecorderComponent) {
+				isRecording = true;
+				onRecordingStateChange(true, false);
+				await audioRecorderComponent.startRecording();
+				transcription = '';
+				console.log('✅ Recording started successfully');
+			}
 		} catch (error) {
-			throw new Error('Failed to start recording: ' + error.message);
+			console.error('❌ Start recording failed:', error);
+			isRecording = false;
+			onRecordingStateChange(false, false);
 		}
-	}
+	};
 
-	// Add helper function for recording cleanup
-	function stopAndCleanupRecording() {
-		console.log('🧹 Cleaning up recording resources...');
-
-		if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-			mediaRecorder.stop();
-			console.log('🎤 MediaRecorder stopped');
+	export const handleLongPressEnd = async () => {
+		console.log('🎤 Long press ended');
+		if (!isRecording || !audioRecorderComponent) {
+			console.log('⚠️ No active recording to stop');
+			return;
 		}
-
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => {
-				track.stop();
-				console.log('🎤 Audio track stopped:', track.kind);
-			});
-			audioStream = null;
-		}
-
-		mediaRecorder = null;
-		audioChunks = [];
-	}
-
-	export async function handleLongPressEnd() {
-		if (!mediaRecorder) return;
 
 		try {
-			modalState = 'processing';
-			visualizerMode = 'hominio';
+			isRecording = false;
+			isProcessing = true;
+			onRecordingStateChange(false, true);
 
-			const audioData = await stopRecording();
-			await processAudioData(audioData);
+			const audioBlob = await audioRecorderComponent.stopRecording();
+			console.log('✅ Recording stopped successfully');
+
+			// Convert blob to base64
+			const base64 = await new Promise<string>((resolve) => {
+				const reader = new FileReader();
+				reader.onloadend = () => {
+					const base64Data = reader.result as string;
+					resolve(base64Data.split(',')[1]);
+				};
+				reader.readAsDataURL(audioBlob);
+			});
+
+			console.log('🎤 Sending audio for transcription...');
+			const response = await $transcribeAudioMutation.mutateAsync({
+				audioBase64: base64
+			});
+
+			if (response.data?.text) {
+				transcription = response.data.text;
+				console.log('📝 Transcription result:', transcription);
+			}
 		} catch (error) {
 			console.error('❌ Processing failed:', error);
-			modalState = 'error';
-			visualizerMode = 'user';
 		} finally {
-			stopAndCleanupRecording();
+			isProcessing = false;
+			onRecordingStateChange(false, false);
+			isOpen = false; // Close the modal after processing
 		}
-	}
+	};
 
-	async function stopRecording(): Promise<Blob[]> {
-		return new Promise((resolve) => {
-			if (!mediaRecorder) return resolve([]);
-
-			mediaRecorder.onstop = () => {
-				console.log('🎤 MediaRecorder stopped');
-				resolve(audioChunks);
-			};
-
-			mediaRecorder.stop();
-		});
-	}
-
-	async function processAudioData(audioData: Blob[]) {
-		const audioBlob = new Blob(audioData, { type: 'audio/mp4' });
-		console.log('📦 Audio blob details:', {
-			size: audioBlob.size,
-			type: audioBlob.type,
-			mimeType: audioBlob.type,
-			chunksLength: audioData.length
-		});
-
-		if (audioBlob.size < 100) {
-			throw new Error('Audio recording too short');
-		}
-
-		const base64 = await new Promise<string>((resolve) => {
-			const reader = new FileReader();
-			reader.onloadend = () => {
-				const result = reader.result as string;
-				resolve(result);
-			};
-			reader.readAsDataURL(audioBlob);
-		});
-
-		console.log('🚀 Sending to transcription API...');
-		const response = await $transcribeAudioMutation.mutateAsync({
-			audioBase64: base64
-		});
-
-		if (response.data.text) {
-			console.log('📝 Transcription successful:', response.data.text);
-			handleTranscriptionComplete(response.data.text);
-		} else if (response.data.error === 'paywall') {
-			console.log('ℹ️ Paywall response received');
-			modalState = 'paywall';
-		} else {
-			throw new Error(response.data.error);
-		}
-	}
-
-	function handleActionComplete() {
-		currentAction = null;
-	}
-
-	// Add this helper function at the top with other functions
-	function getRandomWorkingAudio() {
-		const audioNum = Math.floor(Math.random() * 5) + 1;
-		return `/audio/workingonit${audioNum}.mp3`;
-	}
-
-	async function playHominioResponse() {
-		try {
-			visualizerMode = 'hominio';
-
-			await initializeAudioContext();
-
-			if (hominioAudio) {
-				hominioAudio.pause();
-				hominioAudio = null;
-			}
-
-			const audioFile = getRandomWorkingAudio();
-			hominioAudio = new Audio(audioFile);
-
-			// iOS-specific attributes
-			hominioAudio.setAttribute('playsinline', '');
-			hominioAudio.setAttribute('webkit-playsinline', '');
-			hominioAudio.muted = false;
-			hominioAudio.preload = 'auto';
-
-			await new Promise((resolve, reject) => {
-				if (!hominioAudio) return reject('No audio instance');
-
-				hominioAudio.addEventListener('canplaythrough', resolve, { once: true });
-				hominioAudio.addEventListener('error', reject, { once: true });
-				hominioAudio.load();
-			});
-
-			const playAttempt = hominioAudio.play();
-
-			if (playAttempt !== undefined) {
-				await playAttempt;
-			}
-
-			return new Promise((resolve) => {
-				hominioAudio!.addEventListener(
-					'ended',
-					() => {
-						hominioAudio = null;
-						resolve(true);
-					},
-					{ once: true }
-				);
-			});
-		} catch (error) {
-			console.warn('⚠️ Audio playback not available:', error);
-			return Promise.resolve(true);
-		}
-	}
-
-	// Modify handleTranscriptionComplete to close the modal instead of showing messages
-	async function handleTranscriptionComplete(text: string) {
-		try {
-			// Set hominio mode immediately
-			visualizerMode = 'hominio';
-
-			const audioPromise = hominioAudio?.paused ? playHominioResponse() : Promise.resolve(true);
-
-			const [response] = await Promise.all([
-				// Use processRequest instead of sendUserMessage
-				hominioAgent.processRequest(text),
-				audioPromise
-			]);
-
-			// Close the modal after processing
-			handleClose();
-
-			// Handle different payload types
-			if (response?.message?.payload) {
-				switch (response.message.payload.type) {
-					case 'view':
-						handleViewPayload(response.message.payload);
-						break;
-					case 'form':
-						handleFormPayload(response.message.payload);
-						break;
-					case 'action':
-						handleActionPayload(response.message.payload);
-						break;
-					case 'data':
-						handleDataPayload(response.message.payload);
-						break;
-				}
-			}
-		} catch (error) {
-			console.error('Error processing request:', error);
-			modalState = 'error';
-			visualizerMode = 'user';
-			conversationManager.addMessage({
-				role: 'system',
-				content: 'Sorry, I encountered an error processing your request.',
-				timestamp: new Date().toISOString()
-			});
-		}
-	}
-
-	// Clean up on component destroy
-	onDestroy(() => {
-		stopAndCleanupRecording();
-		if (hominioAudio) {
-			hominioAudio.pause();
-			hominioAudio = null;
-		}
-	});
-
-	// Update playHominioWorkingAudio to handle iOS
-	async function playHominioWorkingAudio() {
-		try {
-			visualizerMode = 'hominio';
-
-			// Initialize audio context if needed
-			await initializeAudioContext();
-
-			if (hominioAudio) {
-				hominioAudio.pause();
-				hominioAudio = null;
-			}
-
-			const audioFile = getRandomWorkingAudio();
-			hominioAudio = new Audio(audioFile);
-
-			// iOS-specific attributes
-			hominioAudio.setAttribute('playsinline', '');
-			hominioAudio.setAttribute('webkit-playsinline', '');
-			hominioAudio.muted = false;
-			hominioAudio.preload = 'auto';
-
-			// Wait for audio to be loaded
-			await new Promise((resolve, reject) => {
-				if (!hominioAudio) return reject('No audio instance');
-
-				hominioAudio.addEventListener('canplaythrough', resolve, { once: true });
-				hominioAudio.addEventListener('error', reject, { once: true });
-				hominioAudio.load();
-			});
-
-			// Create a user interaction promise
-			const playAttempt = hominioAudio.play();
-
-			if (playAttempt !== undefined) {
-				await playAttempt;
-				console.log('🔊 Audio playback started successfully');
-			}
-
-			// Add ended event listener
-			hominioAudio.addEventListener('ended', () => {
-				console.log('🔊 Audio completed');
-				hominioAudio = null;
-			});
-		} catch (error) {
-			console.warn('⚠️ Audio playback not available:', error);
-			// Continue without audio but keep hominio mode
-			hominioAudio = null;
-		}
-	}
-
-	let showMessages = false;
-
-	// Update MicrophonePermissions handling
-	function handlePermissionGranted() {
-		modalState = 'idle'; // Just set to idle, don't start recording
-	}
-
-	// Make sure we're properly handling the conversation state
-	onMount(async () => {
-		if (isOpen && !currentConversation) {
-			await conversationManager.startNewConversation();
-		}
-	});
-
-	// Cleanup function
-	function resetConversationState() {
-		currentAction = null;
-		if (!currentConversation?.messages?.length) {
-			conversationManager.clearCurrentConversation();
-		}
+	function handleRecordingStateChange(event: CustomEvent<{ isRecording: boolean }>) {
+		isRecording = event.detail.isRecording;
+		onRecordingStateChange(isRecording, isProcessing);
+		console.log('🎤 Recording state changed:', isRecording);
 	}
 </script>
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-40 bg-surface-800/50 backdrop-blur-sm"
-		on:click|self={handleClose}
+		class="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-lg"
 		transition:fade={{ duration: 200 }}
 	>
-		<div class="container h-full max-w-2xl mx-auto" on:click|stopPropagation>
-			<!-- Single modal structure -->
-			<div class="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 mb-16">
-				<div
-					class="w-full max-w-6xl overflow-hidden border shadow-xl rounded-xl bg-surface-700 border-surface-600"
-				>
-					<!-- Header -->
-					<div class="flex items-center justify-between p-4 border-b border-surface-600">
-						<h2 class="text-lg font-semibold text-tertiary-200">
-							{#if modalState === 'recording'}
-								Recording...
-							{:else if modalState === 'processing'}
-								Processing...
-							{:else if modalState === 'need-permissions'}
-								Microphone Access
-							{:else if modalState === 'permissions-denied'}
-								Access Denied
-							{:else if modalState === 'paywall'}
-								Subscription Required
-							{:else}
-								Your Message
-							{/if}
-						</h2>
-						<button
-							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-surface-600/50"
-							on:click={handleClose}
-						>
-							<svg
-								class="w-6 h-6 text-tertiary-200"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
+		<div class="relative z-10 w-full max-w-lg mx-auto mb-32">
+			<div class="relative flex flex-col items-center justify-center mx-auto text-center">
+				{#if isRecording}
+					<!-- Recording State: User Avatar -->
+					<div class="mb-24">
+						<AudioVisualizer {isRecording} {audioStream} mode="user" />
 					</div>
+				{:else if isProcessing}
+					<!-- Processing State: Hominio Avatar -->
+					<div class="mb-24">
+						<AudioVisualizer {isRecording} {audioStream} mode="hominio" />
+					</div>
+				{/if}
 
-					<!-- Content -->
-					<div class="flex flex-col min-h-[200px] max-h-[60vh] overflow-y-auto p-6">
-						{#if modalState === 'need-permissions'}
-							<MicrophonePermissions
-								onPermissionGranted={handlePermissionGranted}
-								on:permissionChange={({ detail }) => {
-									if (detail.granted) {
-										modalState = 'idle'; // Just set to idle, don't start recording
-									} else if (detail.state === 'denied') {
-										modalState = 'permissions-denied';
-									}
-								}}
-							/>
-						{:else if modalState === 'permissions-denied'}
-							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
-								<div class="text-4xl">🚫</div>
-								<h3 class="text-xl font-semibold text-tertiary-200">Microphone Access Denied</h3>
-								<p class="text-surface-200">
-									Please enable microphone access in your browser settings.
-								</p>
-								<div class="text-sm text-surface-300">
-									<p>How to enable:</p>
-									<ol class="mt-2 text-left list-decimal list-inside">
-										<li>Click the lock icon in your browser's address bar</li>
-										<li>Find "Microphone" in the permissions list</li>
-										<li>Change the setting to "Allow"</li>
-										<li>Refresh the page</li>
-									</ol>
-								</div>
-							</div>
-						{:else if modalState === 'recording'}
-							<div class="flex items-center justify-center flex-1">
-								<AudioVisualizer
-									isRecording={true}
-									{audioStream}
-									mode={visualizerMode}
-									audioElement={null}
-								/>
-							</div>
-						{:else if modalState === 'processing'}
-							<div class="flex items-center justify-center flex-1">
-								<AudioVisualizer
-									isRecording={false}
-									audioStream={null}
-									mode={visualizerMode}
-									audioElement={hominioAudio}
-								/>
-							</div>
-						{:else if modalState === 'result'}
-							<div
-								class="flex-1 space-y-4 overflow-y-auto scroll-smooth"
-								bind:this={messageContainer}
-								style="scroll-behavior: smooth;"
-							>
-								{#if currentConversation?.messages?.length}
-									{#each currentConversation.messages as message (message.id)}
-										<MessageItem {message} {session} on:actionComplete={handleActionComplete} />
-									{/each}
-								{:else}
-									<div class="flex items-center justify-center flex-1">
-										<p class="text-lg text-tertiary-200">Press and hold to record your message</p>
-									</div>
-								{/if}
-							</div>
-						{:else if modalState === 'paywall'}
-							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
-								<div class="text-4xl">🚀</div>
-								<h3 class="text-xl font-semibold text-tertiary-200">Coming Soon!</h3>
-								<p class="text-surface-200">Voice commands are currently in beta testing.</p>
-								<p class="text-surface-300">
-									Get early access by moving up the Visioncreator list! The higher your rank, the
-									sooner you'll be invited.
-								</p>
-							</div>
-						{:else}
-							<div class="flex items-center justify-center flex-1">
-								<p class="text-lg text-tertiary-200">Press and hold to record your message</p>
-							</div>
-						{/if}
-					</div>
+				<!-- Keep AudioRecorder mounted but hidden -->
+				<div class="hidden">
+					<AudioRecorder
+						bind:this={audioRecorderComponent}
+						bind:isRecording
+						bind:audioStream
+						on:stateChange={handleRecordingStateChange}
+					/>
 				</div>
 			</div>
 		</div>
 	</div>
 {/if}
 
-<!-- Messages Toggle Button -->
-<button
-	class="fixed z-30 p-3 transition-colors rounded-full shadow-lg bottom-4 right-4 text-tertiary-200 bg-surface-700 hover:bg-surface-600"
-	on:click={() => (showMessages = !showMessages)}
->
-	<svg
-		class="w-6 h-6"
-		xmlns="http://www.w3.org/2000/svg"
-		fill="none"
-		viewBox="0 0 24 24"
-		stroke="currentColor"
+<!-- Transcription Message Bubble -->
+{#if transcription && !isProcessing && !isRecording}
+	<div
+		class="fixed z-40 max-w-md px-6 py-3 mx-auto -translate-x-1/2 bottom-24 left-1/2 rounded-2xl bg-surface-900/50 backdrop-blur-sm"
+		transition:fade={{ duration: 200 }}
 	>
-		<path
-			stroke-linecap="round"
-			stroke-linejoin="round"
-			stroke-width="2"
-			d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-		/>
-	</svg>
-</button>
-
-<!-- Messages Modal -->
-<MessageView isOpen={showMessages} {session} on:close={() => (showMessages = false)} />
+		<p class="text-base text-tertiary-200">
+			{transcription}
+		</p>
+	</div>
+{/if}
 
 <style>
-	/* Add some styles for better interaction feedback */
-	[role='button']:focus-visible {
-		outline: 2px solid rgb(var(--color-tertiary-400));
-		outline-offset: -2px;
+	/* Custom scrollbar for transcription */
+	p {
+		scrollbar-width: thin;
+		scrollbar-color: rgb(var(--color-tertiary-500)) transparent;
 	}
 
-	.modal-container {
-		@apply bg-surface-800 dark:bg-surface-900 rounded-lg shadow-xl;
+	p::-webkit-scrollbar {
+		width: 4px;
+	}
+
+	p::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	p::-webkit-scrollbar-thumb {
+		background-color: rgb(var(--color-tertiary-500));
+		border-radius: 20px;
 	}
 </style>
