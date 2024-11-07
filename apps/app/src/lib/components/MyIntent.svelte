@@ -1,165 +1,199 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher, onMount } from 'svelte';
-	import AudioRecorder from './AudioRecorder.svelte';
-	import { createMutation } from '$lib/wundergraph';
-	import AudioVisualizer from './AudioVisualizer.svelte';
-
-	export let isOpen = false;
-	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
+	import { writable, derived } from 'svelte/store';
+	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	let audioRecorderComponent: AudioRecorder;
-	let audioStream: MediaStream | null = null;
-	let isRecording = false;
-	let transcription = '';
-	let isProcessing = false;
+	// State Machine Configuration
+	const stateMachineConfig = {
+		id: 'intentMachine',
+		initial: 'idle',
+		states: {
+			idle: {
+				on: {
+					LONG_PRESS: {
+						target: 'recording',
+						actions: ['startRecording']
+					}
+				}
+			},
+			recording: {
+				on: {
+					RELEASE: {
+						target: 'processing',
+						actions: ['startProcessing']
+					}
+				}
+			},
+			processing: {
+				on: {
+					TIMEOUT: {
+						target: 'idle',
+						actions: ['cleanup']
+					}
+				},
+				entry: ['startProcessingTimer']
+			}
+		}
+	};
 
-	// Create the mutation instance
-	const transcribeAudioMutation = createMutation({
-		operationName: 'transcribeAudio'
-	});
+	// State Machine Store Implementation
+	function createMachineStore(config) {
+		const { subscribe, set, update } = writable({
+			value: config.initial,
+			context: {},
+			config
+		});
 
-	onMount(() => {
-		return () => {
-			if (isRecording && audioRecorderComponent) {
-				audioRecorderComponent.stopRecording();
+		// Action handlers
+		const actions = {
+			startRecording: () => {
+				console.log('🎤 Recording started');
+				isOpen = true;
+			},
+			startProcessing: () => {
+				console.log('⚡ Processing started');
+			},
+			startProcessingTimer: () => {
+				setTimeout(() => {
+					send('TIMEOUT');
+				}, 3000);
+			},
+			cleanup: () => {
+				console.log('🧹 Cleaning up');
+				isOpen = false;
+				set({
+					value: config.initial,
+					context: {},
+					config
+				});
 			}
 		};
-	});
 
+		// Send events to the machine
+		function send(event) {
+			update((state) => {
+				const currentStateConfig = state.config.states[state.value];
+				const transition = currentStateConfig?.on?.[event];
+
+				if (transition) {
+					console.log(`🔄 State transition: ${state.value} -> ${transition.target}`);
+
+					transition.actions?.forEach((action) => actions[action]?.());
+
+					const newStateConfig = state.config.states[transition.target];
+					const entryActions = newStateConfig?.entry || [];
+					entryActions.forEach((action) => actions[action]?.());
+
+					return {
+						...state,
+						value: transition.target
+					};
+				}
+				return state;
+			});
+		}
+
+		return {
+			subscribe,
+			send,
+			getState: () => {
+				let currentState;
+				subscribe((state) => {
+					currentState = state;
+				})();
+				return currentState;
+			},
+			reset: () => set({ value: config.initial, context: {}, config })
+		};
+	}
+
+	// Props
+	export let isOpen = false;
+	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
+
+	// Create machine instance
+	const machine = createMachineStore(stateMachineConfig);
+
+	// Derived states for UI
+	const currentState = derived(machine, ($machine) => $machine.value);
+
+	// Watch state changes and notify parent
+	$: if ($currentState) {
+		const isRecording = $currentState === 'recording';
+		const isProcessing = $currentState === 'processing';
+		console.log('Current state:', $currentState);
+		onRecordingStateChange(isRecording, isProcessing);
+	}
+
+	// Exported methods for ActionModal
 	export const handleLongPressStart = async () => {
 		console.log('🎤 Long press started');
-		try {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			if (audioRecorderComponent) {
-				isRecording = true;
-				onRecordingStateChange(true, false);
-				await audioRecorderComponent.startRecording();
-				transcription = '';
-				console.log('✅ Recording started successfully');
-			}
-		} catch (error) {
-			console.error('❌ Start recording failed:', error);
-			isRecording = false;
-			onRecordingStateChange(false, false);
-		}
+		machine.send('LONG_PRESS');
 	};
 
 	export const handleLongPressEnd = async () => {
 		console.log('🎤 Long press ended');
-		if (!isRecording || !audioRecorderComponent) {
-			console.log('⚠️ No active recording to stop');
-			return;
-		}
-
-		try {
-			isRecording = false;
-			isProcessing = true;
-			onRecordingStateChange(false, true);
-
-			const audioBlob = await audioRecorderComponent.stopRecording();
-			console.log('✅ Recording stopped successfully');
-
-			// Convert blob to base64
-			const base64 = await new Promise<string>((resolve) => {
-				const reader = new FileReader();
-				reader.onloadend = () => {
-					const base64Data = reader.result as string;
-					resolve(base64Data.split(',')[1]);
-				};
-				reader.readAsDataURL(audioBlob);
-			});
-
-			console.log('🎤 Sending audio for transcription...');
-			const response = await $transcribeAudioMutation.mutateAsync({
-				audioBase64: base64
-			});
-
-			if (response.data?.text) {
-				transcription = response.data.text;
-				console.log('📝 Transcription result:', transcription);
-			}
-		} catch (error) {
-			console.error('❌ Processing failed:', error);
-		} finally {
-			isProcessing = false;
-			onRecordingStateChange(false, false);
-			isOpen = false; // Close the modal after processing
-		}
+		machine.send('RELEASE');
 	};
-
-	function handleRecordingStateChange(event: CustomEvent<{ isRecording: boolean }>) {
-		isRecording = event.detail.isRecording;
-		onRecordingStateChange(isRecording, isProcessing);
-		console.log('🎤 Recording state changed:', isRecording);
-	}
 </script>
 
 {#if isOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-lg"
+		class="fixed inset-0 z-50 flex items-end justify-center bg-surface-900/30 backdrop-blur-xl"
 		transition:fade={{ duration: 200 }}
 	>
-		<div class="relative z-10 w-full max-w-lg mx-auto mb-32">
-			<div class="relative flex flex-col items-center justify-center mx-auto text-center">
-				{#if isRecording}
-					<!-- Recording State: User Avatar -->
-					<div class="mb-24">
-						<AudioVisualizer {isRecording} {audioStream} mode="user" />
+		<div
+			class="w-full max-w-lg p-8 mx-4 mb-24 border rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
+		>
+			{#if $currentState === 'recording'}
+				<div class="text-center">
+					<div class="mb-4">
+						<svg
+							class="w-12 h-12 mx-auto text-tertiary-200"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+							/>
+						</svg>
 					</div>
-				{:else if isProcessing}
-					<!-- Processing State: Hominio Avatar -->
-					<div class="mb-24">
-						<AudioVisualizer {isRecording} {audioStream} mode="hominio" />
-					</div>
-				{/if}
-
-				<!-- Keep AudioRecorder mounted but hidden -->
-				<div class="hidden">
-					<AudioRecorder
-						bind:this={audioRecorderComponent}
-						bind:isRecording
-						bind:audioStream
-						on:stateChange={handleRecordingStateChange}
-					/>
+					<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
+					<p class="mt-2 text-tertiary-200/80">Release to process your request</p>
 				</div>
-			</div>
+			{:else if $currentState === 'processing'}
+				<div class="text-center">
+					<div class="mb-4">
+						<svg
+							class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							/>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							/>
+						</svg>
+					</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Processing...</h2>
+					<p class="mt-2 text-tertiary-200/80">Please wait...</p>
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}
-
-<!-- Transcription Message Bubble -->
-{#if transcription && !isProcessing && !isRecording}
-	<div
-		class="fixed z-40 max-w-md px-6 py-3 mx-auto -translate-x-1/2 bottom-24 left-1/2 rounded-2xl bg-surface-900/50 backdrop-blur-sm"
-		transition:fade={{ duration: 200 }}
-	>
-		<p class="text-base text-tertiary-200">
-			{transcription}
-		</p>
-	</div>
-{/if}
-
-<style>
-	/* Custom scrollbar for transcription */
-	p {
-		scrollbar-width: thin;
-		scrollbar-color: rgb(var(--color-tertiary-500)) transparent;
-	}
-
-	p::-webkit-scrollbar {
-		width: 4px;
-	}
-
-	p::-webkit-scrollbar-track {
-		background: transparent;
-	}
-
-	p::-webkit-scrollbar-thumb {
-		background-color: rgb(var(--color-tertiary-500));
-		border-radius: 20px;
-	}
-</style>

@@ -231,7 +231,7 @@
 	<button
 		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 hover:shadow-xl hover:scale-105"
 		class:bg-error-500={isRecording}
-		class:bg-warning-500={isProcessing}
+		class:bg-surface-800={isProcessing}
 		class:bg-surface-600={!isRecording && !isProcessing}
 		on:mousedown={handleMouseDown}
 		on:mouseup={handleMouseUp}
@@ -244,7 +244,14 @@
 		{#if isRecording}
 			<div class="w-4 h-4 bg-white rounded-full" />
 		{:else if isProcessing}
-			<Icon icon="material-symbols:close" class="text-white w-9 h-9" />
+			<svg class="w-6 h-6 text-tertiary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+				/>
+			</svg>
 		{:else}
 			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
 		{/if}
