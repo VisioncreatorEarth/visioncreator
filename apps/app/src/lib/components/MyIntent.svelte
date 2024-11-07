@@ -164,10 +164,6 @@
 		isLongPressActive = false;
 		machine.send('RELEASE');
 	};
-
-	onMount(() => {
-		// Initial setup happens automatically through machine initialization
-	});
 </script>
 
 {#if $context.isOpen}

@@ -1,4 +1,4 @@
-import { writable, derived, type Readable } from 'svelte/store';
+import { writable } from 'svelte/store';
 
 /**
  * Configuration interface for the state machine
