@@ -8,30 +8,45 @@
 
 	const stateMachineConfig = {
 		id: 'intentMachine',
-		initial: 'idle',
+		initial: 'setup',
 		context: {
 			permissionState: 'prompt',
-			permissionRequesting: false
+			permissionRequesting: false,
+			isOpen: false
 		},
 		states: {
+			setup: {
+				entry: ['initializePermissions'],
+				on: {
+					PERMISSION_GRANTED: {
+						target: 'idle'
+					},
+					INITIALIZED: {
+						target: 'idle'
+					}
+				}
+			},
 			idle: {
 				on: {
 					LONG_PRESS: [
 						{
 							target: 'recording',
-							cond: (context) => context.permissionState === 'granted'
+							guard: 'isPermissionGranted',
+							actions: ['openModal', 'startRecording']
 						},
 						{
-							target: 'checkPermission'
+							target: 'requestPermissions',
+							guard: 'isPermissionNotGranted',
+							actions: ['openModal']
 						}
 					]
 				}
 			},
-			checkPermission: {
-				entry: ['openModal', 'checkMicrophonePermission'],
+			requestPermissions: {
+				entry: ['openModal', 'requestMicrophonePermission'],
 				on: {
 					PERMISSION_GRANTED: {
-						target: 'recording'
+						target: 'readyToRecord'
 					},
 					PERMISSION_DENIED: {
 						target: 'permissionBlocked'
@@ -42,14 +57,22 @@
 				entry: ['openModal'],
 				on: {
 					TRY_AGAIN: {
-						target: 'checkPermission',
-						actions: ['checkMicrophonePermission']
+						target: 'requestPermissions',
+						actions: ['requestMicrophonePermission']
+					}
+				}
+			},
+			readyToRecord: {
+				entry: ['openModal'],
+				on: {
+					LONG_PRESS: {
+						target: 'recording'
 					}
 				}
 			},
 			recording: {
 				entry: ['openModal', 'startRecording'],
-				exit: ['stopRecording', 'closeModal'],
+				exit: ['stopRecording'],
 				on: {
 					RELEASE: {
 						target: 'processing'
@@ -57,7 +80,8 @@
 				}
 			},
 			processing: {
-				entry: ['startProcessingTimer'],
+				entry: ['startProcessingTimer', 'openModal'],
+				exit: ['closeModal'],
 				on: {
 					TIMEOUT: {
 						target: 'idle',
@@ -75,18 +99,101 @@
 			config
 		});
 
+		const guards = {
+			isPermissionGranted: (context) => {
+				console.log('🔒 Checking permission state:', context.permissionState);
+				return context.permissionState === 'granted';
+			},
+			isPermissionNotGranted: (context) => {
+				console.log('🔒 Checking permission state:', context.permissionState);
+				return context.permissionState !== 'granted';
+			}
+		};
+
 		const actions = {
-			checkMicrophonePermission: async () => {
+			initializePermissions: async () => {
+				try {
+					// First try to get existing permissions without prompting
+					const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+					console.log('🎤 Checking initial permission state:', permissionStatus.state);
+
+					// Immediately update context with current permission state
+					update((state) => {
+						state.context.permissionState = permissionStatus.state;
+						return state;
+					});
+
+					// If already granted, transition to idle
+					if (permissionStatus.state === 'granted') {
+						console.log('✅ Microphone permission already granted');
+						send('PERMISSION_GRANTED');
+					} else {
+						// Try to get microphone access silently (without prompt)
+						try {
+							console.log('🎤 Attempting silent microphone access...');
+							const stream = await navigator.mediaDevices.getUserMedia({
+								audio: true,
+								// This option tries to prevent the permission prompt
+								preferCurrentTab: true
+							});
+
+							// If we get here, permission was granted silently
+							stream.getTracks().forEach((track) => track.stop());
+
+							update((state) => {
+								state.context.permissionState = 'granted';
+								return state;
+							});
+
+							console.log('✅ Silent microphone access successful');
+							send('PERMISSION_GRANTED');
+						} catch (mediaError) {
+							console.log('ℹ️ Silent microphone access failed, waiting for user interaction');
+							send('INITIALIZED');
+						}
+					}
+
+					// Set up permission change listener
+					permissionStatus.addEventListener('change', () => {
+						console.log('🔄 Permission state changed to:', permissionStatus.state);
+						update((state) => {
+							state.context.permissionState = permissionStatus.state;
+							return state;
+						});
+
+						if (permissionStatus.state === 'granted') {
+							send('PERMISSION_GRANTED');
+						}
+					});
+				} catch (error) {
+					console.error('❌ Error during permission initialization:', error);
+					send('INITIALIZED');
+				}
+			},
+			requestMicrophonePermission: async () => {
 				try {
 					update((state) => {
 						state.context.permissionRequesting = true;
 						return state;
 					});
+
+					console.log('🎤 Explicitly requesting microphone permission...');
 					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 					stream.getTracks().forEach((track) => track.stop());
+
+					update((state) => {
+						state.context.permissionState = 'granted';
+						return state;
+					});
+
+					console.log('✅ Microphone permission explicitly granted');
 					send('PERMISSION_GRANTED');
 				} catch (error) {
 					console.error('❌ Permission request failed:', error);
+					update((state) => {
+						state.context.permissionState = 'denied';
+						return state;
+					});
 					send('PERMISSION_DENIED');
 				} finally {
 					update((state) => {
@@ -96,19 +203,22 @@
 				}
 			},
 			openModal: () => {
-				isOpen = true;
+				update((state) => {
+					state.context.isOpen = true;
+					return state;
+				});
 			},
 			closeModal: () => {
-				isOpen = false;
+				update((state) => {
+					state.context.isOpen = false;
+					return state;
+				});
 			},
 			startRecording: () => {
 				console.log('🎤 Recording started');
 			},
 			stopRecording: () => {
 				console.log('🛑 Recording stopped');
-			},
-			startProcessing: () => {
-				console.log('⚡ Processing started');
 			},
 			startProcessingTimer: () => {
 				setTimeout(() => {
@@ -117,11 +227,9 @@
 			},
 			cleanup: () => {
 				console.log('🧹 Cleaning up');
-				isOpen = false;
-				set({
-					value: config.initial,
-					context: config.context,
-					config
+				update((state) => {
+					state.context.isOpen = false;
+					return state;
 				});
 			}
 		};
@@ -129,14 +237,15 @@
 		function send(event) {
 			update((state) => {
 				const currentStateConfig = state.config.states[state.value];
-				const transition = currentStateConfig?.on?.[event];
+				const transitions = currentStateConfig?.on?.[event];
 
-				if (transition) {
-					const target = Array.isArray(transition)
-						? transition.find((t) => t.cond?.(state.context) ?? true)?.target
-						: transition.target;
+				if (transitions) {
+					const transition = Array.isArray(transitions)
+						? transitions.find((t) => guards[t.guard]?.(state.context) ?? true)
+						: transitions;
 
-					if (target) {
+					if (transition) {
+						const target = transition.target;
 						console.log(`🔄 State transition: ${state.value} -> ${target}`);
 
 						transition.actions?.forEach((action) => actions[action]?.());
@@ -169,7 +278,6 @@
 		};
 	}
 
-	export let isOpen = false;
 	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
 	const machine = createMachineStore(stateMachineConfig);
@@ -187,12 +295,8 @@
 		console.log('🎤 Long press started');
 		isLongPressActive = true;
 
-		// Directly check the context for permission state
-		if ($context.permissionState === 'granted') {
-			machine.send('PERMISSION_GRANTED');
-		} else {
-			machine.send('LONG_PRESS');
-		}
+		// Always send LONG_PRESS event, let the state machine handle the logic
+		machine.send('LONG_PRESS');
 	};
 
 	export const handleLongPressEnd = async () => {
@@ -201,25 +305,26 @@
 		machine.send('RELEASE');
 	};
 
-	// Check and update permission state on mount
-	onMount(async () => {
-		const permissionStatus = await navigator.permissions.query({
-			name: 'microphone' as PermissionName
-		});
-
-		updatePermissionState(permissionStatus.state);
-
-		permissionStatus.addEventListener('change', () => {
-			updatePermissionState(permissionStatus.state);
-		});
+	// Use the setup function on mount
+	onMount(() => {
+		machine.send('INITIALIZED');
 	});
 
-	function updatePermissionState(state: PermissionState) {
-		machine.send(state === 'granted' ? 'PERMISSION_GRANTED' : 'PERMISSION_DENIED');
-	}
+	export const initialize = async () => {
+		console.log('🚀 MyIntent initialization started');
+		await machine.initialize();
+		const state = machine.getState();
+		console.log('✨ MyIntent initialized with permission state:', state.context.permissionState);
+		return state.context.permissionState;
+	};
+
+	onMount(async () => {
+		console.log('🔄 MyIntent component mounting...');
+		await initialize();
+	});
 </script>
 
-{#if isOpen}
+{#if $context.isOpen}
 	<div
 		class="fixed inset-0 z-50 flex items-end justify-center bg-surface-900/30 backdrop-blur-xl"
 		transition:fade={{ duration: 200 }}
@@ -227,11 +332,11 @@
 		<div
 			class="w-full max-w-lg p-8 mx-4 mb-24 border rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
 		>
-			{#if $currentState === 'checkPermission'}
+			{#if $currentState === 'requestPermissions'}
 				<div class="text-center">
 					<div class="mb-4 text-4xl">🎤</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Checking Permissions...</h2>
-					<p class="mt-2 text-tertiary-200/80">Please allow microphone access.</p>
+					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Required</h2>
+					<p class="mt-2 text-tertiary-200/80">Please allow microphone access to continue.</p>
 				</div>
 			{:else if $currentState === 'permissionBlocked'}
 				<div class="text-center">
