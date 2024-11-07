@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { writable, derived } from 'svelte/store';
+	import { derived } from 'svelte/store';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { createMachine, type MachineConfig } from '$lib/composables/svelteMachine';
 
 	const dispatch = createEventDispatcher();
 	let isLongPressActive = false;
 
-	const stateMachineConfig = {
+	interface IntentContext {
+		permissionState: 'prompt' | 'granted' | 'denied';
+		permissionRequesting: boolean;
+		isOpen: boolean;
+	}
+
+	const intentConfig: MachineConfig<IntentContext, string, string> = {
 		id: 'intentMachine',
 		initial: 'init',
 		context: {
@@ -82,217 +89,84 @@
 		}
 	};
 
-	function createMachineStore(config) {
-		const { subscribe, set, update } = writable({
-			value: config.initial,
-			context: config.context,
-			config
-		});
+	const intentActions = {
+		initializePermissions: async (context: IntentContext) => {
+			try {
+				const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+				context.permissionState = permissionStatus.state as 'prompt' | 'granted' | 'denied';
 
-		const actions = {
-			initializePermissions: async () => {
-				console.log('🎯 initializePermissions action started');
-				try {
-					const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
-					console.log('🎤 Checking initial permission state:', permissionStatus.state);
-
-					update((state) => {
-						state.context.permissionState = permissionStatus.state;
-						return state;
-					});
-
-					permissionStatus.addEventListener('change', () => {
-						console.log('🔄 Permission state changed to:', permissionStatus.state);
-						update((state) => {
-							state.context.permissionState = permissionStatus.state;
-							return state;
-						});
-					});
-				} catch (error) {
-					console.error('❌ Error during permission initialization:', error);
-				} finally {
-					console.log('✅ initializePermissions action completed');
-				}
-			},
-			openModal: () => {
-				update((state) => {
-					state.context.isOpen = true;
-					return state;
+				permissionStatus.addEventListener('change', () => {
+					context.permissionState = permissionStatus.state as 'prompt' | 'granted' | 'denied';
 				});
-			},
-			requestMicrophonePermission: async () => {
-				try {
-					update((state) => {
-						state.context.permissionRequesting = true;
-						return state;
-					});
-
-					console.log('🎤 Explicitly requesting microphone permission...');
-					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-					stream.getTracks().forEach((track) => track.stop());
-
-					update((state) => {
-						state.context.permissionState = 'granted';
-						return state;
-					});
-
-					console.log('✅ Microphone permission explicitly granted');
-					send('PERMISSION_GRANTED');
-				} catch (error) {
-					console.error('❌ Permission request failed:', error);
-					update((state) => {
-						state.context.permissionState = 'denied';
-						return state;
-					});
-					send('PERMISSION_DENIED');
-				} finally {
-					update((state) => {
-						state.context.permissionRequesting = false;
-						return state;
-					});
-				}
-			},
-			startRecording: () => {
-				console.log('🎤 Recording started');
-			},
-			stopRecording: () => {
-				console.log('🛑 Recording stopped');
-			},
-			startProcessingTimer: () => {
-				setTimeout(() => {
-					send('TIMEOUT');
-				}, 2000);
-			},
-			cleanup: () => {
-				console.log('🧹 Cleaning up');
-				update((state) => {
-					state.context.isOpen = false;
-					return state;
-				});
+			} catch (error) {
+				// Handle error silently
 			}
-		};
-
-		const guards = {
-			isPermissionGranted: (context) => {
-				console.log('🔒 Permission check:', context.permissionState);
-				return context.permissionState === 'granted';
-			},
-			isPermissionNotGranted: (context) => {
-				console.log('🔒 Permission check:', context.permissionState);
-				return context.permissionState !== 'granted';
+		},
+		openModal: (context: IntentContext) => {
+			context.isOpen = true;
+		},
+		requestMicrophonePermission: async (context: IntentContext) => {
+			try {
+				context.permissionRequesting = true;
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				stream.getTracks().forEach((track) => track.stop());
+				context.permissionState = 'granted';
+				machine.send('PERMISSION_GRANTED');
+			} catch (error) {
+				context.permissionState = 'denied';
+				machine.send('PERMISSION_DENIED');
+			} finally {
+				context.permissionRequesting = false;
 			}
-		};
-
-		console.log('🚀 Initializing machine with state:', config.initial);
-		const initialStateConfig = config.states[config.initial];
-		if (initialStateConfig?.entry) {
-			console.log('📥 Running entry actions for initial state:', initialStateConfig.entry);
-			initialStateConfig.entry.forEach((actionName) => {
-				console.log('⚡ Executing entry action:', actionName);
-				actions[actionName]?.();
-			});
+		},
+		startRecording: () => {
+			// Implement recording logic
+		},
+		stopRecording: () => {
+			// Implement stop recording logic
+		},
+		startProcessingTimer: () => {
+			setTimeout(() => {
+				machine.send('TIMEOUT');
+			}, 2000);
+		},
+		cleanup: (context: IntentContext) => {
+			context.isOpen = false;
+		},
+		closeModal: (context: IntentContext) => {
+			context.isOpen = false;
 		}
+	};
 
-		function send(event) {
-			update((state) => {
-				const currentStateConfig = state.config.states[state.value];
-				const transitions = currentStateConfig?.on?.[event];
-
-				if (transitions) {
-					const transition = Array.isArray(transitions)
-						? transitions.find((t) => guards[t.guard]?.(state.context) ?? true)
-						: transitions;
-
-					if (transition) {
-						const target = transition.target;
-						console.log(`🔄 State transition: ${state.value} -> ${target}`);
-
-						const exitActions = currentStateConfig?.exit || [];
-						exitActions.forEach((action) => {
-							console.log('📤 Executing exit action:', action);
-							actions[action]?.();
-						});
-
-						transition.actions?.forEach((action) => {
-							console.log('➡️ Executing transition action:', action);
-							actions[action]?.();
-						});
-
-						const newStateConfig = state.config.states[target];
-						const entryActions = newStateConfig?.entry || [];
-						entryActions.forEach((action) => {
-							console.log('📥 Executing entry action:', action);
-							actions[action]?.();
-						});
-
-						return {
-							...state,
-							value: target
-						};
-					}
-				}
-				return state;
-			});
-		}
-
-		return {
-			subscribe,
-			send,
-			getState: () => {
-				let currentState;
-				subscribe((state) => {
-					currentState = state;
-				})();
-				return currentState;
-			},
-			reset: () => {
-				console.log('🔄 Resetting machine to initial state');
-				set({ value: config.initial, context: config.context, config });
-				const initialStateConfig = config.states[config.initial];
-				initialStateConfig?.entry?.forEach((actionName) => {
-					console.log('⚡ Executing entry action on reset:', actionName);
-					actions[actionName]?.();
-				});
-			}
-		};
-	}
+	const intentGuards = {
+		isPermissionGranted: (context: IntentContext) => context.permissionState === 'granted',
+		isPermissionNotGranted: (context: IntentContext) => context.permissionState !== 'granted'
+	};
 
 	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
-	const machine = createMachineStore(stateMachineConfig);
-	console.log('📦 Machine created with initial state:', machine.getState().value);
+	const machine = createMachine(intentConfig, intentActions, intentGuards);
 	const currentState = derived(machine, ($machine) => $machine.value);
 	const context = derived(machine, ($machine) => $machine.context);
 
 	$: if ($currentState) {
-		console.log('🔍 State changed to:', $currentState, 'Context:', $context);
-	}
-
-	$: if ($currentState) {
 		const isRecording = $currentState === 'recording';
 		const isProcessing = $currentState === 'processing';
-		console.log('Current state:', $currentState);
 		onRecordingStateChange(isRecording, isProcessing);
 	}
 
-	export const handleLongPressStart = async () => {
-		console.log('🎤 Long press started');
+	export const handleLongPressStart = () => {
 		isLongPressActive = true;
-
-		// Always send LONG_PRESS event, let the state machine handle the logic
 		machine.send('LONG_PRESS');
 	};
 
-	export const handleLongPressEnd = async () => {
-		console.log('🎤 Long press ended');
+	export const handleLongPressEnd = () => {
 		isLongPressActive = false;
 		machine.send('RELEASE');
 	};
 
-	// Use the setup function on mount
 	onMount(() => {
-		console.log('🔄 MyIntent component mounting...');
-		// No need to send any events, entry actions will run automatically
+		// Initial setup happens automatically through machine initialization
 	});
 </script>
 
