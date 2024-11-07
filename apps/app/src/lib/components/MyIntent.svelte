@@ -8,25 +8,15 @@
 
 	const stateMachineConfig = {
 		id: 'intentMachine',
-		initial: 'setup',
+		initial: 'init',
 		context: {
 			permissionState: 'prompt',
 			permissionRequesting: false,
 			isOpen: false
 		},
 		states: {
-			setup: {
+			init: {
 				entry: ['initializePermissions'],
-				on: {
-					PERMISSION_GRANTED: {
-						target: 'idle'
-					},
-					INITIALIZED: {
-						target: 'idle'
-					}
-				}
-			},
-			idle: {
 				on: {
 					LONG_PRESS: [
 						{
@@ -84,7 +74,7 @@
 				exit: ['closeModal'],
 				on: {
 					TIMEOUT: {
-						target: 'idle',
+						target: 'init',
 						actions: ['cleanup']
 					}
 				}
@@ -99,76 +89,36 @@
 			config
 		});
 
-		const guards = {
-			isPermissionGranted: (context) => {
-				console.log('🔒 Checking permission state:', context.permissionState);
-				return context.permissionState === 'granted';
-			},
-			isPermissionNotGranted: (context) => {
-				console.log('🔒 Checking permission state:', context.permissionState);
-				return context.permissionState !== 'granted';
-			}
-		};
-
 		const actions = {
 			initializePermissions: async () => {
+				console.log('🎯 initializePermissions action started');
 				try {
-					// First try to get existing permissions without prompting
 					const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
 					console.log('🎤 Checking initial permission state:', permissionStatus.state);
 
-					// Immediately update context with current permission state
 					update((state) => {
 						state.context.permissionState = permissionStatus.state;
 						return state;
 					});
 
-					// If already granted, transition to idle
-					if (permissionStatus.state === 'granted') {
-						console.log('✅ Microphone permission already granted');
-						send('PERMISSION_GRANTED');
-					} else {
-						// Try to get microphone access silently (without prompt)
-						try {
-							console.log('🎤 Attempting silent microphone access...');
-							const stream = await navigator.mediaDevices.getUserMedia({
-								audio: true,
-								// This option tries to prevent the permission prompt
-								preferCurrentTab: true
-							});
-
-							// If we get here, permission was granted silently
-							stream.getTracks().forEach((track) => track.stop());
-
-							update((state) => {
-								state.context.permissionState = 'granted';
-								return state;
-							});
-
-							console.log('✅ Silent microphone access successful');
-							send('PERMISSION_GRANTED');
-						} catch (mediaError) {
-							console.log('ℹ️ Silent microphone access failed, waiting for user interaction');
-							send('INITIALIZED');
-						}
-					}
-
-					// Set up permission change listener
 					permissionStatus.addEventListener('change', () => {
 						console.log('🔄 Permission state changed to:', permissionStatus.state);
 						update((state) => {
 							state.context.permissionState = permissionStatus.state;
 							return state;
 						});
-
-						if (permissionStatus.state === 'granted') {
-							send('PERMISSION_GRANTED');
-						}
 					});
 				} catch (error) {
 					console.error('❌ Error during permission initialization:', error);
-					send('INITIALIZED');
+				} finally {
+					console.log('✅ initializePermissions action completed');
 				}
+			},
+			openModal: () => {
+				update((state) => {
+					state.context.isOpen = true;
+					return state;
+				});
 			},
 			requestMicrophonePermission: async () => {
 				try {
@@ -202,18 +152,6 @@
 					});
 				}
 			},
-			openModal: () => {
-				update((state) => {
-					state.context.isOpen = true;
-					return state;
-				});
-			},
-			closeModal: () => {
-				update((state) => {
-					state.context.isOpen = false;
-					return state;
-				});
-			},
 			startRecording: () => {
 				console.log('🎤 Recording started');
 			},
@@ -234,6 +172,27 @@
 			}
 		};
 
+		const guards = {
+			isPermissionGranted: (context) => {
+				console.log('🔒 Permission check:', context.permissionState);
+				return context.permissionState === 'granted';
+			},
+			isPermissionNotGranted: (context) => {
+				console.log('🔒 Permission check:', context.permissionState);
+				return context.permissionState !== 'granted';
+			}
+		};
+
+		console.log('🚀 Initializing machine with state:', config.initial);
+		const initialStateConfig = config.states[config.initial];
+		if (initialStateConfig?.entry) {
+			console.log('📥 Running entry actions for initial state:', initialStateConfig.entry);
+			initialStateConfig.entry.forEach((actionName) => {
+				console.log('⚡ Executing entry action:', actionName);
+				actions[actionName]?.();
+			});
+		}
+
 		function send(event) {
 			update((state) => {
 				const currentStateConfig = state.config.states[state.value];
@@ -248,11 +207,23 @@
 						const target = transition.target;
 						console.log(`🔄 State transition: ${state.value} -> ${target}`);
 
-						transition.actions?.forEach((action) => actions[action]?.());
+						const exitActions = currentStateConfig?.exit || [];
+						exitActions.forEach((action) => {
+							console.log('📤 Executing exit action:', action);
+							actions[action]?.();
+						});
+
+						transition.actions?.forEach((action) => {
+							console.log('➡️ Executing transition action:', action);
+							actions[action]?.();
+						});
 
 						const newStateConfig = state.config.states[target];
 						const entryActions = newStateConfig?.entry || [];
-						entryActions.forEach((action) => actions[action]?.());
+						entryActions.forEach((action) => {
+							console.log('📥 Executing entry action:', action);
+							actions[action]?.();
+						});
 
 						return {
 							...state,
@@ -274,15 +245,28 @@
 				})();
 				return currentState;
 			},
-			reset: () => set({ value: config.initial, context: config.context, config })
+			reset: () => {
+				console.log('🔄 Resetting machine to initial state');
+				set({ value: config.initial, context: config.context, config });
+				const initialStateConfig = config.states[config.initial];
+				initialStateConfig?.entry?.forEach((actionName) => {
+					console.log('⚡ Executing entry action on reset:', actionName);
+					actions[actionName]?.();
+				});
+			}
 		};
 	}
 
 	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
 	const machine = createMachineStore(stateMachineConfig);
+	console.log('📦 Machine created with initial state:', machine.getState().value);
 	const currentState = derived(machine, ($machine) => $machine.value);
 	const context = derived(machine, ($machine) => $machine.context);
+
+	$: if ($currentState) {
+		console.log('🔍 State changed to:', $currentState, 'Context:', $context);
+	}
 
 	$: if ($currentState) {
 		const isRecording = $currentState === 'recording';
@@ -307,20 +291,8 @@
 
 	// Use the setup function on mount
 	onMount(() => {
-		machine.send('INITIALIZED');
-	});
-
-	export const initialize = async () => {
-		console.log('🚀 MyIntent initialization started');
-		await machine.initialize();
-		const state = machine.getState();
-		console.log('✨ MyIntent initialized with permission state:', state.context.permissionState);
-		return state.context.permissionState;
-	};
-
-	onMount(async () => {
 		console.log('🔄 MyIntent component mounting...');
-		await initialize();
+		// No need to send any events, entry actions will run automatically
 	});
 </script>
 
