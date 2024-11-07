@@ -241,14 +241,23 @@
 		},
 
 		stopRecording: (context: IntentContext) => {
-			console.log('[AudioDebug] Stopping recording');
+			console.log('[AudioDebug] Stopping recording and cleaning up audio stream');
 
+			// Stop the MediaRecorder if it's recording
 			if (context.mediaRecorder?.state === 'recording') {
 				context.mediaRecorder.stop();
 			}
 
-			// Don't stop the stream immediately - let the visualizer use it until cleanup
-			console.log('[AudioDebug] Recording stopped, stream kept active for visualizer');
+			// Immediately stop all audio tracks
+			if (context.audioStream) {
+				context.audioStream.getTracks().forEach((track) => {
+					console.log('[AudioDebug] Stopping audio track:', track.kind, track.id);
+					track.stop();
+				});
+				context.audioStream = null;
+			}
+
+			console.log('[AudioDebug] Recording and audio stream stopped');
 		},
 
 		prepareTranscription: async (context: IntentContext) => {
@@ -261,33 +270,11 @@
 					return;
 				}
 
-				// Add a small delay before stopping to ensure we capture the full audio
+				// Add a small delay before processing to ensure we capture the full audio
 				await new Promise((resolve) => setTimeout(resolve, 200));
 
-				// Collect final audio chunks without requestData
-				const chunks = await new Promise<Blob[]>((resolve) => {
-					const audioData = [...context.audioChunks]; // Get existing chunks
-
-					if (context.mediaRecorder!.state === 'recording') {
-						context.mediaRecorder!.addEventListener('dataavailable', (event) => {
-							if (event.data.size > 0) {
-								audioData.push(event.data);
-							}
-						});
-
-						context.mediaRecorder!.addEventListener('stop', () => {
-							resolve(audioData);
-						});
-
-						context.mediaRecorder!.stop();
-					} else {
-						// If recorder is already stopped, just use existing chunks
-						resolve(audioData);
-					}
-				});
-
-				// Process the audio data
-				const audioBlob = new Blob(chunks, { type: 'audio/mp4' });
+				// Process existing audio chunks without waiting for new ones
+				const audioBlob = new Blob(context.audioChunks, { type: 'audio/mp4' });
 				console.log('Audio blob created:', {
 					size: audioBlob.size,
 					type: audioBlob.type
@@ -297,16 +284,8 @@
 					throw new Error('Audio recording too short');
 				}
 
-				// Convert to base64 with proper data URL format
-				const base64 = await new Promise<string>((resolve) => {
-					const reader = new FileReader();
-					reader.onloadend = () => {
-						const result = reader.result as string;
-						resolve(result);
-					};
-					reader.readAsDataURL(audioBlob);
-				});
-
+				// Convert to base64
+				const base64 = await blobToBase64(audioBlob);
 				context.audioData = base64;
 
 				// If we have audio data, proceed with transcription
@@ -434,13 +413,14 @@
 		cleanup: (context: IntentContext) => {
 			console.log('[AudioDebug] Running cleanup');
 
-			// Clean up recording resources
+			// These might already be cleaned up, but let's make sure
 			if (context.mediaRecorder?.state === 'recording') {
 				context.mediaRecorder.stop();
 			}
 
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
+					console.log('[AudioDebug] Cleaning up remaining audio track:', track.kind, track.id);
 					track.stop();
 				});
 				context.audioStream = null;
