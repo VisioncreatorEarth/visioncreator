@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { writable, derived } from 'svelte/store';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 	let isLongPressActive = false;
@@ -16,23 +16,23 @@
 		states: {
 			idle: {
 				on: {
-					LONG_PRESS: {
-						target: 'checkPermission'
-					}
+					LONG_PRESS: [
+						{
+							target: 'recording',
+							cond: (context) => context.permissionState === 'granted'
+						},
+						{
+							target: 'checkPermission'
+						}
+					]
 				}
 			},
 			checkPermission: {
 				entry: ['openModal', 'checkMicrophonePermission'],
 				on: {
-					PERMISSION_GRANTED: [
-						{
-							target: 'recording',
-							cond: () => isLongPressActive
-						},
-						{
-							target: 'readyToRecord'
-						}
-					],
+					PERMISSION_GRANTED: {
+						target: 'recording'
+					},
 					PERMISSION_DENIED: {
 						target: 'permissionBlocked'
 					}
@@ -47,18 +47,9 @@
 					}
 				}
 			},
-			readyToRecord: {
-				entry: ['openModal'],
-				on: {
-					LONG_PRESS: {
-						target: 'recording',
-						actions: ['startRecording']
-					}
-				}
-			},
 			recording: {
-				entry: ['startRecording'],
-				exit: ['stopRecording'],
+				entry: ['openModal', 'startRecording'],
+				exit: ['stopRecording', 'closeModal'],
 				on: {
 					RELEASE: {
 						target: 'processing'
@@ -142,7 +133,7 @@
 
 				if (transition) {
 					const target = Array.isArray(transition)
-						? transition.find((t) => t.cond?.() ?? true)?.target
+						? transition.find((t) => t.cond?.(state.context) ?? true)?.target
 						: transition.target;
 
 					if (target) {
@@ -195,7 +186,13 @@
 	export const handleLongPressStart = async () => {
 		console.log('🎤 Long press started');
 		isLongPressActive = true;
-		machine.send('LONG_PRESS');
+
+		// Directly check the context for permission state
+		if ($context.permissionState === 'granted') {
+			machine.send('PERMISSION_GRANTED');
+		} else {
+			machine.send('LONG_PRESS');
+		}
 	};
 
 	export const handleLongPressEnd = async () => {
@@ -203,6 +200,23 @@
 		isLongPressActive = false;
 		machine.send('RELEASE');
 	};
+
+	// Check and update permission state on mount
+	onMount(async () => {
+		const permissionStatus = await navigator.permissions.query({
+			name: 'microphone' as PermissionName
+		});
+
+		updatePermissionState(permissionStatus.state);
+
+		permissionStatus.addEventListener('change', () => {
+			updatePermissionState(permissionStatus.state);
+		});
+	});
+
+	function updatePermissionState(state: PermissionState) {
+		machine.send(state === 'granted' ? 'PERMISSION_GRANTED' : 'PERMISSION_DENIED');
+	}
 </script>
 
 {#if isOpen}
