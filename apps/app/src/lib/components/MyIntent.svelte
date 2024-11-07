@@ -2,15 +2,50 @@
 	import { fade } from 'svelte/transition';
 	import { writable, derived } from 'svelte/store';
 	import { createEventDispatcher } from 'svelte';
+	import { permissionState, permissionRequesting } from './MicrophonePermissions.svelte';
 
 	const dispatch = createEventDispatcher();
+	let isLongPressActive = false;
 
-	// State Machine Configuration
 	const stateMachineConfig = {
 		id: 'intentMachine',
 		initial: 'idle',
 		states: {
 			idle: {
+				on: {
+					LONG_PRESS: {
+						target: 'checkPermission'
+					}
+				}
+			},
+			checkPermission: {
+				entry: ['openModal', 'checkMicrophonePermission'],
+				on: {
+					PERMISSION_GRANTED: [
+						{
+							target: 'recording',
+							cond: () => isLongPressActive
+						},
+						{
+							target: 'readyToRecord'
+						}
+					],
+					PERMISSION_DENIED: {
+						target: 'permissionBlocked'
+					}
+				}
+			},
+			permissionBlocked: {
+				entry: ['openModal'],
+				on: {
+					TRY_AGAIN: {
+						target: 'checkPermission',
+						actions: ['checkMicrophonePermission']
+					}
+				}
+			},
+			readyToRecord: {
+				entry: ['openModal'],
 				on: {
 					LONG_PRESS: {
 						target: 'recording',
@@ -19,26 +54,26 @@
 				}
 			},
 			recording: {
+				entry: ['startRecording'],
+				exit: ['stopRecording'],
 				on: {
 					RELEASE: {
-						target: 'processing',
-						actions: ['startProcessing']
+						target: 'processing'
 					}
 				}
 			},
 			processing: {
+				entry: ['startProcessingTimer'],
 				on: {
 					TIMEOUT: {
 						target: 'idle',
 						actions: ['cleanup']
 					}
-				},
-				entry: ['startProcessingTimer']
+				}
 			}
 		}
 	};
 
-	// State Machine Store Implementation
 	function createMachineStore(config) {
 		const { subscribe, set, update } = writable({
 			value: config.initial,
@@ -46,11 +81,38 @@
 			config
 		});
 
-		// Action handlers
 		const actions = {
+			checkPermissions: () => {
+				if ($permissionState === 'granted') {
+					send('PERMISSION_GRANTED');
+				} else {
+					send('CHECK_PERMISSION');
+				}
+			},
+			checkMicrophonePermission: async () => {
+				try {
+					permissionRequesting.set(true);
+					const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+					stream.getTracks().forEach((track) => track.stop());
+					send('PERMISSION_GRANTED');
+				} catch (error) {
+					console.error('❌ Permission request failed:', error);
+					send('PERMISSION_DENIED');
+				} finally {
+					permissionRequesting.set(false);
+				}
+			},
+			openModal: () => {
+				isOpen = true;
+			},
+			closeModal: () => {
+				isOpen = false;
+			},
 			startRecording: () => {
 				console.log('🎤 Recording started');
-				isOpen = true;
+			},
+			stopRecording: () => {
+				console.log('🛑 Recording stopped');
 			},
 			startProcessing: () => {
 				console.log('⚡ Processing started');
@@ -58,7 +120,7 @@
 			startProcessingTimer: () => {
 				setTimeout(() => {
 					send('TIMEOUT');
-				}, 3000);
+				}, 2000);
 			},
 			cleanup: () => {
 				console.log('🧹 Cleaning up');
@@ -71,25 +133,30 @@
 			}
 		};
 
-		// Send events to the machine
 		function send(event) {
 			update((state) => {
 				const currentStateConfig = state.config.states[state.value];
 				const transition = currentStateConfig?.on?.[event];
 
 				if (transition) {
-					console.log(`🔄 State transition: ${state.value} -> ${transition.target}`);
+					const target = Array.isArray(transition)
+						? transition.find((t) => t.cond?.() ?? true)?.target
+						: transition.target;
 
-					transition.actions?.forEach((action) => actions[action]?.());
+					if (target) {
+						console.log(`🔄 State transition: ${state.value} -> ${target}`);
 
-					const newStateConfig = state.config.states[transition.target];
-					const entryActions = newStateConfig?.entry || [];
-					entryActions.forEach((action) => actions[action]?.());
+						transition.actions?.forEach((action) => actions[action]?.());
 
-					return {
-						...state,
-						value: transition.target
-					};
+						const newStateConfig = state.config.states[target];
+						const entryActions = newStateConfig?.entry || [];
+						entryActions.forEach((action) => actions[action]?.());
+
+						return {
+							...state,
+							value: target
+						};
+					}
 				}
 				return state;
 			});
@@ -109,17 +176,12 @@
 		};
 	}
 
-	// Props
 	export let isOpen = false;
 	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
-	// Create machine instance
 	const machine = createMachineStore(stateMachineConfig);
-
-	// Derived states for UI
 	const currentState = derived(machine, ($machine) => $machine.value);
 
-	// Watch state changes and notify parent
 	$: if ($currentState) {
 		const isRecording = $currentState === 'recording';
 		const isProcessing = $currentState === 'processing';
@@ -127,14 +189,15 @@
 		onRecordingStateChange(isRecording, isProcessing);
 	}
 
-	// Exported methods for ActionModal
 	export const handleLongPressStart = async () => {
 		console.log('🎤 Long press started');
+		isLongPressActive = true;
 		machine.send('LONG_PRESS');
 	};
 
 	export const handleLongPressEnd = async () => {
 		console.log('🎤 Long press ended');
+		isLongPressActive = false;
 		machine.send('RELEASE');
 	};
 </script>
@@ -147,7 +210,36 @@
 		<div
 			class="w-full max-w-lg p-8 mx-4 mb-24 border rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
 		>
-			{#if $currentState === 'recording'}
+			{#if $currentState === 'checkPermission'}
+				<div class="text-center">
+					<div class="mb-4 text-4xl">🎤</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Checking Permissions...</h2>
+					<p class="mt-2 text-tertiary-200/80">Please allow microphone access.</p>
+				</div>
+			{:else if $currentState === 'permissionBlocked'}
+				<div class="text-center">
+					<div class="mb-4 text-4xl">🚫</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Blocked</h2>
+					<p class="mt-2 text-tertiary-200/80">
+						Please enable microphone access in your browser settings.
+					</p>
+					<div class="text-sm text-tertiary-200/60">
+						<p>How to enable:</p>
+						<ol class="mt-2 text-left list-decimal list-inside">
+							<li>Click the lock icon in your browser's address bar</li>
+							<li>Find "Microphone" in the permissions list</li>
+							<li>Change the setting to "Allow"</li>
+							<li>Refresh the page</li>
+						</ol>
+					</div>
+				</div>
+			{:else if $currentState === 'readyToRecord'}
+				<div class="text-center">
+					<div class="mb-4 text-4xl">🎤</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
+					<p class="mt-2 text-tertiary-200/80">Press and hold to start recording.</p>
+				</div>
+			{:else if $currentState === 'recording'}
 				<div class="text-center">
 					<div class="mb-4">
 						<svg
