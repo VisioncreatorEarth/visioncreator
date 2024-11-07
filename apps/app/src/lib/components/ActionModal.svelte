@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
-	import { dev } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import TabMenu from './TabMenu.svelte';
 	import ActionButtons from './ActionButtons.svelte';
 	import Newsletter from './Newsletter.svelte';
 	import Auth from './Auth.svelte';
 	import MyIntent from './MyIntent.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { dynamicView } from '$lib/stores';
 	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
 	import { page } from '$app/stores';
@@ -24,13 +23,14 @@
 	let isMenuMode = true;
 	let isPressed = false;
 	let isRecording = false;
+	let isProcessing = false;
 	let pressStartTime = 0;
 	let lastToggleTime = 0;
-	let myIntentRef: any;
+	let myIntentRef: MyIntent;
 	let isIntentModalOpen = false;
 	const DEBOUNCE_DELAY = 300;
 
-	// Keep track of the initial modal type to prevent unwanted changes
+	// Keep track of the initial modal type
 	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
 
 	function handleClose(event?: MouseEvent) {
@@ -43,16 +43,17 @@
 		event.stopPropagation();
 	}
 
-	function handleMouseDown() {
+	async function handleMouseDown() {
 		isPressed = true;
 		pressStartTime = performance.now();
 
-		setTimeout(() => {
+		setTimeout(async () => {
 			if (isPressed) {
 				if (performance.now() - pressStartTime >= 500) {
 					isIntentModalOpen = true;
-					if (isIntentModalOpen && myIntentRef) {
-						myIntentRef.handleLongPressStart();
+					await tick();
+					if (isIntentModalOpen && myIntentRef?.handleLongPressStart) {
+						await myIntentRef.handleLongPressStart();
 					}
 				} else if (performance.now() - pressStartTime < 500) {
 					if (session) {
@@ -65,15 +66,15 @@
 		}, 500);
 	}
 
-	function handleMouseUp() {
+	async function handleMouseUp() {
 		const currentTime = performance.now();
 		const pressDuration = currentTime - pressStartTime;
 
 		if (isPressed) {
 			isPressed = false;
 			if (pressDuration >= 500) {
-				if (isIntentModalOpen && myIntentRef) {
-					myIntentRef.handleLongPressEnd();
+				if (isIntentModalOpen && myIntentRef?.handleLongPressEnd) {
+					await myIntentRef.handleLongPressEnd();
 				}
 			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 				if (session) {
@@ -171,6 +172,11 @@
 		}, 0);
 	}
 
+	function handleIntentStateChange(rec: boolean, proc: boolean) {
+		isRecording = rec;
+		isProcessing = proc;
+	}
+
 	// Update onMount to better handle legal modal trigger
 	onMount(() => {
 		const handleViewUpdate = (event: CustomEvent) => {
@@ -213,15 +219,20 @@
 	<MyIntent
 		bind:this={myIntentRef}
 		isOpen={isIntentModalOpen}
-		{session}
+		onRecordingStateChange={(rec, proc) => {
+			isRecording = rec;
+			isProcessing = proc;
+		}}
 		on:close={handleIntentClose}
 	/>
 {/if}
 
 {#if session}
 	<button
-		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
-		class:recording-border={isRecording}
+		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 hover:shadow-xl hover:scale-105"
+		class:bg-error-500={isRecording}
+		class:bg-warning-500={isProcessing}
+		class:bg-surface-600={!isRecording && !isProcessing}
 		on:mousedown={handleMouseDown}
 		on:mouseup={handleMouseUp}
 		on:mouseleave={handleMouseUp}
@@ -230,7 +241,13 @@
 		on:touchcancel|preventDefault={handleMouseUp}
 		style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
 	>
-		<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		{#if isRecording}
+			<div class="w-4 h-4 bg-white rounded-full" />
+		{:else if isProcessing}
+			<Icon icon="material-symbols:close" class="text-white w-9 h-9" />
+		{:else}
+			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		{/if}
 	</button>
 {:else if !isModalOpen}
 	<button
