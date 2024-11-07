@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { derived } from 'svelte/store';
-	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { createMachine, type MachineConfig } from '$lib/composables/svelteMachine';
 	import { createMutation } from '$lib/wundergraph';
 	import { hominioAgent } from '$lib/agents/hominioAgent';
 	import { conversationManager } from '$lib/stores/intentStore';
+	import AudioVisualizer from './AudioVisualizer.svelte';
 
 	let isLongPressActive = false;
 
@@ -47,7 +48,7 @@
 						{
 							target: 'recording',
 							guard: 'isPermissionGranted',
-							actions: ['openModal', 'startRecording']
+							actions: ['startNewConversation', 'openModal', 'startRecording']
 						},
 						{
 							target: 'requestPermissions',
@@ -81,7 +82,8 @@
 				entry: ['openModal'],
 				on: {
 					LONG_PRESS: {
-						target: 'recording'
+						target: 'recording',
+						actions: ['startNewConversation', 'startRecording']
 					}
 				}
 			},
@@ -162,6 +164,12 @@
 
 		openModal: (context: IntentContext) => {
 			context.isOpen = true;
+			console.log('[AudioDebug] Modal opened');
+		},
+
+		startNewConversation: (context: IntentContext) => {
+			conversationManager.startNewConversation();
+			console.log('[AudioDebug] New conversation started');
 		},
 
 		requestMicrophonePermission: async (context: IntentContext) => {
@@ -189,15 +197,13 @@
 			console.log('[AudioDebug] Starting recording, existing stream:', !!context.audioStream);
 
 			try {
+				// Clean up any existing stream first
 				if (context.audioStream) {
-					console.log('[AudioDebug] Found existing stream, cleaning up first');
-					context.audioStream.getTracks().forEach((track) => {
-						console.log('[AudioDebug] Stopping existing track:', track.kind, track.id);
-						track.stop();
-					});
+					context.audioStream.getTracks().forEach((track) => track.stop());
+					context.audioStream = null;
 				}
 
-				console.log('[AudioDebug] Requesting new media stream');
+				// Create new stream with simplified options (like in AudioRecorder.svelte)
 				context.audioStream = await navigator.mediaDevices.getUserMedia({
 					audio: {
 						echoCancellation: true,
@@ -206,33 +212,25 @@
 					}
 				});
 
-				console.log(
-					'[AudioDebug] New stream created with tracks:',
-					context.audioStream.getTracks().map((t) => ({ kind: t.kind, id: t.id }))
-				);
+				// Create MediaRecorder with simpler options
+				context.mediaRecorder = new MediaRecorder(context.audioStream, {
+					mimeType: 'audio/webm;codecs=opus' // Use the same format as AudioRecorder
+				});
 
-				const options = {
-					mimeType: 'audio/mp4',
-					audioBitsPerSecond: 128000
-				};
-
-				context.mediaRecorder = new MediaRecorder(context.audioStream, options);
 				context.audioChunks = [];
-
-				// Set up data collection
 				context.mediaRecorder.ondataavailable = (event) => {
 					if (event.data.size > 0) {
 						context.audioChunks.push(event.data);
 					}
 				};
 
-				// Start recording with frequent chunks
+				// Start recording with the same chunk size as AudioRecorder
 				context.mediaRecorder.start(50);
 				context.visualizerMode = 'user';
 
-				console.log('[AudioDebug] MediaRecorder started:', {
-					state: context.mediaRecorder.state,
-					mimeType: context.mediaRecorder.mimeType
+				console.log('[AudioDebug] Recording started successfully', {
+					streamActive: context.audioStream.active,
+					recorderState: context.mediaRecorder.state
 				});
 			} catch (error) {
 				console.error('[AudioDebug] Error starting recording:', error);
@@ -243,31 +241,14 @@
 		},
 
 		stopRecording: (context: IntentContext) => {
-			console.log('[AudioDebug] Stopping recording:', {
-				recorderState: context.mediaRecorder?.state,
-				hasStream: !!context.audioStream,
-				streamTracks: context.audioStream?.getTracks().length
-			});
+			console.log('[AudioDebug] Stopping recording');
 
-			// Always stop recording and cleanup stream
 			if (context.mediaRecorder?.state === 'recording') {
-				try {
-					context.mediaRecorder.stop();
-					console.log('[AudioDebug] MediaRecorder stopped');
-				} catch (error) {
-					console.error('[AudioDebug] Error stopping recording:', error);
-				}
+				context.mediaRecorder.stop();
 			}
 
-			// Always clean up the stream
-			if (context.audioStream) {
-				context.audioStream.getTracks().forEach((track) => {
-					console.log('[AudioDebug] Stopping track:', track.kind, track.id, track.enabled);
-					track.stop();
-				});
-				context.audioStream = null;
-				console.log('[AudioDebug] Audio stream cleaned up');
-			}
+			// Don't stop the stream immediately - let the visualizer use it until cleanup
+			console.log('[AudioDebug] Recording stopped, stream kept active for visualizer');
 		},
 
 		prepareTranscription: async (context: IntentContext) => {
@@ -451,38 +432,21 @@
 		},
 
 		cleanup: (context: IntentContext) => {
-			console.log('[AudioDebug] Running cleanup', {
-				recorderState: context.mediaRecorder?.state,
-				hasStream: !!context.audioStream,
-				streamTracks: context.audioStream?.getTracks().length
-			});
+			console.log('[AudioDebug] Running cleanup');
 
-			// Stop recording if still active
+			// Clean up recording resources
 			if (context.mediaRecorder?.state === 'recording') {
-				try {
-					context.mediaRecorder.stop();
-					console.log('[AudioDebug] MediaRecorder stopped during cleanup');
-				} catch (error) {
-					console.error('[AudioDebug] Error stopping recording during cleanup:', error);
-				}
+				context.mediaRecorder.stop();
 			}
 
-			// Clean up audio stream
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
-					console.log(
-						'[AudioDebug] Stopping track during cleanup:',
-						track.kind,
-						track.id,
-						track.enabled
-					);
 					track.stop();
 				});
-				console.log('[AudioDebug] Audio stream cleaned up during cleanup');
+				context.audioStream = null;
 			}
 
 			// Reset all context values
-			context.audioStream = null;
 			context.mediaRecorder = null;
 			context.audioChunks = [];
 			context.audioData = null;
@@ -491,7 +455,10 @@
 			context.isOpen = false;
 			context.isStartingRecording = false;
 
-			console.log('[AudioDebug] Cleanup complete, context reset');
+			// End the current conversation when modal closes
+			conversationManager.endCurrentConversation();
+
+			console.log('[AudioDebug] Cleanup complete, context reset and conversation ended');
 		}
 	};
 
@@ -628,23 +595,9 @@
 				</div>
 			{:else if $currentState === 'recording'}
 				<div class="text-center">
-					<div class="mb-4">
-						<svg
-							class="w-12 h-12 mx-auto text-tertiary-200"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-							/>
-						</svg>
+					<div class="flex justify-center mb-4">
+						<AudioVisualizer isRecording={true} audioStream={$context.audioStream} mode="user" />
 					</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
-					<p class="mt-2 text-tertiary-200/80">Release to process your request</p>
 				</div>
 			{:else if $currentState === 'transcribing'}
 				<div class="text-center">
