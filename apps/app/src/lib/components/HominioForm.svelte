@@ -228,23 +228,22 @@
 		}
 	}
 
-	// Improved autoResize function
+	// Enhanced autoResize function
 	function autoResize(event: Event) {
 		const textarea = event.target as HTMLTextAreaElement;
-		// Reset height temporarily to get the correct scrollHeight
-		textarea.style.height = '0px';
+		// Reset height
+		textarea.style.height = 'auto';
 		// Set to scrollHeight to get the full content height
 		textarea.style.height = `${textarea.scrollHeight}px`;
 	}
 
-	// Add reactive statement to handle initial content and updates
+	// Improved reactive statement for textarea sizing
 	$: {
 		if (fields?.length > 0) {
-			// Wait for DOM update
 			setTimeout(() => {
 				const textareas = document.querySelectorAll('textarea');
 				textareas.forEach((textarea) => {
-					textarea.style.height = '0px';
+					textarea.style.height = 'auto';
 					textarea.style.height = `${textarea.scrollHeight}px`;
 				});
 			}, 0);
@@ -252,11 +251,11 @@
 	}
 </script>
 
-<div class="flex flex-col w-full gap-3 p-4">
+<div class="flex flex-col w-full gap-2">
 	{#each fields as field}
 		<div class="flex flex-col w-full gap-2">
 			<div
-				class="flex items-center justify-between w-full p-3 rounded-lg bg-surface-800/50 backdrop-blur-sm"
+				class="flex items-center justify-between w-full p-4 rounded-lg bg-surface-800/50 backdrop-blur-sm"
 			>
 				<div class="flex-1">
 					<label for={field.name} class="block text-sm font-medium text-tertiary-200">
@@ -268,7 +267,7 @@
 							id={field.name}
 							bind:value={$fieldStates[field.name].value}
 							on:input={autoResize}
-							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[2.5rem] overflow-hidden"
+							class="w-full px-0 py-1 text-lg bg-transparent border-none text-tertiary-100 focus:ring-0 min-h-[2.5rem]"
 							rows="1"
 						/>
 					{:else}
@@ -342,13 +341,14 @@
 	textarea {
 		display: block;
 		box-sizing: border-box;
-		max-height: 400px;
+		max-height: none;
 		resize: none;
 		line-height: 1.5;
 		transition: height 0.1s ease-out;
+		overflow: hidden;
 	}
 
-	/* Hide scrollbar but keep functionality */
+	/* Remove scrollbar styles since we don't need them anymore */
 	textarea::-webkit-scrollbar {
 		display: none;
 	}
