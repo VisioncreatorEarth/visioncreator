@@ -110,14 +110,14 @@ Remember: Keep the core message intact while adapting style and language as need
                 return [{
                     name: 'name',
                     type: 'text',
-                    title: 'What is your name?',
+                    title: 'My Name',
                     value: values.name || ''
                 }];
             case 'sendMail':
                 return [
                     {
                         name: 'subject',
-                        type: 'text',
+                        type: 'textarea',
                         title: "What's the topic?",
                         value: values.subject || ''
                     },

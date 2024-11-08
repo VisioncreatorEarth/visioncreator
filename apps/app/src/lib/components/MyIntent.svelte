@@ -514,10 +514,13 @@
 		class="fixed inset-0 z-50 flex flex-col justify-end bg-surface-900/30 backdrop-blur-xl"
 		transition:fade={{ duration: 200 }}
 	>
-		<!-- Main container with proper bottom spacing -->
-		<div class="relative w-full max-w-xl mx-auto mb-20">
-			<!-- Scrollable content area - starts from top -->
-			<div class="px-4 overflow-y-auto" style="max-height: calc(100vh - 120px);">
+		<!-- Main container with increased max-width -->
+		<div class="relative w-full max-w-2xl mx-auto mb-20">
+			<!-- Scrollable content area -->
+			<div
+				class="absolute inset-x-0 bottom-0 px-4 overflow-y-auto"
+				style="max-height: calc(100vh - 120px);"
+			>
 				<!-- Messages Container -->
 				<div class="space-y-3">
 					<!-- User Transcription Message -->
@@ -549,14 +552,12 @@
 						</div>
 					{/if}
 
-					<!-- Assistant Response Message -->
+					<!-- Assistant Response Message - Adjusted avatar size -->
 					{#if $currentState === 'action' && $context.actionMessage}
 						<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
 							<div class="flex-shrink-0">
-								<div
-									class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20"
-								>
-									<img src="/logo.png" alt="Assistant" class="w-6 h-6" />
+								<div class="w-10 h-10 overflow-hidden rounded-full bg-tertiary-200/20">
+									<img src="/logo.png" alt="Assistant" class="object-cover w-full h-full" />
 								</div>
 							</div>
 							<div class="flex-1">
@@ -712,11 +713,6 @@
 					</div>
 				</div>
 			</div>
-
-			<!-- Bottom fade effect -->
-			<div
-				class="absolute bottom-0 left-0 right-0 z-10 h-8 bg-gradient-to-t from-surface-900/30 to-transparent"
-			/>
 		</div>
 	</div>
 {/if}
