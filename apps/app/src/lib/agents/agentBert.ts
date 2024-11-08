@@ -77,7 +77,7 @@ export const itemIconMap = {
     'eggs': 'mdi:egg',
 
     // Beverages
-    'water': 'mdi:bottle-water',
+    'water': 'mdi:water',
     'coca-cola': 'mdi:bottle-soda',
     'cola': 'mdi:bottle-soda',
     'beer': 'mdi:beer',
@@ -89,7 +89,22 @@ export const itemIconMap = {
     'hammer': 'mdi:hammer',
     'nails': 'mdi:nail',
     'soap': 'mdi:hand-wash',
-    'toilet paper': 'mdi:paper-roll'
+    'toilet paper': 'mdi:paper-roll',
+    'chips': 'mdi:cookie',
+    'bread': 'mdi:bread-slice',
+    'milk': 'mdi:milk',
+    'cheese': 'mdi:cheese',
+    'chicken breast': 'mdi:food-drumstick',
+    'hammer': 'mdi:hammer',
+    'nails': 'mdi:nail',
+    'tape': 'mdi:tape-measure',
+    'paper bags': 'mdi:shopping',
+    'soap': 'mdi:soap',
+    'salt': 'mdi:shaker-outline',
+    'dish soap': 'mdi:dish-soap',
+    'paper towels': 'mdi:paper-roll',
+    'hat': 'mdi:hat-fedora',
+    // Add any other common items you want to support
 } as const;
 
 // Add a function to get category icon
