@@ -4,6 +4,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { conversationManager } from '$lib/stores/intentStore';
 	import { AgentWalter } from '$lib/agents/agentWalter';
+	import { eventBus } from '$lib/composables/eventBus';
 
 	const dispatch = createEventDispatcher<{
 		close: void;
@@ -204,10 +205,9 @@
 					payload: result.message.payload
 				});
 
-				// Add 1 second delay before closing
+				// Wait 1 second then emit state change event
 				await new Promise((resolve) => setTimeout(resolve, 1000));
-				dispatch('close');
-				machine.send('CLOSE'); // Send CLOSE event to MyIntent machine
+				eventBus.emit('intent:stateChange', 'FORM_SUCCESS');
 			} else {
 				throw new Error(result.error || 'Form submission failed');
 			}
@@ -290,7 +290,16 @@
 		</div>
 	{/each}
 
-	<div class="flex justify-center w-full mt-4">
+	<div class="flex justify-between w-full gap-4 mt-4">
+		<button
+			on:click={() => {
+				eventBus.emit('intent:stateChange', 'CLOSE');
+			}}
+			class="btn btn-md variant-ghost-tertiary"
+		>
+			Cancel
+		</button>
+
 		<button
 			on:click={handleSubmit}
 			class="btn btn-md {isSubmitted
