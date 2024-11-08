@@ -147,39 +147,17 @@
 		operationName: 'transcribeAudio'
 	});
 
-	function isIOS() {
-		return (
-			['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(
-				navigator.platform
-			) ||
-			(navigator.userAgent.includes('Mac') && 'ontouchend' in document)
-		);
-	}
-
 	const intentActions = {
 		initializePermissions: async (context: IntentContext) => {
 			try {
-				if (isIOS()) {
-					context.permissionState = 'prompt';
+				const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+				context.permissionState = permissionStatus.state as 'prompt' | 'granted' | 'denied';
 
-					try {
-						const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-						stream.getTracks().forEach((track) => track.stop());
-						context.permissionState = 'granted';
-					} catch (err) {
-						context.permissionState = 'prompt';
-					}
-				} else {
-					const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+				permissionStatus.addEventListener('change', () => {
 					context.permissionState = permissionStatus.state as 'prompt' | 'granted' | 'denied';
-
-					permissionStatus.addEventListener('change', () => {
-						context.permissionState = permissionStatus.state as 'prompt' | 'granted' | 'denied';
-					});
-				}
+				});
 			} catch (error) {
-				console.warn('Permission API not supported, falling back to prompt state');
-				context.permissionState = 'prompt';
+				// Handle error silently
 			}
 		},
 
@@ -196,25 +174,10 @@
 		requestMicrophonePermission: async (context: IntentContext) => {
 			try {
 				context.permissionRequesting = true;
-
-				const constraints = {
-					audio: {
-						echoCancellation: true,
-						noiseSuppression: true,
-						autoGainControl: true
-					}
-				};
-
-				const stream = await navigator.mediaDevices.getUserMedia(constraints);
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 				stream.getTracks().forEach((track) => track.stop());
 				context.permissionState = 'granted';
 				machine.send('PERMISSION_GRANTED');
-
-				if (isIOS()) {
-					console.info(
-						'On iOS, you may need to allow microphone access again if you reload the page.'
-					);
-				}
 			} catch (error) {
 				context.permissionState = 'denied';
 				machine.send('PERMISSION_DENIED');
@@ -233,11 +196,13 @@
 			console.log('[AudioDebug] Starting recording, existing stream:', !!context.audioStream);
 
 			try {
+				// Clean up any existing stream first
 				if (context.audioStream) {
 					context.audioStream.getTracks().forEach((track) => track.stop());
 					context.audioStream = null;
 				}
 
+				// Get audio stream
 				const stream = await navigator.mediaDevices.getUserMedia({
 					audio: {
 						echoCancellation: true,
@@ -249,6 +214,7 @@
 				context.audioStream = stream;
 				context.visualizerMode = 'user';
 
+				// Use correct MIME type for iOS compatibility
 				const recorder = new MediaRecorder(stream, {
 					mimeType: 'video/mp4; codecs=mp4a.40.2'
 				});
@@ -280,10 +246,12 @@
 		stopRecording: (context: IntentContext) => {
 			console.log('[AudioDebug] Stopping recording and cleaning up audio stream');
 
+			// Stop the MediaRecorder if it's recording
 			if (context.mediaRecorder?.state === 'recording') {
 				context.mediaRecorder.stop();
 			}
 
+			// Immediately stop all audio tracks
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
 					console.log('[AudioDebug] Stopping audio track:', track.kind, track.id);
@@ -305,8 +273,10 @@
 					return;
 				}
 
+				// Add a small delay before processing to ensure we capture the full audio
 				await new Promise((resolve) => setTimeout(resolve, 200));
 
+				// Process existing audio chunks without waiting for new ones
 				const audioBlob = new Blob(context.audioChunks, { type: 'audio/mp4' });
 				console.log('Audio blob created:', {
 					size: audioBlob.size,
@@ -317,9 +287,11 @@
 					throw new Error('Audio recording too short');
 				}
 
+				// Convert to base64
 				const base64 = await blobToBase64(audioBlob);
 				context.audioData = base64;
 
+				// If we have audio data, proceed with transcription
 				if (context.audioData) {
 					await intentActions.startTranscription(context);
 				} else {
@@ -347,7 +319,7 @@
 				console.log('Transcription response:', response);
 
 				if (response.data?.text) {
-					context.currentTranscription = response.data.text;
+					context.currentTranscription = response.data.text; // Update context
 					machine.send('TRANSCRIPTION_SUCCESS');
 				} else if (response.data?.error === 'paywall') {
 					machine.send('PAYWALL');
@@ -383,12 +355,15 @@
 					conversationManager.getMessageContext() || []
 				);
 
+				// Handle the response payload and close modal
 				if (response?.message?.payload) {
 					const payload = response.message.payload;
 
+					// Close modal first
 					context.isOpen = false;
 					machine.send('PROCESSING_COMPLETE');
 
+					// Then handle the payload
 					switch (payload.type) {
 						case 'view':
 							await handleViewPayload(payload);
@@ -404,6 +379,7 @@
 							break;
 					}
 				} else {
+					// If no payload, just close the modal
 					context.isOpen = false;
 					machine.send('PROCESSING_COMPLETE');
 				}
@@ -419,6 +395,7 @@
 
 		handleTranscriptionError: (context: IntentContext) => {
 			console.log('Handling transcription error');
+			// Ensure cleanup on error
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
 					track.stop();
@@ -439,6 +416,7 @@
 		cleanup: (context: IntentContext) => {
 			console.log('[AudioDebug] Running cleanup');
 
+			// These might already be cleaned up, but let's make sure
 			if (context.mediaRecorder?.state === 'recording') {
 				context.mediaRecorder.stop();
 			}
@@ -451,6 +429,7 @@
 				context.audioStream = null;
 			}
 
+			// Reset all context values
 			context.mediaRecorder = null;
 			context.audioChunks = [];
 			context.audioData = null;
@@ -459,6 +438,7 @@
 			context.isOpen = false;
 			context.isStartingRecording = false;
 
+			// End the current conversation when modal closes
 			conversationManager.endCurrentConversation();
 
 			console.log('[AudioDebug] Cleanup complete, context reset and conversation ended');
@@ -482,6 +462,7 @@
 		onRecordingStateChange(isRecording, isProcessing);
 	}
 
+	// Add this to track state changes
 	$: if ($currentState) {
 		console.log('[AudioDebug] State changed:', $currentState, {
 			hasStream: !!$context.audioStream,
@@ -499,10 +480,12 @@
 		machine.send('RELEASE');
 	};
 
+	// Helper function for blob to base64 conversion with proper data URL format
 	function blobToBase64(blob: Blob): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const reader = new FileReader();
 			reader.onloadend = () => {
+				// Ensure proper data URL format
 				const result = reader.result as string;
 				resolve(result);
 			};
@@ -511,12 +494,14 @@
 		});
 	}
 
+	// Helper function for random audio selection
 	function getRandomWorkingAudio(): string {
 		const audioNum = Math.floor(Math.random() * 5) + 1;
 		return `/audio/workingonit${audioNum}.mp3`;
 	}
 
 	onDestroy(() => {
+		// Ensure cleanup runs when component is destroyed
 		intentActions.cleanup(machine.getState().context);
 	});
 </script>
@@ -526,12 +511,14 @@
 		class="fixed inset-0 z-50 flex flex-col items-center justify-end bg-surface-900/30 backdrop-blur-xl"
 		transition:fade={{ duration: 200 }}
 	>
+		<!-- Transcription Message Display -->
 		{#if $context.currentTranscription}
 			<div class="w-full max-w-lg p-4 mx-4 mb-4">
 				<div
 					class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
 				>
 					<div class="flex-shrink-0">
+						<!-- User Avatar or Icon -->
 						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
 							<svg
 								class="w-6 h-6 text-tertiary-200"
@@ -556,6 +543,7 @@
 			</div>
 		{/if}
 
+		<!-- Existing Modal Content -->
 		<div
 			class="w-full max-w-lg p-8 mx-4 mb-24 border rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
 		>
@@ -591,6 +579,7 @@
 			{:else if $currentState === 'recording'}
 				<div class="text-center">
 					<div class="mb-4">
+						<!-- Replace AudioVisualizer with a simple recording indicator -->
 						<div class="w-12 h-12 mx-auto bg-red-500 rounded-full animate-pulse" />
 					</div>
 					<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
