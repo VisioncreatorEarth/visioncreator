@@ -471,14 +471,6 @@
 		const isRecording = $currentState === 'recording';
 		const isProcessing = $currentState === 'processing';
 		onRecordingStateChange(isRecording, isProcessing);
-
-		// Add state transition debugging
-		console.log('State Changed:', {
-			state: $currentState,
-			context: $context,
-			hasActionView: !!$context.actionView,
-			isOpen: $context.isOpen
-		});
 	}
 
 	export const handleLongPressStart = () => {
@@ -523,12 +515,10 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<!-- Messages Display -->
-		<div class="w-full max-w-lg p-4 mx-4 mb-4 space-y-4">
+		<div class="w-full max-w-xl mx-4 mb-4 space-y-4">
 			<!-- User Transcription Message -->
 			{#if $context.currentTranscription}
-				<div
-					class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
-				>
+				<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
 					<div class="flex-shrink-0">
 						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
 							<svg
@@ -555,9 +545,7 @@
 
 			<!-- Assistant Response Message -->
 			{#if $currentState === 'action' && $context.actionMessage}
-				<div
-					class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
-				>
+				<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
 					<div class="flex-shrink-0">
 						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
 							<img src="/logo.png" alt="Assistant" class="w-6 h-6" />
@@ -571,25 +559,15 @@
 		</div>
 
 		<!-- Modal Content -->
-		<div
-			class="w-full max-w-lg p-8 mx-4 mb-24 border rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
-		>
+		<div class="w-full max-w-xl p-8 mx-4 mb-24 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
 			{#if $currentState === 'action' && $context.actionView}
 				<ComposeView view={$context.actionView} {session} showSpacer={false} />
 			{:else if $currentState === 'requestPermissions'}
 				<div class="text-center">
 					<div class="mb-4 text-4xl">🎤</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Required</h2>
+					<h2 class="text-2xl font-bold text-tertiary-200">Enable Microphone</h2>
 					<p class="mt-2 text-tertiary-200/80">Please allow microphone access to continue.</p>
-				</div>
-			{:else if $currentState === 'permissionBlocked'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">🚫</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Blocked</h2>
-					<p class="mt-2 text-tertiary-200/80">
-						Please enable microphone access in your browser settings.
-					</p>
-					<div class="text-sm text-tertiary-200/60">
+					<div class="mt-4 text-sm text-tertiary-200/60">
 						<p>How to enable:</p>
 						<ol class="mt-2 text-left list-decimal list-inside">
 							<li>Click the lock icon in your browser's address bar</li>
@@ -598,6 +576,20 @@
 							<li>Refresh the page</li>
 						</ol>
 					</div>
+				</div>
+			{:else if $currentState === 'permissionBlocked'}
+				<div class="text-center">
+					<div class="mb-4 text-4xl">🚫</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Blocked</h2>
+					<p class="mt-2 text-tertiary-200/80">
+						Please enable microphone access in your browser settings.
+					</p>
+					<button
+						class="px-4 py-2 mt-4 text-sm font-medium rounded-lg bg-tertiary-200 text-surface-900"
+						on:click={() => machine.send('TRY_AGAIN')}
+					>
+						Try Again
+					</button>
 				</div>
 			{:else if $currentState === 'readyToRecord'}
 				<div class="text-center">
@@ -608,7 +600,6 @@
 			{:else if $currentState === 'recording'}
 				<div class="text-center">
 					<div class="mb-4">
-						<!-- Replace AudioVisualizer with a simple recording indicator -->
 						<div class="w-12 h-12 mx-auto bg-red-500 rounded-full animate-pulse" />
 					</div>
 					<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
