@@ -23,7 +23,7 @@
 		isStartingRecording: boolean;
 	}
 
-	const intentConfig: MachineConfig<IntentContext, string, string> = {
+	const intentConfig: MachineConfig<IntentContext> = {
 		id: 'intentMachine',
 		initial: 'init',
 		context: {
@@ -97,7 +97,7 @@
 				}
 			},
 			transcribing: {
-				entry: ['playHominioAudio'],
+				entry: ['prepareTranscription'],
 				on: {
 					TRANSCRIPTION_SUCCESS: {
 						target: 'processing',
@@ -106,6 +106,14 @@
 					TRANSCRIPTION_ERROR: {
 						target: 'error',
 						actions: ['handleTranscriptionError']
+					},
+					WAITINGLIST: {
+						target: 'waitinglist',
+						actions: ['cleanup']
+					},
+					PAYWALL: {
+						target: 'paywall',
+						actions: ['cleanup']
 					}
 				}
 			},
@@ -132,6 +140,15 @@
 				}
 			},
 			paywall: {
+				entry: ['openModal'],
+				on: {
+					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
+					}
+				}
+			},
+			waitinglist: {
 				entry: ['openModal'],
 				on: {
 					CLOSE: {
@@ -311,24 +328,31 @@
 					return;
 				}
 
-				console.log('Starting transcription with audio data');
 				const response = await $transcribeAudioMutation.mutateAsync({
 					audioBase64: context.audioData
 				});
 
-				console.log('Transcription response:', response);
-
 				if (response.data?.text) {
-					context.currentTranscription = response.data.text; // Update context
+					context.currentTranscription = response.data.text;
 					machine.send('TRANSCRIPTION_SUCCESS');
-				} else if (response.data?.error === 'paywall') {
-					machine.send('PAYWALL');
-				} else {
-					throw new Error(response.data?.error || 'Unknown transcription error');
 				}
 			} catch (error) {
-				console.error('Transcription error:', error);
-				machine.send('TRANSCRIPTION_ERROR');
+				console.log('Full WunderGraph Error:', {
+					error,
+					name: error.name,
+					message: error.message,
+					code: error.code,
+					status: error.status,
+					response: error.response,
+					stack: error.stack
+				});
+
+				// Handle WunderGraph's native AuthorizationError
+				if (error.name === 'AuthorizationError' || error.code === 'AuthorizationError') {
+					machine.send('WAITINGLIST');
+				} else {
+					machine.send('TRANSCRIPTION_ERROR');
+				}
 			}
 		},
 
@@ -656,6 +680,28 @@
 					<div class="mb-4 text-4xl">💸</div>
 					<h2 class="text-2xl font-bold text-tertiary-200">Paywall</h2>
 					<p class="mt-2 text-tertiary-200/80">You've reached the paywall limit.</p>
+				</div>
+			{:else if $currentState === 'waitinglist'}
+				<div class="text-center">
+					<div class="mb-4 text-4xl">🎉</div>
+					<h2 class="text-2xl font-bold text-tertiary-200">Coming Soon!</h2>
+					<p class="mt-2 text-tertiary-200/80">
+						You're on the waiting list. Rank up in the leaderboard to get early access!
+					</p>
+					<div class="mt-4 space-y-2">
+						<p class="text-sm text-tertiary-200/60">Want to skip the queue? Here's how:</p>
+						<ul class="text-sm list-disc list-inside text-tertiary-200/80">
+							<li>Participate in community challenges</li>
+							<li>Share your progress</li>
+							<li>Help other members</li>
+						</ul>
+					</div>
+					<button
+						class="px-4 py-2 mt-6 text-sm font-medium transition-colors rounded-lg bg-tertiary-200 text-surface-900 hover:bg-tertiary-300"
+						on:click={() => machine.send('CLOSE')}
+					>
+						Got it
+					</button>
 				</div>
 			{/if}
 		</div>
