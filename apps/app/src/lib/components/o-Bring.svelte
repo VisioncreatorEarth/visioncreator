@@ -9,6 +9,19 @@
 	// Default fallback icon that's guaranteed to exist
 	const FALLBACK_ICON = 'mdi:shopping';
 
+	// Updated category colors with matching text/icon colors
+	const categoryColors = {
+		fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
+		vegetables: 'bg-green-500/10 hover:bg-green-500/20 text-green-500',
+		dairy: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
+		meat: 'bg-red-500/10 hover:bg-red-500/20 text-red-500',
+		bakery: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500',
+		beverages: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
+		snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
+		household: 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-500',
+		other: 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500'
+	} as const;
+
 	function getItemIcon(item: ShoppingItem): string {
 		try {
 			const normalizedName = item.name.toLowerCase().trim();
@@ -44,6 +57,7 @@
 		}
 	}
 
+	// Modified groupItems to maintain order
 	function groupItems(items: ShoppingItem[]) {
 		return Object.entries(categories)
 			.map(([id, name]) => ({
@@ -70,38 +84,19 @@
 			{#if $shoppingListStore.length === 0}
 				<p class="text-center text-surface-500">Your shopping list is empty.</p>
 			{:else}
-				<div class="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-8 auto-rows-auto">
-					{#each groupedItems as group, groupIndex}
-						<!-- Items flow continuously -->
-						{#each group.items as item, itemIndex (item.id)}
-							<!-- Category separator -->
-							{#if itemIndex === 0}
-								<div class="flex items-center justify-center h-full">
-									{#if groupIndex > 0}
-										<div class="flex flex-col items-center justify-center mx-3">
-											<div class="w-px h-8 bg-surface-200-700-token" />
-											<span
-												class="text-sm font-semibold text-tertiary-500 px-3 py-1.5 my-1 rounded-full bg-surface-100-800-token whitespace-nowrap"
-											>
-												{group.name}
-											</span>
-											<div class="w-px h-8 bg-surface-200-700-token" />
-										</div>
-									{:else}
-										<span
-											class="text-sm font-semibold text-tertiary-500 px-3 py-1.5 rounded-full bg-surface-100-800-token whitespace-nowrap"
-										>
-											{group.name}
-										</span>
-									{/if}
-								</div>
-							{/if}
-
+				<div class="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-8">
+					{#each groupedItems as group}
+						{#each group.items as item (item.id)}
 							<button
 								on:click={() => removeItem(item.id)}
-								class="flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square bg-surface-200-700-token hover:bg-surface-300-600-token"
+								class="relative flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square {categoryColors[
+									item.category
+								]}"
 							>
+								<!-- Icon with matching category color -->
 								<Icon icon={getItemIcon(item)} class="w-1/2 mb-2 h-1/2" fallback={FALLBACK_ICON} />
+
+								<!-- Item Name with matching category color -->
 								<span class="overflow-hidden text-xs text-center text-ellipsis">
 									{item.name}
 								</span>
