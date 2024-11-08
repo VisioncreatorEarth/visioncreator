@@ -1,33 +1,47 @@
 <script lang="ts">
-	import {
-		shoppingListStore,
-		categories,
-		categoryIcons,
-		preselectedItems
-	} from '$lib/agents/agentBert';
+	import { shoppingListStore, categories, categoryIcons, itemIconMap } from '$lib/agents/agentBert';
 	import type { ShoppingItem } from '$lib/agents/agentBert';
 	import Icon from '@iconify/svelte';
 
 	export let slot: string | undefined = undefined;
 	export let me: boolean = false;
 
-	// Create a map of predefined item icons from preselectedItems
-	const itemIcons = new Map(preselectedItems.map((item) => [item.name.toLowerCase(), item.icon]));
+	// Default fallback icon that's guaranteed to exist
+	const FALLBACK_ICON = 'mdi:shopping';
 
 	function getItemIcon(item: ShoppingItem): string {
-		// Try to find a predefined icon for this exact item
-		const predefinedIcon = itemIcons.get(item.name.toLowerCase());
-		if (predefinedIcon) {
-			return predefinedIcon;
-		}
+		try {
+			const normalizedName = item.name.toLowerCase().trim();
 
-		// If the item has an icon property, use it
-		if (item.icon) {
-			return item.icon;
-		}
+			// 1. Try exact match in itemIconMap
+			if (itemIconMap[normalizedName]) {
+				return itemIconMap[normalizedName];
+			}
 
-		// Fall back to category icon
-		return categoryIcons[item.category] || categoryIcons.other;
+			// 2. Try singular/plural variant
+			const alternateForm = normalizedName.endsWith('s')
+				? normalizedName.slice(0, -1)
+				: normalizedName + 's';
+			if (itemIconMap[alternateForm]) {
+				return itemIconMap[alternateForm];
+			}
+
+			// 3. Use category icon
+			if (categoryIcons[item.category]) {
+				return categoryIcons[item.category];
+			}
+
+			// 4. Use item's own icon if it exists
+			if (item.icon && typeof item.icon === 'string') {
+				return item.icon;
+			}
+
+			// 5. Final fallback
+			return FALLBACK_ICON;
+		} catch (error) {
+			console.warn(`Icon lookup failed for ${item.name}:`, error);
+			return FALLBACK_ICON;
+		}
 	}
 
 	function groupItems(items: ShoppingItem[]) {
@@ -66,7 +80,15 @@
 									on:click={() => removeItem(item.id)}
 									class="flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square bg-surface-200-700-token hover:bg-surface-300-600-token"
 								>
-									<Icon icon={getItemIcon(item)} class="w-1/2 mb-2 h-1/2" />
+									<Icon
+										icon={getItemIcon(item)}
+										class="w-1/2 mb-2 h-1/2"
+										fallback={FALLBACK_ICON}
+										on:error={() => {
+											console.warn(`Icon failed to load for ${item.name}, using fallback`);
+											return FALLBACK_ICON;
+										}}
+									/>
 									<span class="overflow-hidden text-xs text-center text-ellipsis">
 										{item.name}
 									</span>

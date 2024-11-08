@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { z } from 'zod';
 	import { derived, writable } from 'svelte/store';
-	import { createEventDispatcher } from 'svelte';
 	import { conversationManager } from '$lib/stores/intentStore';
 	import { AgentWalter } from '$lib/agents/agentWalter';
 	import { eventBus } from '$lib/composables/eventBus';

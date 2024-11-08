@@ -4,6 +4,7 @@ import { conversationManager } from '$lib/stores/intentStore';
 import { client } from '$lib/wundergraph';
 import type { AgentResponse } from '../types/agent.types';
 import { dynamicView } from '$lib/stores';
+import { eventBus } from '$lib/composables/eventBus';
 
 // Define a shared type for icons
 export type CategoryType = 'fruits' | 'vegetables' | 'dairy' | 'meat' | 'bakery' | 'beverages' | 'snacks' | 'household' | 'other';
@@ -35,22 +36,66 @@ export const categories = {
     other: 'Other'
 } as const;
 
-// Update the categoryIcons to include more specific icons
+// Update the categoryIcons with more reliable MDI icons
 export const categoryIcons = {
-    fruits: 'mdi:fruit-cherries',
+    fruits: 'mdi:fruit-watermelon',
     vegetables: 'mdi:carrot',
-    dairy: 'mdi:cheese',
+    dairy: 'mdi:milk',
     meat: 'mdi:food-steak',
-    bakery: 'mdi:baguette',
+    bakery: 'mdi:bread-slice',
     beverages: 'mdi:cup',
     snacks: 'mdi:cookie',
     household: 'mdi:home',
     other: 'mdi:shopping'
 } as const;
 
+// Update the itemIconMap with guaranteed existing MDI icons
+export const itemIconMap = {
+    // Fruits
+    'banana': 'mdi:food-apple-outline',
+    'bananas': 'mdi:food-apple-outline',
+    'apple': 'mdi:food-apple',
+    'apples': 'mdi:food-apple',
+    'orange': 'mdi:fruit-citrus',
+    'oranges': 'mdi:fruit-citrus',
+    'pear': 'mdi:food-apple-outline',
+    'pears': 'mdi:food-apple-outline',
+    'mango': 'mdi:food-apple-outline',
+    'mangos': 'mdi:food-apple-outline',
+
+    // Vegetables
+    'carrot': 'mdi:carrot',
+    'carrots': 'mdi:carrot',
+    'potato': 'mdi:food',
+    'potatoes': 'mdi:food',
+    'tomato': 'mdi:food',
+    'tomatoes': 'mdi:food',
+
+    // Dairy
+    'milk': 'mdi:bottle-tonic',
+    'cheese': 'mdi:food',
+    'eggs': 'mdi:egg',
+
+    // Beverages
+    'water': 'mdi:bottle-water',
+    'coca-cola': 'mdi:bottle-soda',
+    'cola': 'mdi:bottle-soda',
+    'beer': 'mdi:beer',
+    'coffee': 'mdi:coffee',
+
+    // Household
+    'paper bags': 'mdi:shopping-outline',
+    'glass': 'mdi:glass-fragile',
+    'hammer': 'mdi:hammer',
+    'nails': 'mdi:nail',
+    'soap': 'mdi:hand-wash',
+    'toilet paper': 'mdi:paper-roll'
+} as const;
+
 // Add a function to get category icon
 export function getCategoryIcon(category: CategoryType): string {
-    return categoryIcons[category] || categoryIcons.other;
+    const fallbackIcon = 'mdi:shopping-outline';
+    return categoryIcons[category] || fallbackIcon;
 }
 
 // Update preselectedItems to use the shared icons
@@ -311,25 +356,50 @@ please always translate everything to english, no matter the input lagnauge.
     }
 
     private handleAddItems(items: Array<{ name: string; category: string }>, language: string): string {
-        const newItems = items.map(item => ({
-            id: Date.now() + Math.random(),
-            name: this.capitalizeFirstLetter(item.name),
-            category: item.category as CategoryType,
-            icon: undefined // Let o-Bring handle the icon fallback
-        }));
+        const newItems = items.map(item => {
+            const normalizedName = item.name.toLowerCase().trim();
+            // Try both singular and plural forms
+            const icon = itemIconMap[normalizedName] ||
+                itemIconMap[normalizedName.endsWith('s') ? normalizedName.slice(0, -1) : normalizedName + 's'] ||
+                categoryIcons[item.category as CategoryType] ||
+                'mdi:shopping';
+
+            return {
+                id: Date.now() + Math.random(),
+                name: this.capitalizeFirstLetter(item.name),
+                category: item.category as CategoryType,
+                icon: icon
+            };
+        });
 
         shoppingListStore.update(list => [...list, ...newItems]);
+
+        eventBus.emit('intent:stateChange', {
+            state: 'SHOPPING_LIST_UPDATE',
+            items: newItems,
+            operation: 'add'
+        });
+
         return `Added ${newItems.map(i => i.name).join(', ')} to your shopping list.`;
     }
 
     private handleRemoveItems(items: Array<{ name: string }>, language: string): string {
-        shoppingListStore.update(list =>
-            list.filter(item => !items.some(removeItem =>
-                item.name.toLowerCase() === removeItem.name.toLowerCase()
-            ))
-        );
+        let removedItems: string[] = [];
 
-        return `Removed ${items.map(i => this.capitalizeFirstLetter(i.name)).join(', ')} from your shopping list.`;
+        shoppingListStore.update(list => {
+            removedItems = items.map(i => this.capitalizeFirstLetter(i.name));
+            return list.filter(item => !items.some(removeItem =>
+                item.name.toLowerCase() === removeItem.name.toLowerCase()
+            ));
+        });
+
+        eventBus.emit('intent:stateChange', {
+            state: 'SHOPPING_LIST_UPDATE',
+            items: removedItems,
+            operation: 'remove'
+        });
+
+        return `Removed ${removedItems.join(', ')} from your shopping list.`;
     }
 
     private handleClearList(language: string): string {
