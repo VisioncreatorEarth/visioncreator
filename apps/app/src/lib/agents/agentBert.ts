@@ -7,7 +7,7 @@ import { dynamicView } from '$lib/stores';
 import { eventBus } from '$lib/composables/eventBus';
 
 // Define a shared type for icons
-export type CategoryType = 'fruits' | 'vegetables' | 'dairy' | 'meat' | 'bakery' | 'beverages' | 'snacks' | 'household' | 'other';
+export type CategoryType = 'fruits' | 'vegetables' | 'dairy' | 'meat' | 'bakery' | 'beverages' | 'snacks' | 'household' | 'grains' | 'other';
 
 export interface ShoppingItem {
     id: number;
@@ -33,6 +33,7 @@ export const categories = {
     beverages: 'Beverages',
     snacks: 'Snacks',
     household: 'Household',
+    grains: 'Pasta & Grains',
     other: 'Other'
 } as const;
 
@@ -46,65 +47,8 @@ export const categoryIcons = {
     beverages: 'mdi:cup',
     snacks: 'mdi:cookie',
     household: 'mdi:home',
+    grains: 'mdi:pasta',
     other: 'mdi:shopping'
-} as const;
-
-// Update the itemIconMap with guaranteed existing MDI icons
-export const itemIconMap = {
-    // Fruits
-    'banana': 'mdi:food-apple-outline',
-    'bananas': 'mdi:food-apple-outline',
-    'apple': 'mdi:food-apple',
-    'apples': 'mdi:food-apple',
-    'orange': 'mdi:fruit-citrus',
-    'oranges': 'mdi:fruit-citrus',
-    'pear': 'mdi:food-apple-outline',
-    'pears': 'mdi:food-apple-outline',
-    'mango': 'mdi:food-apple-outline',
-    'mangos': 'mdi:food-apple-outline',
-
-    // Vegetables
-    'carrot': 'mdi:carrot',
-    'carrots': 'mdi:carrot',
-    'potato': 'mdi:food',
-    'potatoes': 'mdi:food',
-    'tomato': 'mdi:food',
-    'tomatoes': 'mdi:food',
-
-    // Dairy
-    'milk': 'mdi:bottle-tonic',
-    'cheese': 'mdi:food',
-    'eggs': 'mdi:egg',
-
-    // Beverages
-    'water': 'mdi:water',
-    'coca-cola': 'mdi:bottle-soda',
-    'cola': 'mdi:bottle-soda',
-    'beer': 'mdi:beer',
-    'coffee': 'mdi:coffee',
-
-    // Household
-    'paper bags': 'mdi:shopping-outline',
-    'glass': 'mdi:glass-fragile',
-    'hammer': 'mdi:hammer',
-    'nails': 'mdi:nail',
-    'soap': 'mdi:hand-wash',
-    'toilet paper': 'mdi:paper-roll',
-    'chips': 'mdi:cookie',
-    'bread': 'mdi:bread-slice',
-    'milk': 'mdi:milk',
-    'cheese': 'mdi:cheese',
-    'chicken breast': 'mdi:food-drumstick',
-    'hammer': 'mdi:hammer',
-    'nails': 'mdi:nail',
-    'tape': 'mdi:tape-measure',
-    'paper bags': 'mdi:shopping',
-    'soap': 'mdi:soap',
-    'salt': 'mdi:shaker-outline',
-    'dish soap': 'mdi:dish-soap',
-    'paper towels': 'mdi:paper-roll',
-    'hat': 'mdi:hat-fedora',
-    // Add any other common items you want to support
 } as const;
 
 // Add a function to get category icon
@@ -113,70 +57,70 @@ export function getCategoryIcon(category: CategoryType): string {
     return categoryIcons[category] || fallbackIcon;
 }
 
-// Update preselectedItems to use the shared icons
-export const preselectedItems = [
-    { name: 'Apple', icon: 'mdi:fruit-apple', category: 'fruits' },
-    { name: 'Banana', icon: 'mdi:fruit-banana', category: 'fruits' },
-    { name: 'Orange', icon: 'mdi:fruit-orange', category: 'fruits' },
-    { name: 'Pear', icon: 'mdi:fruit-pear', category: 'fruits' },
-    { name: 'Mango', icon: categoryIcons.fruits, category: 'fruits' },
-    { name: 'Carrot', icon: 'mdi:carrot', category: 'vegetables' },
-    { name: 'Potato', icon: 'mdi:potato', category: 'vegetables' },
-    { name: 'Garlic', icon: categoryIcons.vegetables, category: 'vegetables' },
-    { name: 'Milk', icon: 'mdi:bottle-soda', category: 'dairy' },
-    { name: 'Cheese', icon: 'mdi:cheese', category: 'dairy' },
-    { name: 'Bread', icon: 'mdi:bread-slice', category: 'bakery' },
-    { name: 'Water', icon: 'mdi:bottle-water', category: 'beverages' },
-    { name: 'Coca-Cola', icon: 'simple-icons:coca-cola', category: 'beverages' },
-    { name: 'Beer', icon: 'mdi:beer', category: 'beverages' },
-    { name: 'Chips', icon: 'emojione-monotone:potato-chips', category: 'snacks' },
-    { name: 'Soap', icon: 'mdi:soap', category: 'household' },
-    { name: 'Salt', icon: 'mdi:shaker-outline', category: 'household' },
-    { name: 'Hammer', icon: 'mdi:hammer', category: 'household' },
-    { name: 'Nails', icon: 'mdi:nail', category: 'household' },
-    { name: 'Tape', icon: 'mdi:tape-measure', category: 'household' }
-] as const;
-
 export class BertAgent {
     private readonly agentName = 'bert';
 
     private getSystemPrompt(): string {
-        return `You are Bert, the Smart Shopping List Assistant. Your task is to manage and categorize shopping lists intelligently. 
+        return `You are Bert, the Smart Shopping List Assistant. Your task is to manage and categorize shopping lists intelligently.
 
-Current shopping list items:
-${this.getCurrentListItems()}
+        Current shopping list items:
+        ${this.getCurrentListItems()}
 
-Available predefined items and categories:
-${preselectedItems.map(item => item.name).join(', ')}
+        IMPORTANT RULES:
+        1. For combined operations (like clear and add), return all operations in a single response:
+           Example: 
+           {
+             "operations": [
+               {"type": "clear", "items": []},
+               {"type": "add", "items": [{"name": "Apple", "category": "fruits", "icon": "mdi:food-apple"}]}
+             ]
+           }
 
-IMPORTANT RULES:
-1. Always categorize items into these specific categories:
-   - fruits: Fresh fruits and fruit products
-   - vegetables: Fresh vegetables and vegetable products
-   - dairy: Dairy products, eggs, milk, cheese
-   - meat: Meat, poultry, fish, seafood
-   - bakery: Bread, pastries, baked goods
-   - beverages: All drinks including water, soda, alcohol
-   - snacks: Chips, nuts, candies, sweets
-   - household: Cleaning supplies, paper products
-   - other: Items that don't fit above categories
+        2. Always categorize items into these specific categories:
+        - fruits: Fresh fruits and fruit products
+        - vegetables: Fresh vegetables and vegetable products
+        - dairy: Dairy products, eggs, milk, cheese
+        - meat: Meat, poultry, fish, seafood
+        - bakery: Bread, pastries, baked goods
+        - beverages: All drinks including water, soda, alcohol
+        - snacks: Chips, nuts, candies, sweets
+        - household: Cleaning supplies, paper products
+        - grains: Pasta, rice, quinoa, cereals, grains
+        - other: Items that don't fit above categories
 
-2. Handle similar items and variations:
-   - Merge singular/plural forms
-   - Identify brand names (e.g., "Coca-Cola" → beverages)
-   - Use predefined names when available
-   - Avoid duplicates
+        3. Handle similar items and variations:
+        - Merge singular/plural forms
+        - Identify brand names (e.g., "Coca-Cola" → beverages)
+        - Use predefined names when available
+        - Avoid duplicates at all costs
 
-3. Smart categorization examples:
-   - "Cola" or "Pepsi" → beverages
-   - "Apple" or "Bananas" → fruits
-   - "Toilet paper" or "Soap" → household
-   - "Chips" or "Cookies" → snacks
+        4. Smart categorization examples:
+        - "Cola" or "Pepsi" → beverages
+        - "Apple" or "Bananas" → fruits
+        - "Toilet paper" or "Soap" → household
+        - "Chips" or "Cookies" → snacks
 
-Always respond using the smart_shopping_list tool with categorized operations.
-Include detailed categorization in your response.
-please always translate everything to english, no matter the input lagnauge. 
-`;
+        Always respond using the smart_shopping_list tool with categorized operations.
+        Include detailed categorization in your response.
+        please always translate everything to english, no matter the input lagnauge. 
+
+        When adding items, you should select the most appropriate Material Design Icon (MDI) for each item.
+        Follow these icon selection rules:
+        1. Always use MDI icons starting with 'mdi:'
+        2. Choose the most specific and appropriate icon for the item
+        3. Common patterns:
+           - Food items: mdi:food, mdi:food-apple, mdi:bread-slice, etc.
+           - Beverages: mdi:bottle-water, mdi:cup, mdi:beer, etc.
+           - Household: mdi:broom, mdi:tools, mdi:hammer, etc.
+        4. If no specific icon exists, use a relevant category icon
+        5. Format: { name: "Item Name", category: "category", icon: "mdi:specific-icon" }
+
+        Current shopping list items:
+        ${this.getCurrentListItems()}
+
+        Available categories:
+        ${Object.entries(categories).map(([id, name]) => `${id}: ${name}`).join('\n')}
+        `;
     }
 
     private readonly tools = [{
@@ -211,8 +155,13 @@ please always translate everything to english, no matter the input lagnauge.
                                                 "beverages",
                                                 "snacks",
                                                 "household",
+                                                "grains",
                                                 "other"
                                             ]
+                                        },
+                                        icon: {
+                                            type: "string",
+                                            description: "MDI icon identifier (e.g., mdi:water, mdi:food-apple)"
                                         },
                                         similarTo: { type: "string" },
                                         reason: { type: "string" }
@@ -270,7 +219,6 @@ please always translate everything to english, no matter the input lagnauge.
         const requestId = crypto.randomUUID();
 
         try {
-            // First, switch to o-Bring view
             const viewConfig = this.switchToBringView();
 
             // Add pending message
@@ -306,21 +254,24 @@ please always translate everything to english, no matter the input lagnauge.
             const { operations, language } = toolUse.input;
             const responseMessages: string[] = [];
 
+            // Sort operations to ensure clear happens before add
+            const sortedOperations = this.sortOperations(operations);
+
             // Process operations
-            for (const op of operations) {
+            for (const op of sortedOperations) {
                 switch (op.type) {
-                    case 'add':
-                        if (op.items.length > 0) {
-                            responseMessages.push(this.handleAddItems(op.items, language));
-                        }
+                    case 'clear':
+                        responseMessages.push(this.handleClearList(language));
                         break;
                     case 'remove':
                         if (op.items.length > 0) {
                             responseMessages.push(this.handleRemoveItems(op.items, language));
                         }
                         break;
-                    case 'clear':
-                        responseMessages.push(this.handleClearList(language));
+                    case 'add':
+                        if (op.items.length > 0) {
+                            responseMessages.push(this.handleAddItems(op.items, language));
+                        }
                         break;
                 }
             }
@@ -333,7 +284,7 @@ please always translate everything to english, no matter the input lagnauge.
                 status: 'complete',
                 payload: {
                     type: 'shopping_list',
-                    data: { operations },
+                    data: { operations: sortedOperations },
                     view: viewConfig
                 }
             });
@@ -370,22 +321,15 @@ please always translate everything to english, no matter the input lagnauge.
         }
     }
 
-    private handleAddItems(items: Array<{ name: string; category: string }>, language: string): string {
-        const newItems = items.map(item => {
-            const normalizedName = item.name.toLowerCase().trim();
-            // Try both singular and plural forms
-            const icon = itemIconMap[normalizedName] ||
-                itemIconMap[normalizedName.endsWith('s') ? normalizedName.slice(0, -1) : normalizedName + 's'] ||
-                categoryIcons[item.category as CategoryType] ||
-                'mdi:shopping';
+    private handleAddItems(items: Array<{ name: string; category: string; icon?: string }>, language: string): string {
+        const newItems = items.map(item => ({
+            id: Date.now() + Math.random(),
+            name: this.capitalizeFirstLetter(item.name),
+            category: item.category as CategoryType,
+            icon: item.icon || categoryIcons[item.category as CategoryType] || 'mdi:shopping'
+        }));
 
-            return {
-                id: Date.now() + Math.random(),
-                name: this.capitalizeFirstLetter(item.name),
-                category: item.category as CategoryType,
-                icon: icon
-            };
-        });
+        console.log('Adding items to store:', newItems); // Debug log
 
         shoppingListStore.update(list => [...list, ...newItems]);
 
@@ -420,6 +364,21 @@ please always translate everything to english, no matter the input lagnauge.
     private handleClearList(language: string): string {
         shoppingListStore.set([]);
         return 'I have cleared your shopping list.';
+    }
+
+    // Add this new method to sort operations
+    private sortOperations(operations: any[]): any[] {
+        const operationOrder = {
+            'clear': 1,
+            'remove': 2,
+            'add': 3,
+            'merge': 4,
+            'update': 5
+        };
+
+        return [...operations].sort((a, b) =>
+            (operationOrder[a.type] || 99) - (operationOrder[b.type] || 99)
+        );
     }
 }
 
