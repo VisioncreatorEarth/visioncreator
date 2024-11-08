@@ -511,195 +511,212 @@
 
 {#if $context.isOpen}
 	<div
-		class="fixed inset-0 z-50 flex flex-col items-center justify-end bg-surface-900/30 backdrop-blur-xl"
+		class="fixed inset-0 z-50 flex flex-col justify-end bg-surface-900/30 backdrop-blur-xl"
 		transition:fade={{ duration: 200 }}
 	>
-		<!-- Messages Display -->
-		<div class="w-full max-w-xl mx-4 mb-4 space-y-4">
-			<!-- User Transcription Message -->
-			{#if $context.currentTranscription}
-				<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
-					<div class="flex-shrink-0">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
-							<svg
-								class="w-6 h-6 text-tertiary-200"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-								/>
-							</svg>
+		<!-- Main container with proper bottom spacing -->
+		<div class="relative w-full max-w-xl mx-auto mb-20">
+			<!-- Scrollable content area - starts from top -->
+			<div class="px-4 overflow-y-auto" style="max-height: calc(100vh - 120px);">
+				<!-- Messages Container -->
+				<div class="space-y-3">
+					<!-- User Transcription Message -->
+					{#if $context.currentTranscription}
+						<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
+							<div class="flex-shrink-0">
+								<div
+									class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20"
+								>
+									<svg
+										class="w-6 h-6 text-tertiary-200"
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+										/>
+									</svg>
+								</div>
+							</div>
+							<div class="flex-1">
+								<p class="text-tertiary-200">{$context.currentTranscription}</p>
+							</div>
 						</div>
-					</div>
-					<div class="flex-1">
-						<p class="text-tertiary-200">{$context.currentTranscription}</p>
-					</div>
-				</div>
-			{/if}
+					{/if}
 
-			<!-- Assistant Response Message -->
-			{#if $currentState === 'action' && $context.actionMessage}
-				<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
-					<div class="flex-shrink-0">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
-							<img src="/logo.png" alt="Assistant" class="w-6 h-6" />
+					<!-- Assistant Response Message -->
+					{#if $currentState === 'action' && $context.actionMessage}
+						<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
+							<div class="flex-shrink-0">
+								<div
+									class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20"
+								>
+									<img src="/logo.png" alt="Assistant" class="w-6 h-6" />
+								</div>
+							</div>
+							<div class="flex-1">
+								<p class="text-tertiary-200">{$context.actionMessage}</p>
+							</div>
 						</div>
-					</div>
-					<div class="flex-1">
-						<p class="text-tertiary-200">{$context.actionMessage}</p>
-					</div>
-				</div>
-			{/if}
-		</div>
+					{/if}
 
-		<!-- Modal Content -->
-		<div class="w-full max-w-xl p-8 mx-4 mb-24 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
-			{#if $currentState === 'action' && $context.actionView}
-				<ComposeView view={$context.actionView} {session} showSpacer={false} />
-			{:else if $currentState === 'requestPermissions'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">🎤</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Enable Microphone</h2>
-					<p class="mt-2 text-tertiary-200/80">Please allow microphone access to continue.</p>
-					<div class="mt-4 text-sm text-tertiary-200/60">
-						<p>How to enable:</p>
-						<ol class="mt-2 text-left list-decimal list-inside">
-							<li>Click the lock icon in your browser's address bar</li>
-							<li>Find "Microphone" in the permissions list</li>
-							<li>Change the setting to "Allow"</li>
-							<li>Refresh the page</li>
-						</ol>
+					<!-- Modal Content -->
+					<div class="rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
+						{#if $currentState === 'action' && $context.actionView}
+							<div class="p-1 sm:p-2">
+								<ComposeView view={$context.actionView} {session} showSpacer={false} />
+							</div>
+						{:else if $currentState === 'requestPermissions'}
+							<div class="p-4 text-center">
+								<div class="mb-4 text-4xl">🎤</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Enable Microphone</h2>
+								<p class="mt-2 text-tertiary-200/80">Please allow microphone access to continue.</p>
+								<div class="mt-4 text-sm text-tertiary-200/60">
+									<p>How to enable:</p>
+									<ol class="mt-2 text-left list-decimal list-inside">
+										<li>Click the lock icon in your browser's address bar</li>
+										<li>Find "Microphone" in the permissions list</li>
+										<li>Change the setting to "Allow"</li>
+										<li>Refresh the page</li>
+									</ol>
+								</div>
+							</div>
+						{:else if $currentState === 'permissionBlocked'}
+							<div class="p-4 text-center">
+								<div class="mb-4 text-4xl">🚫</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Microphone Blocked</h2>
+								<p class="mt-2 text-tertiary-200/80">
+									Please enable microphone access in your browser settings.
+								</p>
+								<button
+									class="px-4 py-2 mt-4 text-sm font-medium rounded-lg bg-tertiary-200 text-surface-900"
+									on:click={() => machine.send('TRY_AGAIN')}
+								>
+									Try Again
+								</button>
+							</div>
+						{:else if $currentState === 'readyToRecord'}
+							<div class="p-4 text-center">
+								<div class="mb-4 text-4xl">🎤</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
+								<p class="mt-2 text-tertiary-200/80">Press and hold to start recording.</p>
+							</div>
+						{:else if $currentState === 'recording'}
+							<div class="p-4 text-center">
+								<div class="mb-4">
+									<div class="w-12 h-12 mx-auto bg-red-500 rounded-full animate-pulse" />
+								</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
+								<p class="mt-2 text-tertiary-200/80">Release to process your request</p>
+							</div>
+						{:else if $currentState === 'transcribing'}
+							<div class="p-4 text-center">
+								<div class="mb-4">
+									<svg
+										class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
+										fill="none"
+										viewBox="0 0 24 24"
+									>
+										<circle
+											class="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											stroke-width="4"
+										/>
+										<path
+											class="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										/>
+									</svg>
+								</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Transcribing...</h2>
+								<p class="mt-2 text-tertiary-200/80">Please wait...</p>
+							</div>
+						{:else if $currentState === 'processing'}
+							<div class="p-4 text-center">
+								<div class="mb-4">
+									<svg
+										class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
+										fill="none"
+										viewBox="0 0 24 24"
+									>
+										<circle
+											class="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											stroke-width="4"
+										/>
+										<path
+											class="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										/>
+									</svg>
+								</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Processing...</h2>
+								<p class="mt-2 text-tertiary-200/80">Please wait...</p>
+							</div>
+						{:else if $currentState === 'error'}
+							<div class="p-4 text-center">
+								<div class="mb-4 text-4xl">❌</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Transcription Error</h2>
+								<p class="mt-2 text-tertiary-200/80">
+									An error occurred while processing the transcription.
+								</p>
+								<button
+									class="px-4 py-2 mt-4 text-sm font-medium rounded-lg bg-tertiary-200 text-surface-900"
+									on:click={() => machine.send('TRY_AGAIN')}
+								>
+									Try Again
+								</button>
+							</div>
+						{:else if $currentState === 'paywall'}
+							<div class="p-4 text-center">
+								<div class="mb-4 text-4xl">💸</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Paywall</h2>
+								<p class="mt-2 text-tertiary-200/80">You've reached the paywall limit.</p>
+							</div>
+						{:else if $currentState === 'waitinglist'}
+							<div class="p-4 text-center">
+								<div class="mb-4 text-4xl">🎉</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">Coming Soon!</h2>
+								<p class="mt-2 text-tertiary-200/80">
+									You're on the waiting list. Rank up in the leaderboard to get early access!
+								</p>
+								<div class="mt-4 space-y-2">
+									<p class="text-sm text-tertiary-200/60">Want to skip the queue? Here's how:</p>
+									<ul class="text-sm list-disc list-inside text-tertiary-200/80">
+										<li>Participate in community challenges</li>
+										<li>Share your progress</li>
+										<li>Help other members</li>
+									</ul>
+								</div>
+								<button
+									class="px-4 py-2 mt-6 text-sm font-medium transition-colors rounded-lg bg-tertiary-200 text-surface-900 hover:bg-tertiary-300"
+									on:click={() => machine.send('CLOSE')}
+								>
+									Got it
+								</button>
+							</div>
+						{/if}
 					</div>
 				</div>
-			{:else if $currentState === 'permissionBlocked'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">🚫</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Blocked</h2>
-					<p class="mt-2 text-tertiary-200/80">
-						Please enable microphone access in your browser settings.
-					</p>
-					<button
-						class="px-4 py-2 mt-4 text-sm font-medium rounded-lg bg-tertiary-200 text-surface-900"
-						on:click={() => machine.send('TRY_AGAIN')}
-					>
-						Try Again
-					</button>
-				</div>
-			{:else if $currentState === 'readyToRecord'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">🎤</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
-					<p class="mt-2 text-tertiary-200/80">Press and hold to start recording.</p>
-				</div>
-			{:else if $currentState === 'recording'}
-				<div class="text-center">
-					<div class="mb-4">
-						<div class="w-12 h-12 mx-auto bg-red-500 rounded-full animate-pulse" />
-					</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
-					<p class="mt-2 text-tertiary-200/80">Release to process your request</p>
-				</div>
-			{:else if $currentState === 'transcribing'}
-				<div class="text-center">
-					<div class="mb-4">
-						<svg
-							class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<circle
-								class="opacity-25"
-								cx="12"
-								cy="12"
-								r="10"
-								stroke="currentColor"
-								stroke-width="4"
-							/>
-							<path
-								class="opacity-75"
-								fill="currentColor"
-								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-							/>
-						</svg>
-					</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Transcribing...</h2>
-					<p class="mt-2 text-tertiary-200/80">Please wait...</p>
-				</div>
-			{:else if $currentState === 'processing'}
-				<div class="text-center">
-					<div class="mb-4">
-						<svg
-							class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<circle
-								class="opacity-25"
-								cx="12"
-								cy="12"
-								r="10"
-								stroke="currentColor"
-								stroke-width="4"
-							/>
-							<path
-								class="opacity-75"
-								fill="currentColor"
-								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-							/>
-						</svg>
-					</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Processing...</h2>
-					<p class="mt-2 text-tertiary-200/80">Please wait...</p>
-				</div>
-			{:else if $currentState === 'error'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">❌</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Transcription Error</h2>
-					<p class="mt-2 text-tertiary-200/80">
-						An error occurred while processing the transcription.
-					</p>
-					<button
-						class="px-4 py-2 mt-4 text-sm font-medium rounded-lg bg-tertiary-200 text-surface-900"
-						on:click={() => machine.send('TRY_AGAIN')}
-					>
-						Try Again
-					</button>
-				</div>
-			{:else if $currentState === 'paywall'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">💸</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Paywall</h2>
-					<p class="mt-2 text-tertiary-200/80">You've reached the paywall limit.</p>
-				</div>
-			{:else if $currentState === 'waitinglist'}
-				<div class="text-center">
-					<div class="mb-4 text-4xl">🎉</div>
-					<h2 class="text-2xl font-bold text-tertiary-200">Coming Soon!</h2>
-					<p class="mt-2 text-tertiary-200/80">
-						You're on the waiting list. Rank up in the leaderboard to get early access!
-					</p>
-					<div class="mt-4 space-y-2">
-						<p class="text-sm text-tertiary-200/60">Want to skip the queue? Here's how:</p>
-						<ul class="text-sm list-disc list-inside text-tertiary-200/80">
-							<li>Participate in community challenges</li>
-							<li>Share your progress</li>
-							<li>Help other members</li>
-						</ul>
-					</div>
-					<button
-						class="px-4 py-2 mt-6 text-sm font-medium transition-colors rounded-lg bg-tertiary-200 text-surface-900 hover:bg-tertiary-300"
-						on:click={() => machine.send('CLOSE')}
-					>
-						Got it
-					</button>
-				</div>
-			{/if}
+			</div>
+
+			<!-- Bottom fade effect -->
+			<div
+				class="absolute bottom-0 left-0 right-0 z-10 h-8 bg-gradient-to-t from-surface-900/30 to-transparent"
+			/>
 		</div>
 	</div>
 {/if}
