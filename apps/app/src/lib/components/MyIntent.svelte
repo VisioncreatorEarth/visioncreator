@@ -16,11 +16,13 @@
 		audioStream: MediaStream | null;
 		mediaRecorder: MediaRecorder | null;
 		audioChunks: Blob[];
-		audioData: string | null;
-		visualizerMode: 'user' | 'hominio';
+		audioData: Blob | null;
+		visualizerMode: 'user' | 'assistant';
 		hominioAudio: HTMLAudioElement | null;
 		currentTranscription: string | null;
 		isStartingRecording: boolean;
+		actionView: any | null;
+		actionMessage: string | null;
 	}
 
 	const intentConfig: MachineConfig<IntentContext> = {
@@ -37,7 +39,9 @@
 			visualizerMode: 'user',
 			hominioAudio: null,
 			currentTranscription: null,
-			isStartingRecording: false
+			isStartingRecording: false,
+			actionView: null,
+			actionMessage: null
 		},
 		states: {
 			init: {
@@ -101,7 +105,7 @@
 				on: {
 					TRANSCRIPTION_SUCCESS: {
 						target: 'processing',
-						actions: ['handleTranscriptionSuccess']
+						actions: ['handleTranscriptionSuccess', 'processTranscription']
 					},
 					TRANSCRIPTION_ERROR: {
 						target: 'error',
@@ -118,8 +122,12 @@
 				}
 			},
 			processing: {
-				entry: ['processTranscription'],
+				entry: ['playHominioAudio'],
 				on: {
+					ACTION_READY: {
+						target: 'action',
+						actions: ['setActionView']
+					},
 					PROCESSING_COMPLETE: {
 						target: 'init',
 						actions: ['cleanup']
@@ -127,6 +135,15 @@
 					TRANSCRIPTION_ERROR: {
 						target: 'error',
 						actions: ['handleTranscriptionError']
+					}
+				}
+			},
+			action: {
+				entry: ['confirmActionView'],
+				on: {
+					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
 					}
 				}
 			},
@@ -180,12 +197,10 @@
 
 		openModal: (context: IntentContext) => {
 			context.isOpen = true;
-			console.log('[AudioDebug] Modal opened');
 		},
 
 		startNewConversation: (context: IntentContext) => {
 			conversationManager.startNewConversation();
-			console.log('[AudioDebug] New conversation started');
 		},
 
 		requestMicrophonePermission: async (context: IntentContext) => {
@@ -205,12 +220,10 @@
 
 		startRecording: async (context: IntentContext) => {
 			if (context.isStartingRecording) {
-				console.log('[AudioDebug] Recording already starting, ignoring duplicate request');
 				return;
 			}
 
 			context.isStartingRecording = true;
-			console.log('[AudioDebug] Starting recording, existing stream:', !!context.audioStream);
 
 			try {
 				// Clean up any existing stream first
@@ -245,15 +258,7 @@
 
 				recorder.start(50);
 				context.mediaRecorder = recorder;
-
-				console.log('[AudioDebug] Recording started successfully', {
-					streamActive: stream.active,
-					streamTracks: stream.getTracks().length,
-					recorderState: recorder.state,
-					mimeType: recorder.mimeType
-				});
 			} catch (error) {
-				console.error('[AudioDebug] Recording setup failed:', error);
 				machine.send('TRANSCRIPTION_ERROR');
 			} finally {
 				context.isStartingRecording = false;
@@ -261,8 +266,6 @@
 		},
 
 		stopRecording: (context: IntentContext) => {
-			console.log('[AudioDebug] Stopping recording and cleaning up audio stream');
-
 			// Stop the MediaRecorder if it's recording
 			if (context.mediaRecorder?.state === 'recording') {
 				context.mediaRecorder.stop();
@@ -271,18 +274,13 @@
 			// Immediately stop all audio tracks
 			if (context.audioStream) {
 				context.audioStream.getTracks().forEach((track) => {
-					console.log('[AudioDebug] Stopping audio track:', track.kind, track.id);
 					track.stop();
 				});
 				context.audioStream = null;
 			}
-
-			console.log('[AudioDebug] Recording and audio stream stopped');
 		},
 
 		prepareTranscription: async (context: IntentContext) => {
-			console.log('Preparing transcription, recorder state:', context.mediaRecorder?.state);
-
 			try {
 				if (!context.mediaRecorder) {
 					console.error('No media recorder found');
@@ -295,10 +293,6 @@
 
 				// Process existing audio chunks without waiting for new ones
 				const audioBlob = new Blob(context.audioChunks, { type: 'audio/mp4' });
-				console.log('Audio blob created:', {
-					size: audioBlob.size,
-					type: audioBlob.type
-				});
 
 				if (audioBlob.size < 100) {
 					throw new Error('Audio recording too short');
@@ -335,19 +329,10 @@
 				if (response.data?.text) {
 					context.currentTranscription = response.data.text;
 					machine.send('TRANSCRIPTION_SUCCESS');
+					console.log('Transcription successful:', context.currentTranscription);
 				}
 			} catch (error) {
-				console.log('Full WunderGraph Error:', {
-					error,
-					name: error.name,
-					message: error.message,
-					code: error.code,
-					status: error.status,
-					response: error.response,
-					stack: error.stack
-				});
-
-				// Handle WunderGraph's native AuthorizationError
+				console.error('Transcription error:', error);
 				if (error.name === 'AuthorizationError' || error.code === 'AuthorizationError') {
 					machine.send('WAITINGLIST');
 				} else {
@@ -374,37 +359,29 @@
 
 		processTranscription: async (context: IntentContext) => {
 			try {
+				console.log('Starting processTranscription');
 				const response = await hominioAgent.processRequest(
 					context.currentTranscription!,
 					conversationManager.getMessageContext() || []
 				);
 
-				// Handle the response payload and close modal
 				if (response?.message?.payload) {
 					const payload = response.message.payload;
+					console.log('Received payload:', payload);
 
-					// Close modal first
-					context.isOpen = false;
-					machine.send('PROCESSING_COMPLETE');
+					if (payload.type === 'action') {
+						// Set the action view data first
+						context.actionView = payload.data;
+						context.actionMessage = response.message?.content;
+						context.isOpen = true;
 
-					// Then handle the payload
-					switch (payload.type) {
-						case 'view':
-							await handleViewPayload(payload);
-							break;
-						case 'form':
-							await handleFormPayload(payload);
-							break;
-						case 'action':
-							await handleActionPayload(payload);
-							break;
-						case 'data':
-							await handleDataPayload(payload);
-							break;
+						console.log('Sending ACTION_READY event');
+						// Then send the state transition event
+						machine.send('ACTION_READY');
+					} else {
+						machine.send('PROCESSING_COMPLETE');
 					}
 				} else {
-					// If no payload, just close the modal
-					context.isOpen = false;
 					machine.send('PROCESSING_COMPLETE');
 				}
 			} catch (error) {
@@ -438,34 +415,43 @@
 		},
 
 		cleanup: (context: IntentContext) => {
-			console.log('[AudioDebug] Running cleanup');
-
-			// These might already be cleaned up, but let's make sure
-			if (context.mediaRecorder?.state === 'recording') {
-				context.mediaRecorder.stop();
-			}
-
-			if (context.audioStream) {
-				context.audioStream.getTracks().forEach((track) => {
-					console.log('[AudioDebug] Cleaning up remaining audio track:', track.kind, track.id);
-					track.stop();
-				});
-				context.audioStream = null;
-			}
-
-			// Reset all context values
 			context.mediaRecorder = null;
 			context.audioChunks = [];
 			context.audioData = null;
 			context.currentTranscription = null;
 			context.visualizerMode = 'user';
-			context.isOpen = false;
 			context.isStartingRecording = false;
 
-			// End the current conversation when modal closes
-			conversationManager.endCurrentConversation();
+			// Don't reset these immediately when cleaning up after action
+			if ($currentState !== 'action') {
+				context.isOpen = false;
+				context.actionView = null;
+				context.actionMessage = null;
+			}
 
-			console.log('[AudioDebug] Cleanup complete, context reset and conversation ended');
+			conversationManager.endCurrentConversation();
+		},
+
+		setActionView: (context: IntentContext) => {
+			console.log('Setting Action View:', {
+				hasView: !!context.actionView,
+				currentState: $currentState
+			});
+
+			// The view should already be set in the context from processTranscription
+			if (!context.actionView) {
+				console.error('No action view data available');
+				machine.send('TRANSCRIPTION_ERROR');
+			}
+		},
+
+		confirmActionView: (context: IntentContext) => {
+			console.log('Action View Confirmed:', {
+				hasView: !!context.actionView,
+				view: context.actionView,
+				isOpen: context.isOpen,
+				currentState: $currentState
+			});
 		}
 	};
 
@@ -474,6 +460,7 @@
 		isPermissionNotGranted: (context: IntentContext) => context.permissionState !== 'granted'
 	};
 
+	export let session: any;
 	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
 	const machine = createMachine(intentConfig, intentActions, intentGuards);
@@ -484,13 +471,13 @@
 		const isRecording = $currentState === 'recording';
 		const isProcessing = $currentState === 'processing';
 		onRecordingStateChange(isRecording, isProcessing);
-	}
 
-	// Add this to track state changes
-	$: if ($currentState) {
-		console.log('[AudioDebug] State changed:', $currentState, {
-			hasStream: !!$context.audioStream,
-			recorderState: $context.mediaRecorder?.state
+		// Add state transition debugging
+		console.log('State Changed:', {
+			state: $currentState,
+			context: $context,
+			hasActionView: !!$context.actionView,
+			isOpen: $context.isOpen
 		});
 	}
 
@@ -535,14 +522,14 @@
 		class="fixed inset-0 z-50 flex flex-col items-center justify-end bg-surface-900/30 backdrop-blur-xl"
 		transition:fade={{ duration: 200 }}
 	>
-		<!-- Transcription Message Display -->
-		{#if $context.currentTranscription}
-			<div class="w-full max-w-lg p-4 mx-4 mb-4">
+		<!-- Messages Display -->
+		<div class="w-full max-w-lg p-4 mx-4 mb-4 space-y-4">
+			<!-- User Transcription Message -->
+			{#if $context.currentTranscription}
 				<div
 					class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
 				>
 					<div class="flex-shrink-0">
-						<!-- User Avatar or Icon -->
 						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
 							<svg
 								class="w-6 h-6 text-tertiary-200"
@@ -564,14 +551,32 @@
 						<p class="text-tertiary-200">{$context.currentTranscription}</p>
 					</div>
 				</div>
-			</div>
-		{/if}
+			{/if}
 
-		<!-- Existing Modal Content -->
+			<!-- Assistant Response Message -->
+			{#if $currentState === 'action' && $context.actionMessage}
+				<div
+					class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
+				>
+					<div class="flex-shrink-0">
+						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20">
+							<img src="/logo.png" alt="Assistant" class="w-6 h-6" />
+						</div>
+					</div>
+					<div class="flex-1">
+						<p class="text-tertiary-200">{$context.actionMessage}</p>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<!-- Modal Content -->
 		<div
 			class="w-full max-w-lg p-8 mx-4 mb-24 border rounded-xl bg-tertiary-200/10 backdrop-blur-xl border-tertiary-200/20"
 		>
-			{#if $currentState === 'requestPermissions'}
+			{#if $currentState === 'action' && $context.actionView}
+				<ComposeView view={$context.actionView} {session} showSpacer={false} />
+			{:else if $currentState === 'requestPermissions'}
 				<div class="text-center">
 					<div class="mb-4 text-4xl">🎤</div>
 					<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Required</h2>

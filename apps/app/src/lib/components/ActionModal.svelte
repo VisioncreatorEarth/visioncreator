@@ -217,6 +217,7 @@
 {#if session}
 	<MyIntent
 		bind:this={myIntentRef}
+		{session}
 		isOpen={isIntentModalOpen}
 		onRecordingStateChange={(rec, proc) => {
 			isRecording = rec;
