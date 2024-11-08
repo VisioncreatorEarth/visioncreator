@@ -6,6 +6,8 @@
 	import { createMutation } from '$lib/wundergraph';
 	import { hominioAgent } from '$lib/agents/hominioAgent';
 	import { conversationManager } from '$lib/stores/intentStore';
+	import { eventBus } from '$lib/composables/eventBus';
+	import { onMount } from 'svelte';
 
 	let isLongPressActive = false;
 
@@ -45,7 +47,7 @@
 		},
 		states: {
 			init: {
-				entry: ['initializePermissions'],
+				entry: ['initializePermissions', 'closeModal'],
 				on: {
 					LONG_PRESS: [
 						{
@@ -142,6 +144,10 @@
 				entry: ['confirmActionView'],
 				on: {
 					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
+					},
+					FORM_SUCCESS: {
 						target: 'init',
 						actions: ['cleanup']
 					},
@@ -419,7 +425,6 @@
 		},
 
 		cleanup: (context: IntentContext) => {
-			// Stop recording and clear audio data
 			if (context.mediaRecorder) {
 				context.mediaRecorder.stop();
 			}
@@ -427,20 +432,20 @@
 				context.audioStream.getTracks().forEach((track) => track.stop());
 			}
 
+			// Reset all context values
 			context.mediaRecorder = null;
 			context.audioChunks = [];
 			context.audioData = null;
 			context.currentTranscription = null;
 			context.visualizerMode = 'user';
 			context.isStartingRecording = false;
+			context.isOpen = false; // Make sure modal is closed
+			context.actionView = null;
+			context.actionMessage = null;
+		},
 
-			// Only clear conversation state if we're fully closing
-			if ($currentState === 'init') {
-				context.isOpen = false;
-				context.actionView = null;
-				context.actionMessage = null;
-				conversationManager.endCurrentConversation();
-			}
+		closeModal: (context: IntentContext) => {
+			context.isOpen = false; // Explicitly close modal in init state
 		},
 
 		setActionView: (context: IntentContext) => {
@@ -517,6 +522,18 @@
 	onDestroy(() => {
 		// Ensure cleanup runs when component is destroyed
 		intentActions.cleanup(machine.getState().context);
+	});
+
+	onMount(() => {
+		const handleStateChange = (event: string) => {
+			machine.send(event);
+		};
+
+		eventBus.on('intent:stateChange', handleStateChange);
+
+		return () => {
+			eventBus.off('intent:stateChange', handleStateChange);
+		};
 	});
 </script>
 

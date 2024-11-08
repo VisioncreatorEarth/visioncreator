@@ -31,7 +31,10 @@ export class AgentWalter {
             }
 
             // Emit success event
-            eventBus.emit(operation);
+            eventBus.emit('form:success', {
+                operation,
+                result: result.data
+            });
 
             // Return success response (no direct message adding)
             return {
