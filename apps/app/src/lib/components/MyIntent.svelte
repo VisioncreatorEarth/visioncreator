@@ -103,7 +103,7 @@
 				}
 			},
 			transcribing: {
-				entry: ['prepareTranscription'],
+				entry: ['prepareTranscription', 'playHominioAudio'],
 				on: {
 					TRANSCRIPTION_SUCCESS: {
 						target: 'processing',
@@ -124,7 +124,6 @@
 				}
 			},
 			processing: {
-				entry: ['playHominioAudio'],
 				on: {
 					ACTION_READY: {
 						target: 'action',
