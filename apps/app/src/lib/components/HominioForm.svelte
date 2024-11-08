@@ -6,11 +6,6 @@
 	import { AgentWalter } from '$lib/agents/agentWalter';
 	import { eventBus } from '$lib/composables/eventBus';
 
-	const dispatch = createEventDispatcher<{
-		close: void;
-		message: { role: string; content: string; timestamp: number; toolResult?: any };
-	}>();
-
 	export let me: {
 		data: {
 			formId?: string;
