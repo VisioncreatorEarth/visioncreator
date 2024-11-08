@@ -144,6 +144,10 @@
 					CLOSE: {
 						target: 'init',
 						actions: ['cleanup']
+					},
+					LONG_PRESS: {
+						target: 'recording',
+						actions: ['startRecording']
 					}
 				}
 			},
@@ -415,6 +419,14 @@
 		},
 
 		cleanup: (context: IntentContext) => {
+			// Stop recording and clear audio data
+			if (context.mediaRecorder) {
+				context.mediaRecorder.stop();
+			}
+			if (context.audioStream) {
+				context.audioStream.getTracks().forEach((track) => track.stop());
+			}
+
 			context.mediaRecorder = null;
 			context.audioChunks = [];
 			context.audioData = null;
@@ -422,14 +434,13 @@
 			context.visualizerMode = 'user';
 			context.isStartingRecording = false;
 
-			// Don't reset these immediately when cleaning up after action
-			if ($currentState !== 'action') {
+			// Only clear conversation state if we're fully closing
+			if ($currentState === 'init') {
 				context.isOpen = false;
 				context.actionView = null;
 				context.actionMessage = null;
+				conversationManager.endCurrentConversation();
 			}
-
-			conversationManager.endCurrentConversation();
 		},
 
 		setActionView: (context: IntentContext) => {
@@ -469,7 +480,7 @@
 
 	$: if ($currentState) {
 		const isRecording = $currentState === 'recording';
-		const isProcessing = $currentState === 'processing';
+		const isProcessing = ['transcribing', 'processing', 'action'].includes($currentState);
 		onRecordingStateChange(isRecording, isProcessing);
 	}
 

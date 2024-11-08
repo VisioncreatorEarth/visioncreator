@@ -204,7 +204,10 @@
 					payload: result.message.payload
 				});
 
+				// Add 1 second delay before closing
+				await new Promise((resolve) => setTimeout(resolve, 1000));
 				dispatch('close');
+				machine.send('CLOSE'); // Send CLOSE event to MyIntent machine
 			} else {
 				throw new Error(result.error || 'Form submission failed');
 			}
