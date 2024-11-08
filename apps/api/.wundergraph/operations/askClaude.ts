@@ -59,7 +59,7 @@ export default createOperation.mutation({
         }
 
         // Check if user has required roles
-        if (!user.roles?.includes("admin")) {
+        if (!user?.customClaims?.roles?.includes("admin")) {
             throw new AuthorizationError({
                 message: "User does not have required permissions.",
             });
