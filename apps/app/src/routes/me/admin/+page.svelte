@@ -87,7 +87,7 @@
 		selectedUserId = user.id;
 	}
 
-	async function manageTier(userId: string | null, tier: string) {
+	async function manageTier(userId: string | null, tier: 'free' | 'homino' | 'visioncreator') {
 		if (!userId) return;
 		await $manageCapabilitiesMutation.mutate({
 			userId,
@@ -97,6 +97,7 @@
 				name: `${tier} Tier`,
 				description: `${tier} tier subscription`,
 				config: {
+					type: 'TIER',
 					tier,
 					aiRequestsLimit: tiers.find((t) => t.id === tier)?.aiLimit || 0,
 					aiRequestsUsed: 0,
@@ -116,6 +117,7 @@
 				name: 'Shopping List Access',
 				description: `${action} shopping list access`,
 				config: {
+					type: 'RESOURCE',
 					resourceId: selectedListId,
 					resourceType: 'SHOPPING_LIST',
 					accessLevel: selectedAccessLevel

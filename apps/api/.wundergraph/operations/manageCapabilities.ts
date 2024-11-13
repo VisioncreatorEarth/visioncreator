@@ -1,18 +1,29 @@
 import { createOperation, z } from "../generated/wundergraph.factory";
 import type { Capability } from './types';
 
+// Define the tier type explicitly
+const TierType = z.enum(['free', 'homino', 'visioncreator']);
+const AccessLevelType = z.enum(['read', 'write', 'owner']);
+
 const CapabilityInput = z.object({
     type: z.enum(['TIER', 'RESOURCE']),
     name: z.string(),
     description: z.string(),
-    config: z.object({
-        // Tier specific
-        tier: z.enum(['free', 'homino', 'visioncreator']).optional(),
-        // Resource specific
-        resourceId: z.string().optional(),
-        resourceType: z.string().optional(),
-        accessLevel: z.enum(['read', 'write', 'owner']).optional(),
-    })
+    config: z.discriminatedUnion('type', [
+        z.object({
+            type: z.literal('TIER'),
+            tier: TierType,
+            aiRequestsLimit: z.number(),
+            aiRequestsUsed: z.number(),
+            lastResetAt: z.string()
+        }),
+        z.object({
+            type: z.literal('RESOURCE'),
+            resourceId: z.string(),
+            resourceType: z.string(),
+            accessLevel: AccessLevelType
+        })
+    ])
 });
 
 export default createOperation.mutation({
