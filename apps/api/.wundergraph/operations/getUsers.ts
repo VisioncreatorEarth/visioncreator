@@ -7,15 +7,15 @@ export default createOperation.query({
         requireMatchAll: ["authenticated"],
     },
     handler: async ({ context }) => {
-        // For now, return mocked users
-        const mockedUsers = [
-            { id: "user-1", name: "John Admin" },
-            { id: "user-2", name: "Alice Developer" },
-            { id: "user-3", name: "Bob User" },
-            { id: "user-4", name: "Carol Tester" },
-            { id: "user-5", name: "Dave Manager" },
-        ];
+        const { data: users, error } = await context.supabase
+            .from("profiles")
+            .select("id, name")
+            .order("name");
 
-        return { users: mockedUsers };
+        if (error) {
+            throw new Error("Failed to fetch users");
+        }
+
+        return { users };
     },
 }); 

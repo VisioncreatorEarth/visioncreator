@@ -1,44 +1,47 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import { AccessLevel, UserCapabilities } from './types';
+import type { Capability } from './types';
 
 export default createOperation.query({
     input: z.object({
         userId: z.string(),
     }),
     requireAuthentication: true,
-    handler: async ({ input }): Promise<UserCapabilities> => {
-        const mockTier = input.userId.includes('admin') ? 'visioncreator' : 'free';
-
-        const tierCapabilities = [
+    handler: async ({ input }): Promise<{ capabilities: Capability[] }> => {
+        // Still mocked, but structured according to new unified system
+        const mockCapabilities: Capability[] = [
             {
-                type: 'AI_REQUESTS',
-                limit: mockTier === 'visioncreator' ? 500 : mockTier === 'homino' ? 100 : 5,
-                tier: mockTier
-            }
-        ];
-
-        // Mock resource capabilities (shopping lists)
-        const mockShoppingLists = [
-            {
-                resourceId: 'default-list',
-                resourceType: 'SHOPPING_LIST',
-                accessLevel: 'owner' as AccessLevel,
+                id: 'cap-1',
+                userId: input.userId,
+                type: 'TIER',
+                name: 'Homino Tier',
+                description: 'Homino tier subscription with advanced features',
                 grantedAt: new Date().toISOString(),
-                grantedBy: 'system'
+                grantedBy: 'system',
+                active: true,
+                config: {
+                    tier: 'homino',
+                    aiRequestsLimit: 100,
+                    aiRequestsUsed: 45,
+                    lastResetAt: new Date().toISOString()
+                }
             },
             {
-                resourceId: 'groceries',
-                resourceType: 'SHOPPING_LIST',
-                accessLevel: 'write' as AccessLevel,
+                id: 'cap-2',
+                userId: input.userId,
+                type: 'RESOURCE',
+                name: 'Shopping List Access',
+                description: 'Access to shared shopping list',
                 grantedAt: new Date().toISOString(),
-                grantedBy: 'user-1'
+                grantedBy: 'user-1',
+                active: true,
+                config: {
+                    resourceId: 'list-1',
+                    resourceType: 'SHOPPING_LIST',
+                    accessLevel: 'write'
+                }
             }
         ];
 
-        return {
-            tier: mockTier,
-            tierCapabilities,
-            resourceCapabilities: mockShoppingLists
-        };
+        return { capabilities: mockCapabilities };
     },
 }); 
