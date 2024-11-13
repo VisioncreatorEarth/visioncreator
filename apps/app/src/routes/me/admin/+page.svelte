@@ -7,54 +7,28 @@
 		name: string;
 	}
 
-	interface TierCapability {
-		type: string;
-		limit?: number;
-		tier: string;
-	}
-
-	interface ResourceCapability {
-		resourceId: string;
-		resourceType: string;
-		accessLevel: 'read' | 'write' | 'owner';
-		grantedAt: string;
-		grantedBy: string;
-	}
-
-	interface CapabilitiesQueryResult {
-		tier: string;
-		tierCapabilities: TierCapability[];
-		resourceCapabilities: ResourceCapability[];
-	}
-
-	interface AuditLog {
-		timestamp: string;
-		action: string;
-		userId: string;
-		details: string;
-		performedBy: string;
-	}
-
 	// Queries and mutations with proper store syntax
-	const usersQuery = createQuery<{ users: User[] }>({
+	const usersQuery = createQuery({
 		operationName: 'getUsers',
 		enabled: true
 	});
 
 	let selectedUserId: string | null = null;
 
-	$: getUserCapabilitiesQuery = createQuery<CapabilitiesQueryResult>({
+	$: getUserCapabilitiesQuery = createQuery({
 		operationName: 'getUserCapabilities',
+		input: { userId: selectedUserId || '' },
+		enabled: !!selectedUserId
+	});
+
+	$: auditLogsQuery = createQuery({
+		operationName: 'getAuditLogs',
 		input: { userId: selectedUserId || '' },
 		enabled: !!selectedUserId
 	});
 
 	const manageCapabilitiesMutation = createMutation({
 		operationName: 'manageCapabilities'
-	});
-
-	const manageListAccessMutation = createMutation({
-		operationName: 'manageListAccess'
 	});
 
 	// Constants
@@ -99,59 +73,59 @@
 	let selectedAccessLevel: 'read' | 'write' | 'owner' = 'read';
 	let selectedListId: string | null = null;
 
-	// Mock audit logs (would come from API in real implementation)
-	$: auditLogs = [
-		{
-			timestamp: new Date().toISOString(),
-			action: 'TIER_CHANGE',
-			userId: selectedUserId || '',
-			details: 'Changed to Homino tier',
-			performedBy: 'Admin'
-		},
-		{
-			timestamp: new Date(Date.now() - 86400000).toISOString(),
-			action: 'ACCESS_GRANTED',
-			userId: selectedUserId || '',
-			details: 'Granted write access to Shopping List "Groceries"',
-			performedBy: 'Owner'
-		}
-	];
+	// Helper functions to work with the new capability system
+	function getTierCapability(capabilities: Capability[]) {
+		return capabilities.find((c) => c.type === 'TIER' && c.active);
+	}
+
+	function getResourceCapabilities(capabilities: Capability[]) {
+		return capabilities.filter((c) => c.type === 'RESOURCE' && c.active);
+	}
 
 	// Functions
 	async function selectUser(user: User) {
 		selectedUserId = user.id;
 	}
 
-	async function updateTier(newTier: string) {
-		try {
-			await $manageCapabilitiesMutation.mutateAsync({
-				userId: selectedUserId,
-				tier: newTier
-			});
-			$getUserCapabilitiesQuery.refetch();
-		} catch (error) {
-			console.error('Failed to update tier:', error);
-		}
+	async function manageTier(userId: string | null, tier: string) {
+		if (!userId) return;
+		await $manageCapabilitiesMutation.mutate({
+			userId,
+			action: 'grant',
+			capability: {
+				type: 'TIER',
+				name: `${tier} Tier`,
+				description: `${tier} tier subscription`,
+				config: {
+					tier,
+					aiRequestsLimit: tiers.find((t) => t.id === tier)?.aiLimit || 0,
+					aiRequestsUsed: 0,
+					lastResetAt: new Date().toISOString()
+				}
+			}
+		});
 	}
 
 	async function manageListAccess(action: 'grant' | 'revoke') {
-		if (!selectedListId || !selectedUserId) return;
-
-		try {
-			await $manageListAccessMutation.mutateAsync({
-				listId: selectedListId,
-				userId: selectedUserId,
-				accessLevel: selectedAccessLevel,
-				action
-			});
-			$getUserCapabilitiesQuery.refetch();
-		} catch (error) {
-			console.error('Failed to manage list access:', error);
-		}
+		if (!selectedUserId || !selectedListId) return;
+		await $manageCapabilitiesMutation.mutate({
+			userId: selectedUserId,
+			action,
+			capability: {
+				type: 'RESOURCE',
+				name: 'Shopping List Access',
+				description: `${action} shopping list access`,
+				config: {
+					resourceId: selectedListId,
+					resourceType: 'SHOPPING_LIST',
+					accessLevel: selectedAccessLevel
+				}
+			}
+		});
 	}
 </script>
 
-<div class="container h-screen p-4 mx-auto">
+<div class="container p-4 mx-auto o">
 	<h1 class="mb-6 text-3xl font-bold text-white">User Management</h1>
 
 	{#if $usersQuery.isLoading}
@@ -163,7 +137,7 @@
 	{:else}
 		<div class="grid grid-cols-3 gap-8">
 			<!-- User List - 1/3 width -->
-			<div class="p-6 rounded-lg bg-surface-800">
+			<div class="h-screen p-6 overflow-auto rounded-lg bg-surface-800">
 				<h2 class="mb-4 text-xl font-semibold text-white">Users</h2>
 				<div class="space-y-2">
 					{#each $usersQuery.data?.users || [] as user}
@@ -205,8 +179,9 @@
 											type="radio"
 											name="tier"
 											class="radio"
-											checked={$getUserCapabilitiesQuery.data.tier === tier.id}
-											on:change={() => updateTier(tier.id)}
+											checked={getTierCapability($getUserCapabilitiesQuery.data.capabilities)
+												?.config.tier === tier.id}
+											on:change={() => manageTier(selectedUserId, tier.id)}
 										/>
 									</label>
 								</div>
@@ -229,18 +204,18 @@
 						</div>
 
 						<!-- Current Access -->
-						{#if $getUserCapabilitiesQuery.data.resourceCapabilities.length > 0}
+						{#if getResourceCapabilities($getUserCapabilitiesQuery.data.capabilities).length > 0}
 							<div class="mb-4 space-y-2">
-								{#each $getUserCapabilitiesQuery.data.resourceCapabilities as capability}
+								{#each getResourceCapabilities($getUserCapabilitiesQuery.data.capabilities) as capability}
 									<div class="p-3 rounded-lg bg-surface-900">
 										<div class="flex items-center justify-between">
-											<span class="text-white">List: {capability.resourceId}</span>
+											<span class="text-white">List: {capability.config.resourceId}</span>
 											<span
 												class="px-2 py-1 text-xs rounded-full {accessLevels.find(
-													(l) => l.value === capability.accessLevel
+													(l) => l.value === capability.config.accessLevel
 												)?.color}"
 											>
-												{capability.accessLevel}
+												{capability.config.accessLevel}
 											</span>
 										</div>
 									</div>
@@ -279,7 +254,7 @@
 				<div class="p-6 rounded-lg bg-surface-800">
 					<h2 class="mb-4 text-xl font-semibold text-white">Audit Trail</h2>
 					<div class="space-y-3">
-						{#each auditLogs as log}
+						{#each $auditLogsQuery.data?.logs || [] as log}
 							<div class="p-3 rounded-lg bg-surface-900">
 								<div class="flex items-start justify-between mb-1">
 									<span class="text-sm font-medium text-white">{log.action}</span>
