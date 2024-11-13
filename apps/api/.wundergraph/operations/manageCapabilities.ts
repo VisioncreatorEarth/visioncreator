@@ -1,6 +1,5 @@
 import { createOperation, z } from "../generated/wundergraph.factory";
 
-// Define available tiers
 const TierType = z.enum(['free', 'homino', 'visioncreator']);
 
 export default createOperation.mutation({
@@ -10,36 +9,48 @@ export default createOperation.mutation({
     }),
     requireAuthentication: true,
     handler: async ({ input }) => {
-        const tiers = {
-            'free': {
-                type: ['AI_REQUESTS'],
-                aiLimit: 5,
-                name: 'Free Tier'
-            },
-            'homino': {
-                type: ['AI_REQUESTS'],
-                aiLimit: 100,
-                name: 'Homino'
-            },
-            'visioncreator': {
-                type: ['AI_REQUESTS'],
-                aiLimit: 500,
-                name: 'Vision Creator'
-            }
+        // Define base capabilities that all tiers have
+        const baseCapabilities = {
+            SHOPPING_LISTS: { unlimited: true },
+            HOMINIO_SKILLS: ['shopping']
         };
 
-        const capabilities = [
-            {
-                type: 'AI_REQUESTS',
-                limit: tiers[input.tier].aiLimit,
-                tier: input.tier
+        // Define tier-specific capabilities
+        const tiers = {
+            'free': {
+                aiLimit: 5,
+                name: 'Free Tier',
+                capabilities: {
+                    ...baseCapabilities,
+                }
+            },
+            'homino': {
+                aiLimit: 100,
+                name: 'Homino',
+                capabilities: {
+                    ...baseCapabilities,
+                    HOMINIO_SKILLS: [...baseCapabilities.HOMINIO_SKILLS, 'email', 'todos'],
+                    CUSTOM_PROMPTS: true,
+                }
+            },
+            'visioncreator': {
+                aiLimit: 500,
+                name: 'Vision Creator',
+                capabilities: {
+                    ...baseCapabilities,
+                    // Inherit all Homino capabilities
+                    HOMINIO_SKILLS: [...baseCapabilities.HOMINIO_SKILLS, 'email', 'todos', 'projects'],
+                    PROJECT_MANAGEMENT: true,
+                    EMAIL_INTEGRATION: true,
+                    BETA_ACCESS: true,
+                }
             }
-        ];
+        };
 
         return {
             success: true,
             message: `Updated user tier to ${tiers[input.tier].name}`,
-            capabilities
+            capabilities: tiers[input.tier].capabilities
         };
     },
 }); 
