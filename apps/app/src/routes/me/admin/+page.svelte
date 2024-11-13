@@ -59,9 +59,29 @@
 
 	// Constants
 	const tiers = [
-		{ id: 'free', name: 'Free Tier', aiLimit: 5 },
-		{ id: 'homino', name: 'Homino', aiLimit: 100 },
-		{ id: 'visioncreator', name: 'Visioncreator', aiLimit: 500 }
+		{
+			id: 'free',
+			name: 'Free Tier',
+			aiLimit: 5,
+			features: ['Unlimited Shopping Lists', '5 AI requests per month', 'Shopping Agent']
+		},
+		{
+			id: 'homino',
+			name: 'Homino',
+			aiLimit: 100,
+			features: ['Everything in Free, plus:', '100 Hominio requests per month', 'Todo Agent']
+		},
+		{
+			id: 'visioncreator',
+			name: 'Vision Creator',
+			aiLimit: 500,
+			features: [
+				'Everything in Homino, plus:',
+				'500 Hominio requests per month',
+				'Email Agent',
+				'Beta Access to New Features & Skills'
+			]
+		}
 	];
 
 	const accessLevels = [
@@ -168,12 +188,16 @@
 						<h2 class="mb-4 text-xl font-semibold text-white">Tier Management</h2>
 						<div class="space-y-4">
 							{#each tiers as tier}
-								<div class="flex items-center justify-between p-3 rounded-lg bg-surface-900">
-									<div>
+								<div class="flex items-center justify-between p-4 rounded-lg bg-surface-900">
+									<div class="flex-1">
 										<h3 class="font-medium text-white">{tier.name}</h3>
 										<div class="space-y-1 text-sm text-white/75">
-											<p>{tier.aiLimit} AI requests per month</p>
-											<p>Unlimited Shopping Lists</p>
+											{#each tier.features as feature}
+												<p class="flex items-center gap-2">
+													<span class="text-success-400">✓</span>
+													{feature}
+												</p>
+											{/each}
 										</div>
 									</div>
 									<label class="cursor-pointer label">
