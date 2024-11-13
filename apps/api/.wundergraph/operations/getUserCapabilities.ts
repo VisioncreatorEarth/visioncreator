@@ -7,7 +7,6 @@ export default createOperation.query({
     }),
     requireAuthentication: true,
     handler: async ({ input }): Promise<UserCapabilities> => {
-        // Mock user capabilities
         const mockTier = input.userId.includes('admin') ? 'visioncreator' : 'free';
 
         const tierCapabilities = [
@@ -15,27 +14,31 @@ export default createOperation.query({
                 type: 'AI_REQUESTS',
                 limit: mockTier === 'visioncreator' ? 500 : mockTier === 'homino' ? 100 : 5,
                 tier: mockTier
-            },
-            {
-                type: 'SHOPPING_LISTS',
-                limit: mockTier === 'visioncreator' ? 20 : mockTier === 'homino' ? 5 : 1,
-                tier: mockTier
             }
         ];
 
         // Mock resource capabilities (shopping lists)
-        const mockShoppingList = {
-            resourceId: 'default-list',
-            resourceType: 'SHOPPING_LIST',
-            accessLevel: 'owner' as AccessLevel,
-            grantedAt: new Date().toISOString(),
-            grantedBy: 'system'
-        };
+        const mockShoppingLists = [
+            {
+                resourceId: 'default-list',
+                resourceType: 'SHOPPING_LIST',
+                accessLevel: 'owner' as AccessLevel,
+                grantedAt: new Date().toISOString(),
+                grantedBy: 'system'
+            },
+            {
+                resourceId: 'groceries',
+                resourceType: 'SHOPPING_LIST',
+                accessLevel: 'write' as AccessLevel,
+                grantedAt: new Date().toISOString(),
+                grantedBy: 'user-1'
+            }
+        ];
 
         return {
             tier: mockTier,
             tierCapabilities,
-            resourceCapabilities: [mockShoppingList]
+            resourceCapabilities: mockShoppingLists
         };
     },
 }); 

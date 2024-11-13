@@ -59,9 +59,9 @@
 
 	// Constants
 	const tiers = [
-		{ id: 'free', name: 'Free Tier', aiLimit: 5, shoppingListsLimit: 1 },
-		{ id: 'homino', name: 'Homino', aiLimit: 100, shoppingListsLimit: 5 },
-		{ id: 'visioncreator', name: 'Vision Creator', aiLimit: 500, shoppingListsLimit: 20 }
+		{ id: 'free', name: 'Free Tier', aiLimit: 5 },
+		{ id: 'homino', name: 'Homino', aiLimit: 100 },
+		{ id: 'visioncreator', name: 'Visioncreator', aiLimit: 500 }
 	];
 
 	const accessLevels = [
@@ -165,7 +165,7 @@
 				<div class="space-y-6">
 					<!-- Tier Management -->
 					<div class="p-6 rounded-lg bg-surface-800">
-						<h2 class="mb-4 text-xl font-semibold text-white">Access Management</h2>
+						<h2 class="mb-4 text-xl font-semibold text-white">Tier Management</h2>
 						<div class="space-y-4">
 							{#each tiers as tier}
 								<div class="flex items-center justify-between p-3 rounded-lg bg-surface-900">
@@ -173,7 +173,7 @@
 										<h3 class="font-medium text-white">{tier.name}</h3>
 										<div class="space-y-1 text-sm text-white/75">
 											<p>{tier.aiLimit} AI requests per month</p>
-											<p>{tier.shoppingListsLimit} Shopping Lists</p>
+											<p>Unlimited Shopping Lists</p>
 										</div>
 									</div>
 									<label class="cursor-pointer label">

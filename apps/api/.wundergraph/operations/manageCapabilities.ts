@@ -12,24 +12,18 @@ export default createOperation.mutation({
     handler: async ({ input }) => {
         const tiers = {
             'free': {
-                type: ['AI_REQUESTS', 'SHOPPING_LISTS'],
+                type: ['AI_REQUESTS'],
                 aiLimit: 5,
-                shoppingListsLimit: 1,
-                listSharingLimit: 5,
                 name: 'Free Tier'
             },
             'homino': {
-                type: ['AI_REQUESTS', 'SHOPPING_LISTS'],
+                type: ['AI_REQUESTS'],
                 aiLimit: 100,
-                shoppingListsLimit: 5,
-                listSharingLimit: 10,
                 name: 'Homino'
             },
             'visioncreator': {
-                type: ['AI_REQUESTS', 'SHOPPING_LISTS'],
+                type: ['AI_REQUESTS'],
                 aiLimit: 500,
-                shoppingListsLimit: 20,
-                listSharingLimit: 50,
                 name: 'Vision Creator'
             }
         };
@@ -38,12 +32,6 @@ export default createOperation.mutation({
             {
                 type: 'AI_REQUESTS',
                 limit: tiers[input.tier].aiLimit,
-                tier: input.tier
-            },
-            {
-                type: 'SHOPPING_LISTS',
-                limit: tiers[input.tier].shoppingListsLimit,
-                listSharingLimit: tiers[input.tier].listSharingLimit,
                 tier: input.tier
             }
         ];
