@@ -186,6 +186,16 @@ Please analyze the conversation context carefully to understand the user's true 
                 }
             });
 
+            console.log('Claude response:', claudeResponse);
+
+            // Check for errors in the response
+            if (claudeResponse.error) {
+                console.error('Claude API error:', claudeResponse.error);
+                return {
+                    error: claudeResponse.error
+                };
+            }
+
             // Extract tool use from Claude response
             const toolUseContent = claudeResponse?.data?.content?.find(c => c.type === 'tool_use');
 
@@ -353,4 +363,3 @@ Please analyze the conversation context carefully to understand the user's true 
 }
 
 export const hominioAgent = new HominioAgent();
-

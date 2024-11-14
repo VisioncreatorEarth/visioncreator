@@ -63,6 +63,22 @@ export default createOperation.mutation({
             throw new Error('Anthropic client not configured');
         }
 
+        // Check and increment AI request count
+        const { data: incrementResult, error: incrementError } = await context.supabase
+            .rpc('check_and_increment_ai_requests', { 
+                p_user_id: user.customClaims.id 
+            })
+            .single();
+
+        if (incrementError) {
+            console.error('Error checking AI request limit:', incrementError);
+            throw new Error('Failed to check AI request limit.');
+        }
+
+        if (!incrementResult) {
+            throw new Error('PAYWALL: You have reached your AI request limit for this period.');
+        }
+
         try {
             console.log('askClaude - Calling Anthropic API');
             const startTime = Date.now();

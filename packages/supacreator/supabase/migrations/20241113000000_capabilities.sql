@@ -47,7 +47,7 @@ CREATE TABLE hominio_requests (
 );
 
 -- Function to check and increment AI request count
-CREATE OR REPLACE FUNCTION check_and_increment_ai_requests(user_id UUID)
+CREATE OR REPLACE FUNCTION check_and_increment_ai_requests(p_user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
     capability_record RECORD;
@@ -56,10 +56,10 @@ DECLARE
 BEGIN
     -- Get user's active tier capability
     SELECT * INTO capability_record
-    FROM capabilities
-    WHERE user_id = check_and_increment_ai_requests.user_id
-    AND type = 'TIER'
-    AND active = true;
+    FROM capabilities c
+    WHERE c.user_id = p_user_id
+    AND c.type = 'TIER'
+    AND c.active = true;
 
     IF capability_record IS NULL THEN
         RETURN FALSE;
