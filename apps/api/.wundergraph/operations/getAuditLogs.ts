@@ -8,6 +8,9 @@ export default createOperation.query({
         offset: z.number().optional(),
     }),
     requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ context, input }): Promise<{ logs: AuditLog[] }> => {
         const { data: auditLogs, error } = await context.supabase
             .from('capability_audit_trail')

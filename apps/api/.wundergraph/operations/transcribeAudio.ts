@@ -9,7 +9,7 @@ export default createOperation.mutation({
     }),
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated", "admin"],
+        requireMatchAll: ["authenticated"],
     },
     handler: async ({ user, input, context }) => {
         try {
@@ -20,12 +20,6 @@ export default createOperation.mutation({
                 });
             }
 
-            // Check if user has required role
-            if (!user?.customClaims?.roles?.includes("admin")) {
-                throw new AuthorizationError({
-                    message: 'You are currently on the waiting list. Rank up in the leaderboard to get early access!'
-                });
-            }
 
             let tempFile: string | null = null;
 
