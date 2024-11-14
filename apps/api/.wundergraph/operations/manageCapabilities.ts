@@ -43,6 +43,24 @@ export default createOperation.mutation({
         }
 
         if (input.action === 'revoke') {
+            // Create audit trail entry for revoke action
+            const { error: auditError } = await context.supabase
+                .from('capability_audit_trail')
+                .insert({
+                    action: `${input.action.toUpperCase()}_TIER`,
+                    user_id: input.userId,
+                    performed_by: user.customClaims.id,
+                    details: {
+                        action: 'revoke',
+                        timestamp: new Date().toISOString(),
+                        description: 'Revoked all tier capabilities'
+                    }
+                });
+
+            if (auditError) {
+                throw new Error(`Failed to create audit log: ${auditError.message}`);
+            }
+
             return { success: true };
         }
 
@@ -61,7 +79,7 @@ export default createOperation.mutation({
                     aiRequestsUsed: 0,
                     lastResetAt: new Date().toISOString()
                 },
-                granted_by: user.customClaims.id, // Use the authenticated user's ID
+                granted_by: user.customClaims.id,
                 active: true
             })
             .select()
@@ -69,6 +87,28 @@ export default createOperation.mutation({
 
         if (insertError) {
             throw new Error(`Failed to create new capability: ${insertError.message}`);
+        }
+
+        // Create audit trail entry for grant action
+        const { error: auditError } = await context.supabase
+            .from('capability_audit_trail')
+            .insert({
+                capability_id: capability.id,
+                action: `${input.action.toUpperCase()}_TIER`,
+                user_id: input.userId,
+                performed_by: user.customClaims.id,
+                details: {
+                    tier: input.tier,
+                    aiRequestsLimit: tierLimits[input.tier],
+                    timestamp: new Date().toISOString(),
+                    description: `Granted ${input.tier} tier access`,
+                    previousConfig: null,
+                    newConfig: capability.config
+                }
+            });
+
+        if (auditError) {
+            throw new Error(`Failed to create audit log: ${auditError.message}`);
         }
 
         return { success: true, capability };
