@@ -48,6 +48,12 @@
 		enabled: !!selectedUserId
 	});
 
+	$: userStatsQuery = createQuery({
+		operationName: 'getUserStats',
+		input: { userId: selectedUserId || '' },
+		enabled: !!selectedUserId
+	});
+
 	$: auditLogsQuery = createQuery({
 		operationName: 'getAuditLogs',
 		input: { userId: selectedUserId || '' },
@@ -65,14 +71,14 @@
 		{
 			id: 'free',
 			name: 'Free Tier',
-			aiLimit: 5,
-			features: ['Unlimited Shopping Lists', '5 AI requests per month', 'Shopping Agent']
+			aiLimit: 10,
+			features: ['Unlimited Shopping Lists', '10 Agent requests per week', 'Shopping Agent']
 		},
 		{
 			id: 'homino',
 			name: 'Homino',
-			aiLimit: 100,
-			features: ['Everything in Free, plus:', '100 Hominio requests per month', 'Todo Agent']
+			aiLimit: 150,
+			features: ['Everything in Free, plus:', '150 Agent requests per week', 'Todo Agent']
 		},
 		{
 			id: 'visioncreator',
@@ -80,7 +86,7 @@
 			aiLimit: 500,
 			features: [
 				'Everything in Homino, plus:',
-				'500 Hominio requests per month',
+				'500 Agent requests per week',
 				'Email Agent',
 				'Beta Access to New Features & Skills'
 			]
@@ -204,8 +210,99 @@
 
 				<!-- Audit Trail -->
 				<div class="flex overflow-auto flex-col h-full rounded-lg bg-surface-800">
-					<h2 class="p-6 pb-4 text-xl font-semibold text-white">Audit Trail</h2>
+					<h2 class="p-6 pb-4 text-xl font-semibold text-white">Stats & Audit Trail</h2>
 					<div class="overflow-y-auto flex-1 p-6 pt-0">
+						{#if $userStatsQuery.data?.stats}
+							<div class="p-4 mb-6 rounded-lg bg-surface-700">
+								<h3 class="mb-4 text-lg font-semibold text-white">
+									Usage Statistics (Last 7 Days)
+								</h3>
+								<div class="grid grid-cols-2 gap-4">
+									<div class="p-3 rounded bg-surface-600">
+										<p class="text-sm text-white/60">Total Requests</p>
+										<p class="text-xl font-semibold text-white">
+											{$userStatsQuery.data.stats.total_requests}
+										</p>
+									</div>
+									<div class="p-3 rounded bg-surface-600">
+										<p class="text-sm text-white/60">Success Rate</p>
+										<p class="text-xl font-semibold text-white">
+											{$userStatsQuery.data.stats.success_rate.toFixed(1)}%
+										</p>
+									</div>
+									<div class="p-3 rounded bg-surface-600">
+										<p class="text-sm text-white/60">Total Tokens</p>
+										<p class="text-xl font-semibold text-white">
+											{$userStatsQuery.data.stats.total_input_tokens +
+												$userStatsQuery.data.stats.total_output_tokens}
+										</p>
+										<div class="mt-1 text-xs text-white/60">
+											<p>Input: {$userStatsQuery.data.stats.total_input_tokens}</p>
+											<p>Output: {$userStatsQuery.data.stats.total_output_tokens}</p>
+										</div>
+									</div>
+									<div class="p-3 rounded bg-surface-600">
+										<p class="text-sm text-white/60">Total Cost</p>
+										<p class="text-xl font-semibold text-white">
+											${$userStatsQuery.data.stats.total_cost.toFixed(4)}
+										</p>
+									</div>
+								</div>
+
+								<!-- Model Usage -->
+								{#if Object.keys($userStatsQuery.data.stats.requests_by_model).length > 0}
+									<div class="mt-4">
+										<h4 class="mb-2 text-sm font-semibold text-white">Model Usage</h4>
+										<div class="space-y-2">
+											{#each Object.entries($userStatsQuery.data.stats.requests_by_model) as [model, count]}
+												<div class="flex justify-between items-center p-2 rounded bg-surface-600">
+													<span class="text-sm text-white">{model}</span>
+													<span class="text-sm font-semibold text-white">{count} requests</span>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Recent Requests -->
+								<!-- {#if $userStatsQuery.data.stats.recent_requests.length > 0}
+									<div class="mt-4">
+										<h4 class="mb-2 text-sm font-semibold text-white">Recent Requests</h4>
+										<div class="space-y-2">
+											{#each $userStatsQuery.data.stats.recent_requests as request}
+												<div class="p-2 rounded bg-surface-600">
+													<div class="flex justify-between items-center">
+														<span class="text-sm text-white">
+															{new Date(request.timestamp).toLocaleString()}
+														</span>
+														<span
+															class="text-sm font-semibold {request.success
+																? 'text-green-400'
+																: 'text-red-400'}"
+														>
+															{request.success ? 'Success' : 'Failed'}
+														</span>
+													</div>
+													<div class="mt-1 text-xs text-white/60">
+														<p>Input Tokens: {request.input_tokens}</p>
+														<p>Output Tokens: {request.output_tokens}</p>
+														<p>
+															Cost: ${(
+																request.metadata?.cost?.input + request.metadata?.cost?.output
+															).toFixed(4)}
+														</p>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if} -->
+							</div>
+						{:else if $userStatsQuery.isLoading}
+							<div class="flex justify-center p-4">
+								<div class="loading loading-spinner loading-md" />
+							</div>
+						{/if}
 						{#if $auditLogsQuery.isLoading}
 							<div class="flex justify-center">
 								<span class="loading loading-spinner loading-lg" />
@@ -267,9 +364,8 @@
 													<p class="text-sm text-white/75">{details.description}</p>
 												{/if}
 												<div class="flex gap-2 items-center">
-													<span class="text-sm font-medium text-white/75">AI Requests:</span>
-													<span class="text-sm text-white">{details.aiRequestsLimit} per month</span
-													>
+													<span class="text-sm font-medium text-white/75">Agent Requests:</span>
+													<span class="text-sm text-white">{details.aiRequestsLimit} per week</span>
 												</div>
 											</div>
 										{:else}

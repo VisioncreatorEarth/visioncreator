@@ -10,6 +10,7 @@ export type OperationErrors = {
 	createInvite: CreateInviteErrors;
 	getAuditLogs: GetAuditLogsErrors;
 	getUserCapabilities: GetUserCapabilitiesErrors;
+	getUserStats: GetUserStatsErrors;
 	getUsers: GetUsersErrors;
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
@@ -36,6 +37,7 @@ export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type GetAuditLogsErrors = ClientOperationErrors;
 export type GetUserCapabilitiesErrors = ClientOperationErrors;
+export type GetUserStatsErrors = ClientOperationErrors;
 export type GetUsersErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;

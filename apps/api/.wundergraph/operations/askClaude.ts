@@ -51,6 +51,14 @@ export default createOperation.mutation({
         requireMatchAll: ["authenticated"],
     },
     handler: async ({ input, context, user }) => {
+
+        // Check if user is authenticated
+        if (!user?.customClaims?.id) {
+            throw new AuthorizationError({
+                message: 'You must be logged in to use this feature'
+            });
+        }
+
         console.log('askClaude - Starting operation with input:', {
             messages: input.messages,
             systemPromptLength: input.system.length,
@@ -65,8 +73,8 @@ export default createOperation.mutation({
 
         // Check and increment AI request count
         const { data: incrementResult, error: incrementError } = await context.supabase
-            .rpc('check_and_increment_ai_requests', { 
-                p_user_id: user.customClaims.id 
+            .rpc('check_and_increment_ai_requests', {
+                p_user_id: user.customClaims.id
             })
             .single();
 
@@ -117,13 +125,18 @@ export default createOperation.mutation({
                         stop_reason: response.stop_reason,
                         usage: response.usage
                     },
-                    tokens_used: response.usage.input_tokens + response.usage.output_tokens,
+                    input_tokens: response.usage.input_tokens,
+                    output_tokens: response.usage.output_tokens,
                     processing_time: (Date.now() - startTime) / 1000, // Convert ms to seconds
                     model: response.model,
                     success: true,
                     metadata: {
                         stop_reason: response.stop_reason,
-                        content_types: response.content.map(c => c.type)
+                        content_types: response.content.map(c => c.type),
+                        cost: {
+                            input: (response.usage.input_tokens / 1000000) * 1, // $1 per MTok
+                            output: (response.usage.output_tokens / 1000000) * 5 // $5 per MTok
+                        }
                     }
                 });
 

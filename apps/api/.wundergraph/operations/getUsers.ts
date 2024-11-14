@@ -4,7 +4,7 @@ export default createOperation.query({
     input: z.object({}),
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated"],
+        requireMatchAll: ["authenticated", "admin"],
     },
     handler: async ({ context }) => {
         const { data: users, error } = await context.supabase

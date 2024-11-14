@@ -6,6 +6,9 @@ export default createOperation.query({
         userId: z.string(),
     }),
     requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ context, input }): Promise<{ capabilities: Capability[] }> => {
         const { data: capabilities, error } = await context.supabase
             .from('capabilities')
