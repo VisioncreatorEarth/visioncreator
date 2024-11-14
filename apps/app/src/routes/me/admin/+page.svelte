@@ -7,6 +7,33 @@
 		name: string;
 	}
 
+	interface Capability {
+		id: string;
+		user_id: string;
+		type: string;
+		name: string;
+		description: string;
+		config: {
+			tier: 'free' | 'homino' | 'visioncreator';
+			aiRequestsLimit?: number;
+			[key: string]: any;
+		};
+		granted_at: string;
+		granted_by: string;
+		active: boolean;
+	}
+
+	interface AuditLog {
+		id: string;
+		timestamp: string;
+		action: string;
+		userId: string;
+		details: string;
+		performedBy: string;
+		capabilityId: string;
+		capabilityType: string;
+	}
+
 	// Queries and mutations with proper store syntax
 	const usersQuery = createQuery({
 		operationName: 'getUsers',

@@ -25,92 +25,121 @@ export default createOperation.mutation({
             });
         }
 
-        const tierLimits = {
-            free: 5,
-            homino: 100,
-            visioncreator: 500
+        const now = new Date().toISOString();
+        const tierConfig = {
+            free: { aiRequestsLimit: 5 },
+            homino: { aiRequestsLimit: 100 },
+            visioncreator: { aiRequestsLimit: 500 }
         };
 
-        // First, deactivate any existing tier capabilities
-        const { error: deactivateError } = await context.supabase
+        // Get the current tier capability for this user
+        const { data: existingCapability, error: fetchError } = await context.supabase
             .from('capabilities')
-            .update({ active: false })
+            .select('*')
             .eq('user_id', input.userId)
-            .eq('type', 'TIER');
-
-        if (deactivateError) {
-            throw new Error(`Failed to deactivate existing capabilities: ${deactivateError.message}`);
-        }
-
-        if (input.action === 'revoke') {
-            // Create audit trail entry for revoke action
-            const { error: auditError } = await context.supabase
-                .from('capability_audit_trail')
-                .insert({
-                    action: `${input.action.toUpperCase()}_TIER`,
-                    user_id: input.userId,
-                    performed_by: user.customClaims.id,
-                    details: {
-                        action: 'revoke',
-                        timestamp: new Date().toISOString(),
-                        description: 'Revoked all tier capabilities'
-                    }
-                });
-
-            if (auditError) {
-                throw new Error(`Failed to create audit log: ${auditError.message}`);
-            }
-
-            return { success: true };
-        }
-
-        // Insert new capability with the authenticated user's ID
-        const { data: capability, error: insertError } = await context.supabase
-            .from('capabilities')
-            .insert({
-                user_id: input.userId,
-                type: 'TIER',
-                name: `${input.tier} Tier`,
-                description: `${input.tier} tier subscription`,
-                config: {
-                    type: 'TIER',
-                    tier: input.tier,
-                    aiRequestsLimit: tierLimits[input.tier],
-                    aiRequestsUsed: 0,
-                    lastResetAt: new Date().toISOString()
-                },
-                granted_by: user.customClaims.id,
-                active: true
-            })
-            .select()
+            .eq('type', 'TIER')
             .single();
 
-        if (insertError) {
-            throw new Error(`Failed to create new capability: ${insertError.message}`);
+        if (fetchError && fetchError.code !== 'PGRST116') { // Ignore "no rows returned" error
+            throw new Error(`Failed to fetch existing capability: ${fetchError.message}`);
         }
 
-        // Create audit trail entry for grant action
-        const { error: auditError } = await context.supabase
-            .from('capability_audit_trail')
-            .insert({
-                capability_id: capability.id,
-                action: `${input.action.toUpperCase()}_TIER`,
+        if (input.action === 'grant') {
+            const newConfig = {
+                tier: input.tier,
+                type: 'TIER',
+                lastResetAt: now,
+                aiRequestsUsed: 0,
+                aiRequestsLimit: tierConfig[input.tier].aiRequestsLimit
+            };
+
+            let capabilityId: string;
+
+            if (existingCapability) {
+                // Update existing capability
+                const { error: updateError } = await context.supabase
+                    .from('capabilities')
+                    .update({
+                        config: newConfig,
+                        granted_at: now,
+                        granted_by: user.customClaims.id,
+                        active: true
+                    })
+                    .eq('id', existingCapability.id);
+
+                if (updateError) {
+                    throw new Error(`Failed to update capability: ${updateError.message}`);
+                }
+
+                capabilityId = existingCapability.id;
+            } else {
+                // Create new capability
+                const { data: newCapability, error: insertError } = await context.supabase
+                    .from('capabilities')
+                    .insert({
+                        user_id: input.userId,
+                        type: 'TIER',
+                        name: `${input.tier} Tier`,
+                        description: `${input.tier} tier subscription`,
+                        config: newConfig,
+                        granted_at: now,
+                        granted_by: user.customClaims.id,
+                        active: true
+                    })
+                    .select()
+                    .single();
+
+                if (insertError || !newCapability) {
+                    throw new Error(`Failed to create capability: ${insertError?.message}`);
+                }
+
+                capabilityId = newCapability.id;
+            }
+
+            // Create audit log
+            await context.supabase.from('capability_audit_trail').insert({
                 user_id: input.userId,
                 performed_by: user.customClaims.id,
+                capability_id: capabilityId,
+                action: 'GRANT_TIER',
                 details: {
                     tier: input.tier,
-                    aiRequestsLimit: tierLimits[input.tier],
-                    timestamp: new Date().toISOString(),
-                    description: `Granted ${input.tier} tier access`,
-                    previousConfig: null,
-                    newConfig: capability.config
+                    timestamp: now,
+                    description: existingCapability 
+                        ? `Changed tier to ${input.tier}`
+                        : `Granted ${input.tier} tier`,
+                    previousConfig: existingCapability?.config || null,
+                    newConfig,
+                    aiRequestsLimit: tierConfig[input.tier].aiRequestsLimit
                 }
             });
+        } else if (input.action === 'revoke' && existingCapability) {
+            // Deactivate the capability
+            const { error: updateError } = await context.supabase
+                .from('capabilities')
+                .update({ active: false })
+                .eq('id', existingCapability.id);
 
-        if (auditError) {
-            throw new Error(`Failed to create audit log: ${auditError.message}`);
+            if (updateError) {
+                throw new Error(`Failed to revoke capability: ${updateError.message}`);
+            }
+
+            // Create audit log
+            await context.supabase.from('capability_audit_trail').insert({
+                user_id: input.userId,
+                performed_by: user.customClaims.id,
+                capability_id: existingCapability.id,
+                action: 'REVOKE_TIER',
+                details: {
+                    tier: existingCapability.config.tier,
+                    timestamp: now,
+                    description: `Revoked ${existingCapability.config.tier} tier`,
+                    previousConfig: existingCapability.config,
+                    aiRequestsLimit: 0
+                }
+            });
         }
 
-        return { success: true, capability };
-    },
+        return { success: true };
+    }
 });
