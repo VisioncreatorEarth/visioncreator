@@ -89,41 +89,36 @@
 
 	async function manageTier(userId: string | null, tier: 'free' | 'homino' | 'visioncreator') {
 		if (!userId) return;
-		await $manageCapabilitiesMutation.mutate({
-			userId,
-			action: 'grant',
-			capability: {
-				type: 'TIER',
-				name: `${tier} Tier`,
-				description: `${tier} tier subscription`,
-				config: {
-					type: 'TIER',
-					tier,
-					aiRequestsLimit: tiers.find((t) => t.id === tier)?.aiLimit || 0,
-					aiRequestsUsed: 0,
-					lastResetAt: new Date().toISOString()
-				}
-			}
-		});
+		try {
+			await $manageCapabilitiesMutation.mutate({
+				userId,
+				action: 'grant',
+				tier
+			});
+			// Refresh capabilities using the store
+			$getUserCapabilitiesQuery.refetch();
+			$auditLogsQuery.refetch();
+		} catch (error) {
+			console.error('Failed to manage tier:', error);
+			// Handle error appropriately (e.g., show toast notification)
+		}
 	}
 
 	async function manageListAccess(action: 'grant' | 'revoke') {
 		if (!selectedUserId || !selectedListId) return;
-		await $manageCapabilitiesMutation.mutate({
-			userId: selectedUserId,
-			action,
-			capability: {
-				type: 'RESOURCE',
-				name: 'Shopping List Access',
-				description: `${action} shopping list access`,
-				config: {
-					type: 'RESOURCE',
-					resourceId: selectedListId,
-					resourceType: 'SHOPPING_LIST',
-					accessLevel: selectedAccessLevel
-				}
-			}
-		});
+		try {
+			await $manageCapabilitiesMutation.mutate({
+				userId: selectedUserId,
+				action,
+				tier: 'free' // Default tier for list access
+			});
+			// Refresh capabilities using the store
+			$getUserCapabilitiesQuery.refetch();
+			$auditLogsQuery.refetch();
+		} catch (error) {
+			console.error('Failed to manage list access:', error);
+			// Handle error appropriately
+		}
 	}
 </script>
 
@@ -189,66 +184,6 @@
 								</div>
 							{/each}
 						</div>
-					</div>
-
-					<!-- List Access Management -->
-					<div class="p-6 rounded-lg bg-surface-800">
-						<h2 class="mb-4 text-xl font-semibold text-white">List Access</h2>
-
-						<!-- List Selection -->
-						<div class="mb-4">
-							<select class="w-full select bg-surface-700" bind:value={selectedListId}>
-								<option value={null}>Select a list...</option>
-								{#each mockShoppingLists as list}
-									<option value={list.id}>{list.name}</option>
-								{/each}
-							</select>
-						</div>
-
-						<!-- Current Access -->
-						{#if getResourceCapabilities($getUserCapabilitiesQuery.data.capabilities).length > 0}
-							<div class="mb-4 space-y-2">
-								{#each getResourceCapabilities($getUserCapabilitiesQuery.data.capabilities) as capability}
-									<div class="p-3 rounded-lg bg-surface-900">
-										<div class="flex items-center justify-between">
-											<span class="text-white">List: {capability.config.resourceId}</span>
-											<span
-												class="px-2 py-1 text-xs rounded-full {accessLevels.find(
-													(l) => l.value === capability.config.accessLevel
-												)?.color}"
-											>
-												{capability.config.accessLevel}
-											</span>
-										</div>
-									</div>
-								{/each}
-							</div>
-						{/if}
-
-						<!-- Access Management -->
-						{#if selectedListId}
-							<div class="flex items-center gap-2">
-								<select class="select bg-surface-700" bind:value={selectedAccessLevel}>
-									{#each accessLevels as level}
-										<option value={level.value}>{level.label}</option>
-									{/each}
-								</select>
-
-								<button
-									class="px-3 py-1 text-sm rounded-lg bg-primary-500 hover:bg-primary-600"
-									on:click={() => manageListAccess('grant')}
-								>
-									Grant Access
-								</button>
-
-								<button
-									class="px-3 py-1 text-sm rounded-lg bg-error-500 hover:bg-error-600"
-									on:click={() => manageListAccess('revoke')}
-								>
-									Revoke Access
-								</button>
-							</div>
-						{/if}
 					</div>
 				</div>
 

@@ -9,31 +9,20 @@ export default createOperation.query({
     }),
     requireAuthentication: true,
     handler: async ({ input }): Promise<{ logs: AuditLog[] }> => {
+        // Mock audit logs for now
         const mockLogs: AuditLog[] = [
             {
-                id: 'audit-1',
+                id: '1',
                 timestamp: new Date().toISOString(),
                 action: 'GRANT_TIER',
                 userId: input.userId,
-                details: 'Granted Homino tier access',
-                performedBy: 'admin@example.com',
-                capabilityId: 'tier-1',
+                details: 'Granted tier access',
+                performedBy: 'System',
+                capabilityId: '1',
                 capabilityType: 'TIER'
-            },
-            {
-                id: 'audit-2',
-                timestamp: new Date(Date.now() - 86400000).toISOString(),
-                action: 'GRANT_RESOURCE',
-                userId: input.userId,
-                details: 'Granted write access to Shopping List "Groceries"',
-                performedBy: 'owner@example.com',
-                capabilityId: 'res-1',
-                capabilityType: 'RESOURCE'
             }
         ];
 
-        return {
-            logs: mockLogs
-        };
+        return { logs: mockLogs };
     },
-}); 
+});

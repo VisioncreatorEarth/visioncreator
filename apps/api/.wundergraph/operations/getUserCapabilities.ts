@@ -6,42 +6,28 @@ export default createOperation.query({
         userId: z.string(),
     }),
     requireAuthentication: true,
-    handler: async ({ input }): Promise<{ capabilities: Capability[] }> => {
-        // Still mocked, but structured according to new unified system
-        const mockCapabilities: Capability[] = [
-            {
-                id: 'cap-1',
-                userId: input.userId,
-                type: 'TIER',
-                name: 'Homino Tier',
-                description: 'Homino tier subscription with advanced features',
-                grantedAt: new Date().toISOString(),
-                grantedBy: 'system',
-                active: true,
-                config: {
-                    tier: 'homino',
-                    aiRequestsLimit: 100,
-                    aiRequestsUsed: 45,
-                    lastResetAt: new Date().toISOString()
-                }
-            },
-            {
-                id: 'cap-2',
-                userId: input.userId,
-                type: 'RESOURCE',
-                name: 'Shopping List Access',
-                description: 'Access to shared shopping list',
-                grantedAt: new Date().toISOString(),
-                grantedBy: 'user-1',
-                active: true,
-                config: {
-                    resourceId: 'list-1',
-                    resourceType: 'SHOPPING_LIST',
-                    accessLevel: 'write'
-                }
-            }
-        ];
+    handler: async ({ context, input }): Promise<{ capabilities: Capability[] }> => {
+        const { data: capabilities, error } = await context.supabase
+            .from('capabilities')
+            .select(`
+                id,
+                user_id,
+                type,
+                name,
+                description,
+                config,
+                granted_at,
+                granted_by,
+                active,
+                profiles:granted_by (name)
+            `)
+            .eq('user_id', input.userId)
+            .eq('active', true);
 
-        return { capabilities: mockCapabilities };
+        if (error) {
+            throw new Error('Failed to fetch capabilities');
+        }
+
+        return { capabilities };
     },
 }); 
