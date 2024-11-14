@@ -1,57 +1,76 @@
-import { createOperation, z } from "../generated/wundergraph.factory";
-import type { Capability } from './types';
-
-// Define the tier type explicitly
-const TierType = z.enum(['free', 'homino', 'visioncreator']);
-const AccessLevelType = z.enum(['read', 'write', 'owner']);
-
-const CapabilityInput = z.object({
-    type: z.enum(['TIER', 'RESOURCE']),
-    name: z.string(),
-    description: z.string(),
-    config: z.discriminatedUnion('type', [
-        z.object({
-            type: z.literal('TIER'),
-            tier: TierType,
-            aiRequestsLimit: z.number(),
-            aiRequestsUsed: z.number(),
-            lastResetAt: z.string()
-        }),
-        z.object({
-            type: z.literal('RESOURCE'),
-            resourceId: z.string(),
-            resourceType: z.string(),
-            accessLevel: AccessLevelType
-        })
-    ])
-});
+import { createOperation, z, AuthorizationError } from "../generated/wundergraph.factory";
 
 export default createOperation.mutation({
     input: z.object({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
-        capability: CapabilityInput
+        tier: z.enum(['free', 'homino', 'visioncreator'])
     }),
     requireAuthentication: true,
-    handler: async ({ input, user }) => {
-        const timestamp = new Date().toISOString();
-        const capabilityId = `cap-${Date.now()}`;
-
-        const capability: Capability = {
-            id: capabilityId,
-            userId: input.userId,
-            type: input.capability.type,
-            name: input.capability.name,
-            description: input.capability.description,
-            grantedAt: timestamp,
-            grantedBy: user?.email || 'system',
-            active: input.action === 'grant',
-            config: input.capability.config
-        };
-
-        return {
-            success: true,
-            capability
-        };
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
     },
-}); 
+    handler: async ({ input, context, user }) => {
+        // Check if user is authenticated and has valid ID
+        if (!user?.customClaims?.id) {
+            throw new AuthorizationError({
+                message: "User not authenticated or missing ID.",
+            });
+        }
+
+        // Check if user has required roles
+        if (!user?.customClaims?.roles?.includes("admin")) {
+            throw new AuthorizationError({
+                message: "User does not have required permissions.",
+            });
+        }
+
+        const tierLimits = {
+            free: 5,
+            homino: 100,
+            visioncreator: 500
+        };
+
+        // First, deactivate any existing tier capabilities
+        const { error: deactivateError } = await context.supabase
+            .from('capabilities')
+            .update({ active: false })
+            .eq('user_id', input.userId)
+            .eq('type', 'TIER');
+
+        if (deactivateError) {
+            throw new Error(`Failed to deactivate existing capabilities: ${deactivateError.message}`);
+        }
+
+        if (input.action === 'revoke') {
+            return { success: true };
+        }
+
+        // Insert new capability with the authenticated user's ID
+        const { data: capability, error: insertError } = await context.supabase
+            .from('capabilities')
+            .insert({
+                user_id: input.userId,
+                type: 'TIER',
+                name: `${input.tier} Tier`,
+                description: `${input.tier} tier subscription`,
+                config: {
+                    type: 'TIER',
+                    tier: input.tier,
+                    aiRequestsLimit: tierLimits[input.tier],
+                    aiRequestsUsed: 0,
+                    lastResetAt: new Date().toISOString()
+                },
+                granted_by: user.customClaims.id, // Use the authenticated user's ID
+                active: true
+            })
+            .select()
+            .single();
+
+        if (insertError) {
+            throw new Error(`Failed to create new capability: ${insertError.message}`);
+        }
+
+        return { success: true, capability };
+    },
+});

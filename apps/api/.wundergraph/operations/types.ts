@@ -1,46 +1,31 @@
-export type AccessLevel = 'read' | 'write' | 'owner';
-
-// Unified capability type
 export interface Capability {
     id: string;
     userId: string;
-    type: 'TIER' | 'RESOURCE';  // Extensible for future types
-    grantedAt: string;
-    grantedBy: string;
-    active: boolean;
-
-    // Common properties for all capability types
+    type: 'TIER' | 'RESOURCE';
     name: string;
-    description: string;
-
-    // Type-specific properties
+    description?: string;
     config: {
         // For TIER type
         tier?: 'free' | 'homino' | 'visioncreator';
         aiRequestsLimit?: number;
         aiRequestsUsed?: number;
         lastResetAt?: string;
-
-        // For RESOURCE type
+        // For future RESOURCE types
         resourceId?: string;
         resourceType?: string;
-        accessLevel?: AccessLevel;
-
-        // Add more type-specific properties as needed
+        accessLevel?: 'read' | 'write' | 'owner';
     };
+    grantedAt: string;
+    grantedBy: string;
+    active: boolean;
 }
 
-export interface UserCapabilities {
-    capabilities: Capability[];
-}
-
-export interface AuditLog {
+export interface AuditTrailEntry {
     id: string;
     timestamp: string;
+    capabilityId: string;
     action: string;
     userId: string;
-    details: string;
     performedBy: string;
-    capabilityId: string;
-    capabilityType: Capability['type'];
+    details: Record<string, any>;
 } 
