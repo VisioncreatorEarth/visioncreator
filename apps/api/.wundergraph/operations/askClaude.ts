@@ -48,23 +48,9 @@ export default createOperation.mutation({
     }),
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated", "admin"],
+        requireMatchAll: ["authenticated"],
     },
     handler: async ({ input, context, user }) => {
-        // Check if user is authenticated and has valid ID
-        if (!user?.customClaims?.id) {
-            throw new AuthorizationError({
-                message: "User not authenticated or missing ID.",
-            });
-        }
-
-        // Check if user has required roles
-        if (!user?.customClaims?.roles?.includes("admin")) {
-            throw new AuthorizationError({
-                message: "User does not have required permissions.",
-            });
-        }
-
         console.log('askClaude - Starting operation with input:', {
             messages: input.messages,
             systemPromptLength: input.system.length,
@@ -79,6 +65,7 @@ export default createOperation.mutation({
 
         try {
             console.log('askClaude - Calling Anthropic API');
+            const startTime = Date.now();
             const response = await context.anthropic.messages.create({
                 model: "claude-3-5-haiku-20241022",
                 max_tokens: 1024,
@@ -96,6 +83,40 @@ export default createOperation.mutation({
                 stopReason: response.stop_reason,
                 usage: response.usage
             });
+
+            // Track successful request
+            try {
+                const { error } = await context.supabase.from('hominio_requests').insert({
+                    user_id: user.customClaims.id,
+                    input: {
+                        messages: input.messages,
+                        system: input.system,
+                        tools: input.tools,
+                        temperature: input.temperature
+                    },
+                    response: {
+                        id: response.id,
+                        model: response.model,
+                        content: response.content,
+                        stop_reason: response.stop_reason,
+                        usage: response.usage
+                    },
+                    tokens_used: response.usage.input_tokens + response.usage.output_tokens,
+                    processing_time: (Date.now() - startTime) / 1000, // Convert ms to seconds
+                    model: response.model,
+                    success: true,
+                    metadata: {
+                        stop_reason: response.stop_reason,
+                        content_types: response.content.map(c => c.type)
+                    }
+                });
+
+                if (error) {
+                    console.error('Failed to track request:', error);
+                }
+            } catch (trackingError) {
+                console.error('Error tracking request:', trackingError);
+            }
 
             // Validate response structure
             if (!response.content || !Array.isArray(response.content)) {
