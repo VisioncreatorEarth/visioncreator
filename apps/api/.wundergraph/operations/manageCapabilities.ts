@@ -27,8 +27,8 @@ export default createOperation.mutation({
 
         const now = new Date().toISOString();
         const tierConfig = {
-            free: { aiRequestsLimit: 5 },
-            homino: { aiRequestsLimit: 100 },
+            free: { aiRequestsLimit: 10 },
+            homino: { aiRequestsLimit: 150 },
             visioncreator: { aiRequestsLimit: 500 }
         };
 
@@ -105,7 +105,7 @@ export default createOperation.mutation({
                 details: {
                     tier: input.tier,
                     timestamp: now,
-                    description: existingCapability 
+                    description: existingCapability
                         ? `Changed tier to ${input.tier}`
                         : `Granted ${input.tier} tier`,
                     previousConfig: existingCapability?.config || null,
