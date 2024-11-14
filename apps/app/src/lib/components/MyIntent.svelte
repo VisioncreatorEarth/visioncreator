@@ -107,7 +107,7 @@
 				on: {
 					TRANSCRIPTION_SUCCESS: {
 						target: 'processing',
-						actions: ['handleTranscriptionSuccess', 'processTranscription']
+						actions: ['handleTranscriptionSuccess']
 					},
 					TRANSCRIPTION_ERROR: {
 						target: 'error',
@@ -116,26 +116,27 @@
 					WAITINGLIST: {
 						target: 'waitinglist',
 						actions: ['cleanup']
-					},
-					PAYWALL: {
-						target: 'paywall',
-						actions: ['cleanup']
 					}
 				}
 			},
 			processing: {
+				entry: ['startProcessing'],
 				on: {
 					ACTION_READY: {
 						target: 'action',
 						actions: ['setActionView']
 					},
+					PROCESSING_ERROR: {
+						target: 'error',
+						actions: ['handleProcessingError']
+					},
+					PAYWALL_ERROR: {
+						target: 'paywall',
+						actions: ['cleanup']
+					},
 					PROCESSING_COMPLETE: {
 						target: 'init',
 						actions: ['cleanup']
-					},
-					TRANSCRIPTION_ERROR: {
-						target: 'error',
-						actions: ['handleTranscriptionError']
 					}
 				}
 			},
@@ -171,6 +172,10 @@
 					CLOSE: {
 						target: 'init',
 						actions: ['cleanup']
+					},
+					UPGRADE: {
+						target: 'init',
+						actions: ['navigateToUpgrade']
 					}
 				}
 			},
@@ -366,6 +371,62 @@
 			}
 		},
 
+		startProcessing: async (context: IntentContext) => {
+			try {
+				console.log('Starting processTranscription');
+				const response = await hominioAgent.processRequest(
+					context.currentTranscription!,
+					conversationManager.getMessageContext() || []
+				);
+
+				console.log('Hominio response:', response);
+
+				// Check for errors
+				if (response?.error) {
+					console.log('Error detected:', response.error);
+
+					// Check for paywall error
+					if (response.error.message?.includes('PAYWALL:')) {
+						console.log('Paywall error detected');
+						machine.send('PAYWALL_ERROR');
+						return;
+					}
+
+					// Handle other errors
+					console.error('Processing error:', response.error);
+					machine.send('PROCESSING_ERROR');
+					return;
+				}
+
+				if (response?.message?.payload) {
+					const payload = response.message.payload;
+					console.log('Received payload:', payload);
+
+					if (payload.type === 'action') {
+						// Set the action view data first
+						context.actionView = payload.data;
+						context.actionMessage = response.message?.content;
+						context.isOpen = true;
+
+						console.log('Sending ACTION_READY event');
+						// Then send the state transition event
+						machine.send('ACTION_READY');
+					} else {
+						// For non-action payloads, transition to init
+						console.log('Processing complete, returning to init');
+						machine.send('PROCESSING_COMPLETE');
+					}
+				} else {
+					// No payload, transition back to init
+					console.log('No payload, returning to init');
+					machine.send('PROCESSING_COMPLETE');
+				}
+			} catch (error) {
+				console.error('Processing error:', error);
+				machine.send('PROCESSING_ERROR');
+			}
+		},
+
 		processTranscription: async (context: IntentContext) => {
 			try {
 				console.log('Starting processTranscription');
@@ -373,6 +434,25 @@
 					context.currentTranscription!,
 					conversationManager.getMessageContext() || []
 				);
+
+				console.log('Hominio response:', response);
+
+				// Check for errors
+				if (response?.error) {
+					console.log('Error detected:', response.error);
+
+					// Check for paywall error
+					if (response.error.message?.includes('PAYWALL:')) {
+						console.log('Paywall error detected');
+						machine.send('PAYWALL');
+						return;
+					}
+
+					// Handle other errors
+					console.error('Processing error:', response.error);
+					machine.send('TRANSCRIPTION_ERROR');
+					return;
+				}
 
 				if (response?.message?.payload) {
 					const payload = response.message.payload;
@@ -467,6 +547,10 @@
 				isOpen: context.isOpen,
 				currentState: $currentState
 			});
+		},
+
+		navigateToUpgrade: () => {
+			window.location.href = '/me/admin';
 		}
 	};
 
@@ -538,24 +622,24 @@
 
 {#if $context.isOpen}
 	<div
-		class="fixed inset-0 z-50 flex flex-col justify-end bg-surface-900/30 backdrop-blur-xl"
+		class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-xl bg-surface-900/30"
 		transition:fade={{ duration: 200 }}
 	>
 		<!-- Main container with increased max-width -->
-		<div class="relative w-full max-w-2xl mx-auto mb-20">
+		<div class="relative mx-auto mb-20 w-full max-w-2xl">
 			<!-- Scrollable content area -->
 			<div
-				class="absolute inset-x-0 bottom-0 px-4 overflow-y-auto"
+				class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
 				style="max-height: calc(100vh - 120px);"
 			>
 				<!-- Messages Container -->
 				<div class="space-y-3">
 					<!-- User Transcription Message -->
 					{#if $context.currentTranscription}
-						<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
+						<div class="flex gap-4 p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
 							<div class="flex-shrink-0">
 								<div
-									class="flex items-center justify-center w-10 h-10 rounded-full bg-tertiary-200/20"
+									class="flex justify-center items-center w-10 h-10 rounded-full bg-tertiary-200/20"
 								>
 									<svg
 										class="w-6 h-6 text-tertiary-200"
@@ -581,9 +665,9 @@
 
 					<!-- Assistant Response Message - Adjusted avatar size -->
 					{#if $currentState === 'action' && $context.actionMessage}
-						<div class="flex gap-4 p-4 rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
+						<div class="flex gap-4 p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
 							<div class="flex-shrink-0">
-								<div class="w-10 h-10 overflow-hidden rounded-full bg-tertiary-200/20">
+								<div class="overflow-hidden w-10 h-10 rounded-full bg-tertiary-200/20">
 									<img src="/logo.png" alt="Assistant" class="object-cover w-full h-full" />
 								</div>
 							</div>
@@ -594,7 +678,7 @@
 					{/if}
 
 					<!-- Modal Content -->
-					<div class="rounded-xl bg-tertiary-200/10 backdrop-blur-xl">
+					<div class="rounded-xl backdrop-blur-xl bg-tertiary-200/10">
 						{#if $currentState === 'action' && $context.actionView}
 							<div class="p-1 sm:p-2">
 								<ComposeView view={$context.actionView} {session} showSpacer={false} />
@@ -606,7 +690,7 @@
 								<p class="mt-2 text-tertiary-200/80">Please allow microphone access to continue.</p>
 								<div class="mt-4 text-sm text-tertiary-200/60">
 									<p>How to enable:</p>
-									<ol class="mt-2 text-left list-decimal list-inside">
+									<ol class="mt-2 list-decimal list-inside text-left">
 										<li>Click the lock icon in your browser's address bar</li>
 										<li>Find "Microphone" in the permissions list</li>
 										<li>Change the setting to "Allow"</li>
@@ -637,7 +721,7 @@
 						{:else if $currentState === 'recording'}
 							<div class="p-4 text-center">
 								<div class="mb-4">
-									<div class="w-12 h-12 mx-auto bg-red-500 rounded-full animate-pulse" />
+									<div class="mx-auto w-12 h-12 bg-red-500 rounded-full animate-pulse" />
 								</div>
 								<h2 class="text-2xl font-bold text-tertiary-200">Recording...</h2>
 								<p class="mt-2 text-tertiary-200/80">Release to process your request</p>
@@ -646,7 +730,7 @@
 							<div class="p-4 text-center">
 								<div class="mb-4">
 									<svg
-										class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
+										class="mx-auto w-12 h-12 animate-spin text-tertiary-200"
 										fill="none"
 										viewBox="0 0 24 24"
 									>
@@ -672,7 +756,7 @@
 							<div class="p-4 text-center">
 								<div class="mb-4">
 									<svg
-										class="w-12 h-12 mx-auto text-tertiary-200 animate-spin"
+										class="mx-auto w-12 h-12 animate-spin text-tertiary-200"
 										fill="none"
 										viewBox="0 0 24 24"
 									>
@@ -709,10 +793,29 @@
 								</button>
 							</div>
 						{:else if $currentState === 'paywall'}
-							<div class="p-4 text-center">
-								<div class="mb-4 text-4xl">💸</div>
-								<h2 class="text-2xl font-bold text-tertiary-200">Paywall</h2>
-								<p class="mt-2 text-tertiary-200/80">You've reached the paywall limit.</p>
+							<div class="p-6 text-center">
+								<div class="mb-4 text-4xl">🔒</div>
+								<h2 class="text-2xl font-bold text-tertiary-200">AI Request Limit Reached</h2>
+								<p class="mt-2 text-tertiary-200/80">
+									You've reached your AI request limit for this period. Upgrade your plan to
+									continue using AI features.
+								</p>
+								<div class="flex gap-3 justify-center mt-6">
+									<a
+										href="https://sandbox.polar.sh/visioncreator/products/ef8f64f5-e644-4066-b339-a45e63a64f14"
+										target="_blank"
+										rel="noopener noreferrer"
+										class="px-6 py-2 text-sm font-medium text-white rounded-lg transition-colors bg-tertiary-500 hover:bg-tertiary-600"
+									>
+										Upgrade Now
+									</a>
+									<button
+										class="px-6 py-2 text-sm font-medium rounded-lg border transition-colors text-tertiary-200 border-tertiary-200/20 hover:bg-tertiary-200/10"
+										on:click={() => machine.send('CLOSE')}
+									>
+										Maybe Later
+									</button>
+								</div>
 							</div>
 						{:else if $currentState === 'waitinglist'}
 							<div class="p-4 text-center">
@@ -730,7 +833,7 @@
 									</ul>
 								</div>
 								<button
-									class="px-4 py-2 mt-6 text-sm font-medium transition-colors rounded-lg bg-tertiary-200 text-surface-900 hover:bg-tertiary-300"
+									class="px-4 py-2 mt-6 text-sm font-medium rounded-lg transition-colors bg-tertiary-200 text-surface-900 hover:bg-tertiary-300"
 									on:click={() => machine.send('CLOSE')}
 								>
 									Got it
