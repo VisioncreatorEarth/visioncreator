@@ -84,16 +84,16 @@
 	</video>
 
 	<div class="flex flex-col overlay">
-		<div class="flex flex-col items-center justify-center flex-grow p-4 overflow-y-auto">
-			<div class="flex flex-col w-full max-w-3xl mb-4 space-y-4 text-center">
+		<div class="flex overflow-y-auto flex-col flex-grow justify-center items-center p-4">
+			<div class="flex flex-col mb-4 space-y-4 w-full max-w-3xl text-center">
 				<img
 					src="/logo.png"
 					alt="Visioncreator logo"
-					class="w-20 mx-auto mb-4 lg:w-28 opacity-70"
+					class="mx-auto mb-4 w-20 opacity-70 lg:w-28"
 				/>
 
 				<div class="w-full max-w-3xl video-wrapper">
-					<VideoPlayer youtubeId="rRtBklL49gM" posterFrame="/images/intro_poster.jpg" />
+					<VideoPlayer videoId="e65bf307-0a20-4441-8c81-08e6158beae9" />
 				</div>
 				<p class="@sm:text-lg text-xl text-tertiary-200">
 					Follow along our journey and join our waitlist now
@@ -101,7 +101,7 @@
 				<div class="flex justify-center mt-4">
 					<button
 						on:click={openSignUp}
-						class="signup-btn btn bg-gradient-to-br variant-gradient-secondary-primary"
+						class="bg-gradient-to-br signup-btn btn variant-gradient-secondary-primary"
 					>
 						Sign Up Now
 					</button>
