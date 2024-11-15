@@ -1,7 +1,6 @@
 import { purgeCss } from 'vite-plugin-tailwind-purgecss';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { vite as vidstack } from 'vidstack/plugins';
 import autoImport from 'composer';
 
 export default defineConfig({
@@ -18,7 +17,6 @@ export default defineConfig({
 				svelte: ['onMount']
 			}
 		}),
-		vidstack({ include: /components\// }),
 		sveltekit(),
 		purgeCss()
 	],
