@@ -30,31 +30,21 @@
 <div
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
-	<div class="text-lg p-4 rounded-lg">
-		<h3 class="text-primary-300 text-center">
-			<span class="h1 text-4xl font-bold mb-2 block"> Join the 1 billion-owner startup </span>
-			<p class="text-lg mt-4">
-				Own a piece of the world's most exciting startup, a venture that unlocks human potential, <br
-				/>redefines work and is owned by a billion humans – including you.
-			</p>
-		</h3>
+	<div class="p-4 text-lg rounded-lg">
 		<!-- 	<ul class="space-y-2">
 			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
 			<li>+1 free ticket to our inaugural event</li>
 		</ul>
-		<p class="mt-4 font-semibold text-secondary-300 text-lg sm:text-xl md:text-2xl">
+		<p class="mt-4 text-lg font-semibold text-secondary-300 sm:text-xl md:text-2xl">
 			Time's running!
 		</p>
 		-->
 	</div>
 
-	<div class="w-full max-w-3xl video-wrapper pb-4">
-		<VideoPlayer youtubeId="K8iiYmb0r10" posterFrame="/images/001_poster.png" />
-	</div>
 	<!-- <Countdown /> -->
 	<div class="">
-		<h3 class="  text-primary-300">
-			<span class="h1 text-4xl font-bold">
+		<h3 class="text-primary-300">
+			<span class="text-4xl font-bold h1">
 				Inspire & Rise <br />
 			</span>
 			<p class="text-xl font-medium">Become one of the 1st to unlock early access</p>
@@ -74,7 +64,7 @@
 			logoPadding="4"
 		/>
 	{/if}
-	<div class="p-4 flex flex-row items-center space-x-2">
+	<div class="flex flex-row items-center p-4 space-x-2">
 		<button
 			type="button"
 			class="btn btn-sm @3xl:btn-lg variant-ghost-primary"
