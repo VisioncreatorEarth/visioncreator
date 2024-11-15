@@ -9,8 +9,8 @@
 		id: string;
 		title: string;
 		description: string;
+		videoId: string;
 		poster: string;
-		youtubeId: string;
 	}
 
 	const allVideos: Video[] = [
@@ -18,125 +18,121 @@
 			id: 'intro',
 			title: 'Intro',
 			description: 'The beginning of an exciting journey',
-			poster: 'images/intro_poster.jpg',
-			youtubeId: 'rRtBklL49gM'
+			videoId: 'e65bf307-0a20-4441-8c81-08e6158beae9',
+			poster: 'images/intro_poster.jpg'
 		},
 		{
 			id: '001',
 			title: '001 - "Someday" I will do ... was yesterday',
 			description: 'The day I jumped and took action on the biggest decision of my life',
-			poster: 'images/001_poster.png',
-			youtubeId: 'K8iiYmb0r10'
+			videoId: '98c07c4f-6bf8-4f3b-9f48-4f6d563d858f',
+			poster: 'images/001_poster.png'
 		},
 		{
 			id: '002',
 			title: '002 - We Filed 136 Documents Just to Exist in Germany.',
 			description:
 				'Ever wondered what happens when German efficiency meets startup dreams? Join me on a 180-day adventure through a maze of paperwork, where proving your existence requires more documents than launching a spacecraft.',
-			poster: 'images/002_poster.png',
-			youtubeId: 'QMo2eV_aKDY'
+			videoId: 'a9b3aa34-be53-4348-9064-d6739d9106bb',
+			poster: 'images/002_poster.png'
 		},
 		{
 			id: '003',
 			title: '003 - From Chaos to Focus - How We Built Our Startup MVP in 24 Hours',
 			description:
 				"Ever wondered what it's like to build a startup from scratch? Join Chielo, Samuel and Yvonne as they navigate the chaotic world of MVPs (Minimum Viable Products) building the first working prototype! Watch as they code through the night, fuel up on bavarian beer, and receive an unexpected visitor that changes everything.",
-			poster: 'images/003_poster.png',
-			youtubeId: 'VZFCBFkkjZk'
+			videoId: 'e124e51c-9db3-4f1c-a7ec-8894c9f793df',
+			poster: 'images/003_poster.png'
 		}
 	];
 	const reversedVideos: Video[] = [...allVideos].reverse();
 	const videos: Writable<Video[]> = writable(reversedVideos);
 
 	let selectedVideo: Video = reversedVideos[0];
-	let videoPlayer: VideoPlayer;
+	let videoPlayer: any;
+
+	function selectVideo(video: Video) {
+		selectedVideo = video;
+	}
 
 	onMount(() => {
-		const videoId = $page.url.searchParams.get('video');
-		if (videoId) {
-			const video = $videos.find((v) => v.id === videoId);
+		const videoParam = $page.url.searchParams.get('video');
+		if (videoParam) {
+			const video = allVideos.find((v) => v.id === videoParam);
 			if (video) {
 				selectedVideo = video;
 			}
 		}
 	});
-
-	function handlePlaybackEnded() {
-		resetVideo();
-		moveToNextVideo();
-	}
-
-	function resetVideo() {
-		if (videoPlayer) {
-			videoPlayer.reset();
-		}
-	}
-
-	function moveToNextVideo() {
-		const currentIndex = $videos.findIndex((v) => v.id === selectedVideo.id);
-		if (currentIndex < $videos.length - 1) {
-			selectedVideo = $videos[currentIndex + 1];
-		} else {
-			selectedVideo = $videos[0];
-		}
-		updateURL(selectedVideo.id);
-		resetVideo();
-	}
-
-	function selectVideo(video: Video) {
-		selectedVideo = video;
-		updateURL(video.id);
-		resetVideo();
-	}
-
-	function updateURL(videoId: string) {
-		const url = new URL(window.location.href);
-		url.searchParams.set('video', videoId);
-		window.history.pushState({}, '', url.toString());
-	}
 </script>
 
-<div class="flex flex-col h-full p-4 overflow-hidden video-grid md:flex-row text-surface-50">
-	<div class="w-full mb-8 overflow-y-auto main-view md:w-2/3 md:pr-4 md:mb-0">
-		<h2 class="mb-4 text-2xl font-bold text-primary-400">Now Playing</h2>
-		<div class="relative mb-4 overflow-hidden rounded-lg aspect-w-16 aspect-h-9 bg-surface-600">
-			<VideoPlayer
-				bind:this={videoPlayer}
-				youtubeId={selectedVideo.youtubeId}
-				posterFrame={selectedVideo.poster}
-				on:videoEnded={handlePlaybackEnded}
-			/>
+<div class="flex flex-col h-screen overflow-hidden p-4 md:flex-row text-surface-50">
+	<div class="flex flex-col w-full h-full md:w-2/3 md:pr-4 md:overflow-hidden">
+		<div class="sticky top-0 z-10 px-4 pt-4 -mx-4 bg-surface-900 md:static md:p-0 md:m-0">
+			<h2 class="mb-4 text-2xl font-bold text-primary-400">Now Playing</h2>
+			<VideoPlayer bind:this={videoPlayer} videoId={selectedVideo.videoId} />
 		</div>
-		<h1 class="mb-3 text-2xl font-semibold h1 md:text-3xl text-primary-200">
-			{selectedVideo.title}
-		</h1>
-		<p class="text-base md:text-lg text-primary-100">{selectedVideo.description}</p>
+
+		<div class="flex-1 overflow-y-auto pb-20 md:overflow-hidden">
+			<div class="mt-4">
+				<h1 class="text-2xl font-semibold h1 md:text-3xl text-primary-200">
+					{selectedVideo.title}
+				</h1>
+				<p class="mt-2 text-base md:text-lg text-primary-100">{selectedVideo.description}</p>
+			</div>
+
+			<div class="mt-8 md:hidden">
+				<h2 class="mb-4 text-2xl font-bold text-primary-400">Episodes</h2>
+				<div class="space-y-4">
+					{#each $videos as video (video.id)}
+						<button
+							class="flex overflow-hidden relative w-full text-left rounded-lg shadow-lg cursor-pointer video-card bg-surface-700"
+							on:click={() => selectVideo(video)}
+						>
+							<div class="relative w-2/5">
+								<div class="aspect-w-16 aspect-h-9">
+									<img src={video.poster} alt={video.title} class="object-cover w-full h-full" />
+									{#if video.id === selectedVideo.id}
+										<div
+											class="flex absolute inset-0 justify-center items-center bg-black bg-opacity-50"
+										>
+											<Icon icon="mdi:play" class="text-3xl text-white" />
+										</div>
+									{/if}
+								</div>
+							</div>
+							<div class="p-3 w-3/5">
+								<h3 class="text-sm font-semibold line-clamp-2">{video.title}</h3>
+							</div>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</div>
 	</div>
-	<div class="flex flex-col w-full overflow-hidden episode-list md:w-1/3 md:pl-4">
+
+	<div class="hidden pl-4 w-1/3 md:flex md:flex-col md:h-full episode-list">
 		<h2 class="mb-4 text-2xl font-bold text-primary-400">Episodes</h2>
-		<div class="flex-grow space-y-4 overflow-y-auto">
+		<div class="flex-1 space-y-4 overflow-y-auto pr-2">
 			{#each $videos as video (video.id)}
 				<button
-					class="relative flex w-full overflow-hidden text-left rounded-lg shadow-lg cursor-pointer video-card bg-surface-700"
+					class="flex overflow-hidden relative w-full text-left rounded-lg shadow-lg cursor-pointer video-card bg-surface-700"
 					on:click={() => selectVideo(video)}
 				>
-					<div class="relative w-2/5 md:w-1/3">
+					<div class="relative w-2/5">
 						<div class="aspect-w-16 aspect-h-9">
-							<img
-								src={video.poster}
-								alt={video.title}
-								class="absolute inset-0 object-cover w-full h-full"
-							/>
-							<div class="absolute inset-0 flex items-center justify-center">
-								<Icon icon="mdi:play" class="text-3xl text-primary-300" />
-							</div>
+							<img src={video.poster} alt={video.title} class="object-cover w-full h-full" />
+							{#if video.id === selectedVideo.id}
+								<div
+									class="flex absolute inset-0 justify-center items-center bg-black bg-opacity-50"
+								>
+									<Icon icon="mdi:play" class="text-3xl text-white" />
+								</div>
+							{/if}
 						</div>
 					</div>
-					<div
-						class="flex flex-col justify-center w-3/5 px-4 py-2 overflow-hidden md:w-2/3 sm:px-5 sm:py-3"
-					>
-						<h3 class="text-sm font-semibold truncate sm:text-base">{video.title}</h3>
-						<p class="mt-1 text-xs sm:text-sm text-primary-300 line-clamp-2">{video.description}</p>
+					<div class="p-3 w-3/5">
+						<h3 class="text-sm font-semibold line-clamp-2">{video.title}</h3>
 					</div>
 				</button>
 			{/each}
@@ -150,9 +146,23 @@
 		overflow: hidden;
 	}
 
-	:global(#app) {
-		height: 100%;
-		overflow: hidden;
+	.episode-list {
+		scrollbar-width: thin;
+		scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+	}
+
+	.episode-list::-webkit-scrollbar {
+		width: 6px;
+	}
+
+	.episode-list::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.episode-list::-webkit-scrollbar-thumb {
+		background-color: rgba(155, 155, 155, 0.5);
+		border-radius: 20px;
+		border: transparent;
 	}
 
 	.line-clamp-2 {
