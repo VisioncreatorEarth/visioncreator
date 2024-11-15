@@ -1,33 +1,37 @@
 <TextWrap>
-	<div class="mb-10 image-container w-28">
+	<div class="mb-10 w-28 image-container">
 		<img src="/datenschutz-siegel.png" alt="Impressum Siegel" />
 	</div>
 	<h3>Our social media appearances</h3>
 	<h4>This privacy policy applies to the following social media presence</h4>
 	<ul>
 		<li>
-			<a href="https://www.facebook.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
-				>https://www.facebook.com/1BillionVCs</a
+			<a
+				href="https://www.facebook.com/VisioncreatorEarth"
+				target="_blank"
+				rel="noopener noreferrer">https://www.facebook.com/VisioncreatorEarth</a
 			>
 		</li>
 		<li>
-			<a href="https://x.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
-				>https://x.com/1BillionVCs</a
+			<a href="https://x.com/VisioncreatorEa" target="_blank" rel="noopener noreferrer"
+				>https://x.com/VisioncreatorEa</a
 			>
 		</li>
 		<li>
-			<a href="https://instagram.com/1BillionVCs" target="_blank" rel="noopener noreferrer"
-				>https://instagram.com/1BillionVCs</a
+			<a href="https://instagram.com/VisioncreatorEarth" target="_blank" rel="noopener noreferrer"
+				>https://instagram.com/VisioncreatorEarth</a
 			>
 		</li>
 		<li>
-			<a href="https://linkedin.com/company/1BillionVCs" target="_blank" rel="noopener noreferrer"
-				>https://linkedin.com/company/1BillionVCs</a
+			<a
+				href="https://linkedin.com/company/visioncreatorearth"
+				target="_blank"
+				rel="noopener noreferrer">https://linkedin.com/company/visioncreatorearth</a
 			>
 		</li>
 		<li>
-			<a href="https://youtube.com/@1BillionVCs" target="_blank" rel="noopener noreferrer"
-				>https://youtube.com/@1BillionVCs</a
+			<a href="https://youtube.com/@VisioncreatorEarth" target="_blank" rel="noopener noreferrer"
+				>https://youtube.com/@VisioncreatorEarth</a
 			>
 		</li>
 	</ul>
