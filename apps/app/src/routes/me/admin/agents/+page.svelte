@@ -1,441 +1,223 @@
-<!-- Mock Agent Interface -->
-<script lang="ts">
-	import { onMount } from 'svelte';
-	import type { Message } from '$lib/types/agent';
-	import { agentService } from '$lib/services/agentService';
-	import { CAPABILITIES } from '$lib/types/agent';
-
-	const MOCK_USER_ID = 'user123';
-	let agents = [];
-	let messages: Message[] = [];
-	let inputText = '';
-	let isRecording = false;
-	let chatContainer: HTMLElement;
-
-	onMount(async () => {
-		try {
-			// Create agents
-			const hominio = await agentService.createAgent('hominio');
-			const watts = await agentService.createAgent('watts');
-			const bert = await agentService.createAgent('bert');
-
-			// Add default capabilities
-			await agentService.addAgentCapability(hominio.id, {
-				name: CAPABILITIES.DELEGATION.SHOPPING,
-				description: 'Can delegate shopping tasks'
-			});
-			await agentService.addAgentCapability(hominio.id, {
-				name: CAPABILITIES.DELEGATION.AUDIO,
-				description: 'Can delegate audio tasks'
-			});
-			await agentService.addAgentCapability(watts.id, {
-				name: CAPABILITIES.AUDIO.TRANSCRIBE,
-				description: 'Can transcribe audio'
-			});
-			await agentService.addAgentCapability(bert.id, {
-				name: CAPABILITIES.SHOPPING.MANAGE,
-				description: 'Can manage shopping lists'
-			});
-
-			agents = [hominio, watts, bert];
-			console.log('Initialized agents:', agents);
-		} catch (error) {
-			console.error('Error initializing agents:', error);
-		}
-	});
-
-	// Helper function to find agent by role
-	function findAgentByRole(role: string) {
-		return agents.find(a => a.context?.role === role);
-	}
-
-	async function processTextInput(text: string, isTranscribed = false) {
-		const hominio = findAgentByRole('delegator');
-		if (!hominio) throw new Error('Delegator agent not found');
-
-		updateAgentStatus(hominio.id, 'working');
-
-		try {
-			if (!isTranscribed) {
-				addMessage({
-					id: crypto.randomUUID(),
-					from: 'user',
-					to: hominio.name,
-					content: text,
-					timestamp: new Date(),
-					type: 'request' as const,
-					status: 'pending' as const
-				});
+<script>
+	let agents = [
+		{
+			id: '1',
+			name: 'Bert - Shopping Assistant',
+			pkp: '0x1234...5678',
+			capabilities: {
+				list_1_private: {
+					isEnabled: true,
+					conditions: {
+						maxItems: 50,
+						timeRestriction: '9am-5pm',
+						requiredRole: 'owner',
+						description: 'Private grocery list for personal meal planning'
+					}
+				},
+				list_2_family: {
+					isEnabled: true,
+					conditions: {
+						maxItems: 100,
+						sharedWith: ['0x5678...', '0x9101...'],
+						description: 'Shared family grocery list for weekly shopping'
+					}
+				},
+				list_3_household: {
+					isEnabled: true,
+					conditions: {
+						maxItems: 25,
+						allowedCategories: ['cleaning', 'maintenance', 'utilities'],
+						description: 'Household maintenance and cleaning supplies'
+					}
+				}
 			}
+		}
+	];
 
-			// Check shopping intent first
-			const shoppingKeywords = [
-				'buy',
-				'shop',
-				'list',
-				'store',
-				'grocery',
-				'food',
-				'item',
-				'add',
-				'remove',
-				'delete'
-			];
-			const hasShoppingIntent = shoppingKeywords.some((keyword) =>
-				text.toLowerCase().includes(keyword)
-			);
-			console.log('Shopping intent check:', { text, hasShoppingIntent });
-
-			// Check Bert and capabilities
-			const bert = findAgentByRole('shopping_manager');
-			const hasShoppingCapability = await checkAgentCapability(hominio, CAPABILITIES.DELEGATION.SHOPPING);
-			
-			console.log('Capability check:', {
-				bertFound: !!bert,
-				hasShoppingCapability,
-				hominioCapabilities: hominio.capabilities
-			});
-
-			if (hasShoppingIntent && bert) {
-				// Update Bert's context with the shopping task
-				await agentService.updateAgentContext(bert.id, {
-					shopping_lists: [...(bert.context.shopping_lists || []), {
-						task: text,
-						timestamp: new Date()
-					}]
-				});
-
-				await handleDelegation({
-					to: bert.name,
-					task: text,
-					userMessage: `Adding "${text}" to your shopping list! 🛒`
-				});
-				return;
+	function toggleCapability(agentId, resource) {
+		agents = agents.map((agent) => {
+			if (agent.id === agentId) {
+				return {
+					...agent,
+					capabilities: {
+						...agent.capabilities,
+						[resource]: {
+							...agent.capabilities[resource],
+							isEnabled: !agent.capabilities[resource].isEnabled
+						}
+					}
+				};
 			}
-
-			// Default response if no intent matched
-			await handleDelegation({
-				to: 'user',
-				task: 'clarify',
-				userMessage:
-					"I'm not quite sure what you'd like to do. Could you please specify if this is about your shopping list or something else? 🤨"
-			});
-		} catch (error) {
-			console.error('Error processing text:', error);
-			addMessage({
-				id: crypto.randomUUID(),
-				from: hominio.name,
-				to: 'user',
-				content: error instanceof Error ? error.message : 'An error occurred',
-				timestamp: new Date(),
-				type: 'response' as const,
-				status: 'error' as const
-			});
-		} finally {
-			updateAgentStatus(hominio.id, 'idle');
-		}
+			return agent;
+		});
 	}
 
-	async function handleDelegation(delegation: {
-		to: string;
-		task: string;
-		userMessage: string;
-		transcribedText?: string;
-	}) {
-		const hominio = findAgentByRole('delegator');
-		const toAgent = delegation.to !== 'user' ? findAgentByRole(getAgentRole(delegation.to)) : null;
-
-		if (!hominio) throw new Error('Delegator agent not found');
-		if (delegation.to !== 'user' && !toAgent) throw new Error(`Agent ${delegation.to} not found`);
-
-		// Send delegation message
-		if (delegation.to !== 'user') {
-			addMessage({
-				id: crypto.randomUUID(),
-				from: hominio.name,
-				to: delegation.to,
-				content: delegation.userMessage,
-				timestamp: new Date(),
-				type: 'request' as const,
-				status: 'pending' as const
-			});
-			updateAgentStatus(toAgent.id, 'working');
-		}
-
-		if (delegation.to === 'user') {
-			addMessage({
-				id: crypto.randomUUID(),
-				from: hominio.name,
-				to: 'user',
-				content: delegation.userMessage,
-				timestamp: new Date(),
-				type: 'response' as const,
-				status: 'completed' as const
-			});
-			return;
-		}
-
-		// Handle audio transcription
-		if (toAgent?.context.role === 'audio_processor') {
-			await delay(1000); // Simulate processing
-			const transcribedText = 'Add tomatoes to my shopping list';
-
-			// Add Watts response
-			addMessage({
-				id: crypto.randomUUID(),
-				from: toAgent.name,
-				to: hominio.name,
-				content: `I've transcribed the audio: "${transcribedText}"`,
-				timestamp: new Date(),
-				type: 'response' as const,
-				status: 'completed' as const
-			});
-
-			updateAgentStatus(toAgent.id, 'idle');
-
-			// Process transcribed text
-			await processTextInput(transcribedText, true);
-			return;
-		}
-
-		// Handle shopping tasks
-		if (toAgent?.context.role === 'shopping_manager') {
-			await delay(500);
-
-			// Add Bert response
-			addMessage({
-				id: crypto.randomUUID(),
-				from: toAgent.name,
-				to: hominio.name,
-				content: `Added "${delegation.task}" to the shopping list! 🛒`,
-				timestamp: new Date(),
-				type: 'response' as const,
-				status: 'completed' as const
-			});
-
-			// Hominio forwards confirmation to user
-			addMessage({
-				id: crypto.randomUUID(),
-				from: hominio.name,
-				to: 'user',
-				content: `Great! I've added that to your shopping list! 🛒`,
-				timestamp: new Date(),
-				type: 'response' as const,
-				status: 'completed' as const
-			});
-
-			updateAgentStatus(toAgent.id, 'idle');
-		}
-	}
-
-	// Helper function to get agent role
-	function getAgentRole(name: string): string {
-		switch (name.toLowerCase()) {
-			case 'watts':
-				return 'audio_processor';
-			case 'bert':
-				return 'shopping_manager';
-			case 'hominio':
-				return 'delegator';
-			default:
-				return '';
-		}
-	}
-
-	// Helper function to check if agent has required capability
-	async function checkAgentCapability(agent: any, requiredCapability: string): Promise<boolean> {
-		if (!agent?.capabilities) return false;
-		return agent.capabilities.some((cap) => cap.name === requiredCapability);
-	}
-
-	// Helper function for delays
-	function delay(ms: number) {
-		return new Promise((resolve) => setTimeout(resolve, ms));
-	}
-
-	async function processAudioInput() {
-		const hominio = findAgentByRole('delegator');
-		if (!hominio) throw new Error('Delegator agent not found');
-		
-		updateAgentStatus(hominio.id, 'working');
-
-		const userMessage = {
-			id: crypto.randomUUID(),
-			from: 'user',
-			to: hominio.name,
-			content: '[Audio Message]',
-			timestamp: new Date(),
-			type: 'audio' as const,
-			status: 'pending' as const
+	async function addAgent() {
+		const newAgent = {
+			id: (agents.length + 1).toString(),
+			name: 'New Agent',
+			pkp: '0x' + Math.random().toString(16).slice(2, 10) + '...' + Math.random().toString(16).slice(2, 6),
+			capabilities: {
+				list_1_private: {
+					isEnabled: false,
+					conditions: {
+						maxItems: 10,
+						timeRestriction: 'always',
+						requiredRole: 'none',
+						description: 'Private grocery list for personal meal planning'
+					}
+				},
+				list_2_family: {
+					isEnabled: false,
+					conditions: {
+						maxItems: 10,
+						sharedWith: [],
+						description: 'Shared family grocery list for weekly shopping'
+					}
+				},
+				list_3_household: {
+					isEnabled: false,
+					conditions: {
+						maxItems: 10,
+						allowedCategories: [],
+						description: 'Household maintenance and cleaning supplies'
+					}
+				}
+			}
 		};
-		addMessage(userMessage);
-
-		try {
-			const watts = findAgentByRole('audio_processor');
-			if (!watts) throw new Error('Audio processor agent not found');
-
-			await handleDelegation({
-				to: watts.name,
-				task: 'transcribe_audio',
-				userMessage: 'Please transcribe this audio message 🎤'
-			});
-		} catch (error) {
-			console.error('Audio processing error:', error);
-			addMessage({
-				id: crypto.randomUUID(),
-				from: hominio.name,
-				to: 'user',
-				content: error instanceof Error ? error.message : 'An error occurred',
-				timestamp: new Date(),
-				type: 'response' as const,
-				status: 'error' as const
-			});
-		} finally {
-			updateAgentStatus(hominio.id, 'idle');
-			isRecording = false;
-		}
+		agents = [...agents, newAgent];
 	}
 
-	function addMessage(message: Message) {
-		messages = [...messages, message];
+	function removeAgent(agentId) {
+		agents = agents.filter((agent) => agent.id !== agentId);
 	}
-
-	function updateAgentStatus(agentId: string, status: 'idle' | 'working' | 'error') {
-		agents = agents.map((agent) =>
-			agent.id === agentId ? { ...agent, status, lastActive: new Date() } : agent
-		);
-	}
-
-	async function handleSubmit() {
-		if (!inputText.trim()) return;
-		const text = inputText;
-		inputText = '';
-		await processTextInput(text);
-	}
-
-	function toggleRecording() {
-		isRecording = !isRecording;
-		if (isRecording) {
-			inputText = '[Recording in progress...]';
-			setTimeout(async () => {
-				await processAudioInput();
-				inputText = '';
-			}, 2000);
-		}
-	}
-
-	function scrollToBottom() {
-		if (chatContainer) {
-			chatContainer.scrollTop = chatContainer.scrollHeight;
-		}
-	}
-
-	onMount(() => {
-		chatContainer = document.querySelector('.chat-container');
-	});
 </script>
 
-<div class="flex flex-col h-screen">
-	<!-- Header -->
-	<div class="p-4 w-full variant-filled-surface">
-		<h1 class="h1">Agent Control Center</h1>
-		<p class="opacity-80">Monitor and interact with your AI agents</p>
-	</div>
+{#if agents.length > 0}
+	<div class="container p-4 mx-auto space-y-4">
+		<div class="flex justify-between items-center">
+			<h2 class="h2">AI Agent Access Control</h2>
+			<button class="btn variant-filled-primary" on:click={addAgent}>Add Agent</button>
+		</div>
 
-	<!-- Main Content -->
-	<div class="flex overflow-hidden flex-1">
-		<!-- Left Sidebar - Agents -->
-		<aside
-			class="overflow-y-auto p-4 space-y-4 w-80 border-r variant-filled-surface border-surface-500"
-		>
-			{#each agents as agent}
-				<div class="p-4 card variant-filled-surface">
-					<header class="flex justify-between items-center">
-						<h3 class="h3">{agent.name || agent.type}</h3>
-						<span
-							class="badge {agent.status === 'idle'
-								? 'variant-filled-success'
-								: agent.status === 'working'
-								? 'variant-filled-warning'
-								: 'variant-filled-error'}"
-						>
-							{agent.status || 'idle'}
-						</span>
-					</header>
-					<div class="p-4">
-						<p class="opacity-80">Type: {agent.type}</p>
-						<div class="mt-2">
-							<p class="text-sm opacity-60">Capabilities:</p>
-							<div class="flex flex-wrap gap-2 mt-1">
-								{#each agent.capabilities || [] as capability}
-									<span class="badge variant-soft">{capability.name}</span>
-								{/each}
-							</div>
-						</div>
-					</div>
-				</div>
-			{/each}
-		</aside>
+		<div class="p-4 card variant-filled-surface">
+			<table class="table table-hover">
+				<thead>
+					<tr>
+						<th>Agent</th>
+						<th>PKP</th>
+						<th>List 1: Private</th>
+						<th>List 2: Family</th>
+						<th>List 3: Household</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each agents as agent (agent.id)}
+						<tr>
+							<td class="table-cell-fit">
+								<div class="flex items-center space-x-4">
+									<div class="placeholder" />
+									<span class="font-bold">{agent.name}</span>
+								</div>
+							</td>
+							<td class="table-cell-fit">
+								<code class="code">{agent.pkp}</code>
+							</td>
+							<td class="table-cell-fit">
+								<div class="flex flex-col space-y-2">
+									<button
+										class="chip {agent.capabilities.list_1_private.isEnabled
+											? 'variant-filled-success'
+											: 'variant-filled-surface'}"
+										on:click={() => toggleCapability(agent.id, 'list_1_private')}
+									>
+										{agent.capabilities.list_1_private.isEnabled ? 'Enabled' : 'Disabled'}
+									</button>
+									<div class="text-xs">
+										<div>Max Items: {agent.capabilities.list_1_private.conditions.maxItems}</div>
+										<div>Time: {agent.capabilities.list_1_private.conditions.timeRestriction}</div>
+										<div>Role: {agent.capabilities.list_1_private.conditions.requiredRole}</div>
+										<div class="text-surface-600-300-token">{agent.capabilities.list_1_private.conditions.description}</div>
+									</div>
+								</div>
+							</td>
+							<td class="table-cell-fit">
+								<div class="flex flex-col space-y-2">
+									<button
+										class="chip {agent.capabilities.list_2_family.isEnabled
+											? 'variant-filled-success'
+											: 'variant-filled-surface'}"
+										on:click={() => toggleCapability(agent.id, 'list_2_family')}
+									>
+										{agent.capabilities.list_2_family.isEnabled ? 'Enabled' : 'Disabled'}
+									</button>
+									<div class="text-xs">
+										<div>Max Items: {agent.capabilities.list_2_family.conditions.maxItems}</div>
+										<div>Shared With: {agent.capabilities.list_2_family.conditions.sharedWith.length} addresses</div>
+										<div class="text-surface-600-300-token">{agent.capabilities.list_2_family.conditions.description}</div>
+									</div>
+								</div>
+							</td>
+							<td class="table-cell-fit">
+								<div class="flex flex-col space-y-2">
+									<button
+										class="chip {agent.capabilities.list_3_household.isEnabled
+											? 'variant-filled-success'
+											: 'variant-filled-surface'}"
+										on:click={() => toggleCapability(agent.id, 'list_3_household')}
+									>
+										{agent.capabilities.list_3_household.isEnabled ? 'Enabled' : 'Disabled'}
+									</button>
+									<div class="text-xs">
+										<div>Max Items: {agent.capabilities.list_3_household.conditions.maxItems}</div>
+										<div>Categories: {agent.capabilities.list_3_household.conditions.allowedCategories.join(', ') || 'None'}</div>
+										<div class="text-surface-600-300-token">{agent.capabilities.list_3_household.conditions.description}</div>
+									</div>
+								</div>
+							</td>
+							<td class="table-cell-fit">
+								<button class="btn variant-filled-error" on:click={() => removeAgent(agent.id)}>
+									Remove
+								</button>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 
-		<!-- Main Content - Conversation -->
-		<main class="flex overflow-hidden flex-col flex-1">
-			<div class="overflow-y-auto flex-1 p-4 space-y-4 chat-container" bind:this={chatContainer}>
-				{#each messages as message}
-					<div
-						class="card p-3 {message.from === 'user'
-							? 'variant-soft-primary ml-auto'
-							: 'variant-soft'} max-w-[80%] {message.from === 'user' ? 'ml-auto' : 'mr-auto'}"
-					>
-						<header class="flex justify-between text-sm opacity-80">
-							<span>{message.from} → {message.to}</span>
-							<span>{message.type}</span>
-						</header>
-						<p class="mt-2">{message.content}</p>
-						<footer class="flex justify-between mt-2 text-xs opacity-60">
-							<span>{new Date(message.timestamp).toLocaleTimeString()}</span>
-							<button class="hover:underline" on:click={scrollToBottom}>Scroll to Bottom</button>
-						</footer>
-					</div>
-				{/each}
+		<div class="p-4 card variant-filled-surface">
+			<h3 class="mb-4 h3">About List Access Control</h3>
+			<p class="mb-2">Each AI agent has configurable access to three specific lists:</p>
+			<ul class="space-y-2 list-disc list-inside">
+				<li>
+					<strong>List 1 - Private:</strong> Personal grocery list for meal planning with time restrictions
+				</li>
+				<li>
+					<strong>List 2 - Family:</strong> Shared family grocery list for weekly shopping
+				</li>
+				<li>
+					<strong>List 3 - Household:</strong> Maintenance and cleaning supplies with category restrictions
+				</li>
+			</ul>
+			<div class="mt-4">
+				<p class="text-sm text-surface-600-300-token">
+					Each list has specific conditions and can be enabled/disabled per agent
+				</p>
 			</div>
-
-			<!-- Input Area -->
-			<footer class="p-4 border-t variant-filled-surface border-surface-500">
-				<div class="flex gap-2">
-					<button
-						class="btn {isRecording ? 'variant-filled-error' : 'variant-filled-secondary'}"
-						on:click={toggleRecording}
-					>
-						{isRecording ? '🔴 Recording...' : '🎤 Record'}
-					</button>
-					<input
-						type="text"
-						class="flex-1 input"
-						placeholder="Type your request..."
-						bind:value={inputText}
-						on:keydown={(e) => e.key === 'Enter' && handleSubmit()}
-					/>
-					<button class="btn variant-filled-primary" on:click={handleSubmit}>Send</button>
-				</div>
-			</footer>
-		</main>
+		</div>
 	</div>
-</div>
+{:else}
+	<div class="container p-4 mx-auto">
+		<div class="p-4 card variant-filled-surface">
+			<p class="text-center">No agents found. Add your first agent to get started.</p>
+		</div>
+	</div>
+{/if}
 
 <style>
-	.recording {
-		animation: pulse 2s infinite;
-	}
-
-	@keyframes pulse {
-		0% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0.5;
-		}
-		100% {
-			opacity: 1;
-		}
+	.table-cell-fit {
+		@apply p-2;
 	}
 </style>
