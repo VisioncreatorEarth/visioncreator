@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { goto } from '$app/navigation';
+	import { dynamicView } from '$lib/stores';
 
 	export let activeTab: string;
 	const tabs = ['views', 'actions', 'settings'] as const;
@@ -18,11 +19,33 @@
 			name: 'Episodes',
 			icon: 'mdi:play-circle',
 			href: '/episodes'
+		},
+		{
+			name: 'BringMe',
+			icon: 'mdi:cart',
+			href: '/me',
+			class: 'variant-ghost-tertiary',
+			onClick: () => {
+				dynamicView.set({
+					view: {
+						id: "bring",
+						component: "o-Bring",
+						layout: {
+							areas: "'content'",
+							columns: "1fr",
+							rows: "1fr"
+						}
+					}
+				});
+			}
 		}
 	];
 
-	async function handleNavigation(href: string) {
-		await goto(href);
+	async function handleNavigation(link: typeof viewLinks[number]) {
+		if (link.onClick) {
+			link.onClick();
+		}
+		await goto(link.href);
 		dispatch('closeModal');
 	}
 </script>
@@ -33,9 +56,9 @@
 			<div class="flex gap-4">
 				{#each viewLinks as link}
 					<div
-						on:click={() => handleNavigation(link.href)}
-						on:keydown={(e) => e.key === 'Enter' && handleNavigation(link.href)}
-						class="flex flex-col items-center justify-center w-[100px] h-[100px] transition-colors duration-200 rounded-lg cursor-pointer variant-ghost-secondary hover:variant-ghost-primary"
+						on:click={() => handleNavigation(link)}
+						on:keydown={(e) => e.key === 'Enter' && handleNavigation(link)}
+						class="flex flex-col items-center justify-center w-[100px] h-[100px] transition-colors duration-200 rounded-lg cursor-pointer {link.class || 'variant-ghost-secondary'} hover:variant-ghost-primary"
 						tabindex="0"
 						role="button"
 					>
