@@ -1,5 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import type { AuditLog } from './types';
+import type { AuditLog } from '../utils/types';
 
 export default createOperation.query({
     input: z.object({
