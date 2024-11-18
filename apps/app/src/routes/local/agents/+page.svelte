@@ -38,7 +38,7 @@
 
 			console.log('Creating Ultravox session...');
 			session = new UltravoxSession();
-			
+
 			// Register the view switching tool
 			session.registerToolImplementation('switchView', switchViewTool);
 
@@ -131,7 +131,7 @@
 			</div>
 		{/if}
 
-		<div class="p-4 bg-white rounded-lg shadow-lg mb-8">
+		<!-- <div class="p-4 mb-8 bg-white rounded-lg shadow-lg">
 			<h2 class="mb-4 text-xl font-semibold">Transcripts</h2>
 			{#if transcripts.length === 0}
 				<p class="italic text-gray-500">No transcripts yet</p>
@@ -144,11 +144,11 @@
 					{/each}
 				</div>
 			{/if}
-		</div>
+		</div> -->
 
 		<!-- UI Views -->
 		{#if currentView !== 'none'}
-			<div class="mt-8 p-6 bg-white rounded-lg shadow-lg transition-all duration-300">
+			<div class="p-6 mt-8 bg-white rounded-lg shadow-lg transition-all duration-300">
 				{#if currentView === 'banking'}
 					<div class="space-y-6">
 						<h2 class="text-2xl font-bold text-gray-800">Banking Dashboard</h2>
@@ -162,8 +162,8 @@
 								<p class="text-2xl font-bold text-green-600">$12,380.00</p>
 							</div>
 						</div>
-						<div class="border-t pt-4">
-							<h3 class="font-semibold mb-2">Recent Transactions</h3>
+						<div class="pt-4 border-t">
+							<h3 class="mb-2 font-semibold">Recent Transactions</h3>
 							<div class="space-y-2">
 								<div class="flex justify-between">
 									<span>Grocery Store</span>
@@ -180,16 +180,16 @@
 					<div class="space-y-6">
 						<h2 class="text-2xl font-bold text-gray-800">Todo List</h2>
 						<div class="space-y-3">
-							<div class="flex items-center gap-2">
-								<input type="checkbox" checked class="w-5 h-5">
+							<div class="flex gap-2 items-center">
+								<input type="checkbox" checked class="w-5 h-5" />
 								<span class="line-through">Complete project presentation</span>
 							</div>
-							<div class="flex items-center gap-2">
-								<input type="checkbox" class="w-5 h-5">
+							<div class="flex gap-2 items-center">
+								<input type="checkbox" class="w-5 h-5" />
 								<span>Schedule team meeting</span>
 							</div>
-							<div class="flex items-center gap-2">
-								<input type="checkbox" class="w-5 h-5">
+							<div class="flex gap-2 items-center">
+								<input type="checkbox" class="w-5 h-5" />
 								<span>Review quarterly reports</span>
 							</div>
 						</div>
@@ -197,8 +197,8 @@
 				{:else if currentView === 'profile'}
 					<div class="space-y-6">
 						<h2 class="text-2xl font-bold text-gray-800">Profile Dashboard</h2>
-						<div class="flex items-center gap-4">
-							<div class="w-20 h-20 bg-gray-200 rounded-full"></div>
+						<div class="flex gap-4 items-center">
+							<div class="w-20 h-20 bg-gray-200 rounded-full" />
 							<div>
 								<h3 class="text-xl font-semibold">John Doe</h3>
 								<p class="text-gray-600">john.doe@example.com</p>

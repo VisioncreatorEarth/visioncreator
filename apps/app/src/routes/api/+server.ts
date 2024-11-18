@@ -35,13 +35,13 @@ export const POST: RequestHandler = async ({ request }) => {
         // Log API key presence and first few characters (safely)
         const apiKey = SECRET_ULTRAVOX_API_KEY || '';
         console.log('API Key starts with:', apiKey.substring(0, 8) + '...');
-        
+
         // Prepare headers exactly as shown in documentation
         const headers = {
             'Content-Type': 'application/json',
             'X-API-Key': SECRET_ULTRAVOX_API_KEY
         };
-        
+
         console.log('Request headers:', {
             ...headers,
             'X-API-Key': headers['X-API-Key'] ? 'Present (length: ' + headers['X-API-Key'].length + ')' : 'Missing'
@@ -55,7 +55,8 @@ export const POST: RequestHandler = async ({ request }) => {
             body: JSON.stringify({
                 systemPrompt: "You are an expert AI assistant helping users navigate through different views of an application. You can switch between banking, todo list, and profile views based on user requests.",
                 temperature: 0.8,
-                selectedTools: selectedTools
+                selectedTools: selectedTools,
+                voice: "b0e6b5c1-3100-44d5-8578-9015aa3023ae"
             })
         });
 
@@ -73,7 +74,7 @@ export const POST: RequestHandler = async ({ request }) => {
                     'X-API-Key': SECRET_ULTRAVOX_API_KEY
                 }
             });
-            
+
             const accountInfo = await checkResponse.text();
             console.log('Account Status Response:', checkResponse.status);
             console.log('Account Info:', accountInfo);
@@ -85,7 +86,7 @@ export const POST: RequestHandler = async ({ request }) => {
         }
 
         const ultravoxData = JSON.parse(responseText);
-        
+
         if (!ultravoxData.joinUrl) {
             throw new Error('No joinUrl in Ultravox response');
         }
