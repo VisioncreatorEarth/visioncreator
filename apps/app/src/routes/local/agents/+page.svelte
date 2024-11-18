@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 	import { UltravoxSession } from 'ultravox-client';
+	import { switchViewTool } from '$lib/clientTools';
+	import type { ViewUpdateData } from '$lib/clientTools';
 
 	let session: UltravoxSession | null = null;
 	let status = 'idle';
 	let error: string | null = null;
 	let transcripts: string[] = [];
 	let isCallActive = false;
+	let currentView = 'none'; // 'banking', 'todos', 'profile', or 'none'
 
 	async function startCall() {
 		try {
@@ -35,6 +38,9 @@
 
 			console.log('Creating Ultravox session...');
 			session = new UltravoxSession();
+			
+			// Register the view switching tool
+			session.registerToolImplementation('switchView', switchViewTool);
 
 			session.addEventListener('status', (event) => {
 				console.log('Call status:', event.detail);
@@ -45,6 +51,12 @@
 				console.log('Received transcript:', event.detail);
 				transcripts = [...transcripts, event.detail];
 			});
+
+			// Add view update event listener
+			window.addEventListener('viewUpdate', ((event: CustomEvent<ViewUpdateData>) => {
+				currentView = event.detail.view;
+				// You can use event.detail.context for additional view-specific data
+			}) as EventListener);
 
 			session.addEventListener('error', (event) => {
 				console.error('Session error:', event.detail);
@@ -72,6 +84,7 @@
 			isCallActive = false;
 			status = 'idle';
 			transcripts = [];
+			currentView = 'none';
 		} catch (err) {
 			console.error('Error ending call:', err);
 			error = err instanceof Error ? err.message : 'Failed to end call';
@@ -118,7 +131,7 @@
 			</div>
 		{/if}
 
-		<div class="p-4 bg-white rounded-lg shadow-lg">
+		<div class="p-4 bg-white rounded-lg shadow-lg mb-8">
 			<h2 class="mb-4 text-xl font-semibold">Transcripts</h2>
 			{#if transcripts.length === 0}
 				<p class="italic text-gray-500">No transcripts yet</p>
@@ -132,5 +145,78 @@
 				</div>
 			{/if}
 		</div>
+
+		<!-- UI Views -->
+		{#if currentView !== 'none'}
+			<div class="mt-8 p-6 bg-white rounded-lg shadow-lg transition-all duration-300">
+				{#if currentView === 'banking'}
+					<div class="space-y-6">
+						<h2 class="text-2xl font-bold text-gray-800">Banking Dashboard</h2>
+						<div class="grid grid-cols-2 gap-4">
+							<div class="p-4 bg-blue-50 rounded-lg">
+								<h3 class="font-semibold text-blue-800">Checking Account</h3>
+								<p class="text-2xl font-bold text-blue-600">$2,450.00</p>
+							</div>
+							<div class="p-4 bg-green-50 rounded-lg">
+								<h3 class="font-semibold text-green-800">Savings Account</h3>
+								<p class="text-2xl font-bold text-green-600">$12,380.00</p>
+							</div>
+						</div>
+						<div class="border-t pt-4">
+							<h3 class="font-semibold mb-2">Recent Transactions</h3>
+							<div class="space-y-2">
+								<div class="flex justify-between">
+									<span>Grocery Store</span>
+									<span class="text-red-600">-$82.45</span>
+								</div>
+								<div class="flex justify-between">
+									<span>Salary Deposit</span>
+									<span class="text-green-600">+$2,800.00</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				{:else if currentView === 'todos'}
+					<div class="space-y-6">
+						<h2 class="text-2xl font-bold text-gray-800">Todo List</h2>
+						<div class="space-y-3">
+							<div class="flex items-center gap-2">
+								<input type="checkbox" checked class="w-5 h-5">
+								<span class="line-through">Complete project presentation</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<input type="checkbox" class="w-5 h-5">
+								<span>Schedule team meeting</span>
+							</div>
+							<div class="flex items-center gap-2">
+								<input type="checkbox" class="w-5 h-5">
+								<span>Review quarterly reports</span>
+							</div>
+						</div>
+					</div>
+				{:else if currentView === 'profile'}
+					<div class="space-y-6">
+						<h2 class="text-2xl font-bold text-gray-800">Profile Dashboard</h2>
+						<div class="flex items-center gap-4">
+							<div class="w-20 h-20 bg-gray-200 rounded-full"></div>
+							<div>
+								<h3 class="text-xl font-semibold">John Doe</h3>
+								<p class="text-gray-600">john.doe@example.com</p>
+							</div>
+						</div>
+						<div class="grid grid-cols-2 gap-4">
+							<div class="p-4 bg-purple-50 rounded-lg">
+								<h3 class="font-semibold text-purple-800">Active Projects</h3>
+								<p class="text-2xl font-bold text-purple-600">4</p>
+							</div>
+							<div class="p-4 bg-yellow-50 rounded-lg">
+								<h3 class="font-semibold text-yellow-800">Tasks Completed</h3>
+								<p class="text-2xl font-bold text-yellow-600">28</p>
+							</div>
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 </div>

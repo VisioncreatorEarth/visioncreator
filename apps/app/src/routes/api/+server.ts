@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SECRET_ULTRAVOX_API_KEY } from '$env/static/private';
+import { selectedTools } from '$lib/toolDefinitions';
 
 export const POST: RequestHandler = async ({ request }) => {
     try {
@@ -52,8 +53,9 @@ export const POST: RequestHandler = async ({ request }) => {
             method: 'POST',
             headers,
             body: JSON.stringify({
-                systemPrompt: "You are an expert on speech-to-speech communication.",
-                temperature: 0.8
+                systemPrompt: "You are an expert AI assistant helping users navigate through different views of an application. You can switch between banking, todo list, and profile views based on user requests.",
+                temperature: 0.8,
+                selectedTools: selectedTools
             })
         });
 
