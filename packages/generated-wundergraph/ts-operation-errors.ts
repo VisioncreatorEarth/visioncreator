@@ -6,6 +6,7 @@ export type OperationErrors = {
 	MyNewsletterStatus: MyNewsletterStatusErrors;
 	NewsletterToggle: NewsletterToggleErrors;
 	askClaude: AskClaudeErrors;
+	askHominio: AskHominioErrors;
 	calculateCID: CalculateCIDErrors;
 	createInvite: CreateInviteErrors;
 	getAuditLogs: GetAuditLogsErrors;
@@ -30,9 +31,30 @@ export type OperationErrors = {
 	updateMe: UpdateMeErrors;
 };
 
+export type OperationUltravoxInitializationError = {
+	code: "UltravoxInitializationError";
+	statusCode: 400;
+	message: "";
+};
+export type OperationUltravoxSubscriptionError = {
+	code: "UltravoxSubscriptionError";
+	statusCode: 402;
+	message: "Ultravox subscription needs to be set up";
+};
+export type OperationUltravoxAuthenticationError = {
+	code: "UltravoxAuthenticationError";
+	statusCode: 401;
+	message: "Invalid or missing Ultravox API key";
+};
+
 export type MyNewsletterStatusErrors = ClientOperationErrors;
 export type NewsletterToggleErrors = ClientOperationErrors;
 export type AskClaudeErrors = ClientOperationErrors;
+export type AskHominioErrors =
+	| OperationUltravoxInitializationError
+	| OperationUltravoxSubscriptionError
+	| OperationUltravoxAuthenticationError
+	| ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type GetAuditLogsErrors = ClientOperationErrors;

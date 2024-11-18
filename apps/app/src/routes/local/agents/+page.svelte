@@ -3,6 +3,12 @@
 	import { UltravoxSession } from 'ultravox-client';
 	import { switchViewTool } from '$lib/clientTools';
 	import type { ViewUpdateData } from '$lib/clientTools';
+	import { createMutation } from '$lib/wundergraph';
+
+	// Create the askHominio mutation
+	const askHominioMutation = createMutation({
+		operationName: 'askHominio'
+	});
 
 	let session: UltravoxSession | null = null;
 	let status = 'idle';
@@ -16,23 +22,17 @@
 			status = 'connecting';
 			error = null;
 
-			const response = await fetch('/api', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					chat_message_prompts: ['Hello! How can I help you today?']
-				})
+			const result = await $askHominioMutation.mutateAsync({
+				chat_message_prompts: ['Hello! How can I help you today?']
 			});
 
-			const data = await response.json();
+			const data = result.data;
 
-			if (!response.ok) {
-				throw new Error(data.error || 'Failed to create call');
+			if (result.error) {
+				throw new Error(result.error.message || 'Failed to create call');
 			}
 
-			if (!data.joinUrl) {
+			if (!data?.joinUrl) {
 				throw new Error('No join URL received');
 			}
 
@@ -205,13 +205,13 @@
 							</div>
 						</div>
 						<div class="grid grid-cols-2 gap-4">
-							<div class="p-4 bg-purple-50 rounded-lg">
-								<h3 class="font-semibold text-purple-800">Active Projects</h3>
-								<p class="text-2xl font-bold text-purple-600">4</p>
+							<div class="p-4 bg-gray-50 rounded-lg">
+								<h4 class="font-semibold">Account Type</h4>
+								<p>Premium</p>
 							</div>
-							<div class="p-4 bg-yellow-50 rounded-lg">
-								<h3 class="font-semibold text-yellow-800">Tasks Completed</h3>
-								<p class="text-2xl font-bold text-yellow-600">28</p>
+							<div class="p-4 bg-gray-50 rounded-lg">
+								<h4 class="font-semibold">Member Since</h4>
+								<p>Jan 2023</p>
 							</div>
 						</div>
 					</div>
