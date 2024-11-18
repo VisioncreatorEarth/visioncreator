@@ -11,7 +11,92 @@ export class UltravoxClient {
     this.apiKey = apiKey;
   }
 
-  async call() {
+  private async getActiveCalls(): Promise<string[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/calls`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.warn('Failed to fetch active calls:', response.status);
+        return [];
+      }
+
+      const data = await response.json();
+      return data.calls?.filter(call => !call.ended)?.map(call => call.callId) || [];
+    } catch (error) {
+      console.warn('Error fetching active calls:', error);
+      return [];
+    }
+  }
+
+  private async endCall(callId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/calls/${callId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to end call ${callId}:`, response.status);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.warn(`Error ending call ${callId}:`, error);
+      return false;
+    }
+  }
+
+  private async cleanupActiveCalls(): Promise<void> {
+    console.log('Checking for active calls to cleanup...');
+    const activeCalls = await this.getActiveCalls();
+    
+    if (activeCalls.length > 0) {
+      console.log(`Found ${activeCalls.length} active calls. Cleaning up...`);
+      
+      await Promise.all(
+        activeCalls.map(async callId => {
+          const success = await this.endCall(callId);
+          console.log(`Call ${callId} cleanup ${success ? 'successful' : 'failed'}`);
+        })
+      );
+    } else {
+      console.log('No active calls found to cleanup');
+    }
+  }
+
+  async call(config: {
+    systemPrompt: string;
+    temperature: number;
+    selectedTools: Array<{
+      temporaryTool: {
+        modelToolName: string;
+        description: string;
+        dynamicParameters: Array<{
+          name: string;
+          location: string;
+          schema: {
+            type: string;
+            enum?: string[];
+            description: string;
+            properties?: Record<string, any>;
+          };
+          required: boolean;
+        }>;
+        client: Record<string, any>;
+      };
+    }>;
+    voice: string;
+  }) {
     const headers = {
       'Content-Type': 'application/json',
       'X-API-Key': this.apiKey
@@ -23,54 +108,13 @@ export class UltravoxClient {
     });
 
     try {
+      // Cleanup any active calls first
+      await this.cleanupActiveCalls();
+
       const response = await fetch(`${this.baseUrl}/calls`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          systemPrompt: "You are an expert AI assistant helping users navigate through different views of an application. You can switch between banking, todo list, and profile views based on user requests.",
-          temperature: 0.8,
-          selectedTools: [
-            {
-              temporaryTool: {
-                modelToolName: "switchView",
-                description: "Switch the current UI view based on user intent. Call this whenever the user expresses interest in viewing different content or functionality.",
-                dynamicParameters: [
-                  {
-                    name: "view",
-                    location: "PARAMETER_LOCATION_BODY",
-                    schema: {
-                      type: "string",
-                      enum: ["banking", "todos", "profile", "none"],
-                      description: "The view to switch to based on user intent"
-                    },
-                    required: true
-                  },
-                  {
-                    name: "context",
-                    location: "PARAMETER_LOCATION_BODY",
-                    schema: {
-                      type: "object",
-                      description: "Additional context data specific to the view",
-                      properties: {
-                        reason: {
-                          type: "string",
-                          description: "Why this view was selected based on user intent"
-                        },
-                        additionalData: {
-                          type: "object",
-                          description: "Any additional data needed for the view"
-                        }
-                      }
-                    },
-                    required: false
-                  }
-                ],
-                client: {}
-              }
-            }
-          ],
-          voice: "b0e6b5c1-3100-44d5-8578-9015aa3023ae"
-        })
+        body: JSON.stringify(config)
       });
 
       const responseText = await response.text();

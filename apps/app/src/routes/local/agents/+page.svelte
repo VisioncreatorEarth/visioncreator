@@ -23,7 +23,7 @@
 			error = null;
 
 			const result = await $askHominioMutation.mutateAsync({
-				chat_message_prompts: ['Hello! How can I help you today?']
+				chat_message_prompts: ['Hi, what do you want to see']
 			});
 
 			const data = result.data;
