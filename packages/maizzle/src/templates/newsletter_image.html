@@ -1,0 +1,31 @@
+---
+title: "@{{ .Campaign.Subject }}"
+content: '@{{ template "content" . }}'
+name: "@{{ .Subscriber.Name }}"
+unsubscribeUrl: "@{{ UnsubscribeURL }}"
+emailUnsub: '@{{ L.T "email.unsub" }}'
+trackView: "@{{ TrackView }}"
+---
+
+<x-main>
+  <div class="mx-auto w-full">
+    <div class="overflow-hidden -mx-8 -mt-8 rounded-t-3xl sm:-mx-4 sm:-mt-4">
+      <div style="max-width: 600px; margin: 0 auto; position: relative">
+        <img src="https://listmonk.visioncreator.earth/uploads/006-week_OA7Ikc.png" alt="Cover Image"
+          style="display: block; width: 100%; max-width: 100%; height: auto" />
+      </div>
+    </div>
+
+    <div class="m-0 mt-8 leading-6">
+      <p class="mb-4 text-base sm:text-sm">Hey {{ page.name }},</p>
+      <div class="text-base sm:text-sm">{{{ page.content }}}</div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <a class="text-sm text-primary-500" href="{{ page.unsubscribeUrl }}">
+        {{{ page.emailUnsub }}}
+      </a>
+    </div>
+  </div>
+  {{{ page.trackView }}}
+</x-main>
