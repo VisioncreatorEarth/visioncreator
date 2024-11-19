@@ -31,9 +31,11 @@ export type OperationErrors = {
 	sendMail: SendMailErrors;
 	sendMailWIP: SendMailWIPErrors;
 	toggleOnboarded: ToggleOnboardedErrors;
+	toggleShoppingListItem: ToggleShoppingListItemErrors;
 	transcribeAudio: TranscribeAudioErrors;
 	updateMe: UpdateMeErrors;
 	updateShoppingList: UpdateShoppingListErrors;
+	updateShoppingListItems: UpdateShoppingListItemsErrors;
 	updateView: UpdateViewErrors;
 };
 
@@ -85,7 +87,9 @@ export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
+export type ToggleShoppingListItemErrors = ClientOperationErrors;
 export type TranscribeAudioErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
 export type UpdateShoppingListErrors = ClientOperationErrors;
+export type UpdateShoppingListItemsErrors = ClientOperationErrors;
 export type UpdateViewErrors = ClientOperationErrors;

@@ -1,13 +1,16 @@
-import { createOperation, z } from '../generated/wundergraph.factory';
-import { AuthorizationError } from '@wundergraph/sdk/operations';
+import { createOperation, z, AuthorizationError } from '../generated/wundergraph.factory';
 
 export default createOperation.query({
-  handler: async ({ user, context }) => {
+  requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["authenticated", "admin"],
+  },
+  handler: async ({ context, user }) => {
     if (!user?.customClaims?.id) {
-      throw new AuthorizationError({ message: "User ID does not match." });
+      throw new AuthorizationError({ message: "No authenticated user found." });
     }
 
-    const { data: lists, error: listsError } = await context.supabase
+    const { data: lists, error } = await context.supabase
       .from('shopping_lists')
       .select(`
         id,
@@ -19,11 +22,13 @@ export default createOperation.query({
           quantity,
           unit,
           is_checked,
+          created_at,
+          updated_at,
           shopping_items (
             id,
             name,
-            icon,
             category,
+            icon,
             default_unit
           )
         )
@@ -31,11 +36,11 @@ export default createOperation.query({
       .eq('user_id', user.customClaims.id)
       .order('created_at', { ascending: false });
 
-    if (listsError) {
-      console.error("Error fetching shopping lists:", listsError);
-      throw new Error("Failed to fetch shopping lists");
+    if (error) {
+      console.error('Error fetching shopping lists:', error);
+      throw new Error(error.message);
     }
 
-    return lists;
+    return lists || [];
   },
 });

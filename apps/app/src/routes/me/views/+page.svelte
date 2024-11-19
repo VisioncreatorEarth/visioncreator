@@ -8,6 +8,7 @@
 	let showNewViewForm = false;
 	let newViewName = '';
 	let editError: string | null = null;
+	let showEditor = false;
 
 	const viewsQuery = createQuery({
 		operationName: 'queryMyViews'
@@ -91,9 +92,9 @@
 	}
 </script>
 
-<div class="flex h-screen bg-background">
-	<!-- Left sidebar - Views List (1/7) -->
-	<aside class="w-1/7 min-w-[200px] border-r border-surface-600 bg-surface-900 p-4 space-y-4">
+<div class="flex h-screen overflow-hidden">
+	<!-- Left sidebar - Views List -->
+	<aside class="flex-shrink-0 w-[200px] border-r border-surface-600 bg-surface-900 p-4 space-y-4">
 		<div class="flex justify-between items-center">
 			<h2 class="text-xl font-bold">Views</h2>
 			<button class="btn btn-sm variant-ghost-secondary" on:click={() => (showNewViewForm = true)}>
@@ -126,7 +127,7 @@
 			</div>
 		{/if}
 
-		<div class="space-y-1">
+		<div class="space-y-1 w-full">
 			{#each views as view}
 				<button
 					class="w-full p-2 text-left rounded-lg hover:bg-surface-800 transition-colors {selectedView
@@ -142,8 +143,8 @@
 		</div>
 	</aside>
 
-	<!-- Center - ComposeView (Main Content) -->
-	<main class="overflow-hidden flex-1 bg-surface-900">
+	<!-- Main content -->
+	<main class="flex-1 overflow-hidden">
 		{#if selectedView}
 			<ComposeView view={selectedView} />
 		{:else}
@@ -153,9 +154,17 @@
 		{/if}
 	</main>
 
-	<!-- Right sidebar - Code Editor (1/4) -->
-	{#if selectedView}
-		<aside class="w-1/4 min-w-[300px] border-l border-surface-600 bg-surface-900 p-4 space-y-4">
+	<!-- Editor Toggle Button -->
+	<button
+		class="fixed right-0 top-1/2 z-10 p-2 rounded-l-lg shadow-lg transition-colors -translate-y-1/2 bg-surface-800 hover:bg-surface-700 text-surface-200 hover:text-white"
+		on:click={() => (showEditor = !showEditor)}
+	>
+		<Icon icon={showEditor ? 'mdi:chevron-right' : 'mdi:chevron-left'} class="w-5 h-5" />
+	</button>
+
+	<!-- Right sidebar - Code Editor -->
+	{#if selectedView && showEditor}
+		<aside class="flex-shrink-0 w-[300px] border-l border-surface-600 bg-surface-900 p-4 space-y-4">
 			<div class="flex justify-between items-center">
 				<h2 class="text-xl font-bold">Edit View</h2>
 				<button
@@ -171,14 +180,16 @@
 					{editError}
 				</div>
 			{/if}
-			<textarea
-				bind:value={editedConfig}
-				on:input={handleConfigEdit}
-				class="w-full h-[calc(100vh-8rem)] font-mono text-sm p-3 bg-surface-900 border border-border rounded-lg {editError
-					? 'border-red-500'
-					: ''}"
-				spellcheck="false"
-			/>
+			<div class="flex flex-col w-full h-full">
+				<textarea
+					bind:value={editedConfig}
+					on:input={handleConfigEdit}
+					class="w-full h-full font-mono text-sm p-3 bg-surface-900 border border-border rounded-lg {editError
+						? 'border-red-500'
+						: ''}"
+					spellcheck="false"
+				/>
+			</div>
 		</aside>
 	{/if}
 </div>

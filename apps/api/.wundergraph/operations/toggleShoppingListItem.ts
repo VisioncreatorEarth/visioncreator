@@ -2,7 +2,7 @@ import { createOperation, z, AuthorizationError } from '../generated/wundergraph
 
 export default createOperation.mutation({
   input: z.object({
-    listName: z.string().min(1).max(100),
+    itemId: z.string(),
   }),
   requireAuthentication: true,
   rbac: {
@@ -13,22 +13,19 @@ export default createOperation.mutation({
       throw new AuthorizationError({ message: "No authenticated user found." });
     }
 
-    const { data, error } = await context.supabase
-      .from('shopping_lists')
-      .insert([
-        {
-          name: input.listName,
-          user_id: user.customClaims.id
-        }
-      ])
-      .select()
-      .single();
+    const { data: isChecked, error } = await context.supabase.rpc(
+      'toggle_shopping_list_item',
+      {
+        p_user_id: user.customClaims.id,
+        p_item_id: input.itemId
+      }
+    );
 
     if (error) {
-      console.error('Error creating shopping list:', error);
+      console.error('Error toggling shopping list item:', error);
       throw new Error(error.message);
     }
 
-    return data;
+    return { id: input.itemId, is_checked: isChecked };
   },
 });
