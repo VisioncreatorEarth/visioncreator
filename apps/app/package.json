@@ -37,6 +37,7 @@
 		"svelte-markdown": "^0.4.1",
 		"sveltekit-superforms": "^1.7.2",
 		"ultravox-client": "^0.3.2",
+		"uuid": "^11.0.3",
 		"ws": "^8.18.0",
 		"zod": "^3.23.8"
 	},

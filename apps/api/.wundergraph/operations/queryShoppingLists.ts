@@ -2,11 +2,8 @@ import { createOperation, z } from '../generated/wundergraph.factory';
 import { AuthorizationError } from '@wundergraph/sdk/operations';
 
 export default createOperation.query({
-  input: z.object({
-    userId: z.string()
-  }),
-  handler: async ({ input, user, context }) => {
-    if (input.userId !== user?.customClaims?.id) {
+  handler: async ({ user, context }) => {
+    if (!user?.customClaims?.id) {
       throw new AuthorizationError({ message: "User ID does not match." });
     }
 
@@ -31,7 +28,7 @@ export default createOperation.query({
           )
         )
       `)
-      .eq('user_id', input.userId)
+      .eq('user_id', user.customClaims.id)
       .order('created_at', { ascending: false });
 
     if (listsError) {
