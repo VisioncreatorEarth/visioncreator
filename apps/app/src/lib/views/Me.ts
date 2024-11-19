@@ -17,35 +17,54 @@ export const view = {
 			component: 'Profile',
 			slot: 'row1',
 			map: {
-				name: 'Profile',
+				avatar: {
+					query: 'queryMe',
+					prop: 'id'
+				},
 				title: {
 					query: 'queryMe',
-					input: { id: 'authID' },
 					prop: 'name'
 				},
 				description: 'wonderful to have you around',
-				invites: {
+				stat1: {
 					query: 'queryUserStats',
-					input: { id: 'authID' },
 					prop: 'suminvites'
 				},
-				waitingPosition: {
+				stat1desc: "Pioneers Inspired",
+				stat2: {
 					query: 'queryUserStats',
-					input: { id: 'authID' },
 					prop: 'userRank'
-				}
+				},
+				stat2desc: "Vision Rank",
 			}
 		},
 		{
 			id: 'InviteCard',
 			slot: 'row2',
-			component: 'InviteCard'
+			component: 'InviteCard',
+			map: {
+				qrCodeId: {
+					query: 'queryMe',
+					prop: 'id'
+				},
+				title: "Inspire & Rise",
+				subtitle: "Become one of the 1st to unlock early access",
+				description: "The more fellows you inspire, the higher you rise in your rank and the faster you get invited.",
+				showQrText: "Show QR Code",
+				hideQrText: "Hide QR Code",
+				copyLinkText: "Copy Inspire Link",
+				linkCopiedText: "Link Copied!"
+			}
 		},
 		{
 			id: 'Leaderboard',
 			component: 'Leaderboard',
 			slot: 'row3',
 			map: {
+				highlightedItem: {
+					query: 'queryMe',
+					prop: 'id'
+				},
 				list: {
 					query: 'queryLeaderboard',
 					prop: 'profiles',
@@ -54,17 +73,7 @@ export const view = {
 						identifier: 'prop.id',
 						numericValue: 'prop.suminvites'
 					}
-				},
-				stats: [
-					{
-						label: 'Inspirations',
-						value: 'prop.suminvites'
-					},
-					{
-						label: 'Rank',
-						value: 'prop.rank'
-					}
-				]
+				}
 			}
 		}
 	]

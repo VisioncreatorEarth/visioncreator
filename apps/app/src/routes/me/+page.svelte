@@ -46,17 +46,11 @@
 			// Only proceed if we don't have an inviter set and have a visionid
 			if (!user?.user_metadata.inviter && $futureMe.visionid) {
 				try {
-					console.log('Starting initial setup...', {
-						currentName: user?.user_metadata.name,
-						futureMeName: $futureMe.name,
-						visionId: $futureMe.visionid
-					});
-
 					// Update user metadata with inviter and name
 					await supabase.auth.updateUser({
 						data: {
 							inviter: $futureMe.visionid,
-							name: user.user_metadata.name || $futureMe.name || 'UpdateMyName'
+							name: $futureMe.name || 'UpdateMyName'
 						}
 					});
 
@@ -70,7 +64,6 @@
 						// Update name in database if needed
 						if ($futureMe.name) {
 							await $updateNameMutation.mutateAsync({
-								id: session.user.id,
 								name: $futureMe.name
 							});
 						}
@@ -80,7 +73,7 @@
 					Me.update((store) => ({
 						...store,
 						id: session.user.id,
-						name: $futureMe.name || user.user_metadata.name || 'UpdateMyName'
+						name: $futureMe.name || 'UpdateMyName'
 					}));
 
 					// Refetch user data
@@ -148,10 +141,10 @@
 <svelte:window on:updateView={handleViewUpdate} />
 
 {#if $meQuery.isLoading}
-	<div class="flex items-center justify-center h-screen">Loading...</div>
+	<div class="flex justify-center items-center h-screen">Loading...</div>
 {:else if meData && !meData.onboarded}
 	{#if !showComposeView}
-		<div class="flex items-center justify-center w-full min-h-screen px-4 sm:px-6 md:px-8">
+		<div class="flex justify-center items-center px-4 w-full min-h-screen sm:px-6 md:px-8">
 			<div class="w-full max-w-3xl">
 				<SubscribeToNewsletter
 					userId={session.user.id}
@@ -161,18 +154,10 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView
-			view={$dynamicView.view || meView}
-			{session}
-			key={JSON.stringify($dynamicView.view)}
-		/>
+		<ComposeView view={$dynamicView.view || meView} />
 	{/if}
 {:else if meData}
-	<ComposeView
-		view={$dynamicView.view || meView}
-		{session}
-		key={JSON.stringify($dynamicView.view)}
-	/>
+	<ComposeView view={$dynamicView.view || meView} />
 {:else}
-	<div class="flex items-center justify-center h-screen text-red-500">Error loading user data</div>
+	<div class="flex justify-center items-center h-screen text-red-500">Error loading user data</div>
 {/if}

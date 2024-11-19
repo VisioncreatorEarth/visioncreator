@@ -5,22 +5,20 @@ import {
 } from "../generated/wundergraph.factory";
 
 export default createOperation.query({
-  input: z.object({
-    id: z.string(),
-  }),
   requireAuthentication: true,
   rbac: {
     requireMatchAll: ["authenticated"],
   },
-  handler: async ({ context, input, user }) => {
-    if (input.id !== user?.customClaims?.id) {
-      console.error("Authorization Error: User ID does not match.");
-      throw new AuthorizationError({ message: "User ID does not match." });
+  handler: async ({ context, user }) => {
+    if (!user?.customClaims?.id) {
+      console.error("Authorization Error: No authenticated user found.");
+      throw new AuthorizationError({ message: "No authenticated user found." });
     }
+
     const { data: profiles, error } = await context.supabase
       .from("profiles")
       .select("id, name, onboarded")
-      .eq("id", input.id)
+      .eq("id", user.customClaims.id)
       .single();
 
     if (error) {

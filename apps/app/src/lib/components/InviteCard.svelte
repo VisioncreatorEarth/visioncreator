@@ -4,10 +4,11 @@
 	import QRCode from '@castlenine/svelte-qrcode';
 
 	export let me;
+	const query = $me.query;
 
 	let linkCopied = writable(false);
 	let showQRCode = writable(false);
-	let invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$me.authID}`;
+	let invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$query.data.qrCodeId}`;
 
 	async function copyInvitationLink() {
 		try {
@@ -30,26 +31,14 @@
 <div
 	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
 >
-	<div class="p-4 text-lg rounded-lg">
-		<!-- 	<ul class="space-y-2">
-			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
-			<li>+1 free ticket to our inaugural event</li>
-		</ul>
-		<p class="mt-4 text-lg font-semibold text-secondary-300 sm:text-xl md:text-2xl">
-			Time's running!
-		</p>
-		-->
-	</div>
-
-	<!-- <Countdown /> -->
 	<div class="">
 		<h3 class="text-primary-300">
 			<span class="text-4xl font-bold h1">
-				Inspire & Rise <br />
+				{$query.data.title}<br />
 			</span>
-			<p class="text-xl font-medium">Become one of the 1st to unlock early access</p>
+			<p class="text-xl font-medium">{$query.data.subtitle}</p>
 		</h3>
-		The more fellows you inspire, the higher you rise in your rank and the faster you get invited.
+		{$query.data.description}
 	</div>
 
 	{#if $showQRCode}
@@ -70,7 +59,7 @@
 			class="btn btn-sm @3xl:btn-lg variant-ghost-primary"
 			on:click={toggleQRCode}
 		>
-			{$showQRCode ? 'Hide QR Code' : 'Show QR Code'}
+			{$showQRCode ? $query.data.hideQrText : $query.data.showQrText}
 		</button>
 		<button
 			type="button"
@@ -78,7 +67,7 @@
 			on:click={copyInvitationLink}
 			disabled={$linkCopied}
 		>
-			{$linkCopied ? 'Link Copied!' : 'Copy Inspire Link'}
+			{$linkCopied ? $query.data.linkCopiedText : $query.data.copyLinkText}
 		</button>
 	</div>
 </div>

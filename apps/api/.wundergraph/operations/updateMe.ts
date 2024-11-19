@@ -6,7 +6,6 @@ import {
 
 export default createOperation.mutation({
   input: z.object({
-    id: z.string(),
     name: z.string(),
   }),
   requireAuthentication: true,
@@ -14,12 +13,12 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, input, user }) => {
-    if (input.id !== user?.customClaims?.id) {
-      throw new AuthorizationError({ message: "User ID does not match." });
+    if (!user?.customClaims?.id) {
+      throw new AuthorizationError({ message: "No authenticated user found." });
     }
 
     // Check if the user is the admin user
-    if (input.id === "00000000-0000-0000-0000-000000000001") {
+    if (user.customClaims.id === "00000000-0000-0000-0000-000000000001") {
       return {
         success: false,
         message: "Admin user cannot be updated.",
@@ -89,7 +88,7 @@ export default createOperation.mutation({
         const { data: updateData, error: updateError } = await context.supabase
           .from("profiles")
           .update({ name: input.name, active: true })
-          .eq("id", input.id)
+          .eq("id", user.customClaims.id)
           .select()
           .single();
 

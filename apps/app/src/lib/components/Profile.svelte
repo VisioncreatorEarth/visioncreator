@@ -27,21 +27,18 @@
 	});
 </script>
 
-<div class="w-full max-w-6xl bg-surface-800 rounded-3xl">
+<div class="w-full max-w-6xl rounded-3xl bg-surface-800">
 	<div
 		class="relative text-center bg-center bg-cover rounded-t-3xl"
 		style="background-image: url('/profile-bg.jpg');"
 	>
 		<div class="absolute inset-0 bg-opacity-40 bg-surface-900" />
 
-		<div class="relative z-10 flex flex-col items-center text-tertiary-300">
-			<!-- <div class="px-6 py-2 font-bold text-white bg-transparent text-md rounded-t-3xl">
-				{$query.data.name}
-			</div> -->
-			<div class="flex flex-col items-center pt-16 p-8">
+		<div class="flex relative z-10 flex-col items-center text-tertiary-300">
+			<div class="flex flex-col items-center p-8 pt-16">
 				<Avatar
 					me={{
-						data: { seed: $me.authID },
+						data: { seed: $query.data.avatar },
 						design: { highlight: true },
 						size: 'lg'
 					}}
@@ -57,21 +54,15 @@
 	<div class="flex items-center justify-evenly p-4 @3xl:p-8 space-x-4">
 		<div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
-				{$query.data.waitingPosition}
+				{$query.data.stat1}
 			</p>
-			<p class="text-tertiary-600 text-sm @3xl:text-lg">My Vision Rank</p>
+			<p class="text-tertiary-600 text-sm @3xl:text-lg">{$query.data.stat1desc}</p>
 		</div>
 		<div class="text-center">
 			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
-				{$query.data.invites}
+				{$query.data.stat2}
 			</p>
-			<p class="text-tertiary-600 text-sm @3xl:text-lg">Pioneers inspired</p>
+			<p class="text-tertiary-600 text-sm @3xl:text-lg">{$query.data.stat2desc}</p>
 		</div>
-		<!-- <div class="text-center">
-			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
-				{getLevel($query.data.invites)}
-			</p>
-			<p class="text-tertiary-600 text-sm @3xl:text-lg">My Level</p>
-		</div> -->
 	</div>
 </div>
