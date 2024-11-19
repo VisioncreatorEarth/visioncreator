@@ -8,6 +8,7 @@ export type OperationErrors = {
 	askClaude: AskClaudeErrors;
 	askHominio: AskHominioErrors;
 	calculateCID: CalculateCIDErrors;
+	composeView: ComposeViewErrors;
 	createInvite: CreateInviteErrors;
 	createShoppingList: CreateShoppingListErrors;
 	getAuditLogs: GetAuditLogsErrors;
@@ -23,6 +24,7 @@ export type OperationErrors = {
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMails: QueryMailsErrors;
 	queryMe: QueryMeErrors;
+	queryMyViews: QueryMyViewsErrors;
 	queryShoppingLists: QueryShoppingListsErrors;
 	queryUserStats: QueryUserStatsErrors;
 	saveMailWIP: SaveMailWIPErrors;
@@ -32,6 +34,7 @@ export type OperationErrors = {
 	transcribeAudio: TranscribeAudioErrors;
 	updateMe: UpdateMeErrors;
 	updateShoppingList: UpdateShoppingListErrors;
+	updateView: UpdateViewErrors;
 };
 
 export type OperationUltravoxInitializationError = {
@@ -59,6 +62,7 @@ export type AskHominioErrors =
 	| OperationUltravoxAuthenticationError
 	| ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
+export type ComposeViewErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateShoppingListErrors = ClientOperationErrors;
 export type GetAuditLogsErrors = ClientOperationErrors;
@@ -74,6 +78,7 @@ export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
+export type QueryMyViewsErrors = ClientOperationErrors;
 export type QueryShoppingListsErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
 export type SaveMailWIPErrors = ClientOperationErrors;
@@ -83,3 +88,4 @@ export type ToggleOnboardedErrors = ClientOperationErrors;
 export type TranscribeAudioErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
 export type UpdateShoppingListErrors = ClientOperationErrors;
+export type UpdateViewErrors = ClientOperationErrors;

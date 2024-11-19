@@ -119,29 +119,32 @@ ALTER TABLE capabilities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE capability_audit_trail ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hominio_requests ENABLE ROW LEVEL SECURITY;
 
--- Capabilities policies
-CREATE POLICY "Users can view their own capabilities"
-    ON capabilities FOR SELECT
-    USING (user_id = auth.uid());
+-- Service role policies for full access
+CREATE POLICY "Service role has full access to capabilities"
+    ON capabilities
+    AS PERMISSIVE
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
 
-CREATE POLICY "Admins can manage all capabilities"
-    ON capabilities FOR ALL
-    USING (EXISTS (
-        SELECT 1 FROM auth.users
-        WHERE auth.uid() = id 
-        AND raw_user_meta_data->>'role' = 'admin'
-    ));
+CREATE POLICY "Service role has full access to audit trail"
+    ON capability_audit_trail
+    AS PERMISSIVE
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
 
--- Hominio requests policies
-CREATE POLICY "Users can view their own requests"
-    ON hominio_requests FOR SELECT
-    USING (user_id = auth.uid());
-
-CREATE POLICY "Users can insert their own requests"
-    ON hominio_requests FOR INSERT
-    WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Service role has full access to hominio requests"
+    ON hominio_requests
+    AS PERMISSIVE
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
 
 -- Grants
 GRANT ALL ON TABLE capabilities TO service_role;
 GRANT ALL ON TABLE capability_audit_trail TO service_role;
-GRANT ALL ON TABLE hominio_requests TO service_role; 
+GRANT ALL ON TABLE hominio_requests TO service_role;
