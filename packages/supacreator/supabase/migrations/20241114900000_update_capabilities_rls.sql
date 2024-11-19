@@ -28,28 +28,3 @@ CREATE POLICY "Service role has full access to hominio requests"
     TO service_role
     USING (true)
     WITH CHECK (true);
-
--- Create admin user's tier capability if not exists
-INSERT INTO capabilities (
-    user_id,
-    type,
-    name,
-    description,
-    config,
-    granted_by,
-    active
-)
-VALUES (
-    '00000000-0000-0000-0000-000000000001',
-    'TIER',
-    'visioncreator',
-    'Admin user tier capability',
-    jsonb_build_object(
-        'aiRequestsLimit', 1000000,
-        'aiRequestsUsed', 0,
-        'lastResetAt', NOW()
-    ),
-    '00000000-0000-0000-0000-000000000001',
-    true
-)
-ON CONFLICT (user_id, type, name) DO NOTHING;

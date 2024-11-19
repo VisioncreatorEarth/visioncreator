@@ -9,6 +9,7 @@ export type OperationErrors = {
 	askHominio: AskHominioErrors;
 	calculateCID: CalculateCIDErrors;
 	createInvite: CreateInviteErrors;
+	createShoppingList: CreateShoppingListErrors;
 	getAuditLogs: GetAuditLogsErrors;
 	getUserCapabilities: GetUserCapabilitiesErrors;
 	getUserStats: GetUserStatsErrors;
@@ -22,6 +23,7 @@ export type OperationErrors = {
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMails: QueryMailsErrors;
 	queryMe: QueryMeErrors;
+	queryShoppingLists: QueryShoppingListsErrors;
 	queryUserStats: QueryUserStatsErrors;
 	saveMailWIP: SaveMailWIPErrors;
 	sendMail: SendMailErrors;
@@ -29,6 +31,7 @@ export type OperationErrors = {
 	toggleOnboarded: ToggleOnboardedErrors;
 	transcribeAudio: TranscribeAudioErrors;
 	updateMe: UpdateMeErrors;
+	updateShoppingList: UpdateShoppingListErrors;
 };
 
 export type OperationUltravoxInitializationError = {
@@ -57,6 +60,7 @@ export type AskHominioErrors =
 	| ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
+export type CreateShoppingListErrors = ClientOperationErrors;
 export type GetAuditLogsErrors = ClientOperationErrors;
 export type GetUserCapabilitiesErrors = ClientOperationErrors;
 export type GetUserStatsErrors = ClientOperationErrors;
@@ -70,6 +74,7 @@ export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
+export type QueryShoppingListsErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
 export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
@@ -77,3 +82,4 @@ export type SendMailWIPErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
 export type TranscribeAudioErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
+export type UpdateShoppingListErrors = ClientOperationErrors;
