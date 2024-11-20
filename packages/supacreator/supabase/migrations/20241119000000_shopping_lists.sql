@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS shopping_items (
     category TEXT NOT NULL,
     icon TEXT,
     default_unit TEXT,
+    variant_units JSONB DEFAULT '[]',  -- Add support for variant units
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(name, category)
@@ -141,19 +142,23 @@ BEGIN
                 shopping_list_id,
                 item_id,
                 quantity,
-                unit
+                unit,
+                is_checked
             )
             VALUES (
                 v_list_id,
                 v_item_id,
                 (v_item->>'quantity')::decimal,
-                COALESCE(v_item->>'unit', v_item->>'default_unit')
+                COALESCE(v_item->>'unit', v_item->>'default_unit'),
+                COALESCE((v_item->>'is_checked')::boolean, false)
             )
             ON CONFLICT (shopping_list_id, item_id)
             DO UPDATE SET
                 quantity = EXCLUDED.quantity,
                 unit = EXCLUDED.unit,
-                updated_at = NOW();
+                is_checked = false,  -- Reset check status when re-adding item
+                updated_at = NOW()
+            WHERE shopping_list_items.is_checked = true;  -- Only update if item was checked
         END LOOP;
 
         -- Prepare result

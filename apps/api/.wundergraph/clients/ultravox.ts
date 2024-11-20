@@ -47,17 +47,8 @@ export class UltravoxClient {
         }
       });
 
-      await this.cleanupActiveCalls();
-
       console.log('🔑 Using API Key:', this.apiKey.substring(0, 8) + '...');
       console.log('🌐 Making request to:', `${this.baseUrl}/calls`);
-      console.log('📦 Request payload:', JSON.stringify({
-        voice: config.voice,
-        systemPrompt: config.systemPrompt,
-        temperature: config.temperature,
-        selectedTools: config.selectedTools,
-        transcriptOptional: true,
-      }, null, 2));
 
       const response = await fetch(`${this.baseUrl}/calls`, {
         method: 'POST',
@@ -69,8 +60,7 @@ export class UltravoxClient {
           voice: config.voice,
           systemPrompt: config.systemPrompt,
           temperature: config.temperature,
-          selectedTools: config.selectedTools,
-          transcriptOptional: true,
+          selectedTools: config.selectedTools
         }),
       });
 
@@ -78,7 +68,6 @@ export class UltravoxClient {
         console.error('❌ Response not OK:', {
           status: response.status,
           statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
         });
 
         try {
@@ -94,7 +83,7 @@ export class UltravoxClient {
       }
 
       const responseData = await response.json();
-      console.log('✅ Response data:', JSON.stringify(responseData, null, 2));
+      console.log('✅ Call created successfully');
 
       if (!responseData.joinUrl) {
         throw new UltravoxInitializationError('No joinUrl in Ultravox response');
@@ -123,6 +112,10 @@ export class UltravoxClient {
   }
 
   private async pollMessages(callId: string) {
+    let lastInteractionTime = Date.now();
+    let isConversationActive = false;
+    const INACTIVITY_TIMEOUT = 25000;
+
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`${this.baseUrl}/calls/${callId}/messages`, {
@@ -136,15 +129,37 @@ export class UltravoxClient {
         if (!response.ok) return;
 
         const data = await response.json();
+        let hasNewInteraction = false;
 
         if (data.results?.length > 0) {
+          // Process messages and check for interactions
           for (const msg of data.results) {
+            if (msg.role === 'MESSAGE_ROLE_TRANSCRIPT') {
+              if (msg.speaker === 'user' && msg.isFinal) {
+                // User finished speaking
+                console.log('👤 User finished speaking:', msg.text);
+                hasNewInteraction = true;
+                isConversationActive = true;
+              } else if (msg.speaker === 'user' && !msg.isFinal) {
+                // User is currently speaking
+                console.log('🎤 User is speaking...');
+                isConversationActive = true;
+              }
+            } else if (msg.role === 'MESSAGE_ROLE_ASSISTANT') {
+              // Assistant is responding
+              console.log('🤖 Assistant message:', msg.text);
+              hasNewInteraction = true;
+              isConversationActive = true;
+            }
+
+            // Handle tool calls
             if (msg.role === 'MESSAGE_ROLE_TOOL_CALL') {
               const implementation = this.toolImplementations.get(msg.toolName);
               if (implementation) {
                 try {
                   const args = JSON.parse(msg.text);
                   const result = await implementation(args);
+                  isConversationActive = true; // Keep conversation active during tool execution
 
                   await fetch(`${this.baseUrl}/calls/${callId}/tool-results`, {
                     method: 'POST',
@@ -159,6 +174,7 @@ export class UltravoxClient {
                     }),
                   });
                 } catch (error) {
+                  console.error('❌ Tool execution error:', error);
                   await fetch(`${this.baseUrl}/calls/${callId}/tool-results`, {
                     method: 'POST',
                     headers: {
@@ -175,12 +191,49 @@ export class UltravoxClient {
               }
             }
           }
+
+          // Update last interaction time only if we have new completed interactions
+          if (hasNewInteraction) {
+            lastInteractionTime = Date.now();
+            console.log('⏱️ Interaction timer reset');
+          }
+
+          // Log all transcripts for monitoring
+          const transcripts = data.results
+            .filter(msg => msg.role === 'MESSAGE_ROLE_TRANSCRIPT')
+            .map(msg => ({
+              text: msg.text,
+              isFinal: msg.isFinal,
+              speaker: msg.speaker,
+              medium: msg.medium
+            }));
+
+          if (transcripts.length > 0) {
+            console.log('📝 All transcripts:', transcripts);
+          }
         }
+
+        // Check for inactivity only if no active conversation
+        const currentTime = Date.now();
+        const inactiveTime = currentTime - lastInteractionTime;
+
+        if (!isConversationActive && inactiveTime > INACTIVITY_TIMEOUT) {
+          console.log(`⏰ No activity for ${Math.round(inactiveTime / 1000)} seconds, ending call...`);
+          await this.endCall(callId);
+          clearInterval(pollInterval);
+          clearInterval(statusInterval);
+          return;
+        }
+
+        // Reset conversation active flag each poll
+        isConversationActive = false;
+
       } catch (error) {
-        // Silent error handling for polling
+        console.error('❌ Error polling messages:', error);
       }
     }, 1000);
 
+    // Check call status and cleanup
     const statusInterval = setInterval(async () => {
       try {
         const response = await fetch(`${this.baseUrl}/calls/${callId}`, {
@@ -198,14 +251,15 @@ export class UltravoxClient {
         if (data.ended) {
           clearInterval(pollInterval);
           clearInterval(statusInterval);
+          console.log('✅ Call ended, cleaning up intervals');
         }
       } catch (error) {
-        // Silent error handling for status polling
+        console.error('❌ Error checking call status:', error);
       }
     }, 2000);
   }
 
-  private async getActiveCalls(): Promise<string[]> {
+  private async cleanupActiveCalls() {
     try {
       const response = await fetch(`${this.baseUrl}/calls`, {
         method: 'GET',
@@ -215,20 +269,21 @@ export class UltravoxClient {
         }
       });
 
-      if (!response.ok) return [];
+      if (!response.ok) return;
 
       const data = await response.json();
-      return data.calls?.filter(call => !call.ended)?.map(call => call.callId) || [];
-    } catch {
-      return [];
-    }
-  }
+      const activeCallIds = data.calls?.filter(call => !call.ended)?.map(call => call.callId) || [];
 
-  private async cleanupActiveCalls(): Promise<void> {
-    const activeCalls = await this.getActiveCalls();
-    await Promise.all(
-      activeCalls.map(callId => this.endCall(callId))
-    );
+      await Promise.all(
+        activeCallIds.map(callId =>
+          this.endCall(callId).catch(() => {
+            /* Silent error handling for cleanup */
+          })
+        )
+      );
+    } catch {
+      /* Silent error handling for cleanup */
+    }
   }
 
   private async endCall(callId: string): Promise<boolean> {

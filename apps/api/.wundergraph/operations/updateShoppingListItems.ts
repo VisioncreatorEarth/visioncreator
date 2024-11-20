@@ -31,6 +31,44 @@ const getCategoryDefaults = (category: string) => {
   };
 };
 
+// Helper function to get default variant units based on category and name
+function getDefaultVariantUnits(category: string, name: string) {
+  const specialCases: Record<string, any> = {
+    'Eggs': [
+      { unit: 'pcs', multiplier: 1, description: 'Single egg' },
+      { unit: '6-pack', multiplier: 6, description: 'Half dozen' },
+      { unit: '10-pack', multiplier: 10, description: 'Ten pack' },
+      { unit: '12-pack', multiplier: 12, description: 'Dozen' }
+    ],
+    'Bread': [
+      { unit: 'pcs', multiplier: 1, description: 'Single loaf' },
+      { unit: 'slices', multiplier: 0.05, description: 'Bread slice' }
+    ]
+  };
+
+  const lowerName = name.toLowerCase();
+  if (specialCases[lowerName]) {
+    return specialCases[lowerName];
+  }
+
+  // Default variant units based on category
+  switch (category.toLowerCase()) {
+    case 'fruits':
+    case 'vegetables':
+      return [
+        { unit: 'kg', multiplier: 1, description: 'Kilogram' },
+        { unit: 'pcs', description: 'Piece' }
+      ];
+    case 'dairy':
+      return [
+        { unit: 'l', multiplier: 1, description: 'Liter' },
+        { unit: 'ml', multiplier: 0.001, description: 'Milliliter' }
+      ];
+    default:
+      return [];
+  }
+}
+
 export default createOperation.mutation({
   input: z.object({
     listId: z.string(),
@@ -39,6 +77,11 @@ export default createOperation.mutation({
       category: z.string(),
       icon: z.string().optional(),
       default_unit: z.string().optional(),
+      variant_units: z.array(z.object({
+        unit: z.string(),
+        multiplier: z.number().optional(),
+        description: z.string().optional()
+      })).optional(),
       quantity: z.number(),
       unit: z.string().optional(),
     }))
@@ -55,6 +98,8 @@ export default createOperation.mutation({
     // Process items with proper capitalization and defaults
     const processedItems = input.items.map(item => {
       const categoryDefaults = getCategoryDefaults(item.category);
+      const defaultVariantUnits = getDefaultVariantUnits(item.category, item.name);
+      
       return {
         ...item,
         name: capitalizeFirstLetter(item.name),
@@ -62,6 +107,7 @@ export default createOperation.mutation({
         icon: item.icon || categoryDefaults.icon,
         default_unit: item.default_unit || categoryDefaults.defaultUnit,
         unit: item.unit || categoryDefaults.defaultUnit,
+        variant_units: item.variant_units || defaultVariantUnits
       };
     });
 
