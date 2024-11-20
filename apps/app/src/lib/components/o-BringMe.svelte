@@ -169,10 +169,13 @@
 		}
 	}
 
-	async function toggleItemChecked(itemId: string) {
+	async function toggleItemChecked(itemId: string, itemName: string) {
+		if (!currentListId) return;
+		
 		try {
 			await $toggleShoppingListItemMutation.mutateAsync({
-				itemId
+				listId: currentListId,
+				itemName
 			});
 
 			await $shoppingListsQuery.refetch();
@@ -283,7 +286,7 @@
 									class="relative flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square {categoryColors[
 										item.shopping_items?.category || 'Other'
 									]}"
-									on:click={() => toggleItemChecked(item.id)}
+									on:click={() => toggleItemChecked(item.id, item.shopping_items?.name || '')}
 								>
 									<Icon
 										icon={item.shopping_items?.icon ||
@@ -312,7 +315,7 @@
 									{#each currentList.shopping_list_items.filter((item) => item.is_checked) as item (item.id)}
 										<button
 											class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
-											on:click={() => toggleItemChecked(item.id)}
+											on:click={() => toggleItemChecked(item.id, item.shopping_items?.name || '')}
 										>
 											<Icon
 												icon={item.shopping_items?.icon ||

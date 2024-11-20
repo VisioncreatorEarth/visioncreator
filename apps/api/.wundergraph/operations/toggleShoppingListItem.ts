@@ -2,7 +2,8 @@ import { createOperation, z, AuthorizationError } from '../generated/wundergraph
 
 export default createOperation.mutation({
   input: z.object({
-    itemId: z.string(),
+    listId: z.string(),
+    itemName: z.string()
   }),
   requireAuthentication: true,
   rbac: {
@@ -13,19 +14,37 @@ export default createOperation.mutation({
       throw new AuthorizationError({ message: "No authenticated user found." });
     }
 
-    const { data: isChecked, error } = await context.supabase.rpc(
-      'toggle_shopping_list_item',
-      {
-        p_user_id: user.customClaims.id,
-        p_item_id: input.itemId
-      }
-    );
+    // First get the item ID
+    const { data: listItem, error: findError } = await context.supabase
+      .from('shopping_list_items')
+      .select('id, is_checked, shopping_items!inner(id, name)')
+      .eq('shopping_list_id', input.listId)
+      .ilike('shopping_items.name', input.itemName)
+      .single();
 
-    if (error) {
-      console.error('Error toggling shopping list item:', error);
-      throw new Error(error.message);
+    if (findError && findError.code !== 'PGRST116') { // Ignore "no rows returned" error
+      console.error('Error finding shopping list item:', findError);
+      throw new Error(findError.message);
     }
 
-    return { id: input.itemId, is_checked: isChecked };
+    if (listItem) {
+      // Item exists, toggle it
+      const { data: updatedItem, error: updateError } = await context.supabase
+        .from('shopping_list_items')
+        .update({ is_checked: !listItem.is_checked })
+        .eq('id', listItem.id)
+        .select('id, is_checked')
+        .single();
+
+      if (updateError) {
+        console.error('Error toggling shopping list item:', updateError);
+        throw new Error(updateError.message);
+      }
+
+      return updatedItem;
+    } else {
+      // Item doesn't exist, return null to indicate it needs to be added
+      return null;
+    }
   },
 });

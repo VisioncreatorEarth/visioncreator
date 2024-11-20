@@ -3,17 +3,17 @@ import { UltravoxAuthenticationError, UltravoxInitializationError, UltravoxSubsc
 
 // Define categories and their default settings
 const CATEGORIES = {
-  Fruits: { icon: '🍎', defaultUnit: 'kilogram' },
-  Vegetables: { icon: '🥕', defaultUnit: 'kilogram' },
-  Dairy: { icon: '🥛', defaultUnit: 'liter' },
-  Meat: { icon: '🥩', defaultUnit: 'kilogram' },
-  Bakery: { icon: '🍞', defaultUnit: 'piece' },
-  Beverages: { icon: '🥤', defaultUnit: 'liter' },
-  Snacks: { icon: '🍪', defaultUnit: 'piece' },
-  Household: { icon: '🏠', defaultUnit: 'piece' },
-  Grains: { icon: '🌾', defaultUnit: 'kilogram' },
-  'Personal Care': { icon: '🧴', defaultUnit: 'piece' },
-  Other: { icon: '🛍️', defaultUnit: 'piece' }
+  Fruits: { icon: 'mdi:food-apple', defaultUnit: 'piece' },
+  Vegetables: { icon: 'mdi:food-carrot', defaultUnit: 'piece' },
+  Dairy: { icon: 'mdi:food-milk', defaultUnit: 'liter' },
+  Meat: { icon: 'mdi:food-steak', defaultUnit: 'kilogram' },
+  Bakery: { icon: 'mdi:food-croissant', defaultUnit: 'piece' },
+  Beverages: { icon: 'mdi:cup', defaultUnit: 'liter' },
+  Snacks: { icon: 'mdi:food-cookie', defaultUnit: 'piece' },
+  Household: { icon: 'mdi:home', defaultUnit: 'piece' },
+  Grains: { icon: 'mdi:grain', defaultUnit: 'kilogram' },
+  'Personal Care': { icon: 'mdi:face-man', defaultUnit: 'piece' },
+  Other: { icon: 'mdi:shopping', defaultUnit: 'piece' }
 } as const;
 
 // Helper function to capitalize first letter
@@ -108,6 +108,10 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
                               unit: {
                                 type: "string",
                                 description: "Unit of measurement: Available units (be creative and use what makes most sense for each item) - (f.e. kilogram, liter, piece, pack, box, can, bottle, jar, bag, carton, bundle, roll, tube, stick, slice, bunch, handful, pinch, scoop, cup, glass, liter, milliliter, gallon, kilogram, gram, ounce, pound, dozen, pair, set, strip, sheet, block, bar, tray, crate, basket) "
+                              },
+                              icon: {
+                                type: "string",
+                                description: "Iconify icon name. Use mdi (Material Design Icons) for food items (e.g., mdi:food-apple, mdi:food-croissant, mdi:food-drumstick, mdi:food-fork-drink). For beverages use mdi:cup* or mdi:bottle*. For household items use mdi:home* variants. Be creative and specific to the item type. Examples: mdi:food-apple for apples, mdi:bottle-wine for wine, mdi:broom for cleaning supplies."
                               }
                             },
                             required: ["name", "category"]
@@ -143,7 +147,7 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
                             category,
                             quantity: item.quantity || 1,
                             unit: item.unit || defaultUnit,
-                            icon: CATEGORIES[typedCategory].icon
+                            icon: item.icon || CATEGORIES[typedCategory].icon
                           };
                         });
 
@@ -162,23 +166,79 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
                         }
 
                         results.push({ action: 'add', items: processedItems, result: addResult });
-                      } else if (action.action === 'toggle') {
-                        // Toggle items
+                      } else if (action.action === 'toggle' || action.action === 'remove') {
+                        // Handle both toggle and remove actions
                         for (const item of action.items) {
+                          const itemName = capitalizeFirstLetter(item.name);
                           const { data: toggleResult, error: toggleError } = await operations.mutate({
                             operationName: 'toggleShoppingListItem',
                             input: {
                               listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
-                              itemName: capitalizeFirstLetter(item.name)
+                              itemName
                             }
                           });
 
                           if (toggleError) {
-                            console.error('\n❌ Error toggling item:', toggleError);
+                            console.error(`\n❌ Error ${action.action === 'remove' ? 'removing' : 'toggling'} item:`, toggleError);
                             throw toggleError;
                           }
 
-                          results.push({ action: 'toggle', item: item.name, result: toggleResult });
+                          // If item doesn't exist and we're trying to toggle/remove, add it first
+                          if (!toggleResult) {
+                            const category = Object.keys(CATEGORIES).find(
+                              cat => cat.toLowerCase() === (item.category || 'Other').toLowerCase()
+                            ) || 'Other';
+
+                            const typedCategory = category as keyof typeof CATEGORIES;
+                            const defaultUnit = CATEGORIES[typedCategory].defaultUnit;
+
+                            const processedItem = {
+                              name: itemName,
+                              category,
+                              quantity: item.quantity || 1,
+                              unit: item.unit || defaultUnit,
+                              icon: item.icon || CATEGORIES[typedCategory].icon
+                            };
+
+                            const { data: addResult, error: addError } = await operations.mutate({
+                              operationName: 'updateShoppingListItems',
+                              input: {
+                                listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
+                                items: [processedItem]
+                              }
+                            });
+
+                            if (addError) {
+                              console.error('\n❌ Error adding item:', addError);
+                              throw addError;
+                            }
+
+                            // Now try toggling again
+                            const { data: retryResult, error: retryError } = await operations.mutate({
+                              operationName: 'toggleShoppingListItem',
+                              input: {
+                                listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
+                                itemName
+                              }
+                            });
+
+                            if (retryError) {
+                              console.error('\n❌ Error retrying toggle:', retryError);
+                              throw retryError;
+                            }
+
+                            results.push({
+                              action: action.action,
+                              item: itemName,
+                              result: retryResult
+                            });
+                          } else {
+                            results.push({
+                              action: action.action,
+                              item: itemName,
+                              result: toggleResult
+                            });
+                          }
                         }
                       }
                     }
@@ -190,8 +250,8 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
                         return `Added: ${r.items.map((i: any) =>
                           `${i.quantity} ${i.unit}${i.quantity > 1 ? 's' : ''} of ${i.name}`
                         ).join(', ')}`;
-                      } else if (r.action === 'toggle') {
-                        return `Toggled: ${r.item}`;
+                      } else if (r.action === 'toggle' || r.action === 'remove') {
+                        return `${r.action === 'remove' ? 'Removed' : 'Toggled'}: ${r.item}`;
                       }
                       return '';
                     }).filter(Boolean).join('. ');
