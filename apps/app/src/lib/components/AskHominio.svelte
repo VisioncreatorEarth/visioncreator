@@ -22,20 +22,20 @@
 	let transcripts: string[] = [];
 	let isCallActive = false;
 	let isSpeaking = false;
+	let processedTranscripts = new Set<string>();
+	let transcriptsContainer: HTMLDivElement | null = null;
+
+	// Helper function for consistent log formatting
+	function formatLog(type: string, message: string) {
+		console.log(`[${type}]: ${message}`);
+	}
 
 	function handleStatusChange(event: any) {
-		// Access the status from the UltravoxSession instance
 		const sessionStatus = session?.status;
-		console.log('📊 Raw status event:', event);
-		console.log('📊 Session status:', sessionStatus);
-		console.log('📊 Call status changed:', {
-			previousStatus: status,
-			newSessionStatus: sessionStatus,
-			timestamp: new Date().toISOString()
-		});
+		formatLog('STATUS', sessionStatus || 'Unknown');
 
 		if (!sessionStatus) {
-			console.warn('⚠️ No session status available');
+			formatLog('WARNING', 'No session status available');
 			return;
 		}
 
@@ -67,25 +67,20 @@
 				isCallActive = true;
 				break;
 			default:
-				console.warn('⚠️ Unknown status received:', sessionStatus);
+				formatLog('WARNING', `Unknown status received: ${sessionStatus}`);
 		}
 	}
 
 	async function startCall() {
 		try {
-			console.log('🎤 Starting shopping assistant...');
+			formatLog('STATUS', 'Starting shopping assistant...');
 			status = 'connecting';
 			error = null;
 			transcripts = [];
+			processedTranscripts.clear(); // Clear the set when starting a new call
 
 			const result = await $askHominioMutation.mutateAsync({
 				chat_message_prompts: ['Start shopping assistant']
-			});
-
-			console.log('📞 Mutation result:', {
-				success: !!result.data,
-				error: result.error ? result.error.message : null,
-				data: result.data
 			});
 
 			if (result.error) {
@@ -96,49 +91,91 @@
 				throw new Error('No join URL received');
 			}
 
-			console.log('🔄 Creating Ultravox session...');
-			session = new UltravoxSession({
+			formatLog('STATUS', 'Creating Ultravox session...');
+			// Enable debug messages
+			const debugMessages = new Set(['debug']);
+			session = new UltravoxSession({ 
 				joinUrl: result.data.joinUrl,
-				transcriptOptional: false
+				transcriptOptional: false,
+				experimentalMessages: debugMessages 
 			});
 
 			// Add event listeners
 			session.addEventListener('status', handleStatusChange);
-			session.addEventListener('transcript', (event) => {
-				console.log('🗣️ New transcript:', {
-					text: event.detail,
-					timestamp: new Date().toISOString()
-				});
-				if (event.detail && typeof event.detail === 'string') {
-					transcripts = [...transcripts, event.detail];
+			
+			session.addEventListener('transcripts', () => {
+				// Access transcripts directly from session
+				const currentTranscripts = session?.transcripts || [];
+				
+				// Only process and display final transcripts that we haven't seen before
+				currentTranscripts
+					.filter((t: any) => {
+						// Only process transcripts that:
+						// 1. Are final
+						// 2. Have actual text content
+						// 3. Haven't been processed before
+						// 4. For user transcripts, ensure they're not null/undefined
+						return t.isFinal && 
+							   t.text && 
+							   !processedTranscripts.has(t.text) && 
+							   (t.speaker === 'agent' || (t.speaker === 'user' && t.text !== 'null'));
+					})
+					.forEach((t: any) => {
+						const role = t.speaker === 'agent' ? 'ASSISTANT-SPEAKER' : 'USER-TRANSCRIPT';
+						formatLog(role, `${t.text} [${t.medium}]`);
+						processedTranscripts.add(t.text);
+					});
+
+				// Update the UI transcripts array with only valid final transcripts
+				transcripts = currentTranscripts
+					.filter((t: any) => 
+						t.isFinal && 
+						t.text && 
+						(t.speaker === 'agent' || (t.speaker === 'user' && t.text !== 'null'))
+					)
+					.map((t: any) => `${t.speaker === 'user' ? 'You' : 'Assistant'}: ${t.text}`);
+
+				// Update the display in the UI
+				if (transcriptsContainer) {
+					transcriptsContainer.scrollTop = transcriptsContainer.scrollHeight;
 				}
 			});
 
 			session.addEventListener('speaking', (event) => {
-				console.log('🔊 Speaking status:', {
-					speaking: event.detail,
-					timestamp: new Date().toISOString()
-				});
+				formatLog('STATUS', `Speaking: ${event.detail}`);
 				isSpeaking = event.detail;
 			});
 
 			session.addEventListener('error', (event) => {
-				console.error('❌ Session error:', {
-					error: event.detail,
-					timestamp: new Date().toISOString()
-				});
+				formatLog('ERROR', event.detail.message || 'Unknown error occurred');
 				error = event.detail.message || 'Unknown error occurred';
 				status = 'disconnected';
 			});
 
-			console.log('🔗 Joining call with URL:', result.data.joinUrl);
-			await session.joinCall(result.data.joinUrl);
-			console.log('✨ Call successfully connected!');
-		} catch (err) {
-			console.error('❌ Error starting call:', {
-				error: err,
-				timestamp: new Date().toISOString()
+			// Add debug message listener
+			session.addEventListener('experimental_message', (msg) => {
+				if (!msg.detail) return;
+				
+				if (msg.detail.type === 'tool_call') {
+					const { function: fn, args, invocation_id } = msg.detail;
+					formatLog('DEBUG-TOOL', `Tool Call [${invocation_id}]: ${fn} Args: ${JSON.stringify(args)}`);
+				} else if (msg.detail.type === 'tool_result') {
+					const { result, invocation_id } = msg.detail;
+					formatLog('DEBUG-TOOL', `Tool Result [${invocation_id}]: ${JSON.stringify(result)}`);
+				} else if (msg.detail.messages) {
+					msg.detail.messages.forEach((m: any) => {
+						if (m.text) {  // Only show messages with text
+							formatLog('DEBUG-MSG', `${m.role}: ${m.text}`);
+						}
+					});
+				}
 			});
+
+			formatLog('STATUS', 'Joining call...');
+			await session.joinCall(result.data.joinUrl);
+			formatLog('STATUS', 'Call successfully connected!');
+		} catch (err) {
+			formatLog('ERROR', err instanceof Error ? err.message : 'Failed to start call');
 			error = err instanceof Error ? err.message : 'Failed to start call';
 			status = 'disconnected';
 		}
@@ -147,21 +184,19 @@
 	async function endCall() {
 		try {
 			if (session) {
-				console.log('🛑 Ending call...');
+				formatLog('STATUS', 'Ending call...');
 				status = 'disconnecting';
 				await session.leaveCall();
 				session = null;
 				status = 'disconnected';
 				isCallActive = false;
 				transcripts = [];
+				processedTranscripts.clear(); // Clear the set when ending the call
 				isSpeaking = false;
-				console.log('✅ Call ended successfully');
+				formatLog('STATUS', 'Call ended successfully');
 			}
 		} catch (err) {
-			console.error('❌ Error ending call:', {
-				error: err,
-				timestamp: new Date().toISOString()
-			});
+			formatLog('ERROR', err instanceof Error ? err.message : 'Failed to end call');
 			error = err instanceof Error ? err.message : 'Failed to end call';
 			status = 'disconnected';
 			isCallActive = false;
@@ -171,11 +206,11 @@
 
 	onDestroy(() => {
 		if (session) {
-			console.log('🧹 Cleaning up session...');
+			formatLog('STATUS', 'Cleaning up session...');
 			session
 				.leaveCall()
-				.then(() => console.log('✅ Session cleanup successful'))
-				.catch((err) => console.error('❌ Session cleanup error:', err));
+				.then(() => formatLog('STATUS', 'Session cleanup successful'))
+				.catch((err) => formatLog('ERROR', 'Session cleanup error:', err));
 			session = null;
 		}
 	});
@@ -185,21 +220,36 @@
 	<div class="flex flex-col gap-4 items-center">
 		{#if isCallActive && transcripts.length > 0}
 			<div
-				class="overflow-y-auto p-4 w-full max-w-md max-h-48 rounded-lg shadow-lg backdrop-blur-sm bg-white/90"
+				bind:this={transcriptsContainer}
+				class="overflow-y-auto p-4 w-full max-w-md max-h-[60vh] rounded-lg shadow-lg bg-surface-100-800-token"
 			>
 				{#each transcripts as transcript}
-					<p class="mb-2 text-sm text-gray-700">{transcript}</p>
+					<div class="flex flex-col mb-3 last:mb-0">
+						{#if transcript.startsWith('Assistant:')}
+							<div class="flex justify-start">
+								<div class="variant-ghost-tertiary rounded-lg p-3 max-w-[85%]">
+									<p class="text-sm font-medium">Assistant</p>
+									<p class="text-sm">{transcript.replace('Assistant:', '')}</p>
+								</div>
+							</div>
+						{:else}
+							<div class="flex justify-end">
+								<div class="variant-ghost-primary rounded-lg p-3 max-w-[85%]">
+									<p class="text-sm font-medium">You</p>
+									<p class="text-sm">{transcript.replace('You:', '')}</p>
+								</div>
+							</div>
+						{/if}
+					</div>
 				{/each}
 			</div>
 		{/if}
 
 		{#if error}
-			<div class="p-4 text-sm text-red-500 bg-red-100 rounded-lg">{error}</div>
+			<div class="variant-ghost-error p-4 text-sm rounded-lg">{error}</div>
 		{/if}
 
-		<div
-			class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800"
-		>
+		<div class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800">
 			{#if status !== 'idle'}
 				<div
 					class="inline-flex items-center px-4 py-2 text-sm rounded-full shadow-inner text-tertiary-200 bg-surface-700"
