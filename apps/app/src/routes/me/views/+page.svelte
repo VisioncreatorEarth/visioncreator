@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import ComposeView from '$lib/components/ComposeView.svelte';
+	import AskHominio from '$lib/components/AskHominio.svelte';
 	import { onMount } from 'svelte';
 
 	let selectedView: any = null;
@@ -145,13 +146,16 @@
 
 	<!-- Main content -->
 	<main class="flex-1 overflow-hidden">
-		{#if selectedView}
-			<ComposeView view={selectedView} />
-		{:else}
-			<div class="flex justify-center items-center h-full text-muted-foreground">
-				Select a view to display
-			</div>
-		{/if}
+		<div class="relative">
+			<AskHominio />
+			{#if selectedView}
+				<ComposeView view={selectedView} />
+			{:else}
+				<div class="flex justify-center items-center h-full text-muted-foreground">
+					Select a view to display
+				</div>
+			{/if}
+		</div>
 	</main>
 
 	<!-- Editor Toggle Button -->

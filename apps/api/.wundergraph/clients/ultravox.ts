@@ -2,7 +2,8 @@ import { UltravoxAuthenticationError, UltravoxInitializationError, UltravoxSubsc
 
 export class UltravoxClient {
   private apiKey: string;
-  private baseUrl: string = 'https://api.ultravox.ai/api';
+  private baseUrl = 'https://api.ultravox.ai/api';
+  private toolImplementations = new Map<string, Function>();
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -11,67 +12,8 @@ export class UltravoxClient {
     this.apiKey = apiKey;
   }
 
-  private async getActiveCalls(): Promise<string[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/calls`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey
-        }
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to fetch active calls:', response.status);
-        return [];
-      }
-
-      const data = await response.json();
-      return data.calls?.filter(call => !call.ended)?.map(call => call.callId) || [];
-    } catch (error) {
-      console.warn('Error fetching active calls:', error);
-      return [];
-    }
-  }
-
-  private async endCall(callId: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/calls/${callId}/end`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey
-        }
-      });
-
-      if (!response.ok) {
-        console.warn(`Failed to end call ${callId}:`, response.status);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.warn(`Error ending call ${callId}:`, error);
-      return false;
-    }
-  }
-
-  private async cleanupActiveCalls(): Promise<void> {
-    console.log('Checking for active calls to cleanup...');
-    const activeCalls = await this.getActiveCalls();
-    
-    if (activeCalls.length > 0) {
-      console.log(`Found ${activeCalls.length} active calls. Cleaning up...`);
-      
-      await Promise.all(
-        activeCalls.map(async callId => {
-          const success = await this.endCall(callId);
-          console.log(`Call ${callId} cleanup ${success ? 'successful' : 'failed'}`);
-        })
-      );
-    } else {
-      console.log('No active calls found to cleanup');
-    }
+  registerTool(name: string, implementation: Function) {
+    this.toolImplementations.set(name, implementation);
   }
 
   async call(config: {
@@ -97,57 +39,211 @@ export class UltravoxClient {
     }>;
     voice: string;
   }) {
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-API-Key': this.apiKey
-    };
-
-    console.log('Request headers:', {
-      ...headers,
-      'X-API-Key': headers['X-API-Key'] ? 'Present (length: ' + headers['X-API-Key'].length + ')' : 'Missing'
-    });
-
     try {
-      // Cleanup any active calls first
+      config.selectedTools.forEach(tool => {
+        const { modelToolName, client } = tool.temporaryTool;
+        if (client?.implementation) {
+          this.registerTool(modelToolName, client.implementation);
+        }
+      });
+
       await this.cleanupActiveCalls();
+
+      console.log('🔑 Using API Key:', this.apiKey.substring(0, 8) + '...');
+      console.log('🌐 Making request to:', `${this.baseUrl}/calls`);
+      console.log('📦 Request payload:', JSON.stringify({
+        voice: config.voice,
+        systemPrompt: config.systemPrompt,
+        temperature: config.temperature,
+        selectedTools: config.selectedTools,
+        transcriptOptional: true,
+      }, null, 2));
 
       const response = await fetch(`${this.baseUrl}/calls`, {
         method: 'POST',
-        headers,
-        body: JSON.stringify(config)
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        },
+        body: JSON.stringify({
+          voice: config.voice,
+          systemPrompt: config.systemPrompt,
+          temperature: config.temperature,
+          selectedTools: config.selectedTools,
+          transcriptOptional: true,
+        }),
       });
 
-      const responseText = await response.text();
-      console.log('Ultravox API Response Status:', response.status);
-      console.log('Ultravox API Response Headers:', Object.fromEntries([...response.headers]));
-      console.log('Ultravox API Response Body:', responseText);
-
       if (!response.ok) {
-        if (response.status === 402) {
-          throw new UltravoxSubscriptionError();
+        console.error('❌ Response not OK:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+        });
+
+        try {
+          const errorBody = await response.text();
+          console.error('📄 Error response body:', errorBody);
+        } catch (e) {
+          console.error('⚠️ Could not read error response body');
         }
-        if (response.status === 401) {
-          throw new UltravoxAuthenticationError();
-        }
-        throw new UltravoxInitializationError(`Ultravox API error: ${response.status} - ${responseText}`);
+
+        if (response.status === 402) throw new UltravoxSubscriptionError();
+        if (response.status === 401) throw new UltravoxAuthenticationError();
+        throw new UltravoxInitializationError(`Ultravox API error: ${response.status}`);
       }
 
-      const data = JSON.parse(responseText);
+      const responseData = await response.json();
+      console.log('✅ Response data:', JSON.stringify(responseData, null, 2));
 
-      if (!data.joinUrl) {
+      if (!responseData.joinUrl) {
         throw new UltravoxInitializationError('No joinUrl in Ultravox response');
+      }
+
+      if (responseData.callId) {
+        this.pollMessages(responseData.callId);
       }
 
       return {
         success: true,
-        joinUrl: data.joinUrl,
-        message: 'Successfully created Ultravox call'
+        message: 'Successfully created Ultravox call',
+        joinUrl: responseData.joinUrl,
+        callId: responseData.callId,
+        transcript: responseData.transcript,
+        toolExecutions: responseData.toolExecutions
       };
+
     } catch (error) {
+      console.error('❌ Error in UltravoxClient.call:', error);
       if (error instanceof Error) {
         throw new UltravoxInitializationError(error.message || 'Unknown error occurred');
       }
       throw error;
+    }
+  }
+
+  private async pollMessages(callId: string) {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${this.baseUrl}/calls/${callId}/messages`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': this.apiKey,
+          },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.results?.length > 0) {
+          for (const msg of data.results) {
+            if (msg.role === 'MESSAGE_ROLE_TOOL_CALL') {
+              const implementation = this.toolImplementations.get(msg.toolName);
+              if (implementation) {
+                try {
+                  const args = JSON.parse(msg.text);
+                  const result = await implementation(args);
+
+                  await fetch(`${this.baseUrl}/calls/${callId}/tool-results`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-API-Key': this.apiKey,
+                    },
+                    body: JSON.stringify({
+                      toolName: msg.toolName,
+                      result: JSON.stringify(result),
+                      success: true,
+                    }),
+                  });
+                } catch (error) {
+                  await fetch(`${this.baseUrl}/calls/${callId}/tool-results`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-API-Key': this.apiKey,
+                    },
+                    body: JSON.stringify({
+                      toolName: msg.toolName,
+                      result: error instanceof Error ? error.message : 'Unknown error',
+                      success: false,
+                    }),
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // Silent error handling for polling
+      }
+    }, 1000);
+
+    const statusInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${this.baseUrl}/calls/${callId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': this.apiKey,
+          },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        if (data.ended) {
+          clearInterval(pollInterval);
+          clearInterval(statusInterval);
+        }
+      } catch (error) {
+        // Silent error handling for status polling
+      }
+    }, 2000);
+  }
+
+  private async getActiveCalls(): Promise<string[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/calls`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      return data.calls?.filter(call => !call.ended)?.map(call => call.callId) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async cleanupActiveCalls(): Promise<void> {
+    const activeCalls = await this.getActiveCalls();
+    await Promise.all(
+      activeCalls.map(callId => this.endCall(callId))
+    );
+  }
+
+  private async endCall(callId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/calls/${callId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      return response.ok;
+    } catch {
+      return false;
     }
   }
 }

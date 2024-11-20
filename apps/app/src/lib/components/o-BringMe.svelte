@@ -9,89 +9,97 @@
 
 	// Category colors with hover states
 	const categoryColors = {
-		fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
-		vegetables: 'bg-green-500/10 hover:bg-green-500/20 text-green-500',
-		dairy: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
-		meat: 'bg-red-500/10 hover:bg-red-500/20 text-red-500',
-		bakery: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500',
-		beverages: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
-		snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
-		household: 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-500',
-		grains: 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500',
-		other: 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500'
+		Fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
+		Vegetables: 'bg-green-500/10 hover:bg-green-500/20 text-green-500',
+		Dairy: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
+		Meat: 'bg-red-500/10 hover:bg-red-500/20 text-red-500',
+		Bakery: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500',
+		Beverages: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
+		Snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
+		Household: 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-500',
+		Grains: 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500',
+		'Personal Care': 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-500',
+		Other: 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500'
 	} as const;
 
 	const categoryHoverColors = {
-		fruits: 'bg-orange-500/20',
-		vegetables: 'bg-green-500/20',
-		dairy: 'bg-blue-500/20',
-		meat: 'bg-red-500/20',
-		bakery: 'bg-yellow-500/20',
-		beverages: 'bg-purple-500/20',
-		snacks: 'bg-pink-500/20',
-		household: 'bg-slate-500/20',
-		grains: 'bg-amber-500/20',
-		other: 'bg-gray-500/20'
+		Fruits: 'bg-orange-500/20',
+		Vegetables: 'bg-green-500/20',
+		Dairy: 'bg-blue-500/20',
+		Meat: 'bg-red-500/20',
+		Bakery: 'bg-yellow-500/20',
+		Beverages: 'bg-purple-500/20',
+		Snacks: 'bg-pink-500/20',
+		Household: 'bg-slate-500/20',
+		Grains: 'bg-amber-500/20',
+		'Personal Care': 'bg-teal-500/20',
+		Other: 'bg-gray-500/20'
 	} as const;
 
 	const categoryTextColors = {
-		fruits: 'text-orange-500',
-		vegetables: 'text-green-500',
-		dairy: 'text-blue-500',
-		meat: 'text-red-500',
-		bakery: 'text-yellow-500',
-		beverages: 'text-purple-500',
-		snacks: 'text-pink-500',
-		household: 'text-slate-500',
-		grains: 'text-amber-500',
-		other: 'text-gray-500'
+		Fruits: 'text-orange-500',
+		Vegetables: 'text-green-500',
+		Dairy: 'text-blue-500',
+		Meat: 'text-red-500',
+		Bakery: 'text-yellow-500',
+		Beverages: 'text-purple-500',
+		Snacks: 'text-pink-500',
+		Household: 'text-slate-500',
+		Grains: 'text-amber-500',
+		'Personal Care': 'text-teal-500',
+		Other: 'text-gray-500'
 	} as const;
 
 	// Maintain consistent category order
 	const categoryOrder = [
-		'fruits',
-		'vegetables',
-		'dairy',
-		'meat',
-		'bakery',
-		'beverages',
-		'snacks',
-		'household',
-		'grains',
-		'other'
+		'Fruits',
+		'Vegetables',
+		'Dairy',
+		'Meat',
+		'Bakery',
+		'Beverages',
+		'Snacks',
+		'Household',
+		'Grains',
+		'Personal Care',
+		'Other'
 	];
 
 	// Simplified but diverse fallback icons per category
 	const FALLBACK_ICONS = {
-		fruits: ['mdi:fruit-watermelon', 'mdi:fruit-cherries', 'mdi:food-apple'],
-		vegetables: ['mdi:carrot', 'mdi:food-broccoli', 'mdi:leaf'],
-		dairy: ['mdi:cheese', 'mdi:milk', 'mdi:egg'],
-		meat: ['mdi:food-steak', 'mdi:food-turkey', 'mdi:fish'],
-		bakery: ['mdi:bread-slice', 'mdi:croissant', 'mdi:cookie'],
-		beverages: ['mdi:cup', 'mdi:bottle-soda', 'mdi:coffee'],
-		snacks: ['mdi:cookie', 'mdi:food-potato', 'mdi:candy'],
-		household: ['mdi:home', 'mdi:washing-machine', 'mdi:broom'],
-		grains: ['mdi:pasta', 'mdi:rice', 'mdi:grain', 'mdi:noodles'],
-		other: ['mdi:shopping']
+		Fruits: ['mdi:fruit-watermelon', 'mdi:fruit-cherries', 'mdi:food-apple'],
+		Vegetables: ['mdi:carrot', 'mdi:food-broccoli', 'mdi:leaf'],
+		Dairy: ['mdi:cheese', 'mdi:milk', 'mdi:egg'],
+		Meat: ['mdi:food-steak', 'mdi:food-turkey', 'mdi:fish'],
+		Bakery: ['mdi:bread-slice', 'mdi:croissant', 'mdi:cookie'],
+		Beverages: ['mdi:cup', 'mdi:bottle-soda', 'mdi:coffee'],
+		Snacks: ['mdi:cookie', 'mdi:food-potato', 'mdi:candy'],
+		Household: ['mdi:home', 'mdi:washing-machine', 'mdi:broom'],
+		Grains: ['mdi:pasta', 'mdi:rice', 'mdi:grain', 'mdi:noodles'],
+		'Personal Care': ['mdi:face-man', 'mdi:toothbrush', 'mdi:lotion'],
+		Other: ['mdi:shopping']
 	} as const;
 
 	// Sample items for random generation
 	const sampleItems = [
-		{ name: 'Apples', category: 'fruits', icon: 'mdi:food-apple', default_unit: 'kg' },
-		{ name: 'Bananas', category: 'fruits', icon: 'mdi:food-apple', default_unit: 'kg' },
-		{ name: 'Milk', category: 'dairy', icon: 'mdi:cup', default_unit: 'l' },
-		{ name: 'Bread', category: 'bakery', icon: 'mdi:bread-slice', default_unit: 'pcs' },
-		{ name: 'Cheese', category: 'dairy', icon: 'mdi:cheese', default_unit: 'kg' },
-		{ name: 'Chicken', category: 'meat', icon: 'mdi:food-turkey', default_unit: 'kg' },
-		{ name: 'Tomatoes', category: 'vegetables', icon: 'mdi:food', default_unit: 'kg' },
-		{ name: 'Pasta', category: 'grains', icon: 'mdi:noodles', default_unit: 'pcs' },
-		{ name: 'Rice', category: 'grains', icon: 'mdi:rice', default_unit: 'kg' },
-		{ name: 'Coffee', category: 'beverages', icon: 'mdi:coffee', default_unit: 'pcs' }
+		{ name: 'Apples', category: 'Fruits', icon: 'mdi:food-apple', default_unit: 'kg' },
+		{ name: 'Bananas', category: 'Fruits', icon: 'mdi:fruit-watermelon', default_unit: 'kg' },
+		{ name: 'Milk', category: 'Dairy', icon: 'mdi:milk', default_unit: 'l' },
+		{ name: 'Bread', category: 'Bakery', icon: 'mdi:bread-slice', default_unit: 'pcs' },
+		{ name: 'Cheese', category: 'Dairy', icon: 'mdi:cheese', default_unit: 'kg' },
+		{ name: 'Chicken', category: 'Meat', icon: 'mdi:food-turkey', default_unit: 'kg' },
+		{ name: 'Tomatoes', category: 'Vegetables', icon: 'mdi:carrot', default_unit: 'kg' },
+		{ name: 'Pasta', category: 'Grains', icon: 'mdi:noodles', default_unit: 'pcs' },
+		{ name: 'Rice', category: 'Grains', icon: 'mdi:rice', default_unit: 'kg' },
+		{ name: 'Coffee', category: 'Beverages', icon: 'mdi:coffee', default_unit: 'pcs' },
+		{ name: 'Shampoo', category: 'Personal Care', icon: 'mdi:lotion', default_unit: 'pcs' },
+		{ name: 'Toothpaste', category: 'Personal Care', icon: 'mdi:toothbrush', default_unit: 'pcs' }
 	];
 
 	// WunderGraph queries and mutations
 	const shoppingListsQuery = createQuery({
-		operationName: 'queryShoppingLists'
+		operationName: 'queryShoppingLists',
+		liveQuery: true
 	});
 
 	const createShoppingListMutation = createMutation({
@@ -272,19 +280,23 @@
 						<div class="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-8">
 							{#each currentList.shopping_list_items.filter((item) => !item.is_checked) as item (item.id)}
 								<button
-									class="relative flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square {categoryColors[item.shopping_items?.category || 'other']}"
+									class="relative flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square {categoryColors[
+										item.shopping_items?.category || 'Other'
+									]}"
 									on:click={() => toggleItemChecked(item.id)}
 								>
 									<Icon
 										icon={item.shopping_items?.icon ||
-											FALLBACK_ICONS[item.shopping_items?.category || 'other'][0]}
-										class="w-1/2 mb-2 h-1/2"
+											FALLBACK_ICONS[item.shopping_items?.category || 'Other'][0]}
+										class="mb-2 w-1/2 h-1/2"
 									/>
 									<span class="overflow-hidden text-xs text-center text-ellipsis">
 										{item.shopping_items?.name}
 									</span>
 									{#if item.quantity > 1 || item.unit}
-										<div class="mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-surface-900/10">
+										<div
+											class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/10"
+										>
 											{item.quantity}{item.unit ? ` ${item.unit}` : ''}
 										</div>
 									{/if}
@@ -299,19 +311,23 @@
 								<div class="grid grid-cols-3 gap-4 opacity-60 sm:grid-cols-5 lg:grid-cols-8">
 									{#each currentList.shopping_list_items.filter((item) => item.is_checked) as item (item.id)}
 										<button
-											class="relative flex flex-col items-center justify-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
+											class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
 											on:click={() => toggleItemChecked(item.id)}
 										>
 											<Icon
 												icon={item.shopping_items?.icon ||
-													FALLBACK_ICONS[item.shopping_items?.category || 'other'][0]}
-												class="w-1/2 mb-2 h-1/2 text-surface-200"
+													FALLBACK_ICONS[item.shopping_items?.category || 'Other'][0]}
+												class="mb-2 w-1/2 h-1/2 text-surface-200"
 											/>
-											<span class="overflow-hidden text-xs text-center text-ellipsis text-surface-200">
+											<span
+												class="overflow-hidden text-xs text-center text-ellipsis text-surface-200"
+											>
 												{item.shopping_items?.name}
 											</span>
 											{#if item.quantity > 1 || item.unit}
-												<div class="mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-surface-900/10">
+												<div
+													class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/10"
+												>
 													{item.quantity}{item.unit ? ` ${item.unit}` : ''}
 												</div>
 											{/if}
