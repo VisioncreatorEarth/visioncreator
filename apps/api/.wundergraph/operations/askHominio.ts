@@ -38,112 +38,162 @@ Key Behaviors:
 1. Add items with quantities immediately
 2. Only ask for missing quantities, and very short, f.e. "How many Bananas, How much milk etc."
 3. Keep responses brief and focused on current items
+4. Handle multiple actions in one request:
+   - Adding new items
+   - Marking items as completed (removing / toggling) or incomplete (adding new or toggling previously existing)
+   - Acknowledging already owned items
 
 Example Interactions:
 
 User: "Add 2 liters milk and bread"
 Assistant: "Added: 2 liters of Milk. How much bread do you want?"
 
-User: "3 Stück Brot und 1 kg Kartoffeln" (German)
-Assistant: "Added:
-- 3 pieces of Bread
-- 1 kilo of Potatoes
-Need anything else?"
+User: "3 pieces of bread and mark bananas as done"
+Assistant: "Added: 3 pieces of Bread. Marked Bananas as completed."
 
-Always speak out the units in full form, not the abbreviations, for example: "1 kilogram" instead of "1 kg"
+User: "Add pasta and remove all fruits"
+Assistant: "Added: 1 piece of Pasta. Removed all fruits from your list."
 
 Categories: ${Object.keys(CATEGORIES).join(', ')}`,
         temperature: 0.7,
         selectedTools: [
           {
             temporaryTool: {
-              modelToolName: "addShoppingItems",
-              description: "Add items to the shopping list immediately when user mentions any item. Call this tool for EVERY item mentioned, even without quantity.",
+              modelToolName: "manageShoppingList",
+              description: "Manage shopping list items: add new items, toggle completion status, or remove items.",
               dynamicParameters: [
                 {
-                  name: "items",
+                  name: "actions",
                   location: "PARAMETER_LOCATION_BODY",
                   schema: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        name: {
+                        action: {
                           type: "string",
-                          description: "Name of the item in English. Always translate non-English items."
+                          enum: ["add", "toggle", "remove"],
+                          description: "Action to perform: 'add' for new items, 'toggle' for marking complete/incomplete, 'remove' for removing items"
                         },
-                        category: {
-                          type: "string",
-                          enum: Object.keys(CATEGORIES),
-                          description: "Category the item belongs to. Required."
-                        },
-                        quantity: {
-                          type: "number",
-                          description: "Quantity of the item. Default to 1 if not specified."
-                        },
-                        unit: {
-                          type: "string",
-                          description: "Unit of measurement (kilogram, liter, piece). Use category default if not specified."
+                        items: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              name: {
+                                type: "string",
+                                description: "Name of the item in English. Always translate non-English items."
+                              },
+                              category: {
+                                type: "string",
+                                enum: Object.keys(CATEGORIES),
+                                description: "Category the item belongs to."
+                              },
+                              quantity: {
+                                type: "number",
+                                description: "Quantity of the item. Default to 1 if not specified."
+                              },
+                              unit: {
+                                type: "string",
+                                description: "Unit of measurement (kilogram, liter, piece). Use category default if not specified."
+                              }
+                            },
+                            required: ["name", "category"]
+                          }
                         }
                       },
-                      required: ["name", "category"]
+                      required: ["action", "items"]
                     }
                   },
                   required: true
                 }
               ],
               client: {
-                implementation: async (params: { items: string }) => {
+                implementation: async (params: { actions: string }, context: any) => {
                   try {
-                    const items = JSON.parse(params.items);
-                    console.log('\n📝 Received items:', items);
+                    const actions = JSON.parse(params.actions);
+                    console.log('\n📝 Received actions:', actions);
 
-                    const processedItems = items.map((item: any) => {
-                      // Find category, defaulting to 'Other' if not found
-                      const category = Object.keys(CATEGORIES).find(
-                        cat => cat.toLowerCase() === item.category.toLowerCase()
-                      ) || 'Other';
+                    const results = [];
 
-                      const typedCategory = category as keyof typeof CATEGORIES;
-                      const defaultUnit = CATEGORIES[typedCategory].defaultUnit;
+                    for (const action of actions) {
+                      if (action.action === 'add') {
+                        const processedItems = action.items.map((item: any) => {
+                          const category = Object.keys(CATEGORIES).find(
+                            cat => cat.toLowerCase() === item.category.toLowerCase()
+                          ) || 'Other';
 
-                      // Process item with defaults and variant units
-                      return {
-                        name: capitalizeFirstLetter(item.name),
-                        category,
-                        quantity: item.quantity || 1,
-                        unit: item.unit || defaultUnit,
-                        icon: CATEGORIES[typedCategory].icon,
-                        variant_units: CATEGORIES[typedCategory].variantUnits
-                      };
-                    });
+                          const typedCategory = category as keyof typeof CATEGORIES;
+                          const defaultUnit = CATEGORIES[typedCategory].defaultUnit;
 
-                    // Call updateShoppingListItems operation
-                    const { data: updateResult, error } = await operations.mutate({
-                      operationName: 'updateShoppingListItems',
-                      input: {
-                        listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
-                        items: processedItems
+                          return {
+                            name: capitalizeFirstLetter(item.name),
+                            category,
+                            quantity: item.quantity || 1,
+                            unit: item.unit || defaultUnit,
+                            icon: CATEGORIES[typedCategory].icon
+                          };
+                        });
+
+                        // Add items
+                        const { data: addResult, error: addError } = await operations.mutate({
+                          operationName: 'updateShoppingListItems',
+                          input: {
+                            listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
+                            items: processedItems
+                          }
+                        });
+
+                        if (addError) {
+                          console.error('\n❌ Error adding items:', addError);
+                          throw addError;
+                        }
+
+                        results.push({ action: 'add', items: processedItems, result: addResult });
+                      } else if (action.action === 'toggle') {
+                        // Toggle items
+                        for (const item of action.items) {
+                          const { data: toggleResult, error: toggleError } = await operations.mutate({
+                            operationName: 'toggleShoppingListItem',
+                            input: {
+                              listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
+                              itemName: capitalizeFirstLetter(item.name)
+                            }
+                          });
+
+                          if (toggleError) {
+                            console.error('\n❌ Error toggling item:', toggleError);
+                            throw toggleError;
+                          }
+
+                          results.push({ action: 'toggle', item: item.name, result: toggleResult });
+                        }
                       }
-                    });
-
-                    if (error) {
-                      console.error('\n❌ Error updating shopping list:', error);
-                      throw error;
                     }
 
-                    console.log('\n✅ Items added to database:', updateResult);
+                    console.log('\n✅ Actions completed:', results);
+
+                    const message = results.map(r => {
+                      if (r.action === 'add') {
+                        return `Added: ${r.items.map((i: any) =>
+                          `${i.quantity} ${i.unit}${i.quantity > 1 ? 's' : ''} of ${i.name}`
+                        ).join(', ')}`;
+                      } else if (r.action === 'toggle') {
+                        return `Toggled: ${r.item}`;
+                      }
+                      return '';
+                    }).filter(Boolean).join('. ');
 
                     return {
                       success: true,
-                      items: processedItems,
-                      message: `Added ${processedItems.map(item =>
-                        `${item.quantity} ${item.unit}${item.quantity > 1 ? 's' : ''} of ${item.name}`
-                      ).join(', ')}`
+                      message
                     };
                   } catch (error) {
-                    console.error('\n❌ Error processing items:', error);
-                    throw error;
+                    console.error('\n❌ Error processing actions:', error);
+                    return {
+                      success: false,
+                      message: 'Failed to process actions: ' + (error instanceof Error ? error.message : String(error))
+                    };
                   }
                 }
               }

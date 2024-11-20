@@ -94,19 +94,19 @@
 			formatLog('STATUS', 'Creating Ultravox session...');
 			// Enable debug messages
 			const debugMessages = new Set(['debug']);
-			session = new UltravoxSession({ 
+			session = new UltravoxSession({
 				joinUrl: result.data.joinUrl,
 				transcriptOptional: false,
-				experimentalMessages: debugMessages 
+				experimentalMessages: debugMessages
 			});
 
 			// Add event listeners
 			session.addEventListener('status', handleStatusChange);
-			
+
 			session.addEventListener('transcripts', () => {
 				// Access transcripts directly from session
 				const currentTranscripts = session?.transcripts || [];
-				
+
 				// Only process and display final transcripts that we haven't seen before
 				currentTranscripts
 					.filter((t: any) => {
@@ -115,10 +115,12 @@
 						// 2. Have actual text content
 						// 3. Haven't been processed before
 						// 4. For user transcripts, ensure they're not null/undefined
-						return t.isFinal && 
-							   t.text && 
-							   !processedTranscripts.has(t.text) && 
-							   (t.speaker === 'agent' || (t.speaker === 'user' && t.text !== 'null'));
+						return (
+							t.isFinal &&
+							t.text &&
+							!processedTranscripts.has(t.text) &&
+							(t.speaker === 'agent' || (t.speaker === 'user' && t.text !== 'null'))
+						);
 					})
 					.forEach((t: any) => {
 						const role = t.speaker === 'agent' ? 'ASSISTANT-SPEAKER' : 'USER-TRANSCRIPT';
@@ -128,10 +130,11 @@
 
 				// Update the UI transcripts array with only valid final transcripts
 				transcripts = currentTranscripts
-					.filter((t: any) => 
-						t.isFinal && 
-						t.text && 
-						(t.speaker === 'agent' || (t.speaker === 'user' && t.text !== 'null'))
+					.filter(
+						(t: any) =>
+							t.isFinal &&
+							t.text &&
+							(t.speaker === 'agent' || (t.speaker === 'user' && t.text !== 'null'))
 					)
 					.map((t: any) => `${t.speaker === 'user' ? 'You' : 'Assistant'}: ${t.text}`);
 
@@ -155,16 +158,20 @@
 			// Add debug message listener
 			session.addEventListener('experimental_message', (msg) => {
 				if (!msg.detail) return;
-				
+
 				if (msg.detail.type === 'tool_call') {
 					const { function: fn, args, invocation_id } = msg.detail;
-					formatLog('DEBUG-TOOL', `Tool Call [${invocation_id}]: ${fn} Args: ${JSON.stringify(args)}`);
+					formatLog(
+						'DEBUG-TOOL',
+						`Tool Call [${invocation_id}]: ${fn} Args: ${JSON.stringify(args)}`
+					);
 				} else if (msg.detail.type === 'tool_result') {
 					const { result, invocation_id } = msg.detail;
 					formatLog('DEBUG-TOOL', `Tool Result [${invocation_id}]: ${JSON.stringify(result)}`);
 				} else if (msg.detail.messages) {
 					msg.detail.messages.forEach((m: any) => {
-						if (m.text) {  // Only show messages with text
+						if (m.text) {
+							// Only show messages with text
 							formatLog('DEBUG-MSG', `${m.role}: ${m.text}`);
 						}
 					});
@@ -218,7 +225,7 @@
 
 <div class="fixed bottom-20 left-1/2 z-50 transform -translate-x-1/2">
 	<div class="flex flex-col gap-4 items-center">
-		{#if isCallActive && transcripts.length > 0}
+		<!-- {#if isCallActive && transcripts.length > 0}
 			<div
 				bind:this={transcriptsContainer}
 				class="overflow-y-auto p-4 w-full max-w-md max-h-[60vh] rounded-lg shadow-lg bg-surface-100-800-token"
@@ -243,13 +250,15 @@
 					</div>
 				{/each}
 			</div>
-		{/if}
+		{/if} -->
 
 		{#if error}
-			<div class="variant-ghost-error p-4 text-sm rounded-lg">{error}</div>
+			<div class="p-4 text-sm rounded-lg variant-ghost-error">{error}</div>
 		{/if}
 
-		<div class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800">
+		<div
+			class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800"
+		>
 			{#if status !== 'idle'}
 				<div
 					class="inline-flex items-center px-4 py-2 text-sm rounded-full shadow-inner text-tertiary-200 bg-surface-700"
