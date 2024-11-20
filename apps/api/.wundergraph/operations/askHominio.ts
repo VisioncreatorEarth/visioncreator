@@ -26,7 +26,7 @@ export default createOperation.mutation({
     chat_message_prompts: z.array(z.string()).min(1)
   }),
   errors: [UltravoxInitializationError, UltravoxSubscriptionError, UltravoxAuthenticationError],
-  handler: async ({ input, context }) => {
+  handler: async ({ input, context, operations }) => {
     try {
       console.log("🎤 Starting Ultravox API call with prompts:", input.chat_message_prompts);
 
@@ -68,20 +68,20 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
                     items: {
                       type: "object",
                       properties: {
-                        name: { 
-                          type: "string", 
-                          description: "Name of the item in English. Always translate non-English items." 
+                        name: {
+                          type: "string",
+                          description: "Name of the item in English. Always translate non-English items."
                         },
-                        category: { 
-                          type: "string", 
+                        category: {
+                          type: "string",
                           enum: Object.keys(CATEGORIES),
-                          description: "Category the item belongs to. Required." 
+                          description: "Category the item belongs to. Required."
                         },
-                        quantity: { 
+                        quantity: {
                           type: "number",
                           description: "Quantity of the item. Default to 1 if not specified."
                         },
-                        unit: { 
+                        unit: {
                           type: "string",
                           description: "Unit of measurement (kilogram, liter, piece). Use category default if not specified."
                         }
@@ -97,32 +97,47 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
                   try {
                     const items = JSON.parse(params.items);
                     console.log('\n📝 Received items:', items);
-                    
+
                     const processedItems = items.map((item: any) => {
                       // Find category, defaulting to 'Other' if not found
                       const category = Object.keys(CATEGORIES).find(
                         cat => cat.toLowerCase() === item.category.toLowerCase()
                       ) || 'Other';
-                      
-                      // Get default unit for category
-                      const defaultUnit = CATEGORIES[category as keyof typeof CATEGORIES].defaultUnit;
-                      
-                      // Process item with defaults
+
+                      const typedCategory = category as keyof typeof CATEGORIES;
+                      const defaultUnit = CATEGORIES[typedCategory].defaultUnit;
+
+                      // Process item with defaults and variant units
                       return {
                         name: capitalizeFirstLetter(item.name),
                         category,
                         quantity: item.quantity || 1,
                         unit: item.unit || defaultUnit,
-                        icon: CATEGORIES[category as keyof typeof CATEGORIES].icon
+                        icon: CATEGORIES[typedCategory].icon,
+                        variant_units: CATEGORIES[typedCategory].variantUnits
                       };
                     });
 
-                    console.log('\n✅ Processed items:', processedItems);
-                    
+                    // Call updateShoppingListItems operation
+                    const { data: updateResult, error } = await operations.mutate({
+                      operationName: 'updateShoppingListItems',
+                      input: {
+                        listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
+                        items: processedItems
+                      }
+                    });
+
+                    if (error) {
+                      console.error('\n❌ Error updating shopping list:', error);
+                      throw error;
+                    }
+
+                    console.log('\n✅ Items added to database:', updateResult);
+
                     return {
                       success: true,
                       items: processedItems,
-                      message: `Added ${processedItems.map(item => 
+                      message: `Added ${processedItems.map(item =>
                         `${item.quantity} ${item.unit}${item.quantity > 1 ? 's' : ''} of ${item.name}`
                       ).join(', ')}`
                     };
@@ -150,7 +165,7 @@ Categories: ${Object.keys(CATEGORIES).join(', ')}`,
         timestamp: new Date().toISOString()
       });
 
-      return { 
+      return {
         data: {
           ...response,
           status: 'active',
