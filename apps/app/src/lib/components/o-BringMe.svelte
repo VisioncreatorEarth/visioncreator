@@ -11,63 +11,35 @@
 	const categoryColors = {
 		Fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
 		Vegetables: 'bg-green-500/10 hover:bg-green-500/20 text-green-500',
-		Dairy: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
+		Dairy: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
 		Meat: 'bg-red-500/10 hover:bg-red-500/20 text-red-500',
+		Grains: 'bg-warning-500/10 hover:bg-amwarningber-500/20 text-warning-500',
 		Bakery: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500',
-		Beverages: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
+		Beverages: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
 		Snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
-		Household: 'bg-slate-500/10 hover:bg-slate-500/20 text-slate-500',
-		Grains: 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-500',
+		Household: 'bg-tertiary-500/10 hover:bg-tertiary-500/20 text-tertiary-500',
 		'Personal Care': 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-500',
 		Other: 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500'
 	} as const;
 
-	const categoryHoverColors = {
-		Fruits: 'bg-orange-500/20',
-		Vegetables: 'bg-green-500/20',
-		Dairy: 'bg-blue-500/20',
-		Meat: 'bg-red-500/20',
-		Bakery: 'bg-yellow-500/20',
-		Beverages: 'bg-purple-500/20',
-		Snacks: 'bg-pink-500/20',
-		Household: 'bg-slate-500/20',
-		Grains: 'bg-amber-500/20',
-		'Personal Care': 'bg-teal-500/20',
-		Other: 'bg-gray-500/20'
-	} as const;
-
-	const categoryTextColors = {
-		Fruits: 'text-orange-500',
-		Vegetables: 'text-green-500',
-		Dairy: 'text-blue-500',
-		Meat: 'text-red-500',
-		Bakery: 'text-yellow-500',
-		Beverages: 'text-purple-500',
-		Snacks: 'text-pink-500',
-		Household: 'text-slate-500',
-		Grains: 'text-amber-500',
-		'Personal Care': 'text-teal-500',
-		Other: 'text-gray-500'
-	} as const;
-
 	// Maintain consistent category order
 	const categoryOrder = [
-		'Fruits',
 		'Vegetables',
-		'Dairy',
+		'Fruits',
 		'Meat',
+		'Grains',
 		'Bakery',
 		'Beverages',
+		'Dairy',
 		'Snacks',
-		'Household',
-		'Grains',
 		'Personal Care',
+		'Household',
 		'Other'
 	];
 
 	// Simplified but diverse fallback icons per category
 	const FALLBACK_ICONS = {
-		Fruits: ['mdi:fruit-watermelon', 'mdi:fruit-cherries', 'mdi:food-apple'],
+		Fruits: ['mdi:fruit-watermelon', 'mdi:food-apple', 'mdi:fruit-cherries'],
 		Vegetables: ['mdi:carrot', 'mdi:food-broccoli', 'mdi:leaf'],
 		Dairy: ['mdi:cheese', 'mdi:milk', 'mdi:egg'],
 		Meat: ['mdi:food-steak', 'mdi:food-turkey', 'mdi:fish'],
@@ -82,20 +54,97 @@
 
 	// Sample items for random generation
 	const sampleItems = [
-		{ name: 'Apples', category: 'Fruits', icon: 'mdi:food-apple', default_unit: 'kg' },
-		{ name: 'Bananas', category: 'Fruits', icon: 'mdi:fruit-watermelon', default_unit: 'kg' },
-		{ name: 'Milk', category: 'Dairy', icon: 'mdi:milk', default_unit: 'l' },
-		{ name: 'Bread', category: 'Bakery', icon: 'mdi:bread-slice', default_unit: 'pcs' },
-		{ name: 'Cheese', category: 'Dairy', icon: 'mdi:cheese', default_unit: 'kg' },
-		{ name: 'Chicken', category: 'Meat', icon: 'mdi:food-turkey', default_unit: 'kg' },
-		{ name: 'Tomatoes', category: 'Vegetables', icon: 'mdi:carrot', default_unit: 'kg' },
-		{ name: 'Pasta', category: 'Grains', icon: 'mdi:noodles', default_unit: 'pcs' },
-		{ name: 'Rice', category: 'Grains', icon: 'mdi:rice', default_unit: 'kg' },
-		{ name: 'Coffee', category: 'Beverages', icon: 'mdi:coffee', default_unit: 'pcs' },
-		{ name: 'Shampoo', category: 'Personal Care', icon: 'mdi:lotion', default_unit: 'pcs' },
-		{ name: 'Toothpaste', category: 'Personal Care', icon: 'mdi:toothbrush', default_unit: 'pcs' }
-	];
+		// Fruits
+		{ name: 'Bananas', category: 'Fruits', icon: 'mdi:fruit-watermelon' },
+		{ name: 'Apples', category: 'Fruits', icon: 'mdi:food-apple' },
+		{ name: 'Oranges', category: 'Fruits', icon: 'mdi:fruit-citrus' },
+		{ name: 'Strawberries', category: 'Fruits', icon: 'mdi:fruit-cherries' },
+		{ name: 'Grapes', category: 'Fruits', icon: 'mdi:fruit-grapes' },
+		{ name: 'Peaches', category: 'Fruits', icon: 'mdi:fruit-watermelon' },
+		{ name: 'Pineapple', category: 'Fruits', icon: 'mdi:fruit-pineapple' },
+		{ name: 'Mango', category: 'Fruits', icon: 'mdi:fruit-watermelon' },
 
+		// Vegetables
+		{ name: 'Broccoli', category: 'Vegetables', icon: 'mdi:sprout' },
+		{ name: 'Carrots', category: 'Vegetables', icon: 'mdi:carrot' },
+		{ name: 'Tomatoes', category: 'Vegetables', icon: 'mdi:fruit-cherries' },
+		{ name: 'Lettuce', category: 'Vegetables', icon: 'mdi:leaf' },
+		{ name: 'Cucumber', category: 'Vegetables', icon: 'mdi:sprout' },
+		{ name: 'Bell Peppers', category: 'Vegetables', icon: 'mdi:sprout' },
+		{ name: 'Spinach', category: 'Vegetables', icon: 'mdi:leaf' },
+		{ name: 'Onions', category: 'Vegetables', icon: 'mdi:sprout' },
+		{ name: 'Potatoes', category: 'Vegetables', icon: 'mdi:carrot' },
+		{ name: 'Garlic', category: 'Vegetables', icon: 'mdi:sprout' },
+
+		// Dairy
+		{ name: 'Milk', category: 'Dairy', icon: 'mdi:bottle-tonic' },
+		{ name: 'Cheese', category: 'Dairy', icon: 'mdi:cheese' },
+		{ name: 'Yogurt', category: 'Dairy', icon: 'mdi:cup' },
+		{ name: 'Butter', category: 'Dairy', icon: 'mdi:bottle-tonic' },
+		{ name: 'Cream', category: 'Dairy', icon: 'mdi:cup' },
+		{ name: 'Sour Cream', category: 'Dairy', icon: 'mdi:cup' },
+		{ name: 'Cottage Cheese', category: 'Dairy', icon: 'mdi:cheese' },
+
+		// Bakery
+		{ name: 'Bread', category: 'Bakery', icon: 'mdi:bread-slice' },
+		{ name: 'Croissant', category: 'Bakery', icon: 'mdi:bread-slice-outline' },
+		{ name: 'Bagels', category: 'Bakery', icon: 'mdi:bread-slice-outline' },
+		{ name: 'Muffins', category: 'Bakery', icon: 'mdi:cookie' },
+		{ name: 'Baguette', category: 'Bakery', icon: 'mdi:bread-slice' },
+		{ name: 'Donuts', category: 'Bakery', icon: 'mdi:cookie' },
+		{ name: 'Cake', category: 'Bakery', icon: 'mdi:cake-variant' },
+
+		// Snacks
+		{ name: 'Potato Chips', category: 'Snacks', icon: 'mdi:chips' },
+		{ name: 'Cookies', category: 'Snacks', icon: 'mdi:cookie' },
+		{ name: 'Popcorn', category: 'Snacks', icon: 'mdi:popcorn' },
+		{ name: 'Nuts', category: 'Snacks', icon: 'mdi:peanut' },
+		{ name: 'Pretzels', category: 'Snacks', icon: 'mdi:pretzel' },
+		{ name: 'Crackers', category: 'Snacks', icon: 'mdi:cracker' },
+		{ name: 'Chocolate', category: 'Snacks', icon: 'mdi:candy' },
+
+		// Beverages
+		{ name: 'Water', category: 'Beverages', icon: 'mdi:water' },
+		{ name: 'Coffee', category: 'Beverages', icon: 'mdi:coffee' },
+		{ name: 'Tea', category: 'Beverages', icon: 'mdi:tea' },
+		{ name: 'Juice', category: 'Beverages', icon: 'mdi:cup' },
+		{ name: 'Soda', category: 'Beverages', icon: 'mdi:bottle-soda' },
+		{ name: 'Beer', category: 'Beverages', icon: 'mdi:beer' },
+		{ name: 'Wine', category: 'Beverages', icon: 'mdi:wine' },
+
+		// Meat
+		{ name: 'Chicken', category: 'Meat', icon: 'mdi:food-drumstick' },
+		{ name: 'Beef', category: 'Meat', icon: 'mdi:food-steak' },
+		{ name: 'Pork', category: 'Meat', icon: 'mdi:food-steak' },
+		{ name: 'Fish', category: 'Meat', icon: 'mdi:fish' },
+		{ name: 'Turkey', category: 'Meat', icon: 'mdi:food-drumstick' },
+		{ name: 'Lamb', category: 'Meat', icon: 'mdi:food-steak' },
+		{ name: 'Sausages', category: 'Meat', icon: 'mdi:sausage' },
+
+		// Grains
+		{ name: 'Rice', category: 'Grains', icon: 'mdi:grain' },
+		{ name: 'Pasta', category: 'Grains', icon: 'mdi:noodles' },
+		{ name: 'Cereal', category: 'Grains', icon: 'mdi:bowl' },
+		{ name: 'Oatmeal', category: 'Grains', icon: 'mdi:bowl' },
+		{ name: 'Quinoa', category: 'Grains', icon: 'mdi:grain' },
+		{ name: 'Flour', category: 'Grains', icon: 'mdi:flour' },
+
+		// Personal Care
+		{ name: 'Soap', category: 'Personal Care', icon: 'mdi:hand-wash' },
+		{ name: 'Shampoo', category: 'Personal Care', icon: 'mdi:shampoo' },
+		{ name: 'Toothpaste', category: 'Personal Care', icon: 'mdi:toothbrush' },
+		{ name: 'Deodorant', category: 'Personal Care', icon: 'mdi:spray' },
+		{ name: 'Toilet Paper', category: 'Personal Care', icon: 'mdi:paper-roll' },
+		{ name: 'Tissues', category: 'Personal Care', icon: 'mdi:tissue-box' },
+
+		// Household
+		{ name: 'Paper Towels', category: 'Household', icon: 'mdi:paper-roll' },
+		{ name: 'Trash Bags', category: 'Household', icon: 'mdi:delete' },
+		{ name: 'Dish Soap', category: 'Household', icon: 'mdi:bottle-tonic' },
+		{ name: 'Laundry Detergent', category: 'Household', icon: 'mdi:washing-machine' },
+		{ name: 'Sponges', category: 'Household', icon: 'mdi:spray-bottle' },
+		{ name: 'Light Bulbs', category: 'Household', icon: 'mdi:lightbulb' }
+	];
 	// WunderGraph queries and mutations
 	const shoppingListsQuery = createQuery({
 		operationName: 'queryShoppingLists',
@@ -130,40 +179,17 @@
 				.filter((group) => group.items.length > 0)
 		: [];
 
-	async function createList() {
-		if (!newListName.trim()) return;
-
-		try {
-			await $createShoppingListMutation.mutateAsync({
-				listName: newListName.trim()
-			});
-
-			newListName = '';
-			showNewListForm = false;
-			await $shoppingListsQuery.refetch();
-		} catch (error) {
-			console.error('Error creating list:', error);
-		}
-	}
-
 	async function addRandomItems() {
 		if (!currentListId) return;
-
-		const randomItems = [...sampleItems]
-			.sort(() => 0.5 - Math.random())
-			.slice(0, 3)
-			.map((item) => ({
-				...item,
-				quantity: Math.floor(Math.random() * 5) + 1
-			}));
 
 		try {
 			await $updateShoppingListItemsMutation.mutateAsync({
 				listId: currentListId,
-				items: randomItems
+				items: sampleItems.map((item) => ({
+					...item,
+					quantity: 1
+				}))
 			});
-
-			await $shoppingListsQuery.refetch();
 		} catch (error) {
 			console.error('Error adding random items:', error);
 		}
@@ -171,7 +197,7 @@
 
 	async function toggleItemChecked(itemId: string, itemName: string) {
 		if (!currentListId) return;
-		
+
 		try {
 			await $toggleShoppingListItemMutation.mutateAsync({
 				listId: currentListId,
@@ -189,15 +215,15 @@
 	});
 </script>
 
-<div class="flex relative flex-col w-full h-full bg-surface-900">
+<div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
 	<header class="p-4 card-header">
 		<h2 class="mb-2 text-2xl font-bold text-center text-white">{title}</h2>
 		<p class="text-center text-surface-200">{description}</p>
 	</header>
 
-	<div class="flex overflow-hidden flex-grow w-full">
+	<div class="flex overflow-hidden flex-grow w-full h-full">
 		<!-- Lists Sidebar -->
-		<div class="overflow-y-auto p-4 w-80 border-r border-surface-700">
+		<div class="overflow-y-auto p-4 w-80 h-full border-r border-surface-700">
 			<!-- New List Form -->
 			{#if showNewListForm}
 				<div class="p-4 mb-4 rounded-lg bg-surface-800">
@@ -259,7 +285,7 @@
 		</div>
 
 		<!-- Main Content -->
-		<div class="overflow-y-auto flex-1 p-4">
+		<div class="overflow-y-auto flex-1 p-4 h-full">
 			{#if currentList}
 				<div class="flex justify-between items-center mb-6">
 					<h2 class="text-2xl font-bold">{currentList.name}</h2>
@@ -281,29 +307,31 @@
 					<div class="space-y-8">
 						<!-- Unchecked Items Grid -->
 						<div class="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-8">
-							{#each currentList.shopping_list_items.filter((item) => !item.is_checked) as item (item.id)}
-								<button
-									class="relative flex flex-col items-center justify-center p-2 transition-colors duration-200 rounded-lg aspect-square {categoryColors[
-										item.shopping_items?.category || 'Other'
-									]}"
-									on:click={() => toggleItemChecked(item.id, item.shopping_items?.name || '')}
-								>
-									<Icon
-										icon={item.shopping_items?.icon ||
-											FALLBACK_ICONS[item.shopping_items?.category || 'Other'][0]}
-										class="mb-2 w-1/2 h-1/2"
-									/>
-									<span class="overflow-hidden text-xs text-center text-ellipsis">
-										{item.shopping_items?.name}
-									</span>
-									{#if item.quantity > 1 || item.unit}
-										<div
-											class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/10"
-										>
-											{item.quantity}{item.unit ? ` ${item.unit}` : ''}
-										</div>
-									{/if}
-								</button>
+							{#each groupedItems as group}
+								{#each group.items as item (item.id)}
+									<button
+										class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {categoryColors[
+											item.shopping_items?.category || 'Other'
+										]}"
+										on:click={() => toggleItemChecked(item.id, item.shopping_items?.name || '')}
+									>
+										<Icon
+											icon={item.shopping_items?.icon ||
+												FALLBACK_ICONS[item.shopping_items?.category || 'Other'][0]}
+											class="mb-2 w-1/2 h-1/2"
+										/>
+										<span class="overflow-hidden text-xs text-center text-ellipsis">
+											{item.shopping_items?.name}
+										</span>
+										{#if item.quantity > 1 || item.unit}
+											<div
+												class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/10"
+											>
+												{item.quantity}{item.unit ? ` ${item.unit}` : ''}
+											</div>
+										{/if}
+									</button>
+								{/each}
 							{/each}
 						</div>
 
@@ -341,6 +369,7 @@
 						{/if}
 					</div>
 				{/if}
+				<div class="h-48" />
 			{:else}
 				<div class="py-12 text-center text-surface-300">
 					<p class="text-lg">Select a list from the sidebar or create a new one to get started!</p>
