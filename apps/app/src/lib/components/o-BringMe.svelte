@@ -195,6 +195,22 @@
 		}
 	}
 
+	async function createList() {
+		if (!newListName.trim()) return;
+
+		try {
+			await $createShoppingListMutation.mutateAsync({
+				listName: newListName.trim()
+			});
+
+			newListName = '';
+			showNewListForm = false;
+			await $shoppingListsQuery.refetch();
+		} catch (error) {
+			console.error('Error creating list:', error);
+		}
+	}
+
 	async function toggleItemChecked(itemId: string, itemName: string) {
 		if (!currentListId) return;
 
@@ -216,11 +232,6 @@
 </script>
 
 <div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
-	<header class="p-4 card-header">
-		<h2 class="mb-2 text-2xl font-bold text-center text-white">{title}</h2>
-		<p class="text-center text-surface-200">{description}</p>
-	</header>
-
 	<div class="flex overflow-hidden flex-grow w-full h-full">
 		<!-- Lists Sidebar -->
 		<div class="overflow-y-auto p-4 w-80 h-full border-r border-surface-700">
