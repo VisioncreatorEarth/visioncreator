@@ -10,6 +10,31 @@ interface UltravoxResponse {
   error?: string;
 }
 
+interface TimeUsageResponse {
+  data?: {
+    timeUsed: string;
+    timeRemaining: string;
+    hasActiveSubscription: boolean;
+  };
+  error?: string;
+}
+
+interface CallResponse {
+  data?: {
+    calls: Array<{
+      callId: string;
+      created: string;
+      ended?: string;
+      endReason?: string;
+      firstSpeaker: string;
+      systemPrompt: string;
+      voice: string;
+    }>;
+    nextCursor?: string;
+  };
+  error?: string;
+}
+
 export class UltravoxClient {
   private apiKey: string;
   private baseUrl = 'https://api.ultravox.ai/api';
@@ -130,6 +155,98 @@ export class UltravoxClient {
     } catch (error) {
       console.error('❌ Error ending call:', error);
       throw error;
+    }
+  }
+
+  async getTimeUsage(): Promise<TimeUsageResponse> {
+    console.log('📊 Getting time usage...');
+    try {
+      const response = await fetch(`${this.baseUrl}/accounts/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.error('❌ Response not OK:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+
+        if (response.status === 401) {
+          throw new UltravoxAuthenticationError('Invalid API key');
+        }
+        throw new Error(`Failed to get time usage: ${response.statusText}`);
+      }
+
+      const accountData = await response.json();
+      return {
+        data: {
+          timeUsed: accountData.freeTimeUsed,
+          timeRemaining: accountData.freeTimeRemaining,
+          hasActiveSubscription: accountData.hasActiveSubscription
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error getting time usage:', error);
+      return { error: error.message };
+    }
+  }
+
+  async getCalls(): Promise<CallResponse> {
+    console.log('📞 Getting calls...');
+    try {
+      let allCalls = [];
+      let nextCursor: string | undefined;
+
+      // Keep fetching until we have all calls
+      do {
+        const url = new URL(`${this.baseUrl}/calls`);
+        if (nextCursor) {
+          url.searchParams.append('cursor', nextCursor);
+        }
+
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': this.apiKey
+          }
+        });
+
+        if (!response.ok) {
+          console.error('❌ Response not OK:', {
+            status: response.status,
+            statusText: response.statusText
+          });
+
+          if (response.status === 401) {
+            throw new UltravoxAuthenticationError('Invalid API key');
+          }
+          throw new Error(`Failed to get calls: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        allCalls = [...allCalls, ...(data.results || [])];
+        nextCursor = data.next_cursor;
+
+        // Log progress
+        console.log(`📞 Fetched ${allCalls.length} calls so far...`);
+
+      } while (nextCursor);
+
+      console.log(`📞 Fetched all ${allCalls.length} calls`);
+      
+      return {
+        data: {
+          calls: allCalls
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error getting calls:', error);
+      return { error: error.message };
     }
   }
 }

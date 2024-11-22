@@ -6,13 +6,17 @@ export default createOperation.mutation({
     action: z.enum(['create', 'end']),
     callId: z.string().optional(),
   }),
+  requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["authenticated", "admin"],
+  },
   errors: [UltravoxInitializationError, UltravoxAuthenticationError],
   handler: async ({ input, context }) => {
     try {
       if (input.action === 'create') {
         const systemPrompt = `You are a friendly AI assistant. Keep your responses brief and clear.`;
         const result = await context.ultravox.createCall(systemPrompt);
-        
+
         if (!result?.data?.callId || !result?.data?.joinUrl) {
           console.error('❌ Invalid call data received:', result);
           throw new Error('Invalid call data received from Ultravox');
