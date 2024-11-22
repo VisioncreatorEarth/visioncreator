@@ -159,7 +159,6 @@ export class UltravoxClient {
   }
 
   async getTimeUsage(): Promise<TimeUsageResponse> {
-    console.log('📊 Getting time usage...');
     try {
       const response = await fetch(`${this.baseUrl}/accounts/me`, {
         method: 'GET',
@@ -196,7 +195,6 @@ export class UltravoxClient {
   }
 
   async getCalls(): Promise<CallResponse> {
-    console.log('📞 Getting calls...');
     try {
       let allCalls = [];
       let nextCursor: string | undefined;
@@ -232,13 +230,10 @@ export class UltravoxClient {
         allCalls = [...allCalls, ...(data.results || [])];
         nextCursor = data.next_cursor;
 
-        // Log progress
-        console.log(`📞 Fetched ${allCalls.length} calls so far...`);
-
       } while (nextCursor);
 
       console.log(`📞 Fetched all ${allCalls.length} calls`);
-      
+
       return {
         data: {
           calls: allCalls
