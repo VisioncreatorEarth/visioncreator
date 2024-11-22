@@ -1,5 +1,15 @@
 import { UltravoxAuthenticationError, UltravoxInitializationError } from '../errors';
 
+interface CallParams {
+  systemPrompt: string;
+  voice: string;
+  temperature: number;
+  maxDuration: string;
+  timeExceededMessage: string;
+  firstSpeaker: string;
+  selectedTools: any[];
+}
+
 interface UltravoxResponse {
   data?: {
     callId: string;
@@ -47,7 +57,7 @@ export class UltravoxClient {
     this.apiKey = apiKey;
   }
 
-  async createCall(systemPrompt: string): Promise<UltravoxResponse> {
+  async createCall(params: CallParams): Promise<UltravoxResponse> {
     console.log('🚀 Creating Ultravox call...');
     try {
       console.log('🔑 Using API Key:', this.apiKey.substring(0, 8) + '...');
@@ -59,14 +69,7 @@ export class UltravoxClient {
           'Content-Type': 'application/json',
           'X-API-Key': this.apiKey
         },
-        body: JSON.stringify({
-          systemPrompt,
-          temperature: 0.8,
-          voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
-          maxDuration: '30s',
-          timeExceededMessage: "Maximum calltime exceeded. See you next time!",
-          selectedTools: []
-        })
+        body: JSON.stringify(params)
       });
 
       if (!response.ok) {
