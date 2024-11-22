@@ -44,11 +44,6 @@ export type OperationUltravoxInitializationError = {
 	statusCode: 400;
 	message: "";
 };
-export type OperationUltravoxSubscriptionError = {
-	code: "UltravoxSubscriptionError";
-	statusCode: 402;
-	message: "Ultravox subscription needs to be set up";
-};
 export type OperationUltravoxAuthenticationError = {
 	code: "UltravoxAuthenticationError";
 	statusCode: 401;
@@ -60,7 +55,6 @@ export type NewsletterToggleErrors = ClientOperationErrors;
 export type AskClaudeErrors = ClientOperationErrors;
 export type AskHominioErrors =
 	| OperationUltravoxInitializationError
-	| OperationUltravoxSubscriptionError
 	| OperationUltravoxAuthenticationError
 	| ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
