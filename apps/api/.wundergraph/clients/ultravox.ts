@@ -38,7 +38,7 @@ export class UltravoxClient {
           systemPrompt,
           temperature: 0.8,
           voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
-          maxDuration: '20s',
+          maxDuration: '30s',
           timeExceededMessage: "Maximum calltime exceeded. See you next time!",
           selectedTools: []
         })
@@ -88,8 +88,15 @@ export class UltravoxClient {
         }
       });
 
-      if (!statusResponse.ok && statusResponse.status !== 404) {
-        console.error('❌ Failed to get call status:', statusResponse.status, statusResponse.statusText);
+      // If call doesn't exist (404) or is already ended, return successfully
+      if (statusResponse.status === 404) {
+        console.log('ℹ️ Call already ended or does not exist:', callId);
+        return;
+      }
+
+      // For other non-OK responses, log the error but continue with deletion attempt
+      if (!statusResponse.ok) {
+        console.warn('⚠️ Failed to get call status:', statusResponse.status, statusResponse.statusText);
       }
 
       // Proceed with ending the call
@@ -101,9 +108,22 @@ export class UltravoxClient {
         }
       });
 
-      if (!response.ok && response.status !== 404) {
-        console.error('❌ Failed to end call:', response.status, response.statusText);
-        throw new Error(`Failed to end call: ${response.statusText}`);
+      // If the call was already deleted or doesn't exist, consider it a success
+      if (response.status === 404) {
+        console.log('ℹ️ Call was already deleted:', callId);
+        return;
+      }
+
+      if (!response.ok) {
+        let errorMessage = `Failed to end call: ${response.statusText}`;
+        try {
+          const errorBody = await response.text();
+          console.error('📄 Error response body:', errorBody);
+          errorMessage = errorBody || errorMessage;
+        } catch (e) {
+          console.error('⚠️ Could not read error response body');
+        }
+        throw new Error(errorMessage);
       }
 
       console.log('✅ Call ended successfully:', callId);

@@ -1,260 +1,379 @@
 <!-- AskHominio.svelte -->
 <script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { UltravoxSession } from 'ultravox-client';
-  import { createMutation } from '$lib/wundergraph';
+	import { onDestroy } from 'svelte';
+	import { UltravoxSession } from 'ultravox-client';
+	import { createMutation } from '$lib/wundergraph';
+	import { createMachine } from '$lib/composables/svelteMachine';
 
-  const askHominioMutation = createMutation({
-    operationName: 'askHominio'
-  });
+	const askHominioMutation = createMutation({
+		operationName: 'askHominio'
+	});
 
-  let session: UltravoxSession | null = null;
-  let status: 'disconnected' | 'disconnecting' | 'connecting' | 'idle' | 'listening' | 'thinking' | 'speaking' =
-    'disconnected';
-  let error: string | null = null;
-  let isCallActive = false;
-  let isSpeaking = false;
-  let currentCallId: string | null = null;
-  let isLoading = false;
-  let transcripts: { text: string; speaker: 'agent' | 'user' }[] = [];
+	// Machine context type
+	type Context = {
+		error: string | null;
+		transcripts: any[];
+		currentCallId: string | null;
+		session: any | null;
+		isLoading: boolean;
+	};
 
-  // Helper function for consistent log formatting
-  function formatLog(type: string, message: string) {
-    console.log(`[${type}]: ${message}`);
-  }
+	// Machine states type
+	type State =
+		| 'disconnected'
+		| 'connecting'
+		| 'idle'
+		| 'listening'
+		| 'thinking'
+		| 'speaking'
+		| 'disconnecting';
 
-  function handleStatusChange(event: any) {
-    const sessionStatus = session?.status;
-    formatLog('STATUS', sessionStatus || 'Unknown');
+	// Machine events type
+	type Event =
+		| 'START'
+		| 'CONNECTED'
+		| 'ERROR'
+		| 'DISCONNECT'
+		| 'STATUS_CHANGED'
+		| 'SPEAKING'
+		| 'TRANSCRIPT';
 
-    if (!sessionStatus) return;
+	// Create the machine
+	const machine = createMachine<Context, State, Event>(
+		{
+			id: 'call',
+			initial: 'disconnected',
+			context: {
+				error: null,
+				transcripts: [],
+				currentCallId: null,
+				session: null,
+				isLoading: false
+			},
+			states: {
+				disconnected: {
+					on: {
+						START: {
+							target: 'connecting',
+							actions: ['startCall']
+						}
+					}
+				},
+				connecting: {
+					on: {
+						CONNECTED: { target: 'idle' },
+						ERROR: {
+							target: 'disconnected',
+							actions: ['handleError']
+						}
+					}
+				},
+				idle: {
+					on: {
+						STATUS_CHANGED: [
+							{ target: 'listening', guard: 'isListening' },
+							{ target: 'thinking', guard: 'isThinking' },
+							{ target: 'speaking', guard: 'isSpeaking' }
+						],
+						DISCONNECT: {
+							target: 'disconnecting',
+							actions: ['endCall']
+						}
+					}
+				},
+				listening: {
+					on: {
+						STATUS_CHANGED: [
+							{ target: 'idle', guard: 'isIdle' },
+							{ target: 'thinking', guard: 'isThinking' },
+							{ target: 'speaking', guard: 'isSpeaking' }
+						],
+						DISCONNECT: {
+							target: 'disconnecting',
+							actions: ['endCall']
+						}
+					}
+				},
+				thinking: {
+					on: {
+						STATUS_CHANGED: [
+							{ target: 'idle', guard: 'isIdle' },
+							{ target: 'listening', guard: 'isListening' },
+							{ target: 'speaking', guard: 'isSpeaking' }
+						],
+						DISCONNECT: {
+							target: 'disconnecting',
+							actions: ['endCall']
+						}
+					}
+				},
+				speaking: {
+					on: {
+						STATUS_CHANGED: [
+							{ target: 'idle', guard: 'isIdle' },
+							{ target: 'listening', guard: 'isListening' },
+							{ target: 'thinking', guard: 'isThinking' }
+						],
+						DISCONNECT: {
+							target: 'disconnecting',
+							actions: ['endCall']
+						}
+					}
+				},
+				disconnecting: {
+					on: {
+						STATUS_CHANGED: {
+							target: 'disconnected',
+							guard: 'isDisconnected'
+						}
+					}
+				}
+			}
+		},
+		{
+			// Actions
+			startCall: async (context) => {
+				context.isLoading = true;
+				context.error = null;
+				context.transcripts = [];
 
-    status = sessionStatus;
-    isCallActive = ['idle', 'listening', 'thinking', 'speaking'].includes(sessionStatus);
-  }
+				try {
+					const result = await $askHominioMutation.mutateAsync({
+						action: 'create'
+					});
 
-  async function startCall() {
-    formatLog('START', 'Starting new call...');
-    isLoading = true;
-    error = null;
-    transcripts = [];
+					if (!result?.joinUrl) {
+						throw new Error('No join URL received');
+					}
 
-    try {
-      const result = await $askHominioMutation.mutateAsync({
-        action: 'create'
-      });
+					context.currentCallId = result.callId;
+					context.session = new UltravoxSession({
+						joinUrl: result.joinUrl,
+						transcriptOptional: false,
+						experimentalMessages: new Set(['debug', 'status', 'transcripts', 'speaking']),
+						webSocketConfig: {
+							reconnect: true,
+							maxRetries: 3,
+							retryDelay: 1000
+						}
+					});
 
-      formatLog('RESPONSE', JSON.stringify(result, null, 2));
+					// Add event listeners
+					context.session.addEventListener('status', (event) => {
+						machine.send('STATUS_CHANGED');
+					});
 
-      if (!result?.joinUrl) {
-        throw new Error('No join URL received');
-      }
+					context.session.addEventListener('transcripts', () => {
+						const currentTranscripts = context.session?.transcripts || [];
+						const finalTranscripts = currentTranscripts
+							.filter((t: any) => t.isFinal && t.text)
+							.map((t: any) => ({
+								text: t.text,
+								speaker: t.speaker
+							}));
 
-      currentCallId = result.callId;
-      
-      // Create Ultravox session with debug messages
-      formatLog('SESSION', 'Creating Ultravox session...');
-      const debugMessages = new Set(['debug', 'status', 'transcripts', 'speaking']);
-      session = new UltravoxSession({
-        joinUrl: result.joinUrl,
-        transcriptOptional: false,
-        experimentalMessages: debugMessages,
-        webSocketConfig: {
-          reconnect: true,
-          maxRetries: 3,
-          retryDelay: 1000
-        }
-      });
+						if (finalTranscripts.length > context.transcripts.length) {
+							context.transcripts = finalTranscripts;
+						}
+					});
 
-      // Add event listeners
-      session.addEventListener('status', handleStatusChange);
-      
-      session.addEventListener('speaking', (event) => {
-        formatLog('SPEAKING', String(event.detail));
-        isSpeaking = event.detail;
-      });
+					context.session.addEventListener('error', (event) => {
+						context.error = event.detail.message || 'Unknown error occurred';
+						machine.send('ERROR');
+					});
 
-      session.addEventListener('transcripts', () => {
-        const currentTranscripts = session?.transcripts || [];
-        formatLog('TRANSCRIPTS', JSON.stringify(currentTranscripts));
-        
-        transcripts = currentTranscripts
-          .filter((t: any) => t.isFinal && t.text)
-          .map((t: any) => ({
-            text: t.text,
-            speaker: t.speaker
-          }));
-      });
+					// Join the call with retry logic
+					let retries = 0;
+					const maxRetries = 3;
 
-      session.addEventListener('error', (event) => {
-        formatLog('ERROR', event.detail.message || 'Unknown error');
-        error = event.detail.message || 'Unknown error occurred';
-        status = 'disconnected';
-      });
+					while (retries < maxRetries) {
+						try {
+							await context.session.joinCall(result.joinUrl);
+							machine.send('CONNECTED');
+							break;
+						} catch (error) {
+							retries++;
+							if (retries === maxRetries) {
+								throw error;
+							}
+							await new Promise((resolve) => setTimeout(resolve, 1000));
+						}
+					}
 
-      // Add debug message listener
-      session.addEventListener('experimental_message', (msg) => {
-        if (!msg.detail) return;
-        formatLog('DEBUG', JSON.stringify(msg.detail));
-      });
+					// Auto-close timer (20 seconds)
+					setTimeout(() => {
+						machine.send('DISCONNECT');
+					}, 30000);
+				} catch (e) {
+					context.error =
+						e instanceof Error ? e.message : 'Failed to start call. Please try again.';
+					machine.send('ERROR');
+					if (context.session) {
+						context.session.leaveCall().catch(() => {});
+						context.session = null;
+					}
+				} finally {
+					context.isLoading = false;
+				}
+			},
+			endCall: async (context) => {
+				if (!context.currentCallId) return;
 
-      // Join the call with retry logic
-      formatLog('JOIN', 'Joining call...');
-      let retries = 0;
-      const maxRetries = 3;
-      
-      while (retries < maxRetries) {
-        try {
-          await session.joinCall(result.joinUrl);
-          formatLog('SUCCESS', `Call started: ${currentCallId}`);
-          break;
-        } catch (error) {
-          retries++;
-          formatLog('RETRY', `Join attempt ${retries} failed: ${error}`);
-          if (retries === maxRetries) {
-            throw error;
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-      
-      // Auto-close timer (20 seconds)
-      setTimeout(() => {
-        formatLog('TIMER', 'Auto-closing call after 20 seconds');
-        endCall();
-      }, 20000);
+				try {
+					await $askHominioMutation.mutateAsync({
+						action: 'end',
+						callId: context.currentCallId
+					});
 
-    } catch (e) {
-      formatLog('ERROR', e instanceof Error ? e.message : 'Failed to start call');
-      error = e instanceof Error ? e.message : 'Failed to start call. Please try again.';
-      status = 'disconnected';
-      if (session) {
-        session.leaveCall().catch(() => {});
-        session = null;
-      }
-    } finally {
-      isLoading = false;
-    }
-  }
+					if (context.session) {
+						await context.session.leaveCall();
+					}
+				} catch (e) {
+					context.error = e instanceof Error ? e.message : 'Failed to end call';
+				} finally {
+					context.currentCallId = null;
+					context.session = null;
+					context.transcripts = [];
+				}
+			},
+			handleError: (context) => {
+				if (context.session) {
+					context.session.leaveCall().catch(() => {});
+					context.session = null;
+				}
+				context.currentCallId = null;
+				context.transcripts = [];
+			}
+		},
+		{
+			// Guards
+			isIdle: (context) => context.session?.status === 'idle',
+			isListening: (context) => context.session?.status === 'listening',
+			isThinking: (context) => context.session?.status === 'thinking',
+			isSpeaking: (context) => context.session?.status === 'speaking',
+			isDisconnected: (context) => !context.session || context.session?.status === 'disconnected'
+		}
+	);
 
-  async function endCall() {
-    if (!currentCallId) return;
+	// Reactive values from machine state
+	$: ({ value: status, context } = $machine);
+	$: isCallActive = ['idle', 'listening', 'thinking', 'speaking'].includes(status);
+	$: ({ error, transcripts, isLoading } = context);
 
-    formatLog('END', `Ending call: ${currentCallId}`);
-    
-    try {
-      // First leave the WebSocket session
-      if (session) {
-        status = 'disconnecting';
-        await session.leaveCall();
-        session = null;
-      }
+	// Helper for UI status display
+	$: displayStatus = (() => {
+		switch (status) {
+			case 'connecting':
+				return 'Connecting...';
+			case 'idle':
+				return 'Ready';
+			case 'listening':
+				return 'Listening';
+			case 'thinking':
+				return 'Thinking';
+			case 'speaking':
+				return 'Speaking';
+			case 'disconnecting':
+				return 'Disconnecting...';
+			default:
+				return 'Disconnected';
+		}
+	})();
 
-      // Then end the call via API
-      await $askHominioMutation.mutateAsync({
-        action: 'end',
-        callId: currentCallId
-      });
-
-      formatLog('SUCCESS', 'Call ended successfully');
-      
-      // Reset state
-      status = 'disconnected';
-      isCallActive = false;
-      currentCallId = null;
-      isSpeaking = false;
-      transcripts = [];
-      
-    } catch (e) {
-      formatLog('ERROR', e instanceof Error ? e.message : 'Failed to end call');
-      error = e instanceof Error ? e.message : 'Failed to end call';
-      status = 'disconnected';
-    }
-  }
-
-  onDestroy(() => {
-    if (session) {
-      formatLog('CLEANUP', 'Cleaning up session...');
-      session.leaveCall().catch(err => formatLog('ERROR', `Cleanup error: ${err}`));
-      session = null;
-    }
-  });
+	onDestroy(() => {
+		if (context.session) {
+			context.session.leaveCall().catch(() => {});
+			context.session = null;
+		}
+	});
 </script>
 
 <div class="fixed bottom-20 left-1/2 z-50 transform -translate-x-1/2">
-  <div class="flex flex-col gap-4 items-center">
-    {#if transcripts.length > 0}
-      <div class="w-full max-w-md p-4 rounded-lg shadow-lg bg-surface-100-800-token overflow-y-auto max-h-[60vh]">
-        {#each transcripts as transcript}
-          <div class="flex flex-col mb-3 last:mb-0">
-            <div class="flex {transcript.speaker === 'agent' ? 'justify-start' : 'justify-end'}">
-              <div class="variant-ghost-{transcript.speaker === 'agent' ? 'tertiary' : 'primary'} rounded-lg p-3 max-w-[85%]">
-                <p class="text-sm font-medium">{transcript.speaker === 'agent' ? 'Assistant' : 'You'}</p>
-                <p class="text-sm">{transcript.text}</p>
-              </div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    {/if}
+	<div class="flex flex-col gap-4 items-center">
+		{#if transcripts.length > 0}
+			<div
+				class="w-full max-w-md p-4 rounded-lg shadow-lg bg-surface-100-800-token overflow-y-auto max-h-[60vh]"
+			>
+				{#each transcripts as transcript}
+					<div class="flex flex-col mb-3 last:mb-0">
+						<div class="flex {transcript.speaker === 'agent' ? 'justify-start' : 'justify-end'}">
+							<div
+								class="variant-ghost-{transcript.speaker === 'agent'
+									? 'tertiary'
+									: 'primary'} rounded-lg p-3 max-w-[85%]"
+							>
+								<p class="text-sm font-medium">
+									{transcript.speaker === 'agent' ? 'Assistant' : 'You'}
+								</p>
+								<p class="text-sm">{transcript.text}</p>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
 
-    {#if error}
-      <div class="p-4 text-sm rounded-lg variant-ghost-error">{error}</div>
-    {/if}
+		{#if error}
+			<div class="p-4 text-sm rounded-lg variant-ghost-error">{error}</div>
+		{/if}
 
-    <div
-      class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800"
-    >
-      {#if status !== 'idle'}
-        <div
-          class="inline-flex items-center px-4 py-2 text-sm rounded-full shadow-inner text-tertiary-200 bg-surface-700"
-        >
-          <span class="flex relative mr-2 w-2 h-2">
-            <span
-              class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
-            />
-            <span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
-          </span>
-          {status} {isSpeaking ? '(Speaking)' : ''}
-        </div>
-      {/if}
+		<div
+			class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800"
+		>
+			{#if status !== 'disconnected'}
+				<div
+					class="inline-flex items-center px-4 py-2 text-sm rounded-full shadow-inner text-tertiary-200 bg-surface-700"
+				>
+					<span class="flex relative mr-2 w-2 h-2">
+						<span
+							class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
+						/>
+						<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
+					</span>
+					{displayStatus}
+				</div>
+			{/if}
 
-      <div class="flex justify-center w-full">
-        {#if !isCallActive}
-          <button
-            class="btn variant-ghost-primary"
-            on:click={startCall}
-            disabled={status === 'connecting' || isLoading}
-          >
-            {status === 'connecting' ? 'Connecting...' : 'Start Call'}
-          </button>
-        {:else}
-          <button class="btn variant-ghost-error" on:click={endCall} disabled={status === 'disconnecting'}>
-            {status === 'disconnecting' ? 'Stopping...' : 'Stop'}
-          </button>
-        {/if}
-      </div>
-    </div>
-  </div>
+			<div class="flex justify-center w-full">
+				{#if !isCallActive}
+					<button
+						class="btn variant-ghost-primary"
+						on:click={() => machine.send('START')}
+						disabled={status === 'connecting' || isLoading}
+					>
+						{status === 'connecting' ? 'Connecting...' : 'Start Call'}
+					</button>
+				{:else}
+					<button
+						class="btn variant-ghost-error"
+						on:click={() => machine.send('DISCONNECT')}
+						disabled={status === 'disconnecting'}
+					>
+						{status === 'disconnecting' ? 'Disconnecting...' : 'Stop'}
+					</button>
+				{/if}
+			</div>
+		</div>
+	</div>
 </div>
 
 <style>
-  /* Add smooth scrolling for transcripts */
-  div :global(.overflow-y-auto) {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-  }
+	/* Add smooth scrolling for transcripts */
+	div :global(.overflow-y-auto) {
+		scrollbar-width: thin;
+		scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+	}
 
-  div :global(.overflow-y-auto::-webkit-scrollbar) {
-    width: 6px;
-  }
+	div :global(.overflow-y-auto::-webkit-scrollbar) {
+		width: 6px;
+	}
 
-  div :global(.overflow-y-auto::-webkit-scrollbar-track) {
-    background: transparent;
-  }
+	div :global(.overflow-y-auto::-webkit-scrollbar-track) {
+		background: transparent;
+	}
 
-  div :global(.overflow-y-auto::-webkit-scrollbar-thumb) {
-    background-color: rgba(156, 163, 175, 0.5);
-    border-radius: 3px;
-  }
+	div :global(.overflow-y-auto::-webkit-scrollbar-thumb) {
+		background-color: rgba(156, 163, 175, 0.5);
+		border-radius: 3px;
+	}
 </style>
