@@ -93,7 +93,7 @@
 	}
 </script>
 
-<div class="flex h-screen overflow-hidden">
+<div class="flex overflow-hidden h-screen">
 	<!-- Left sidebar - Views List -->
 	<aside class="flex-shrink-0 w-[200px] border-r border-surface-600 bg-surface-900 p-4 space-y-4">
 		<div class="flex justify-between items-center">
@@ -145,9 +145,9 @@
 	</aside>
 
 	<!-- Main content -->
-	<main class="flex-1 overflow-hidden">
+	<main class="overflow-hidden flex-1">
 		<div class="relative">
-			<AskHominio />
+			<!-- <AskHominio /> -->
 			{#if selectedView}
 				<ComposeView view={selectedView} />
 			{:else}

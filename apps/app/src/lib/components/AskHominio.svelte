@@ -280,10 +280,50 @@
 		}
 	})();
 
-	onDestroy(() => {
+	let isCleaningUp = false;
+
+	export let session: any;
+	export let onCallEnd: () => void = () => {};
+	export let showControls: boolean = true;  // Default to showing controls
+
+	// Create a method to start the call
+	export function startCall() {
+		machine.send('START');
+	}
+
+	// Create a method to stop the call
+	export function stopCall() {
+		if (isCleaningUp) return; // Prevent recursive calls
+		isCleaningUp = true;
+		
+		machine.send('DISCONNECT');
+		cleanupCall();
+		
+		isCleaningUp = false;
+	}
+
+	function cleanupCall() {
 		if (context.session) {
-			context.session.leaveCall().catch(() => {});
+			// Ensure we properly leave the call
+			try {
+				context.session.leaveCall().catch(() => {});
+			} catch (e) {
+				console.error('Error leaving call:', e);
+			}
 			context.session = null;
+		}
+		
+		// Reset machine state
+		machine.reset();
+		
+		// Notify parent component
+		onCallEnd();
+	}
+
+	onDestroy(() => {
+		// Always ensure cleanup happens on destroy
+		if (!isCleaningUp) {
+			cleanupCall();
 		}
 	});
 </script>
@@ -334,25 +374,27 @@
 				</div>
 			{/if}
 
-			<div class="flex justify-center w-full">
-				{#if !isCallActive}
-					<button
-						class="btn variant-ghost-primary"
-						on:click={() => machine.send('START')}
-						disabled={status === 'connecting' || isLoading}
-					>
-						{status === 'connecting' ? 'Connecting...' : 'Start Call'}
-					</button>
-				{:else}
-					<button
-						class="btn variant-ghost-error"
-						on:click={() => machine.send('DISCONNECT')}
-						disabled={status === 'disconnecting'}
-					>
-						{status === 'disconnecting' ? 'Disconnecting...' : 'Stop'}
-					</button>
-				{/if}
-			</div>
+			{#if showControls}
+				<div class="flex justify-center w-full">
+					{#if !isCallActive}
+						<button
+							class="btn variant-ghost-primary"
+							on:click={() => machine.send('START')}
+							disabled={status === 'connecting' || isLoading}
+						>
+							{status === 'connecting' ? 'Connecting...' : 'Start Call'}
+						</button>
+					{:else}
+						<button
+							class="btn variant-ghost-error"
+							on:click={() => machine.send('DISCONNECT')}
+							disabled={status === 'disconnecting'}
+						>
+							{status === 'disconnecting' ? 'Disconnecting...' : 'Stop'}
+						</button>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
