@@ -5,20 +5,41 @@
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
 
-	// Mock shopping list client tool implementation
-	const mockUpdateShoppingListItems = (parameters: any) => {
-		console.log('Mock updateShoppingListItems called with parameters:', parameters);
+	// Create updateShoppingList mutation
+	const updateShoppingListMutation = createMutation({
+		operationName: 'updateShoppingListItems'
+	});
+
+	// Shopping list client tool implementation
+	const updateShoppingListTool = async (parameters: any) => {
+		console.log('UpdateShoppingList called with parameters:', parameters);
 		try {
-			const itemsArray = typeof parameters.items === 'string' ? JSON.parse(parameters.items) : parameters.items;
+			const itemsArray =
+				typeof parameters.items === 'string' ? JSON.parse(parameters.items) : parameters.items;
 			console.log('Parsed items array:', itemsArray);
-			
+
+			const { data, error } = await $updateShoppingListMutation.mutateAsync({
+				listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
+				items: itemsArray.map((item: any) => ({
+					name: item.name,
+					category: item.category,
+					quantity: item.quantity,
+					unit: item.unit,
+					icon: item.icon
+				}))
+			});
+
+			if (error) {
+				console.error('Error updating shopping list:', error);
+				return 'Failed to update shopping list';
+			}
+
 			const items = itemsArray
 				.map((item: any) => `${item.quantity} ${item.unit} of ${item.name} (${item.category})`)
 				.join(', ');
-			console.log('Formatted items:', items);
-			
+
 			const responseMessage = `Added to shopping list: ${items}`;
-			console.log('Mock response:', responseMessage);
+			console.log('Response:', responseMessage);
 			return responseMessage;
 		} catch (error) {
 			console.error('Error processing shopping list items:', error);
@@ -179,8 +200,8 @@
 						}
 					});
 
-					// Register the mock shopping list tool
-					session.registerToolImplementation('updateShoppingList', mockUpdateShoppingListItems);
+					// Register the shopping list tool
+					session.registerToolImplementation('updateShoppingList', updateShoppingListTool);
 
 					context.session = session;
 
