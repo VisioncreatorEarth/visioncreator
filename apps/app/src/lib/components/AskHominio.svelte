@@ -8,13 +8,22 @@
 	// Mock shopping list client tool implementation
 	const mockUpdateShoppingListItems = (parameters: any) => {
 		console.log('Mock updateShoppingListItems called with parameters:', parameters);
-		const items = parameters.items
-			.map((item: any) => `${item.quantity} ${item.unit} of ${item.name} (${item.category})`)
-			.join(', ');
-		console.log('items', items);
-		const responseMessage = `Added to shopping list: ${items}`;
-		console.log('Mock response:', responseMessage);
-		return responseMessage;
+		try {
+			const itemsArray = typeof parameters.items === 'string' ? JSON.parse(parameters.items) : parameters.items;
+			console.log('Parsed items array:', itemsArray);
+			
+			const items = itemsArray
+				.map((item: any) => `${item.quantity} ${item.unit} of ${item.name} (${item.category})`)
+				.join(', ');
+			console.log('Formatted items:', items);
+			
+			const responseMessage = `Added to shopping list: ${items}`;
+			console.log('Mock response:', responseMessage);
+			return responseMessage;
+		} catch (error) {
+			console.error('Error processing shopping list items:', error);
+			return 'Failed to process shopping list items';
+		}
 	};
 
 	const askHominioMutation = createMutation({

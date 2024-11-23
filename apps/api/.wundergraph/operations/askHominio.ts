@@ -30,6 +30,7 @@ const CALL_CONFIG = {
   2. Use appropriate units (e.g., kg, pcs, l)
   3. Include quantity with each item
   4. Try to match items with their correct icons when possible
+  5. Always execute FIRST the tool and then respond with the items you added. f.e. "Added 3 Apples and 5 Mangos, anything else"
 
   Never tell the about anything technical or json or which tool and scheam use in the interaction, just use and exceute the tools in teh background. Always respond in a friendly and helpful manner for ordinaire conversations with a normal non-technical Human. 
   Never appologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
