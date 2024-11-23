@@ -87,11 +87,11 @@
 
 		// Bakery
 		{ name: 'Bread', category: 'Bakery', icon: 'mdi:bread-slice' },
-		{ name: 'Croissant', category: 'Bakery', icon: 'mdi:bread-slice-outline' },
-		{ name: 'Bagels', category: 'Bakery', icon: 'mdi:bread-slice-outline' },
+		{ name: 'Croissant', category: 'Bakery', icon: 'mdi:food-croissant' },
+		{ name: 'Bagels', category: 'Bakery', icon: 'mdi:food-croissant' },
 		{ name: 'Muffins', category: 'Bakery', icon: 'mdi:cookie' },
 		{ name: 'Baguette', category: 'Bakery', icon: 'mdi:bread-slice' },
-		{ name: 'Donuts', category: 'Bakery', icon: 'mdi:cookie' },
+		{ name: 'Donuts', category: 'Bakery', icon: 'game-icons:donut' },
 		{ name: 'Cake', category: 'Bakery', icon: 'mdi:cake-variant' },
 
 		// Snacks

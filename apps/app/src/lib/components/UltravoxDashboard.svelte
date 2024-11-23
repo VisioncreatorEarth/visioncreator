@@ -28,7 +28,13 @@
 			}) ?? [];
 
 	function formatDuration(duration: string): string {
-		return duration?.replace('s', ' seconds') || '0 seconds';
+		const seconds = parseFloat(duration.replace('s', ''));
+		const minutes = Math.floor(seconds / 60);
+		const remainingSeconds = Math.floor(seconds % 60);
+		if (minutes > 0) {
+			return `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s`;
+		}
+		return `${remainingSeconds.toString().padStart(2, '0')}s`;
 	}
 
 	function formatDate(dateString: string): string {
@@ -42,7 +48,10 @@
 		const durationMs = endTime - startTime;
 		const seconds = Math.floor(durationMs / 1000);
 		const minutes = Math.floor(seconds / 60);
-		return minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+		const remainingSeconds = seconds % 60;
+		return minutes > 0 
+			? `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s` 
+			: `${remainingSeconds.toString().padStart(2, '0')}s`;
 	}
 </script>
 
