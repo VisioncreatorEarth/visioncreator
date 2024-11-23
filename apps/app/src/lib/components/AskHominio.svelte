@@ -8,13 +8,13 @@
 	// Mock shopping list client tool implementation
 	const mockUpdateShoppingListItems = (parameters: any) => {
 		console.log('Mock updateShoppingListItems called with parameters:', parameters);
-		const mockResponse = {
-			success: true,
-			message: 'Items added to shopping list',
-			items: parameters.items
-		};
-		console.log('Mock response:', mockResponse);
-		return mockResponse;
+		const items = parameters.items
+			.map((item: any) => `${item.quantity} ${item.unit} of ${item.name} (${item.category})`)
+			.join(', ');
+		console.log('items', items);
+		const responseMessage = `Added to shopping list: ${items}`;
+		console.log('Mock response:', responseMessage);
+		return responseMessage;
 	};
 
 	const askHominioMutation = createMutation({
@@ -171,32 +171,9 @@
 					});
 
 					// Register the mock shopping list tool
-					session.registerToolImplementation(
-						'updateShoppingListItems',
-						mockUpdateShoppingListItems
-					);
+					session.registerToolImplementation('updateShoppingList', mockUpdateShoppingListItems);
 
 					context.session = session;
-
-					// Client tool implementation for shopping list updates
-					const updateShoppingList = async (parameters: any) => {
-						try {
-							console.log('Shopping list update received:', parameters.items);
-							return {
-								result: 'Shopping list updated (mock response)',
-								responseType: 'success'
-							};
-						} catch (error) {
-							console.error('Error in shopping list update:', error);
-							return {
-								result: 'Failed to update shopping list',
-								responseType: 'error'
-							};
-						}
-					};
-
-					// Register shopping list tool
-					context.session.registerToolImplementation('updateShoppingList', updateShoppingList);
 
 					// Add event listeners
 					context.session.addEventListener('status', (event) => {
