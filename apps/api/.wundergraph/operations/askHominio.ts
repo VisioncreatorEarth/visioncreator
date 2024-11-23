@@ -11,6 +11,48 @@ const CALL_CONFIG = {
   firstSpeaker: 'FIRST_SPEAKER_USER', // API expects 'FIRST_SPEAKER_AGENT' or 'FIRST_SPEAKER_USER'
 } as const;
 
+// Define client tools
+const shoppingListTool = {
+  temporaryTool: {
+    modelToolName: 'updateShoppingList',
+    description: 'Update shopping list items. Call this when items are added, removed, or modified.',
+    dynamicParameters: [
+      {
+        name: 'items',
+        location: 'PARAMETER_LOCATION_BODY',
+        schema: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name of the item' },
+              quantity: { type: 'number', description: 'Quantity of the item' },
+              category: { type: 'string', description: 'Category of the item' },
+              icon: { type: 'string', description: 'Icon for the item' },
+              default_unit: { type: 'string', description: 'Default unit for the item' },
+              variant_units: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    unit: { type: 'string' },
+                    multiplier: { type: 'number' },
+                    description: { type: 'string' }
+                  }
+                }
+              },
+              unit: { type: 'string', description: 'Unit for this item' }
+            },
+            required: ['name', 'quantity']
+          }
+        },
+        required: true
+      }
+    ],
+    client: {}
+  }
+};
+
 export default createOperation.mutation({
   input: z.object({
     action: z.enum(['create', 'end']),
@@ -31,7 +73,7 @@ export default createOperation.mutation({
           maxDuration: CALL_CONFIG.maxDuration,
           timeExceededMessage: CALL_CONFIG.timeExceededMessage,
           firstSpeaker: CALL_CONFIG.firstSpeaker,
-          selectedTools: []
+          selectedTools: [shoppingListTool]
         };
 
         console.log('📞 Creating call with params:', callParams);

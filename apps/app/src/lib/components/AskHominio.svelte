@@ -158,6 +158,26 @@
 						}
 					});
 
+					// Client tool implementation for shopping list updates
+					const updateShoppingList = async (parameters: any) => {
+						try {
+							console.log('Shopping list update received:', parameters.items);
+							return {
+								result: 'Shopping list updated (mock response)',
+								responseType: 'success'
+							};
+						} catch (error) {
+							console.error('Error in shopping list update:', error);
+							return {
+								result: 'Failed to update shopping list',
+								responseType: 'error'
+							};
+						}
+					};
+
+					// Register shopping list tool
+					context.session.registerToolImplementation('updateShoppingList', updateShoppingList);
+
 					// Add event listeners
 					context.session.addEventListener('status', (event) => {
 						machine.send('STATUS_CHANGED');

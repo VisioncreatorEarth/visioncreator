@@ -1,3 +1,1459 @@
+## SDK
+
+Ultravox SDK
+The Ultravox REST API is used to create calls but you must use one of the Ultravox client SDKs to join and end calls. This page primarily uses examples in JavaScript. The concepts are the same across all the different SDK implementations.
+
+Ultravox Session
+The core of the SDK is the UltravoxSession. The session is used to join and leave calls.
+
+JavaScript
+Flutter
+Kotlin
+Python
+import { UltravoxSession } from 'ultravox-client';
+
+const session = new UltravoxSession();
+session.joinCall('wss://your-call-join-url');
+
+session.leaveCall();
+
+Methods
+The UltravoxSession contains methods for:
+
+Joining/leaving a call
+Sending text messages to the agent
+Changing the output medium for how the agent replies
+Registering client tools
+Muting the microphone/speaker
+joinCall()
+joinCall(joinUrl: string): UltravoxSessionState
+
+Joins a call. Requires a joinUrl (string). Returns an UltravoxSessionState.
+
+leaveCall()
+async leaveCall(): Promise<void>
+
+Leaves the current call. Returns a promise (with no return value) that resolves when the call has successfully been left.
+
+sendText()
+sendText(text: string): void
+
+Sends a text message to the agent. Requires inputting the text message (string).
+
+setOutputMedium()
+setOutputMedium(medium: Medium): void
+
+Sets the agent’s output medium for future utterances. If the agent is currently speaking, this will take effect at the end of the agent’s utterance. Also see muteSpeaker and unmuteSpeaker below.
+
+parameter	description
+medium	How replies are communicated. Must be either 'text' or 'voice'.
+registerToolImplementation()
+registerToolImplementation(name: string, implementation: ClientToolImplementation): void
+
+Registers a client tool implementation with the given name. If the call is started with a client-implemented tool, this implementation will be invoked when the model calls the tool.
+
+parameter	description
+name	String. The name of the tool. Must match what is defined in selectedTools during call creation. If nameOverride is set then must match that name. Otherwise must match modelToolName.
+implementation	ClientToolImplementation function that implements the tool’s logic.
+ClientToolImplementation
+
+This is a function that:
+
+Accepts parameters → An object containing key-value pairs for the tool’s parameters. The keys will be strings.
+
+Returns → Either a string result, or an object with a result string and a responseType, or a Promise that resolves to one of these.
+
+For example:
+
+  const stock_price = (parameters) => {
+    ...  // to be implemented
+    return `Stock price is ${value}`;
+  };
+
+registerToolImplementations()
+registerToolImplementations(implementationMap: { [name: string]: ClientToolImplementation }): void
+
+Convenience batch wrapper for registerToolImplementation.
+
+implementationMap → An object where each key (a string) represents the name of the tool and each value is a ClientToolImplementation function.
+
+isMicMuted()
+isMicMuted(): boolean
+
+Returns a boolen indicating if the end user’s microphone is muted. This is scoped to the Ultravox SDK and does not detect muting done by the user outside of your application.
+
+isSpeakerMuted()
+isSpeakerMuted(): boolean
+
+Returns a boolen indicating if the speaker (the agent’s voice output) is muted. This is scoped to the Ultravox SDK and does not detect muting done by the user outside of your application.
+
+muteMic()
+muteMic(): void
+
+Mutes the end user’s microphone. This is scoped to the Ultravox SDK.
+
+unmuteMic()
+unmuteMic(): void
+
+Unmutes the end user’s microphone. This is scoped to the Ultravox SDK.
+
+muteSpeaker()
+muteSpeaker(): void
+
+Mutes the end user’s speaker (the agent’s voice output). This is scoped to the Ultravox SDK.
+
+unmuteSpeaker()
+unmuteSpeaker(): void
+
+Unmutes the end user’s speaker (the agent’s voice output). This is scoped to the Ultravox SDK.
+
+Client Tools
+Ultravox has robust support for tools. The SDK has support for client tools. Client tools will be invoked in your client code and enable you to add interactivity in your app that is driven by user interactions with your agent. For example, your agent could choose to invoke a tool that would trigger some UI change.
+
+Creating Client Tools
+Client tools are defined just like “server” tools with three exceptions:
+
+1. “client” not “http”
+You don’t add the URL and HTTP method for client tools. Instead, you add "client": {} to the tool definition.
+
+Using a Client Tool
+{
+  "model": "fixie-ai/ultravox-70B",
+  "systemPrompt": ...
+  "selectedTools": [
+    "temporaryTool": {
+      "modelToolName": "stock_price",
+      "description": "Get the current stock price for a given symbol",
+      "dynamicParameters": [
+        {
+          "name": "symbol",
+          "location": "PARAMETER_LOCATION_BODY",
+          "schema": {
+            "type": "string",
+            "description": "Stock symbol (e.g., AAPL for Apple Inc.)"
+          },
+          "required": true
+        }
+      ],
+      "client": {}
+    }
+  ]
+}
+
+Using a Server Tool
+{
+  "model": "fixie-ai/ultravox-70B",
+  "systemPrompt": ...
+  "selectedTools": [
+    "temporaryTool": {
+      "modelToolName": "stock_price",
+      "description": "Get the current stock price for a given symbol",
+      "dynamicParameters": [
+        {
+          "name": "symbol",
+          "location": "PARAMETER_LOCATION_QUERY",
+          "schema": {
+            "type": "string",
+            "description": "Stock symbol (e.g., AAPL for Apple Inc.)"
+          },
+          "required": true
+        }
+      ],
+      "http": {
+        "baseUrlPattern": "https://api.stockmarket.com/v1/price",
+        "httpMethod": "GET"
+      }
+    }
+  ]
+}
+
+2. Client Registration
+Your client tool must be registered in your client code. Here’s a snippet that might be found in client code to register the client tool and implement the logic for the tool.
+
+See SDK Methods for more information.
+
+Registering a Client Tool
+// Start up our Ultravox Session
+uvSession = new UltravoxSession();
+
+// Register our client-side tool
+uvSession.registerToolImplementation(
+  "stock_price",
+  stock_price
+);
+
+uvSession.joinCall(joinUrl);
+
+// Function that implements tool logic
+const stock_price = (parameters) => {
+  ...  // to be implemented
+  return `Stock price is ${value}`;
+};
+
+3. Only Body Parameters
+Unlike server tools (which accept parameters passed by path, header, body, etc.), client tools only allow parameters to be passed in the body of the request. That means client tools will always have parameter location set like this:
+
+"location": "PARAMETER_LOCATION_BODY"
+
+Session Status
+The UltravoxSession exposes status. Based on the UltravoxSessionStatus enum, status can be one of the following:
+
+status	description
+disconnected	Session is not connected. This is the initial state prior to joinCall.
+disconnecting	Session is in the process of disconnecting.
+connecting	Session is establishing the connection.
+idle	Session is connected but not yet active.
+listening	Listening to the end user.
+thinking	The model is processing/thinking.
+speaking	The model is speaking.
+Status Events
+The status can be retrieved by adding an event listener to the session status. Building on what we did above:
+
+JavaScript
+Flutter
+// Listen for status changing events
+session.addEventListener('status', (event) => {
+  console.log('Session status changed: ', session.status);
+});
+
+Transcripts
+Sometimes you may want to augment the audio with text transcripts (e.g. if you want to show the end user the model’s output in real-time). Transcripts can be retrieved by adding an event listener:
+
+import { UltravoxSession } from 'ultravox-client';
+
+const session = new UltravoxSession();
+session.joinCall('wss://your-call-join-url');
+
+// Listen for transcripts changing events
+session.addEventListener('transcripts', (event) => {
+  console.log('Transcripts updated: ', session.transcripts);
+});
+
+session.leaveCall();
+
+Transcripts are an array of transcript objects. Each transcript has the following properties:
+
+property	type	definition
+text	string	Text transcript of the speech from the end user or the agent.
+isFinal	boolean	True if the transcript represents a complete utterance. False if it is a fragment of an utterance that is still underway.
+speaker	Role	Either “user” or “agent”. Denotes who was speaking.
+medium	Medium	Either “voice” or “text”. Denotes how the message was sent.
+Debug Messages
+No Guarantee
+
+Debug messages from Ultravox should be treated as debug logs. They can change regularly and don’t have a contract. Relying on the specific structure or content should be avoided.
+
+The UltravoxSession object also provides debug messages. Debug messages must be enabled when creating a new session and then are available via an event listener similar to status and transcripts:
+
+import { UltravoxSession } from 'ultravox-client';
+
+const debugMessages = new Set(["debug"]);
+const session = new UltravoxSession({ experimentalMessages: debugMessages });
+session.joinCall('wss://your-call-join-url');
+
+// Listen for debug messages
+session.addEventListener('experimental_message', (msg) => {
+  console.log('Got a debug message: ', JSON.stringify(msg));
+});
+
+session.leaveCall();
+
+Debug Message: Tool Call
+When the agent invokes a tool, the message contains the function, all arguments, and an invocation ID:
+
+Terminal window
+LLM response: Tool calls: [FunctionCall(name='createProfile', args='{"firstName":"Ron","lastName":"Burgandy","organization":"Fixie.ai","useCase":"creating a talking AI news reporter"}', invocation_id='call_D2qQVS8OQc998aMEw5PRa9cF')]
+
+Debug Message: Tool Call Result
+When the tool call completes, the message contains an array of messages. Multiple tools can be invoked by the model. This message array will conatain all the calls followed by all the results. These messages are also available via List Call Messages.
+
+Here’s an example of what we might see from a single tool invocation:
+
+Terminal window
+Tool call complete.
+
+Result: [
+  role: MESSAGE_ROLE_TOOL_CALL ordinal: 6 text: "{\"firstName\":\"Ron\",\"lastName\":\"Burgandy\",\"organization\":\"Fixie.ai\",\"useCase\":\"creating a talking AI news reporter\"}" tool_name: "createProfile" invocation_id: "call_D2qQVS8OQc998aMEw5PRa9cF" tool_id: "aa737e12-0989-4adb-9895-f387f40557d8" ,
+  role: MESSAGE_ROLE_TOOL_RESULT ordinal: 7 text: "{\"firstName\":\"Ron\",\"lastName\":\"Burgandy\",\"emailAddress\":null,\"organization\":\"Fixie\",\"useCase\":\"creating a talking AI news reporter\"}" tool_name: "createProfile" invocation_id: "call_D2qQVS8OQc998aMEw5PRa9cF" tool_id: "aa737e12-0989-4adb-9895-f387f40557d8"
+]
+
+Quickstart
+API Key Required
+
+The Ultravox API (and the completion of this Quickstart) requires an API key.
+
+You can sign-up for a free account that comes with 30 free minutes for creating calls.
+
+Creating your first voice-powered AI agent with Ultravox is easy. This guide will walk you through the process of creating a simple voice-enabled AI agent.
+
+There are three main steps to building a voice-enabled AI agent with the Ultravox API:
+
+Create a Call → Construct a systemPrompt and choose a voice for your AI agent. This returns a joinUrl that you use to join the call.
+
+Join the Call → Using the joinUrl from the previous step, join the call which starts a speech-to-speech conversation with your AI agent.
+
+End the Call → When the conversation is complete, end the call to stop the conversation.
+
+Create a Call
+The first step is to create a call. This is done by doing a POST to the /calls endpoint. This call should be made from a server to prevent accidentally leaking your API key on the client. Here is what that looks like:
+
+Terminal window
+curl --location 'https://api.ultravox.ai/api/calls' \
+--header 'Content-Type: application/json' \
+--header 'X-API-Key: ••••••' \
+--data '{
+    "systemPrompt": "You are an expert on speech-to-speech communication.",
+    "temperature": 0.8,
+}'
+
+This returns the following response:
+
+{
+    "callId": "9b74f1aa-0802-4198-a5f3-cfa89871aebb",
+    "created": "2024-08-12T18:47:22.365692Z",
+    "ended": null,
+    "model": "fixie-ai/ultravox",
+    "systemPrompt": "You are an expert on speech-to-speech communication.",
+    "temperature": 0.8,
+    "voice": null,
+    "languageHint": null,
+    "joinUrl": "wss://voice...app/calls/9b74f1aa-0802-4198-a5f3-cfa89871aebb"
+}
+
+We will ignore voice and languageHint for now.
+
+The joinUrl will be used in the next step.
+
+Join the Call
+Now that we have a joinUrl, we can use the ultravox-client in our application to join the call. The ultravox-client is available for multiple languages. More info on the SDK page.
+
+We need to reference the ultravox-client in our front-end, create an UltravoxSession, and then call the joinCall method:
+
+<script type="module">
+  import { UltravoxSession } from 'https://unpkg.com/ultravox-client/dist/esm/session.js?module';
+  let UVSession = new UltravoxSession();
+  const joinUrl = "wss://voice...app/calls/9b74f1aa-0802-4198-a5f3-cfa89871aebb" // From the POST to /calls
+  UVSession.joinCall(joinUrl);
+</script>
+
+End the Call
+When the call is over, simply use the endCall() method on the UltravoxSession object:
+
+UVSession.leaveCall();
+
+Examples
+There are some examples you can fork and run.
+
+Previous
+Welcome
+
+Tools in Ultravox
+Tools in Ultravox are Different
+
+Unlike using tools with single-generation LLM APIs, Ultravox actually calls your tool. This means you need to do a bit more work upfront in defining tools with the proper authentication and parameters.
+
+“Server” vs. Client Tools
+
+You can implement your tools as either server (the tool’s logic is exposed via a URL) or client (the tool’s logic is implemented in your client application) tools.
+
+See Client Tools to learn how those are registered and used with the Ultravox SDK.
+
+Temporary vs. Durable Tools
+Ultravox supports two types of tools: temporary and durable. There is much more information below but there are a few things to consider right upfront:
+
+Creation → Temporary tools are created in the request body when a new call is created. Durable tools are created using the Ultravox REST API.
+No Functional Difference → There is no functional difference within the context of an Ultravox call between the two tool types.
+Iteration Speed → Temporary tools are great when you are building out a new application and need to iterate.
+Reuse & Collaboration → Durable tools are best when you have things dialed in and want to reuse tools across applications and/or work with a team and want to divide ownership of tools from the rest of your app.
+Temporary Tools
+Temporary tools are created each time you create a new Call and exist exclusively within the context of that call. (Temporary tools aren’t visible in the List Tools response for example.)
+
+Iteration is faster when using temporary tools because you don’t have to create/update/delete tools as you build out your application. You can simply adjust the JSON in the request body and start a new call.
+
+Creating & Using Temporary Tools
+Temporary tools are defined and passed in the request body of the Create Call endpoint. They are available during the current call.
+
+Creating an Ultravox Call with a Tool
+{
+  "model": "fixie-ai/ultravox-70B",
+  "systemPrompt": ...
+  "selectedTools": [
+    "temporaryTool": {
+      "modelToolName": "stock_price",
+      "description": "Get the current stock price for a given symbol",
+      "dynamicParameters": [
+        {
+          "name": "symbol",
+          "location": "PARAMETER_LOCATION_QUERY",
+          "schema": {
+            "type": "string",
+            "description": "Stock symbol (e.g., AAPL for Apple Inc.)"
+          },
+          "required": true
+        }
+      ],
+      "http": {
+        "baseUrlPattern": "https://api.stockmarket.com/v1/price",
+        "httpMethod": "GET"
+      }
+    }
+  ]
+}
+
+Durable Tools
+In addition to temporary tools, Ultravox supports the creation of durable tools. There is no functional difference between durable and temporary tools within the context of a call.
+
+Durable tools are persisted and can be reused across calls or applications. They shine once you have things dialed in, when you want to share tools across multiple applications, or if you have split responsibilities on the team.
+
+Creating Durable Tools
+You create durable tools either by uploading an OpenAPI spec or via the request body in the Create Tool endpoint. Your OpenAPI spec must be either json or yaml format.
+
+The /tools endpoint in the Ultravox API is for working with durable tools.
+
+Using Durable Tools
+To use a durable tool in a call, set the toolName or toolId field instead of temporaryTool. For example:
+
+// Request body for creating an Ultravox call with a durable tool
+{
+  "model": "fixie-ai/ultravox-70B",
+  "systemPrompt": ...
+  "selectedTools": [
+    "toolName": "stock_price",
+  ]
+}
+
+Tool Authentication
+Ultravox has rich support for tools auth. When creating a tool, you must specify what is required for successful auth to the backend service. Three methods for passing API keys are supported and are used when creating the tool:
+
+Query Parameter → The API key will be passed via the query string. The name of the parameter must be provided when the tool is created.
+Header → The API key will be passed via a custom header. The name of the header must be provided when the tool is created.
+HTTP Authentication → The API key will be passed via the HTTP Authentication header. The name of the scheme (e.g. Bearer) must be provided when the tool is created.
+You then pass in the key(s) in the authTokens property of selectedTools when creating a call.
+
+Query Parameter
+Header
+HTTP Authentication
+// Create a tool that uses a query parameter called 'apiKey'
+{
+  "name": "stock_price"
+  "definition": {
+    "description": "Get the current stock price for a given symbol",
+    "requirements": {
+      "httpSecurityOptions": {
+        "options": [
+          "requirements": {
+            "mySeviceApiKey": {
+              "queryApiKey": {
+                "name": "apiKey"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+
+// Pass the API key during call creation
+{
+  "model": "fixie-ai/ultravox-70B"
+  "systemPrompt": ...
+  "selectedTools": [
+    {
+      "toolName": "stock_price"
+      "authTokens": {
+        "myServiceApiKey": "your_token_here"
+      }
+    }
+  ]
+}
+
+Tool Parameters
+Tool parameters define what gets passed in to your backend service when the tool is called. When creating a tool, parameters are defined as one of three types:
+
+Dynamic → The model will choose which values to pass. These are the parameters you’d use for a single-generation LLM API. Can be overridden (see below).
+Static → Value is known when the tool is defined and is unconditionally set on invocations. Not exposed to or set by the model.
+Automatic → Like “Static”, except that the value may not be known when the tool is defined but will instead be populated by the system when the tool is invoked.
+Dynamic Parameters
+Dynamic parameters will have their values set by the model. Creating a dynamic parameter on a tool looks like this:
+
+// Adding a dynamic parameter to a stock price tool
+{
+  "name": "stock_price",
+  "description": "Get the current stock price for a given symbol",
+  "dynamicParameters": [
+    {
+      "name": "symbol",
+      "location": "PARAMETER_LOCATION_QUERY",
+      "schema": {
+        "type": "string",
+        "description": "Stock symbol (e.g., AAPL for Apple Inc.)"
+      },
+      "required": true
+    }
+  ]
+}
+
+Parameter Overrides
+You can choose to set static values for dynamic parameters when you start a call. The model won’t see any parameters that you override. When creating a call simply pass in the overrides with each tool:
+
+// Overriding dynamic parameter when starting a new call
+// Always set the stock symbol to 'NVDA'
+{
+  "model": "fixie-ai/ultravox-70B",
+  "systemPrompt": ...
+  "selectedTools": [
+    "toolName": "stock_price",
+    "parameterOverrides": {
+      "symbol": "NVDA"
+    }
+  ]
+}
+
+Parameter overrides don’t make sense for temporary tools. Instead of overriding a dynamic parameter, use a static parameter instead.
+
+Static Parameters
+If you have parameters that are known at the time you create the tool, static parameters can be used.
+
+// Adding a static parameter that always sends utm=ultravox
+{
+  "name": "stock_price",
+  "description": "Get the current stock price for a given symbol",
+  "staticParameters": [
+    {
+      "name": "utm",
+      "location": "PARAMETER_LOCATION_QUERY",
+      "value": "ultravox"
+    }
+  ]
+}
+
+Automatic Parameters
+Automatic parameters are used when you don’t want the model to specify the value and you don’t know the value when the tool is created. The primary use case for automatic parameters today is for using the call_id that is generated for the current call and then passing it as a unique identifier to your tool. Can also be used to get the current conversation history.
+
+// Adding an automatic parameter to a profile creation tool
+{
+  "name": "create_profile",
+  "description": "Creates a profile for the current caller",
+  "automaticParameters": [
+    {
+      "name": "call_id",
+      "location": "PARAMETER_LOCATION_QUERY",
+      "knownValue": "KNOWN_PARAM_CALL_ID"
+    }
+  ]
+}
+
+Additional Information
+Debugging
+The Ultravox SDK enables viewing debug messages for any active call. These messages include tool calls. You can see a live demo of this on our website (make sure to toggle “Debug View” on at the bottom).
+
+Tool Definition Schema
+The definition object in the tool creation and update requests follows the BaseToolDefinition schema. Here’s a breakdown of its main components:
+
+description (string): A clear, concise description of what the tool does.
+dynamicParameters (array, optional): List of parameters that can be set by the AI model when using the tool. Each parameter is an object containining:
+name (string): The name of the parameter.
+location (string): Where the parameter is used (“PARAMETER_LOCATION_QUERY”, “PARAMETER_LOCATION_PATH”, “PARAMETER_LOCATION_HEADER”, “PARAMETER_LOCATION_BODY”).
+schema (object): JSON Schema definition of the parameter. This typically includes things like type, description, enum values, format, other restrictions, etc.
+required (boolean): Whether the parameter is required.
+staticParameters (array, optional): List of parameters that are always set to a known, fixed value when the tool is used. These are unconditionally added when the tool is invoked. These parameters are not exposed to or set by the model. Example: you use an API for various things but want to track which requests come from your Ultravox app so you always append utm=ultravox to the query parameters.
+automaticParameters (array, optional): Additional parameters automatically set by the system. Used when the value is not known when the tool is created but that will be known when the tool is called. Example: you want to use the unique call_id from ultravox as a key in your backend and you have the tool include call_id in the request body when your tool’s API is called.
+requirements (object, optional): Any specific requirements for using the tool. Currently this is used for security (e.g. API keys or HTTP Auth).
+http (object): Details for invoking the tool via HTTP. For server tools.
+baseUrlPattern (string): The base URL pattern for the tool, possibly with placeholders for path parameters.
+httpMethod (string): The HTTP method for the tool (e.g., “GET”, “POST”).
+client (object): Declares the tool as a client tool. Exactly one of http or client must be set for a tool.
+Best Practices for Creating Tools
+Clear Naming: Choose a descriptive and unique name for your tool that clearly indicates its function.
+
+Detailed Description: Provide a comprehensive description of what the tool does, including any important details about its usage or limitations. This and the name will help the model decide when and how to use your tool.
+
+Precise Parameters: Define your dynamic parameters carefully, ensuring that the AI model has all the information it needs to use the tool effectively.
+
+Error Handling: Consider how your tool will handle errors or unexpected inputs, and document this behavior in the tool’s description.
+
+Iterate Faster: Use temporary tools when you are building your application. Persist durable tools in the system when things have stabilized.
+
+Version Control: When updating tools, consider creating a new version (e.g., “stock_price_v2”) rather than modifying the existing tool. This allows testing of the new tool before impacting new calls made with the prior version of the tool.
+
+Security: Be mindful of security when creating tools, especially when they interact with external APIs. Use appropriate authentication methods and avoid exposing sensitive information.
+
+Testing: Thoroughly test your tools before deploying them in production conversations to ensure they function as expected.
+
+
+
+Call Stages
+The Ultravox API’s Call Stages functionality allows you to create dynamic, multi-stage conversations. Stages enable more complex and nuanced agent interactions, giving you fine-grained control over the conversation flow.
+
+Each stage can have a new system prompt, a different set of tools, a new voice, an updated conversation history, and more.
+
+Understanding Call Stages
+Call Stages (“Stages”) provide a way to segment a conversation into distinct phases, each with its own system prompt and potentially different parameters. This enables interactions that can adapt and change focus as the conversation progresses.
+
+Key points to understand about Stages:
+
+Dynamic System Prompts → Stages allow you to give granular system prompts to the model as the conversation progresses.
+
+Flexibility → You have full control to determine when and how you want the conversation to progress to the next stage.
+
+Thoughtful Design → Implementing stages requires careful planning and consideration of the conversation structure. Consider how to handle stage transitions and test thoroughly to ensure a natural flow to the conversation.
+
+Maintain Context → Think about how the agent will maintain context about the user between stages if you need to ensure a coherent conversation.
+
+Advanced Feature
+
+Stages require planning and careful implementation. Stages are likely not required for simple use cases.
+
+Creating and Managing Stages
+To implement Call Stages in your Ultravox application, follow these steps:
+
+1. Plan Your Stages
+Determine the different phases of your conversation and what prompts or parameters should change at each stage.
+
+2. Implement a Stage Change Tool
+Create a custom tool that will trigger stage changes when called. This tool should:
+
+Respond with a new-stage response type. This creates the new stage. How you send the response depends on the tool type:
+For server/HTTP tools, set the X-Ultravox-Response-Type header to new-stage.
+For client tools, set responseType="new-stage" on your ClientToolResult object.
+Provide the updated parameters (e.g., system prompt, tools, voice) for the new stage in the response body.
+Unless overridden, stages inherit all properties of the existing call. See Stages Call Properties for the list of call properties that can be changed.
+
+3. Configure Stage Transitions
+Prompt the agent to use the stage change tool at appropriate points in the conversation.
+Ensure the stage change tool is part of selectedTools when creating the call as well as during new stages (if needed).
+Update your system prompt as needed to instruct the agent on when/how to use the stage change tool.
+Things to Remember
+
+New stages inherit all properties from the previous stage unless explicitly overridden.
+Refer to Stages Call Properties to understand which call properties can be changed as part of a new stage.
+Test your stage transitions thoroughly to ensure the conversation flows naturally.
+Example Stage Change Implementation
+Here’s a basic example of how to implement a new call stage.
+
+First, we create a tool that is responsible for changing stages:
+
+Basic stage change tool
+function changeStage(requestBody) {
+  const responseBody = {
+    systemPrompt: "...", // new prompt
+    ... // other properties
+  };
+
+  return {
+    body: responseBody,
+    headers: {
+      'X-Ultravox-Response-Type': 'new-stage'
+    }
+  };
+}
+
+We also need to ensure that we have instructed our agent to use the tool and that we add the tool to our selectedTools during the creation of the call.
+
+Updating our systemPrompt and selectedTools
+// Instruct the agent on how to use the stage management tool
+// Add the tool to selectedTools
+{
+  systemPrompt: "You are a helpful assistant...you have access to a tool called changeStage...",
+  ...
+  selectedTools: [
+    {
+      "temporaryTool": {
+        "modelToolName": "changeStage",
+        "description": ...,
+        "dynamicParameters": [...],
+      }
+    }
+  ]
+}
+
+Inheritance
+
+New stages inherit all properties from the previous stage. You can selectively overwrite properties as needed when defining a new stage.
+
+See Stages Call Properties for more.
+
+Ultravox API Implications
+If you are not using stages for a call, retrieving calls or call messages via the API (e.g. GET /api/calls) works as expected.
+
+However, if you are using call stages then you most likely want to use the stage-centric API endpoints to get stage-specific settings, messages, etc.
+
+Use GET /api/calls/{call_id}/stages to get all the stages for a given call.
+
+Ultravox API	Description	Stage-Centric Equivalent	Description
+/calls/{call_id}	Get a call	/calls/{call_id}/stages/{call_stage_id}	Get the call stage
+/calls/{call_id}/messages	Get messages for a call	/calls/{call_id}/stages/{call_stage_id}/messages	Get message for the stage
+/calls/{call_id}/tools	Get tools for a call	/calls/{call_id}/stages/{call_stage_id}/tools	Get tools for the stage
+Stages Call Properties
+Tip
+
+The schema used for a Stages response body is a subset of the request body schema used when creating a new call. The response body must contain the new values for any properties you want to change in the new stage.
+
+Unless overridden, stages inherit all properties of the existing call.
+
+Here is the list of all call properties that can and cannot be changed during a new stage:
+
+property	change with new stage?
+systemPrompt	Yes
+temperature	Yes
+voice	Yes
+languageHint	Yes
+initialMessages	Yes
+selectedTools	Yes
+firstSpeaker	No
+model	No
+joinTimeout	No
+maxDuration	No
+timeExceededMessage	No
+inactivityMessages	No
+medium	No
+initiator	No
+recordingEnabled	No
+Use Cases for Call Stages
+Call Stages are particularly useful for complex conversational flows. Here are some example scenarios:
+
+Data Gathering → Scenarios where the agent needs to collect a lot of data. Examples: job applications, medical intake forms, applying for a mortgage.
+
+Here are potential stages for a Mortgage Application:
+
+Stage 1: Greeting and basic information gathering
+Stage 2: Financial assessment
+Stage 3: Property evaluation
+Stage 4: Presentation of loan options
+Stage 5: Hand-off to loan officer
+Switching Contexts → Scenarios where the agent needs to navigate different contexts. Examples: customer support escalation, triaging IT issues.
+
+Let’s consider what the potential stages might be for Customer Support:
+
+Stage 1: Initial greeting and problem identification
+Stage 2: Troubleshooting
+Stage 3: Resolution or escalation (to another stage or to a human support agent)
+Conclusion
+Call Stages in the Ultravox API give you the ability to create adaptive conversations for more complex scenarios like data gathering or switching contexts. By allowing granular control over system prompts and conversation parameters at different stages, you can create more dynamic and context-aware interactions.
+
+Ultravox + Telephony
+The Ultravox API allows you to create AI-powered voice applications that can interact with regular phone numbers. This enables Ultravox AI agents to make outgoing calls and receive incoming calls from traditional phone networks.
+
+Twilio Support
+
+We currently integrate with Twilio. Please let us know if there’s another integration you’d like to see.
+
+This guide will walk you through the process of setting up and using the Ultravox API with Twilio for both outgoing and incoming phone calls.
+
+Creating a Phone Call with Twilio
+Prerequisites
+
+Make sure you have:
+
+An active Twilio account
+A phone number purchased from Twilio
+Creating an Ultravox call that works with Twilio is just like creating a WebRTC call, but there are two parameters to the Create Call command worth special attention:
+
+medium	object	Tells Ultravox which protocol to use.
+For Twilio, must be set to {"twilio": {}} and sets the call to use Twilio Media Streams. Defaults to {"webRtc": {}} which sets the protocol to WebRTC.
+initiator	string	Tells Ultravox who started the call. For outgoing calls, typically set to "INITIATOR_AGENT". Default is "INITIATOR_USER".
+Adding these to the request body when creating the call would look like this:
+
+{
+  "systemPrompt": "You are a helpful assistant...",
+  ...
+  "medium": {
+    "twilio": {}
+  },
+  "initiator": "INITIATOR_AGENT"
+}
+
+Ultravox will return a joinUrl that can then be used with Twilio for outgoing or incoming calls.
+
+Outgoing Calls
+It only takes two steps to make an outgoing call to regular phone numbers through Twilio:
+
+Create an Ultravox Call → Create a new call (see above), and get a joinUrl.
+
+Initiate Twilio Phone call → Use the joinUrl with a Twilio <Stream>.
+
+// Example using the twilio node library
+const call = await client.calls.create({
+    twiml: `<Response>
+                <Connect>
+                    <Stream url="${joinUrl}"/>
+                </Connect>
+            </Response>`,
+    to: phoneNumber, // the number you are calling
+    from: twilioPhoneNumber // your twilio number
+});
+
+See the twilio-outgoing-call example for more.
+
+This example shows one of the many options Twilio provides for making outgoing calls. Consult the Twilio docs for more details.
+
+Incoming Calls
+Incoming calls require essentially the same two steps as outgoing calls:
+
+Create an Ultravox Call → Create a new call (see above), and get a joinUrl. Note: for incoming calls you will want to keep initiator set to the default (“user”).
+
+Receive Inbound Twilio Phone call → Use the joinUrl with a Twilio <Stream>.
+
+<!-- Example using a TwiML Bin -->
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Connect>
+        <Stream url="your_ultravox_join_url" />
+    </Connect>
+</Response>
+
+The above shows how to create a TwiML Bin and use that for handling the inbound call. Consult the Twilio docs for more on all the options Twilio provides for handling phone calls.
+
+Conclusion
+By integrating the Ultravox API with Twilio, you can create powerful AI-driven voice applications that interact with regular phone networks. This opens up a wide range of possibilities for customer service, automated outreach, and other voice-based AI applications.
+
+Tutorial: Building Interactive UI with Client Tools
+This tutorial walks you through implementing client-side tools in Ultravox to create real-time, interactive UI elements. You’ll build a drive-thru order display screen that updates dynamically as customers place orders through an AI agent.
+
+What you’ll learn:
+
+How to define and implement client tools
+Real-time UI updates using custom events
+State management with React components
+Integration with Ultravox’s AI agent system
+Time to complete: 30 minutes
+
+Prerequisites
+Before starting this tutorial, make sure you have:
+
+Basic knowledge of TypeScript and React
+The starter code from our tutorial repository
+Node.js 16+ installed on your machine
+Understanding Client Tools
+Client tools in Ultravox enable direct interaction between AI agents and your frontend application. Unlike server-side tools that handle backend operations, client tools are specifically designed for:
+
+UI Updates → Modify interface elements in real-time
+State Management → Handle application state changes
+User Interaction → Respond to and process user actions
+Event Handling → Dispatch and manage custom events
+Project Overview: Dr Donut Drive-Thru
+We’ll build a drive-thru order display for a fictional restaurant called “Dr. Donut”. The display will update in real-time as customers place orders through our AI agent.
+
+Implementation Steps
+Define the Tool → Create a schema for order updates
+Implement Logic → Build the tool’s functionality
+Register the Tool → Connect it to the Ultravox system
+Create the UI → Build the order display component
+Stuck?
+
+If at any point you get lost, you can refer to the /final folder in the repo to get final versions of the various files you will create or edit.
+
+Step 1: Define the Tool
+First, we’ll define our updateOrder tool that the AI agent will use to modify the order display.
+
+Modify .demo-config.ts:
+
+const selectedTools: SelectedTool[] = [
+  {
+    "temporaryTool": {
+      "modelToolName": "updateOrder",
+      "description": "Update order details. Used any time items are added or removed or when the order is finalized. Call this any time the user updates their order.",
+      "dynamicParameters": [
+        {
+          "name": "orderDetailsData",
+          "location": ParameterLocation.BODY,
+          "schema": {
+            "description": "An array of objects contain order items.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "description": "The name of the item to be added to the order." },
+                "quantity": { "type": "number", "description": "The quantity of the item for the order." },
+                "specialInstructions": { "type": "string", "description": "Any special instructions that pertain to the item." },
+                "price": { "type": "number", "description": "The unit price for the item." },
+              },
+              "required": ["name", "quantity", "price"]
+            }
+          },
+          "required": true
+        },
+      ],
+      "client": {}
+    }
+  },
+];
+
+Here’s what this is doing:
+
+Defines a client tool called updateOrder and describes what it does and how to use it.
+Defines a single, required parameter called orderDetailsData that:
+Is passed in the request body
+Is an array of objects where each object can contain name, quantity, specialInstructions, and price. Only specialInstructions is optional.
+Update System Prompt
+Now, we need to update the system prompt to tell the agent how to use the tool.
+
+Update the sysPrompt variable:
+
+sysPrompt = `
+  # Drive-Thru Order System Configuration
+
+  ## Agent Role
+  - Name: Dr. Donut Drive-Thru Assistant
+  - Context: Voice-based order taking system with TTS output
+  - Current time: ${new Date()}
+
+  ## Menu Items
+    # DONUTS
+    PUMPKIN SPICE ICED DOUGHNUT $1.29
+    PUMPKIN SPICE CAKE DOUGHNUT $1.29
+    OLD FASHIONED DOUGHNUT $1.29
+    CHOCOLATE ICED DOUGHNUT $1.09
+    CHOCOLATE ICED DOUGHNUT WITH SPRINKLES $1.09
+    RASPBERRY FILLED DOUGHNUT $1.09
+    BLUEBERRY CAKE DOUGHNUT $1.09
+    STRAWBERRY ICED DOUGHNUT WITH SPRINKLES $1.09
+    LEMON FILLED DOUGHNUT $1.09
+    DOUGHNUT HOLES $3.99
+
+    # COFFEE & DRINKS
+    PUMPKIN SPICE COFFEE $2.59
+    PUMPKIN SPICE LATTE $4.59
+    REGULAR BREWED COFFEE $1.79
+    DECAF BREWED COFFEE $1.79
+    LATTE $3.49
+    CAPPUCINO $3.49
+    CARAMEL MACCHIATO $3.49
+    MOCHA LATTE $3.49
+    CARAMEL MOCHA LATTE $3.49
+
+  ## Conversation Flow
+  1. Greeting -> Order Taking -> Call "updateOrder" Tool -> Order Confirmation -> Payment Direction
+
+  ## Tool Usage Rules
+  - You must call the tool "updateOrder" immediately when:
+    - User confirms an item
+    - User requests item removal
+    - User modifies quantity
+  - Do not emit text during tool calls
+  - Validate menu items before calling updateOrder
+
+  ## Response Guidelines
+  1. Voice-Optimized Format
+    - Use spoken numbers ("one twenty-nine" vs "$1.29")
+    - Avoid special characters and formatting
+    - Use natural speech patterns
+
+  2. Conversation Management
+    - Keep responses brief (1-2 sentences)
+    - Use clarifying questions for ambiguity
+    - Maintain conversation flow without explicit endings
+    - Allow for casual conversation
+
+  3. Order Processing
+    - Validate items against menu
+    - Suggest similar items for unavailable requests
+    - Cross-sell based on order composition:
+      - Donuts -> Suggest drinks
+      - Drinks -> Suggest donuts
+      - Both -> No additional suggestions
+
+  4. Standard Responses
+    - Off-topic: "Um... this is a Dr. Donut."
+    - Thanks: "My pleasure."
+    - Menu inquiries: Provide 2-3 relevant suggestions
+
+  5. Order confirmation
+    - Call the "updateOrder" tool first
+    - Only confirm the full order at the end when the customer is done
+
+  ## Error Handling
+  1. Menu Mismatches
+    - Suggest closest available item
+    - Explain unavailability briefly
+  2. Unclear Input
+    - Request clarification
+    - Offer specific options
+  3. Invalid Tool Calls
+    - Validate before calling
+    - Handle failures gracefully
+
+  ## State Management
+  - Track order contents
+  - Monitor order type distribution (drinks vs donuts)
+  - Maintain conversation context
+  - Remember previous clarifications
+  `;
+
+Update Configuration + Import
+Now we need to add the selectedTools to our call definition and update our import statement.
+
+Add the tool to your demo configuration:
+
+export const demoConfig: DemoConfig = {
+  title: "Dr. Donut",
+  overview: "This agent has been prompted to facilitate orders at a fictional drive-thru called Dr. Donut.",
+  callConfig: {
+    systemPrompt: getSystemPrompt(),
+    model: "fixie-ai/ultravox-70B",
+    languageHint: "en",
+    selectedTools: selectedTools,
+    voice: "Mark",
+    temperature: 0.4
+  }
+};
+
+Add ParameterLocation and SelectedTool to our import:
+
+import { DemoConfig, ParameterLocation, SelectedTool } from "@/lib/types";
+
+Step 2: Implement Tool Logic
+Now that we’ve defined the updateOrder tool, we need to implement the logic for it.
+
+Create /lib/clientTools.ts to handle the tool’s functionality:
+
+import { ClientToolImplementation } from 'ultravox-client';
+
+export const updateOrderTool: ClientToolImplementation = (parameters) => {
+  const { ...orderData } = parameters;
+
+  if (typeof window !== "undefined") {
+    const event = new CustomEvent("orderDetailsUpdated", {
+      detail: orderData.orderDetailsData,
+    });
+    window.dispatchEvent(event);
+  }
+
+  return "Updated the order details.";
+};
+
+We will do most of the heavy lifting in the UI component that we’ll build in step 4.
+
+Step 3: Register the Tool
+Next, we are going to register the client tool with the Ultravox client SDK.
+
+Update /lib/callFunctions.ts:
+
+import { updateOrderTool } from '@/lib/clientTools';
+
+// Initialize Ultravox session
+uvSession = new UltravoxSession({ experimentalMessages: debugMessages });
+
+// Register tool
+uvSession.registerToolImplementation(
+    "updateOrder",
+    updateOrderTool
+);
+
+// Handle call ending -- This allows clearing the order details screen
+export async function endCall(): Promise<void> {
+  if (uvSession) {
+    uvSession.leaveCall();
+    uvSession = null;
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('callEnded'));
+    }
+  }
+}
+
+Step 4: Build the UI
+Create a new React component to display order details. This component will:
+
+Listen for order updates
+Format currency and order items
+Handle order clearing when calls end
+Create /components/OrderDetails.tsx:
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { OrderDetailsData, OrderItem } from '@/lib/types';
+
+// Function to calculate order total
+function prepOrderDetails(orderDetailsData: string): OrderDetailsData {
+  try {
+    const parsedItems: OrderItem[] = JSON.parse(orderDetailsData);
+    const totalAmount = parsedItems.reduce((sum, item) => {
+      return sum + (item.price * item.quantity);
+    }, 0);
+
+    // Construct the final order details object with total amount
+    const orderDetails: OrderDetailsData = {
+      items: parsedItems,
+      totalAmount: Number(totalAmount.toFixed(2))
+    };
+
+    return orderDetails;
+  } catch (error) {
+    throw new Error(`Failed to parse order details: ${error}`);
+  }
+}
+
+const OrderDetails: React.FC = () => {
+  const [orderDetails, setOrderDetails] = useState<OrderDetailsData>({
+    items: [],
+    totalAmount: 0
+  });
+
+  useEffect(() => {
+    // Update order details as things change
+    const handleOrderUpdate = (event: CustomEvent<string>) => {
+      console.log(`got event: ${JSON.stringify(event.detail)}`);
+
+      const formattedData: OrderDetailsData = prepOrderDetails(event.detail);
+      setOrderDetails(formattedData);
+    };
+
+    // Clear out order details when the call ends so it's empty for the next call
+    const handleCallEnded = () => {
+      setOrderDetails({
+        items: [],
+        totalAmount: 0
+      });
+    };
+
+    window.addEventListener('orderDetailsUpdated', handleOrderUpdate as EventListener);
+    window.addEventListener('callEnded', handleCallEnded as EventListener);
+
+    return () => {
+      window.removeEventListener('orderDetailsUpdated', handleOrderUpdate as EventListener);
+      window.removeEventListener('callEnded', handleCallEnded as EventListener);
+    };
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+
+  const formatOrderItem = (item: OrderItem, index: number) => (
+    <div key={index} className="mb-2 pl-4 border-l-2 border-gray-200">
+      <div className="flex justify-between items-center">
+        <span className="font-medium">{item.quantity}x {item.name}</span>
+        <span className="text-gray-600">{formatCurrency(item.price * item.quantity)}</span>
+      </div>
+      {item.specialInstructions && (
+        <div className="text-sm text-gray-500 italic mt-1">
+          Note: {item.specialInstructions}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="mt-10">
+      <h1 className="text-xl font-bold mb-4">Order Details</h1>
+      <div className="shadow-md rounded p-4">
+        <div className="mb-4">
+          <span className="text-gray-400 font-mono mb-2 block">Items:</span>
+          {orderDetails.items.length > 0 ? (
+            orderDetails.items.map((item, index) => formatOrderItem(item, index))
+          ) : (
+            <span className="text-gray-500 text-base font-mono">No items</span>
+          )}
+        </div>
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="flex justify-between items-center font-bold">
+            <span className="text-gray-400 font-mono">Total:</span>
+            <span>{formatCurrency(orderDetails.totalAmount)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OrderDetails;
+
+Add to Main Page
+Update the main page (page.tsx) to include the new component:
+
+import OrderDetails from '@/components/OrderDetails';
+
+// In the JSX:
+{/* Call Status */}
+<CallStatus status={agentStatus}>
+    <OrderDetails />
+</CallStatus>
+
+Testing Your Implementation
+Start the development server:
+
+Terminal window
+pnpm run dev
+
+Navigate to http://localhost:3000
+
+Start a call and place an order. You should see:
+
+Real-time updates to the order display
+Formatted prices and item details
+Special instructions when provided
+Order clearing when calls end
+Next Steps
+Now that you’ve implemented basic client tools, you can:
+
+Add additional UI features like order modification or nutritional information
+Add animations for updates
+Enhance the display with customer and/or vehicle information
+
+Tutorial: Customer Escalation with Call Stages
+Learn how to implement customer service escalation in Ultravox using call stages to handle customer complaints by transferring them to a manager.
+
+What you’ll learn:
+
+How to implement an escalation tool
+How to use call stages to switch conversation context
+How to handle manager takeover with a new system prompt
+Testing escalation scenarios
+Time to complete: 25 minutes
+
+Prerequisites
+Before starting this tutorial, make sure you have:
+
+Basic knowledge of TypeScript and React
+The starter code from our tutorial repository
+Node.js 16+ installed on your machine
+ngrok installed on your machine
+Understanding Call Stages
+Call stages in Ultravox enable dynamic changes to an ongoing conversation by:
+
+Switching system prompts mid-conversation
+Changing voice personalities
+Maintaining conversation context
+Handling role transitions seamlessly
+In this tutorial, we’ll use call stages to transfer angry customers to a manager who can better handle their complaints.
+
+Project Overview: Dr. Donut Manager Escalation
+We’ll build an escalation system for our Dr. Donut drive-thru that allows the AI agent to transfer difficult situations to a manager. The system will:
+
+Recognize when a customer needs manager assistance
+Collect complaint details
+Switch to a manager persona with authority to resolve issues
+Implementation Steps
+Set Up ngrok → Enable external access to our escalation endpoint
+Define the Tool → Create a schema for escalation requests
+Create Manager Handler → Build the API route for manager takeover
+Update System Prompt → Add escalation rules to the base prompt
+Test the System → Verify escalation flows
+Stuck?
+
+If at any point you get lost, you can refer to the /final folder in the repo to get final versions of the various files you will create or edit.
+
+Debugging
+
+During testing, watch your terminal for ngrok request logs to verify the escalation endpoint is being called correctly.
+
+Step 1: Set Up ngrok
+First, we need to make our escalation endpoint accessible to Ultravox.
+
+Start your development server:
+Terminal window
+pnpm run dev
+
+In a new terminal, start ngrok:
+Terminal window
+ngrok http 3000
+
+Copy the HTTPS URL from ngrok (it will look like https://1234-56-78-910-11.ngrok-free.app)
+
+Update toolsBaseUrl in demo-config.ts:
+
+const toolsBaseUrl = 'https://your-ngrok-url-here';
+
+Step 2: Define the Escalation Tool
+We’ll define an escalateToManager tool that the AI agent will use to transfer difficult customers.
+
+Update the selectedTools array in demo-config.ts and add to our call definition:
+
+const selectedTools: SelectedTool[] = [
+  {
+    "temporaryTool": {
+      "modelToolName": "escalateToManager",
+      "description": "Escalate to the manager in charge. Use this tool if a customer becomes irate, asks for a refund, or complains about the food.",
+      "dynamicParameters": [
+        {
+          "name": "complaintDetails",
+          "location": ParameterLocation.BODY,
+          "schema": {
+            "description": "An object containing details about the nature of the complaint or issue.",
+            "type": "object",
+            "properties": {
+              "complaintType": {
+                "type": "string",
+                "enum": ["refund", "food", "price", "other"],
+                "description": "The type of complaint."
+              },
+              "complaintDetails": {
+                "type": "string",
+                "description": "The details of the complaint."
+              },
+              "desiredResolution": {
+                "type": "string",
+                "description": "The resolution the customer is seeking."
+              },
+              "firstName": {
+                "type": "string",
+                "description": "Customer first name."
+              },
+              "lastName": {
+                "type": "string",
+                "description": "Customer last name."
+              }
+            },
+            "required": ["complaintType", "complaintDetails"]
+          },
+          "required": true
+        }
+      ],
+      "http": {
+        "baseUrlPattern": `${toolsBaseUrl}/api/managerEscalation`,
+        "httpMethod": "POST"
+      }
+    }
+  }
+];
+
+// Update call definition to add selectedTools
+export const demoConfig: DemoConfig = {
+  title: "Dr. Donut",
+  overview: "This agent has been prompted to facilitate orders at a fictional drive-thru called Dr. Donut.",
+  callConfig: {
+    systemPrompt: getSystemPrompt(),
+    model: "fixie-ai/ultravox-70B",
+    languageHint: "en",
+    voice: "Mark",
+    temperature: 0.4,
+    selectedTools: selectedTools
+  }
+};
+
+Step 3: Create Manager Handler
+Create a new file at app/api/managerEscalation/route.ts to handle the escalation:
+
+import { NextRequest, NextResponse } from 'next/server';
+
+const managerPrompt: string = `
+  # Drive-Thru Order System Configuration
+
+  ## Agent Role
+  - Name: Dr. Donut Drive-Thru Manager
+  - Context: Voice-based order taking system with TTS output
+  - Current time: ${new Date()}
+
+  ## Menu Items
+    [Menu items section - same as base prompt]
+
+  ## Conversation Flow
+  1. Greeting -> Apologize for Situation -> Offer Resolution -> Order Confirmation -> End
+
+  ## Response Guidelines
+  1. Voice-Optimized Format
+    - Use spoken numbers ("one twenty-nine" vs "$1.29")
+    - Avoid special characters and formatting
+    - Use natural speech patterns
+
+  2. Conversation Management
+    - Keep responses brief (1-2 sentences)
+    - Use clarifying questions for ambiguity
+    - Maintain conversation flow without explicit endings
+    - Allow for casual conversation
+
+  3. Greeting
+    - Tell the customer that you are the manager
+    - Inform the customer you were just informed of the issue
+    - Then move to the apology
+
+  4. Apology
+    - Acknowledge customer concern
+    - Apologize and reaffirm Dr. Donut's commitment to quality and customer happiness
+
+  5. Resolving Customer Concern
+    - Offer reasonable remedy
+    - Maximum refund amount equal to purchase amount
+    - Offer $10 or $20 gift cards for more extreme issues
+
+  [Rest of guidelines section]
+`;
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  console.log(`Got escalation!`);
+
+  // Set-up escalation
+  const responseBody = {
+    systemPrompt: managerPrompt,
+    voice: 'Jessica'  // Different voice for manager
+  };
+  const response = NextResponse.json(responseBody);
+  // Set our custom header for starting a new call stage
+  response.headers.set('X-Ultravox-Response-Type', 'new-stage');
+
+  return response;
+}
+
+Step 4: Update System Prompt
+Add escalation rules to your base system prompt in demo-config.ts:
+
+## Response Guidelines
+  [Previous guidelines...]
+
+  6. Angry Customers or Complaints
+    - You must escalate to your manager for angry customers, refunds, or big problems
+    - Before you escalate, ask the customer if they would like to talk to your manager
+    - If the customer wants the manager, you MUST call the tool "escalateToManager"
+
+  ## State Management
+    [Previous instructions...]
+  - Use the "escalateToManager" tool for any complaints or angry customers
+
+Testing Your Implementation
+Here are three scenarios to test the escalation system:
+
+Scenario 1: Food Quality Issue
+Customer: "I just found hair in my donuts! This is disgusting!"
+Expected: Agent should offer manager assistance and escalate with complaint type "food"
+
+Scenario 2: Out of Stock Frustration
+Customer: "You don't have the Magic Rainbow donuts in stock and this is the third time I drove down here this week for them! This is ridiculous!"
+Expected: Agent should offer manager assistance and escalate with complaint type "other"
+
+Scenario 3: Product and Refund
+Customer: "This coffee is cold and I want a refund right now!"
+Expected: Agent should offer manager assistance and escalate with complaint type "refund"
+
+For each scenario, verify:
+
+The agent offers manager assistance
+The escalation tool is called with appropriate details
+The manager persona takes over with the new voice
+The manager follows the resolution guidelines
+Common Issues
+ngrok URL Not Working
+
+Make sure ngrok is running
+Check the URL is correctly copied to demo-config.ts
+Verify no trailing slash in the URL
+Escalation Not Triggering
+
+Check the system prompt includes escalation guidelines
+Verify the complaint is clearly expressed
+Try using keywords like “manager”, “refund”, or “complaint”
+Manager Voice Not Changing
+
+Verify the X-Ultravox-Response-Type header is set
+Check the voice parameter in the response body
+Next Steps
+Now that you’ve implemented basic escalation, you can:
+
+Implement different manager personalities for different situations
+Create a complaint logging system
+Add resolution tracking and follow-up mechanisms
+
+
+
+
+## REST API
+
 openapi: 3.0.3
 info:
   title: Ultravox
