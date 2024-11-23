@@ -243,7 +243,7 @@
 					// Auto-close timer (20 seconds)
 					setTimeout(() => {
 						machine.send('DISCONNECT');
-					}, 30000);
+					}, 200000);
 				} catch (e) {
 					context.error =
 						e instanceof Error ? e.message : 'Failed to start call. Please try again.';
