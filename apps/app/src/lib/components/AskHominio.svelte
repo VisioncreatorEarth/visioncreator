@@ -5,6 +5,18 @@
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
 
+	// Mock shopping list client tool implementation
+	const mockUpdateShoppingListItems = (parameters: any) => {
+		console.log('Mock updateShoppingListItems called with parameters:', parameters);
+		const mockResponse = {
+			success: true,
+			message: 'Items added to shopping list',
+			items: parameters.items
+		};
+		console.log('Mock response:', mockResponse);
+		return mockResponse;
+	};
+
 	const askHominioMutation = createMutation({
 		operationName: 'askHominio'
 	});
@@ -147,7 +159,7 @@
 					}
 
 					context.currentCallId = result.callId;
-					context.session = new UltravoxSession({
+					const session = new UltravoxSession({
 						joinUrl: result.joinUrl,
 						transcriptOptional: false,
 						experimentalMessages: new Set(['debug', 'status', 'transcripts', 'speaking']),
@@ -157,6 +169,14 @@
 							retryDelay: 1000
 						}
 					});
+
+					// Register the mock shopping list tool
+					session.registerToolImplementation(
+						'updateShoppingListItems',
+						mockUpdateShoppingListItems
+					);
+
+					context.session = session;
 
 					// Client tool implementation for shopping list updates
 					const updateShoppingList = async (parameters: any) => {
@@ -304,7 +324,7 @@
 
 	export let session: any;
 	export let onCallEnd: () => void = () => {};
-	export let showControls: boolean = true;  // Default to showing controls
+	export let showControls: boolean = true; // Default to showing controls
 
 	// Create a method to start the call
 	export function startCall() {
@@ -315,10 +335,10 @@
 	export function stopCall() {
 		if (isCleaningUp) return; // Prevent recursive calls
 		isCleaningUp = true;
-		
+
 		machine.send('DISCONNECT');
 		cleanupCall();
-		
+
 		isCleaningUp = false;
 	}
 
@@ -332,10 +352,10 @@
 			}
 			context.session = null;
 		}
-		
+
 		// Reset machine state
 		machine.reset();
-		
+
 		// Notify parent component
 		onCallEnd();
 	}
