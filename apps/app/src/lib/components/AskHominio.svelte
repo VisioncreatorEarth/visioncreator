@@ -406,6 +406,7 @@
 			style="max-height: calc(100vh - 120px);"
 		>
 			<div class="space-y-3">
+				<!-- Commenting out transcriptions UI for now
 				{#if transcripts.length > 0}
 					<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
 						{#each transcripts as transcript}
@@ -428,6 +429,7 @@
 						{/each}
 					</div>
 				{/if}
+				-->
 
 				{#if currentItems.length > 0}
 					<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
@@ -441,9 +443,7 @@
 						{#if removedItems.length > 0}
 							<div>
 								<h3 class="mb-2 text-sm font-medium text-tertiary-200">Items to Remove:</h3>
-								<div class="opacity-60">
-									<OShoppingItems items={removedItems} />
-								</div>
+								<OShoppingItems items={removedItems.map(item => ({ ...item, is_checked: false }))} />
 							</div>
 						{/if}
 					</div>
