@@ -48,6 +48,7 @@ interface CallResponse {
 export class UltravoxClient {
   private apiKey: string;
   private baseUrl = 'https://api.ultravox.ai/api';
+  private cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -55,6 +56,33 @@ export class UltravoxClient {
       throw new UltravoxInitializationError('Missing Ultravox API key');
     }
     this.apiKey = apiKey;
+  }
+
+  private async checkAndCleanupCall(callId: string) {
+    try {
+      // Check if the call exists and its status
+      const statusResponse = await fetch(`${this.baseUrl}/calls/${callId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (statusResponse.ok) {
+        const callData = await statusResponse.json();
+        // If the call exists and hasn't been joined, end it
+        if (!callData.joined) {
+          console.log('🧹 Auto-cleaning unjoined call:', callId);
+          await this.endCall(callId);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error during auto-cleanup:', error);
+    } finally {
+      // Clear the timer reference
+      this.cleanupTimers.delete(callId);
+    }
   }
 
   async createCall(params: CallParams): Promise<UltravoxResponse> {
@@ -97,6 +125,14 @@ export class UltravoxClient {
         hasJoinUrl: !!data.joinUrl
       });
 
+      // Set up auto-cleanup timer
+      const timer = setTimeout(() => {
+        this.checkAndCleanupCall(data.callId);
+      }, 10000); // 10 seconds
+
+      // Store the timer reference
+      this.cleanupTimers.set(data.callId, timer);
+
       return { data };
     } catch (error) {
       console.error('❌ Error creating call:', error);
@@ -107,6 +143,13 @@ export class UltravoxClient {
   async endCall(callId: string): Promise<void> {
     console.log('🔚 Ending call:', callId);
     try {
+      // Clear any existing cleanup timer for this call
+      const timer = this.cleanupTimers.get(callId);
+      if (timer) {
+        clearTimeout(timer);
+        this.cleanupTimers.delete(callId);
+      }
+
       // First, try to get the call status
       const statusResponse = await fetch(`${this.baseUrl}/calls/${callId}`, {
         method: 'GET',

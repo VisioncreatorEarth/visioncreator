@@ -27,12 +27,12 @@ const CALL_CONFIG = {
 
   When adding items:
   1. Always specify the category from the list above
-  2. Use appropriate units (e.g., kg, pcs, l)
-  3. Include quantity with each item
+  2. Use appropriate units (e.g., kg, pcs, l or any other unit that would make sense for the item)
+  3. Include quantity with each item, if not specified, default to 1
   4. Try to match items with their correct icons when possible
   5. Always execute FIRST the tool and then respond with the items you added. f.e. "Added 3 Apples and 5 Mangos, anything else"
 
-  Never tell the about anything technical or json or which tool and scheam use in the interaction, just use and exceute the tools in teh background. Always respond in a friendly and helpful manner for ordinaire conversations with a normal non-technical Human. 
+  Never tell the about anything technical or json or which tool and scheam use in the interaction, just use and exceute the tools in the background. Always respond in a friendly and helpful manner for ordinaire conversations with a normal non-technical Human. 
   Never appologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
   `,
   voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
