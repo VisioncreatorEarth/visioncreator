@@ -69,12 +69,20 @@ export class UltravoxClient {
         }
       });
 
+      // If call doesn't exist, skip cleanup
+      if (statusResponse.status === 404) {
+        console.log('ℹ️ Call no longer exists, skipping cleanup:', callId);
+        return;
+      }
+
       if (statusResponse.ok) {
         const callData = await statusResponse.json();
-        // If the call exists and hasn't been joined, end it
-        if (!callData.joined) {
+        // Only cleanup if the call hasn't been joined AND isn't already ended
+        if (!callData.joined && !callData.ended) {
           console.log('🧹 Auto-cleaning unjoined call:', callId);
           await this.endCall(callId);
+        } else {
+          console.log('ℹ️ Skipping cleanup - Call is either joined or ended:', callId);
         }
       }
     } catch (error) {
@@ -128,7 +136,7 @@ export class UltravoxClient {
       // Set up auto-cleanup timer
       const timer = setTimeout(() => {
         this.checkAndCleanupCall(data.callId);
-      }, 10000); // 10 seconds
+      }, 10000); // 30 seconds to give more time for joining
 
       // Store the timer reference
       this.cleanupTimers.set(data.callId, timer);
@@ -143,34 +151,30 @@ export class UltravoxClient {
   async endCall(callId: string): Promise<void> {
     console.log('🔚 Ending call:', callId);
     try {
-      // Clear any existing cleanup timer for this call
-      const timer = this.cleanupTimers.get(callId);
-      if (timer) {
-        clearTimeout(timer);
-        this.cleanupTimers.delete(callId);
-      }
-
-      // First, try to get the call status
-      const statusResponse = await fetch(`${this.baseUrl}/calls/${callId}`, {
-        method: 'GET',
+      // First mark the call as ended
+      const response = await fetch(`${this.baseUrl}/calls/${callId}/status`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': this.apiKey
-        }
+        },
+        body: JSON.stringify({ status: 'ended' })
       });
 
-      // If call doesn't exist (404) or is already ended, return successfully
-      if (statusResponse.status === 404) {
-        console.log('ℹ️ Call already ended or does not exist:', callId);
-        return;
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`Failed to end call: ${response.statusText}`);
       }
 
-      // For other non-OK responses, log the error but continue with deletion attempt
-      if (!statusResponse.ok) {
-        console.warn('⚠️ Failed to get call status:', statusResponse.status, statusResponse.statusText);
-      }
+      console.log('✅ Call ended successfully:', callId);
+    } catch (error) {
+      console.error('❌ Error ending call:', error);
+      throw error;
+    }
+  }
 
-      // Proceed with ending the call
+  async deleteCall(callId: string): Promise<void> {
+    console.log('🗑️ Deleting call:', callId);
+    try {
       const response = await fetch(`${this.baseUrl}/calls/${callId}`, {
         method: 'DELETE',
         headers: {
@@ -179,27 +183,13 @@ export class UltravoxClient {
         }
       });
 
-      // If the call was already deleted or doesn't exist, consider it a success
-      if (response.status === 404) {
-        console.log('ℹ️ Call was already deleted:', callId);
-        return;
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`Failed to delete call: ${response.statusText}`);
       }
 
-      if (!response.ok) {
-        let errorMessage = `Failed to end call: ${response.statusText}`;
-        try {
-          const errorBody = await response.text();
-          console.error('📄 Error response body:', errorBody);
-          errorMessage = errorBody || errorMessage;
-        } catch (e) {
-          console.error('⚠️ Could not read error response body');
-        }
-        throw new Error(errorMessage);
-      }
-
-      console.log('✅ Call ended successfully:', callId);
+      console.log('✅ Call deleted successfully:', callId);
     } catch (error) {
-      console.error('❌ Error ending call:', error);
+      console.error('❌ Error deleting call:', error);
       throw error;
     }
   }
@@ -287,6 +277,47 @@ export class UltravoxClient {
       };
     } catch (error) {
       console.error('❌ Error getting calls:', error);
+      return { error: error.message };
+    }
+  }
+
+  async getCallTranscript(callId: string): Promise<UltravoxResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/calls/${callId}/messages`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.error('❌ Response not OK:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+
+        if (response.status === 401) {
+          throw new UltravoxAuthenticationError('Invalid API key');
+        }
+        throw new Error(`Failed to get call transcript: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const transcript = data.results.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp
+      }));
+
+      return {
+        data: {
+          callId,
+          transcript
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error getting call transcript:', error);
       return { error: error.message };
     }
   }

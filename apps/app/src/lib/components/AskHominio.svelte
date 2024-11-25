@@ -267,17 +267,21 @@
 				if (!context.currentCallId) return;
 
 				try {
+					// First end the call and handle transcript
 					await $askHominioMutation.mutateAsync({
 						action: 'end',
 						callId: context.currentCallId
 					});
 
+					// Then ensure we leave the call session
 					if (context.session) {
 						await context.session.leaveCall();
 					}
 				} catch (e) {
 					context.error = e instanceof Error ? e.message : 'Failed to end call';
+					console.error('Error ending call:', e);
 				} finally {
+					// Always clean up the context
 					context.currentCallId = null;
 					context.session = null;
 					context.transcripts = [];

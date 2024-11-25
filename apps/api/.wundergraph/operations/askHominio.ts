@@ -148,27 +148,83 @@ export default createOperation.mutation({
         };
 
       } else if (input.action === 'end' && input.callId) {
-        await context.ultravox.endCall(input.callId);
+        try {
+          // Get the Ultravox call ID from the database
+          const { data: callData, error: lookupError } = await context.supabase
+            .from('hominio_calls')
+            .select('ultravox_call_id')
+            .eq('id', input.callId)
+            .single();
 
-        const { data: duration, error: endError } = await context.supabase
-          .rpc('end_hominio_call', {
-            p_user_id: user.customClaims.id,
-            p_call_id: input.callId,
-            p_end_reason: 'user_ended',
-            p_transcript: null,
-            p_tool_executions: null
-          })
-          .single();
+          if (lookupError || !callData?.ultravox_call_id) {
+            console.error('❌ Error looking up call:', lookupError);
+            throw new Error('Could not find call in database');
+          }
 
-        if (endError) {
-          console.error('Error ending hominio call:', endError);
-          throw new Error('Failed to end call tracking.');
+          const ultravoxCallId = callData.ultravox_call_id;
+
+          // End the call first
+          await context.ultravox.endCall(ultravoxCallId);
+
+          // Wait a moment for the call to fully end
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Try to get the transcript
+          let transcript = null;
+          try {
+            const transcriptResponse = await context.ultravox.getCallTranscript(ultravoxCallId);
+            if (transcriptResponse.error) {
+              console.error('❌ Error getting transcript:', transcriptResponse.error);
+            } else if (transcriptResponse.data?.transcript) {
+              transcript = transcriptResponse.data.transcript;
+            }
+          } catch (transcriptError) {
+            console.error('❌ Error retrieving transcript:', transcriptError);
+          }
+
+          // Update the database using the end_hominio_call function
+          const { data: endCallResult, error: endError } = await context.supabase
+            .rpc('end_hominio_call', {
+              p_user_id: user.customClaims.id,
+              p_call_id: input.callId, // This is the database ID
+              p_end_reason: 'user_ended',
+              p_transcript: transcript ? JSON.stringify(transcript) : null,
+              p_tool_executions: null
+            });
+
+          if (endError) {
+            console.error('❌ Error updating call in database:', endError);
+            throw endError;
+          }
+
+          // Delete the call from Ultravox
+          try {
+            await context.ultravox.deleteCall(ultravoxCallId);
+          } catch (deleteError) {
+            console.error('❌ Error deleting call:', deleteError);
+          }
+
+          return {
+            success: true,
+            transcript,
+            callData: endCallResult
+          };
+        } catch (error) {
+          // If anything fails, try to mark the call as errored
+          try {
+            await context.supabase
+              .rpc('mark_hominio_call_error', {
+                p_user_id: user.customClaims.id,
+                p_call_id: input.callId,
+                p_error_message: error instanceof Error ? error.message : 'Unknown error'
+              });
+          } catch (markError) {
+            console.error('❌ Error marking call as errored:', markError);
+          }
+
+          console.error('❌ Operation error:', error);
+          throw error;
         }
-
-        return {
-          success: true,
-          duration
-        };
       }
 
       throw new Error('Invalid action or missing callId');
@@ -185,7 +241,7 @@ export default createOperation.mutation({
           console.error('Failed to mark call as error:', dbError);
         }
       }
-      
+
       console.error('❌ Operation error:', error);
       throw error;
     }
