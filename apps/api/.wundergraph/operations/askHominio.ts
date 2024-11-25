@@ -4,7 +4,7 @@ import { UltravoxAuthenticationError, UltravoxInitializationError } from '../err
 // Call configuration
 const CALL_CONFIG = {
   defaultSystemPrompt: `
-  You are a friendly shopping assistant. Please help me with my shopping list. Always use the updateShoppingList tool to add items to the shopping list.
+  You are a friendly shopping assistant. Please help me with my shopping list. Always use the updateShoppingList tool to add or remove items from the shopping list.
 
   Available Categories and their Icons:
   - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
@@ -25,21 +25,30 @@ const CALL_CONFIG = {
   - Dairy: Milk, Cheese, Yogurt, Butter, Cream, Sour Cream, Cottage Cheese
   - Bakery: Bread, Croissant, Bagels, Muffins, Baguette, Donuts, Cake
 
-  When adding items:
+  For each item in the request:
   1. Always specify the category from the list above
-  2. Use appropriate units (e.g., kg, pcs, l or any other unit that would make sense for the item)
-  3. Include quantity with each item, if not specified, default to 1
-  4. Try to match items with their correct icons when possible
-  5. Always execute FIRST the tool and then respond with the items you added. f.e. "Added 3 Apples and 5 Mangos, anything else"
+  2. Set the action field to 'add' or 'remove' based on what to do with the item
+  3. For 'add' actions:
+     - Include quantity (default to 1 if not specified)
+     - Use appropriate units (e.g., kg, pcs, l)
+     - Try to match items with their correct icons
+  4. For 'remove' actions:
+     - Only name and category are required
+     - Use the same category and name as when adding to ensure proper removal
 
-  Never tell the about anything technical or json or which tool and scheam use in the interaction, just use and exceute the tools in the background. Always respond in a friendly and helpful manner for ordinaire conversations with a normal non-technical Human. 
-  Never appologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
+  Always execute FIRST the tool and then respond with what you did. For example:
+  - "Added 3 Apples and removed Bananas from your list, anything else?"
+  - "Added Milk and removed Bread from your list, what else can I help you with?"
+
+  Never tell about anything technical or json or which tool and schema to use in the interaction, just use and execute the tools in the background. Always respond in a friendly and helpful manner for ordinary conversations with a normal non-technical Human. 
+  Never apologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
   `,
   voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
   temperature: 0.6,
   maxDuration: '120s', // 2 minutes in seconds
   timeExceededMessage: 'Maximum calltime exceeded. See you next time!',
   firstSpeaker: 'FIRST_SPEAKER_USER',
+  model: 'fixie-ai/ultravox-70B'
 } as const;
 
 // Define client tools
@@ -60,21 +69,10 @@ const shoppingListTool = {
               quantity: { type: 'number', description: 'Quantity of the item' },
               category: { type: 'string', description: 'Category of the item' },
               icon: { type: 'string', description: 'Icon for the item' },
-              default_unit: { type: 'string', description: 'Default unit for the item' },
-              variant_units: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    unit: { type: 'string' },
-                    multiplier: { type: 'number' },
-                    description: { type: 'string' }
-                  }
-                }
-              },
-              unit: { type: 'string', description: 'Unit for this item' }
+              unit: { type: 'string', description: 'Unit for this item' },
+              action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
             },
-            required: ['name', 'quantity', 'category']
+            required: ['name', 'category', 'action']
           }
         },
         required: true
@@ -104,6 +102,7 @@ export default createOperation.mutation({
         const callParams = {
           systemPrompt: CALL_CONFIG.defaultSystemPrompt,
           voice: CALL_CONFIG.voice,
+          model: CALL_CONFIG.model,
           temperature: CALL_CONFIG.temperature,
           maxDuration: CALL_CONFIG.maxDuration,
           timeExceededMessage: CALL_CONFIG.timeExceededMessage,

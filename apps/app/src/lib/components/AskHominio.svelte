@@ -6,8 +6,8 @@
 	import { createMachine } from '$lib/composables/svelteMachine';
 
 	// Create updateShoppingList mutation
-	const updateShoppingListMutation = createMutation({
-		operationName: 'updateShoppingListItems'
+	const addItemsMutation = createMutation({
+		operationName: 'addItemsToShoppingList'
 	});
 
 	// Shopping list client tool implementation
@@ -18,29 +18,52 @@
 				typeof parameters.items === 'string' ? JSON.parse(parameters.items) : parameters.items;
 			console.log('Parsed items array:', itemsArray);
 
-			const { data, error } = await $updateShoppingListMutation.mutateAsync({
-				listId: '685b9b0b-33fa-4672-a634-7a95c0150018',
-				items: itemsArray.map((item: any) => ({
-					name: item.name,
-					category: item.category,
-					quantity: item.quantity,
-					unit: item.unit,
-					icon: item.icon
-				}))
-			});
+			// Group items by action
+			const addItems = itemsArray.filter((item: any) => item.action === 'add');
+			const removeItems = itemsArray.filter((item: any) => item.action === 'remove');
 
-			if (error) {
-				console.error('Error updating shopping list:', error);
-				return 'Failed to update shopping list';
+			// Process add items
+			if (addItems.length > 0) {
+				await $addItemsMutation.mutateAsync({
+					action: 'add',
+					items: addItems.map((item: any) => ({
+						name: item.name,
+						category: item.category,
+						quantity: item.quantity || 1,
+						unit: item.unit,
+						icon: item.icon
+					}))
+				});
 			}
 
-			const items = itemsArray
-				.map((item: any) => `${item.quantity} ${item.unit} of ${item.name} (${item.category})`)
-				.join(', ');
+			// Process remove items
+			if (removeItems.length > 0) {
+				await $addItemsMutation.mutateAsync({
+					action: 'remove',
+					items: removeItems.map((item: any) => ({
+						name: item.name,
+						category: item.category
+					}))
+				});
+			}
 
-			const responseMessage = `Added to shopping list: ${items}`;
-			console.log('Response:', responseMessage);
-			return responseMessage;
+			// Build response message
+			const addedItems = addItems.length > 0
+				? addItems
+					.map((item: any) => `${item.quantity || 1} ${item.unit || 'pcs'} of ${item.name} (${item.category})`)
+					.join(', ')
+				: '';
+			const removedItems = removeItems.length > 0
+				? removeItems
+					.map((item: any) => `${item.name} (${item.category})`)
+					.join(', ')
+				: '';
+
+			let responseMessage = '';
+			if (addedItems) responseMessage += `Added to shopping list: ${addedItems}. `;
+			if (removedItems) responseMessage += `Removed from shopping list: ${removedItems}.`;
+
+			return responseMessage.trim();
 		} catch (error) {
 			console.error('Error processing shopping list items:', error);
 			return 'Failed to process shopping list items';
