@@ -36,7 +36,7 @@ const CALL_CONFIG = {
   Never appologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
   `,
   voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
-  temperature: 0.8,
+  temperature: 0.6,
   maxDuration: '120s', // 2 minutes in seconds
   timeExceededMessage: 'Maximum calltime exceeded. See you next time!',
   firstSpeaker: 'FIRST_SPEAKER_USER',
@@ -165,7 +165,7 @@ export default createOperation.mutation({
 
           // End the call first
           await context.ultravox.endCall(ultravoxCallId);
-          
+
           // Wait a bit for the transcript to be processed
           await new Promise(resolve => setTimeout(resolve, 2000));
 

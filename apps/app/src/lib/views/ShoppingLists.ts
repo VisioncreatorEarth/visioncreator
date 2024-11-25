@@ -26,7 +26,7 @@ export let view = {
         "id": "BringMe",
         "map": {
           "lists": {
-            "query": "queryShoppingLists"
+            "query": "queryMyShoppingList"
           },
           "title": "Shopping Lists",
           "description": "Manage your shopping lists"

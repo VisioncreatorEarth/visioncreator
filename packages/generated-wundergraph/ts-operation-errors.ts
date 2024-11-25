@@ -5,6 +5,7 @@ import type { ClientOperationErrors, GraphQLError } from "@wundergraph/sdk/clien
 export type OperationErrors = {
 	MyNewsletterStatus: MyNewsletterStatusErrors;
 	NewsletterToggle: NewsletterToggleErrors;
+	addItemsToShoppingList: AddItemsToShoppingListErrors;
 	askClaude: AskClaudeErrors;
 	askHominio: AskHominioErrors;
 	calculateCID: CalculateCIDErrors;
@@ -26,8 +27,8 @@ export type OperationErrors = {
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMails: QueryMailsErrors;
 	queryMe: QueryMeErrors;
+	queryMyShoppingList: QueryMyShoppingListErrors;
 	queryMyViews: QueryMyViewsErrors;
-	queryShoppingLists: QueryShoppingListsErrors;
 	queryUserStats: QueryUserStatsErrors;
 	saveMailWIP: SaveMailWIPErrors;
 	sendMail: SendMailErrors;
@@ -54,6 +55,7 @@ export type OperationUltravoxAuthenticationError = {
 
 export type MyNewsletterStatusErrors = ClientOperationErrors;
 export type NewsletterToggleErrors = ClientOperationErrors;
+export type AddItemsToShoppingListErrors = ClientOperationErrors;
 export type AskClaudeErrors = ClientOperationErrors;
 export type AskHominioErrors =
 	| OperationUltravoxInitializationError
@@ -78,8 +80,8 @@ export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
+export type QueryMyShoppingListErrors = ClientOperationErrors;
 export type QueryMyViewsErrors = ClientOperationErrors;
-export type QueryShoppingListsErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
 export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;

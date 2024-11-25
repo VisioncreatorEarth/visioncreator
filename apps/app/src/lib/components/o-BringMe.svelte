@@ -4,8 +4,8 @@
 	import Icon from '@iconify/svelte';
 
 	export let me;
-	export let title = 'Shopping Lists';
-	export let description = 'Manage your shopping lists';
+	export let title = 'Shopping List';
+	export let description = 'Manage your shopping list';
 
 	// Category colors with hover states
 	const categoryColors = {
@@ -145,170 +145,96 @@
 		{ name: 'Sponges', category: 'Household', icon: 'mdi:spray-bottle' },
 		{ name: 'Light Bulbs', category: 'Household', icon: 'mdi:lightbulb' }
 	];
+
 	// WunderGraph queries and mutations
-	const shoppingListsQuery = createQuery({
-		operationName: 'queryShoppingLists',
+	const shoppingListQuery = createQuery({
+		operationName: 'queryMyShoppingList',
 		liveQuery: true
 	});
 
-	const createShoppingListMutation = createMutation({
-		operationName: 'createShoppingList'
+	const addItemsMutation = createMutation({
+		operationName: 'addItemsToShoppingList'
 	});
 
-	const updateShoppingListItemsMutation = createMutation({
-		operationName: 'updateShoppingListItems'
-	});
-
-	const toggleShoppingListItemMutation = createMutation({
-		operationName: 'toggleShoppingListItem'
-	});
-
-	let newListName = '';
-	let showNewListForm = false;
-	let currentListId: string | null = null;
-
-	$: currentList = $shoppingListsQuery.data?.find((list) => list.id === currentListId);
-	$: groupedItems = currentList?.shopping_list_items
-		? categoryOrder
-				.map((category) => ({
-					category,
-					items: currentList!.shopping_list_items.filter(
-						(item) => item.shopping_items?.category === category && !item.is_checked
-					)
-				}))
-				.filter((group) => group.items.length > 0)
-		: [];
-
-	async function addRandomItems() {
-		if (!currentListId) return;
-
+	// Handle adding items
+	async function handleAddItems(items) {
 		try {
-			await $updateShoppingListItemsMutation.mutateAsync({
-				listId: currentListId,
-				items: sampleItems.map((item) => ({
-					...item,
-					quantity: 1
+			const result = await $addItemsMutation.mutateAsync({
+				action: 'add',
+				items: items.map((item) => ({
+					name: item.name,
+					category: item.category,
+					quantity: item.quantity || 1,
+					unit: item.unit,
+					icon: item.icon
 				}))
 			});
+			await $shoppingListQuery.refetch();
+
+			if (result.error) {
+				throw new Error(result.error.message);
+			}
 		} catch (error) {
-			console.error('Error adding random items:', error);
+			console.error('Error adding items:', error);
 		}
 	}
 
-	async function createList() {
-		if (!newListName.trim()) return;
-
+	// Handle toggling items
+	async function handleToggleItem(item) {
 		try {
-			await $createShoppingListMutation.mutateAsync({
-				listName: newListName.trim()
+			const result = await $addItemsMutation.mutateAsync({
+				action: 'remove',
+				items: [
+					{
+						name: item.name,
+						category: item.category
+					}
+				]
 			});
+			await $shoppingListQuery.refetch();
 
-			newListName = '';
-			showNewListForm = false;
-			await $shoppingListsQuery.refetch();
-		} catch (error) {
-			console.error('Error creating list:', error);
-		}
-	}
-
-	async function toggleItemChecked(itemId: string, itemName: string) {
-		if (!currentListId) return;
-
-		try {
-			await $toggleShoppingListItemMutation.mutateAsync({
-				listId: currentListId,
-				itemName
-			});
-
-			await $shoppingListsQuery.refetch();
+			if (result.error) {
+				throw new Error(result.error.message);
+			}
 		} catch (error) {
 			console.error('Error toggling item:', error);
 		}
 	}
 
-	onMount(async () => {
-		await $shoppingListsQuery.refetch();
+	onMount(() => {
+		// No need to manually fetch since we're using liveQuery
 	});
 </script>
 
 <div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
 	<div class="flex overflow-hidden flex-grow w-full h-full">
-		<!-- Lists Sidebar -->
-		<div class="overflow-y-auto p-4 w-80 h-full border-r border-surface-700">
-			<!-- New List Form -->
-			{#if showNewListForm}
-				<div class="p-4 mb-4 rounded-lg bg-surface-800">
-					<form on:submit|preventDefault={createList} class="flex flex-col gap-2">
-						<input
-							type="text"
-							bind:value={newListName}
-							placeholder="List name"
-							class="px-4 py-2 w-full text-lg text-white bg-white bg-opacity-20 rounded-full border transition-all duration-300 ease-in-out outline-none border-primary-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
-						/>
-						<div class="flex gap-2 justify-end">
-							<button
-								type="button"
-								on:click={() => {
-									showNewListForm = false;
-									newListName = '';
-								}}
-								class="btn variant-soft"
-							>
-								Cancel
-							</button>
-							<button
-								type="submit"
-								class="bg-gradient-to-br btn variant-gradient-secondary-primary"
-							>
-								Create List
-							</button>
-						</div>
-					</form>
-				</div>
-			{:else}
-				<button
-					on:click={() => (showNewListForm = true)}
-					class="flex gap-2 justify-center items-center mb-4 w-full bg-gradient-to-br btn variant-gradient-secondary-primary"
-				>
-					<Icon icon="mdi:plus" class="w-5 h-5" />
-					<span>New Shopping List</span>
-				</button>
-			{/if}
-
-			<!-- Lists -->
-			{#if $shoppingListsQuery.data}
-				<div class="space-y-2">
-					{#each $shoppingListsQuery.data as list}
-						<button
-							class="w-full p-4 text-left transition-colors rounded-lg {currentListId === list.id
-								? 'bg-surface-700'
-								: 'bg-surface-800 hover:bg-surface-700'}"
-							on:click={() => (currentListId = list.id)}
-						>
-							<h3 class="font-semibold">{list.name}</h3>
-							<p class="text-sm text-surface-300">
-								{list.shopping_list_items?.length || 0} items
-							</p>
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
-
 		<!-- Main Content -->
 		<div class="overflow-y-auto flex-1 p-4 h-full">
-			{#if currentList}
+			{#if $shoppingListQuery.isLoading}
+				<div class="py-12 text-center text-surface-300">
+					<p class="text-lg">Loading shopping list...</p>
+				</div>
+			{:else if $shoppingListQuery.error}
+				<div class="py-12 text-center text-surface-300">
+					<p class="text-lg text-error-500">
+						Error loading shopping list: {$shoppingListQuery.error.message}
+					</p>
+					<button class="mt-4 btn variant-filled" on:click={() => $shoppingListQuery.refetch()}>
+						Try Again
+					</button>
+				</div>
+			{:else if $shoppingListQuery.data}
 				<div class="flex justify-between items-center mb-6">
-					<h2 class="text-2xl font-bold">{currentList.name}</h2>
+					<h2 class="text-2xl font-bold">Shopping List</h2>
 					<button
 						class="bg-gradient-to-br btn variant-gradient-secondary-primary"
-						on:click={addRandomItems}
+						on:click={() => handleAddItems(sampleItems)}
 					>
 						Add Random Items
 					</button>
 				</div>
 
-				{#if currentList.shopping_list_items?.length === 0}
+				{#if !$shoppingListQuery.data.shopping_list_items?.length}
 					<div class="p-8 text-center text-surface-200">
 						<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
 						<p>No items in this list yet</p>
@@ -318,13 +244,13 @@
 					<div class="space-y-8">
 						<!-- Unchecked Items Grid -->
 						<div class="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-8">
-							{#each groupedItems as group}
-								{#each group.items as item (item.id)}
+							{#each categoryOrder as category}
+								{#each $shoppingListQuery.data.shopping_list_items.filter((item) => item.shopping_items?.category === category && !item.is_checked) || [] as item (item.id)}
 									<button
 										class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {categoryColors[
 											item.shopping_items?.category || 'Other'
 										]}"
-										on:click={() => toggleItemChecked(item.id, item.shopping_items?.name || '')}
+										on:click={() => handleToggleItem(item.shopping_items)}
 									>
 										<Icon
 											icon={item.shopping_items?.icon ||
@@ -347,14 +273,14 @@
 						</div>
 
 						<!-- Purchased Items Section -->
-						{#if currentList.shopping_list_items.some((item) => item.is_checked)}
+						{#if ($shoppingListQuery.data.shopping_list_items || []).some((item) => item.is_checked)}
 							<div class="space-y-4">
 								<div class="divider divider-surface">Purchased Items</div>
 								<div class="grid grid-cols-3 gap-4 opacity-60 sm:grid-cols-5 lg:grid-cols-8">
-									{#each currentList.shopping_list_items.filter((item) => item.is_checked) as item (item.id)}
+									{#each ($shoppingListQuery.data.shopping_list_items || []).filter((item) => item.is_checked) as item (item.id)}
 										<button
 											class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
-											on:click={() => toggleItemChecked(item.id, item.shopping_items?.name || '')}
+											on:click={() => handleToggleItem(item.shopping_items)}
 										>
 											<Icon
 												icon={item.shopping_items?.icon ||
@@ -381,10 +307,6 @@
 					</div>
 				{/if}
 				<div class="h-48" />
-			{:else}
-				<div class="py-12 text-center text-surface-300">
-					<p class="text-lg">Select a list from the sidebar or create a new one to get started!</p>
-				</div>
 			{/if}
 		</div>
 	</div>

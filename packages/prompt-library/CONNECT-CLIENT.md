@@ -148,6 +148,8 @@ async function handleSubmit() {
    - Always use `liveQuery` 
    - Consider pagination for large datasets
    - Implement proper loading states
+   - always try to directly refetch:
+      - f.e. await $shoppingListQuery.refetch();
 
 4. **Security**:
    - Always validate input with zod
