@@ -8,8 +8,8 @@
 		liveQuery: true
 	});
 
-	const endCallMutation = createMutation({
-		operationName: 'askHominio'
+	const clearUltravoxCallsMutation = createMutation({
+		operationName: 'clearUltravoxCalls'
 	});
 
 	// Filter state
@@ -32,15 +32,68 @@
 			}) ?? [];
 
 	// Delete call function
+	let selectedCalls: string[] = [];
+
 	async function deleteCall(callId: string) {
+		if (!callId) {
+			console.error('No call ID provided');
+			return;
+		}
+		console.log('Attempting to delete call with ID:', callId, 'Type:', typeof callId);
 		try {
-			await $endCallMutation.mutateAsync({
-				action: 'end',
-				callId
+			const response = await $clearUltravoxCallsMutation.mutateAsync({
+				input: {
+					ultravoxCallIds: [callId]
+				}
 			});
-			// The query will automatically refresh due to liveQuery: true
+
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+
+			if (response.data?.errors?.length > 0) {
+				throw new Error(response.data.errors[0].error);
+			}
+
+			// Refresh the calls list
+			await $timeUsageQuery.refetch();
 		} catch (error) {
-			console.error('Error deleting call:', error);
+			console.error('Failed to delete call:', error);
+		}
+	}
+
+	async function deleteSelectedCalls() {
+		if (selectedCalls.length === 0) {
+			console.error('No calls selected');
+			return;
+		}
+
+		console.log(
+			'Attempting to delete selected calls:',
+			selectedCalls,
+			'Types:',
+			selectedCalls.map((id) => typeof id)
+		);
+		try {
+			const response = await $clearUltravoxCallsMutation.mutateAsync({
+				input: {
+					ultravoxCallIds: selectedCalls
+				}
+			});
+
+			if (response.error) {
+				throw new Error(response.error.message);
+			}
+
+			if (response.data?.errors?.length > 0) {
+				throw new Error(response.data.errors[0].error);
+			}
+
+			// Clear selection and refresh
+			selectedCalls = [];
+			await $timeUsageQuery.refetch();
+		} catch (error) {
+			console.error('Failed to delete selected calls:', error);
 		}
 	}
 
@@ -125,6 +178,11 @@
 						<option value="desc">Newest First</option>
 						<option value="asc">Oldest First</option>
 					</select>
+					{#if selectedCalls.length > 0}
+						<button class="btn variant-filled-error" on:click={deleteSelectedCalls}>
+							Delete Selected ({selectedCalls.length})
+						</button>
+					{/if}
 				</div>
 			</header>
 
@@ -137,18 +195,56 @@
 					<table class="table table-hover">
 						<thead>
 							<tr>
+								<th>
+									<label>
+										<input
+											type="checkbox"
+											class="checkbox"
+											checked={selectedCalls.length === filteredCalls.length}
+											on:change={(e) => {
+												if (e.target.checked) {
+													selectedCalls = filteredCalls.map((call) => call.callId);
+												} else {
+													selectedCalls = [];
+												}
+											}}
+										/>
+									</label>
+								</th>
 								<th>Call ID</th>
 								<th>Created</th>
 								<th>Duration</th>
 								<th>Status</th>
 								<th>First Speaker</th>
 								<th>Voice</th>
-								<th class="text-right">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
 							{#each filteredCalls as call}
 								<tr class="hover:variant-soft-surface">
+									<td>
+										<label>
+											<input
+												type="checkbox"
+												class="checkbox"
+												checked={selectedCalls.includes(call.callId)}
+												on:change={(e) => {
+													console.log(
+														'Checkbox changed for call:',
+														call.callId,
+														'Type:',
+														typeof call.callId
+													);
+													if (e.target.checked) {
+														selectedCalls = [...selectedCalls, call.callId];
+													} else {
+														selectedCalls = selectedCalls.filter((id) => id !== call.callId);
+													}
+													console.log('Selected calls after change:', selectedCalls);
+												}}
+											/>
+										</label>
+									</td>
 									<td>{call.callId}</td>
 									<td>{formatDate(call.created)}</td>
 									<td>{calculateDuration(call.created, call.ended)}</td>
@@ -163,14 +259,6 @@
 									</td>
 									<td>{call.firstSpeaker}</td>
 									<td>{call.voice}</td>
-									<td class="text-right">
-										<button
-											class="btn btn-sm variant-filled-error"
-											on:click={() => deleteCall(call.callId)}
-										>
-											Delete
-										</button>
-									</td>
 								</tr>
 							{/each}
 						</tbody>

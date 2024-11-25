@@ -176,9 +176,20 @@ export default createOperation.mutation({
             console.log('📝 Got transcript response:', transcriptResponse);
 
             if (transcriptResponse?.results?.length > 0) {
-              // Store the full messages array as JSONB
-              finalTranscript = transcriptResponse.results;
-              console.log('📝 Prepared transcript for DB:', finalTranscript);
+              const baseTime = Date.now();
+              finalTranscript = [...transcriptResponse.results]
+                .reverse()
+                .map((message, index) => {
+                  const messageTime = new Date(baseTime - ((transcriptResponse.results.length - 1 - index) * 1000));
+                  return {
+                    content: message.text || '',
+                    timestamp: messageTime.toISOString(),
+                    role: message.role || 'unknown',
+                    type: 'text',
+                    sequence: index + 1
+                  };
+                });
+              console.log('📝 Prepared structured transcript for DB:', finalTranscript);
             }
           } catch (transcriptError) {
             console.error('❌ Error handling transcript:', transcriptError);
@@ -188,7 +199,7 @@ export default createOperation.mutation({
           await context.ultravox.deleteCall(ultravoxCallId);
 
           // Update the database using the end_hominio_call function
-          const { error: endError } = await context.supabase
+          const { data: endData, error: endError } = await context.supabase
             .rpc('end_hominio_call', {
               p_user_id: user.customClaims.id,
               p_call_id: input.callId,
@@ -201,6 +212,8 @@ export default createOperation.mutation({
             console.error('❌ Database error:', endError);
             throw new Error('Failed to update call in database: ' + endError.message);
           }
+
+          console.log('💾 Database update result:', { endData, endError });
 
           return {
             success: true,
