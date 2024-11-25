@@ -94,7 +94,11 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated", "admin"],
   },
   errors: [UltravoxInitializationError, UltravoxAuthenticationError],
-  handler: async ({ input, context }) => {
+  handler: async ({ input, context, user }) => {
+    if (!user?.customClaims?.id) {
+      throw new Error('User ID not found');
+    }
+
     try {
       if (input.action === 'create') {
         const callParams = {
@@ -115,18 +119,73 @@ export default createOperation.mutation({
           throw new Error('Invalid call data received from Ultravox');
         }
 
+        const { data: dbCallId, error: startError } = await context.supabase
+          .rpc('start_hominio_call', {
+            p_user_id: user.customClaims.id,
+            p_ultravox_call_id: result.data.callId,
+            p_ultravox_join_url: result.data.joinUrl,
+            p_voice_id: CALL_CONFIG.voice,
+            p_system_prompt: CALL_CONFIG.defaultSystemPrompt,
+            p_temperature: CALL_CONFIG.temperature,
+            p_max_duration: CALL_CONFIG.maxDuration,
+            p_first_speaker: CALL_CONFIG.firstSpeaker
+          })
+          .single();
+
+        if (startError) {
+          try {
+            await context.ultravox.endCall(result.data.callId);
+          } catch (cleanupError) {
+            console.error('Failed to cleanup Ultravox call after database error:', cleanupError);
+          }
+          throw new Error('Failed to start call tracking: ' + startError.message);
+        }
+
         return {
-          callId: result.data.callId,
+          callId: dbCallId,
+          ultravoxCallId: result.data.callId,
           joinUrl: result.data.joinUrl
         };
 
       } else if (input.action === 'end' && input.callId) {
         await context.ultravox.endCall(input.callId);
-        return { success: true };
+
+        const { data: duration, error: endError } = await context.supabase
+          .rpc('end_hominio_call', {
+            p_user_id: user.customClaims.id,
+            p_call_id: input.callId,
+            p_end_reason: 'user_ended',
+            p_transcript: null,
+            p_tool_executions: null
+          })
+          .single();
+
+        if (endError) {
+          console.error('Error ending hominio call:', endError);
+          throw new Error('Failed to end call tracking.');
+        }
+
+        return {
+          success: true,
+          duration
+        };
       }
 
       throw new Error('Invalid action or missing callId');
     } catch (error) {
+      if (input.callId) {
+        try {
+          await context.supabase
+            .rpc('mark_hominio_call_error', {
+              p_user_id: user.customClaims.id,
+              p_call_id: input.callId,
+              p_error_message: error.message || 'Unknown error occurred'
+            });
+        } catch (dbError) {
+          console.error('Failed to mark call as error:', dbError);
+        }
+      }
+      
       console.error('❌ Operation error:', error);
       throw error;
     }
