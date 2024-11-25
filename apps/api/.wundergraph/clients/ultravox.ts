@@ -276,7 +276,7 @@ export class UltravoxClient {
     }
   }
 
-  async getCallTranscript(callId: string): Promise<UltravoxResponse> {
+  async getTranscript(callId: string): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/calls/${callId}/messages`, {
         method: 'GET',
@@ -287,33 +287,14 @@ export class UltravoxClient {
       });
 
       if (!response.ok) {
-        console.error('❌ Response not OK:', {
-          status: response.status,
-          statusText: response.statusText
-        });
-
-        if (response.status === 401) {
-          throw new UltravoxAuthenticationError('Invalid API key');
-        }
-        throw new Error(`Failed to get call transcript: ${response.statusText}`);
+        throw new Error(`Failed to get transcript: ${response.statusText}`);
       }
 
       const data = await response.json();
-      const transcript = data.results.map((msg: any) => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp
-      }));
-
-      return {
-        data: {
-          callId,
-          transcript
-        }
-      };
+      return data;
     } catch (error) {
-      console.error('❌ Error getting call transcript:', error);
-      return { error: error.message };
+      console.error('❌ Error getting transcript:', error);
+      throw error;
     }
   }
 }

@@ -111,11 +111,9 @@ export default createOperation.mutation({
           selectedTools: [shoppingListTool]
         };
 
-        console.log('📞 Creating call with params:', callParams);
         const result = await context.ultravox.createCall(callParams);
 
         if (!result?.data?.callId || !result?.data?.joinUrl) {
-          console.error('❌ Invalid call data received:', result);
           throw new Error('Invalid call data received from Ultravox');
         }
 
@@ -160,7 +158,6 @@ export default createOperation.mutation({
             .single();
 
           if (lookupError || !callData?.ultravox_call_id) {
-            console.error('❌ Error looking up call:', lookupError);
             throw new Error('Could not find call in database');
           }
 
@@ -170,55 +167,44 @@ export default createOperation.mutation({
           await context.ultravox.endCall(ultravoxCallId);
           
           // Wait a bit for the transcript to be processed
-          console.log('⏳ Waiting for transcript processing...');
           await new Promise(resolve => setTimeout(resolve, 2000));
 
           // Try to get the transcript
-          let transcript = null;
+          let finalTranscript = null;
           try {
-            const transcriptResponse = await context.ultravox.getCallTranscript(ultravoxCallId);
-            console.log('📝 Raw transcript result:', JSON.stringify(transcriptResponse, null, 2));
+            const transcriptResponse = await context.ultravox.getTranscript(ultravoxCallId);
+            console.log('📝 Got transcript response:', transcriptResponse);
 
-            if (transcriptResponse?.data?.transcript) {
-              const messages = transcriptResponse.data.transcript;
-              console.log('📝 Found transcript messages:', JSON.stringify(messages, null, 2));
-              transcript = messages
-                .filter(msg => msg.content)
-                .map(msg => `${msg.role}: ${msg.content}`)
-                .join('\n');
-            } else {
-              console.log('⚠️ No transcript found in result');
+            if (transcriptResponse?.results?.length > 0) {
+              // Store the full messages array as JSONB
+              finalTranscript = transcriptResponse.results;
+              console.log('📝 Prepared transcript for DB:', finalTranscript);
             }
           } catch (transcriptError) {
-            console.error('❌ Error retrieving transcript:', transcriptError);
+            console.error('❌ Error handling transcript:', transcriptError);
           }
 
+          // Now we can safely delete the call
+          await context.ultravox.deleteCall(ultravoxCallId);
+
           // Update the database using the end_hominio_call function
-          const { data: endCallResult, error: endError } = await context.supabase
+          const { error: endError } = await context.supabase
             .rpc('end_hominio_call', {
               p_user_id: user.customClaims.id,
-              p_call_id: input.callId, // This is the database ID
+              p_call_id: input.callId,
               p_end_reason: 'user_ended',
-              p_transcript: transcript ? JSON.stringify(transcript) : null,
+              p_transcript: finalTranscript, // This will be stored as JSONB
               p_tool_executions: null
             });
 
           if (endError) {
-            console.error('❌ Error updating call in database:', endError);
-            throw endError;
-          }
-
-          // Delete the call from Ultravox
-          try {
-            await context.ultravox.deleteCall(ultravoxCallId);
-          } catch (deleteError) {
-            console.error('❌ Error deleting call:', deleteError);
+            console.error('❌ Database error:', endError);
+            throw new Error('Failed to update call in database: ' + endError.message);
           }
 
           return {
             success: true,
-            transcript,
-            callData: endCallResult
+            message: 'Call ended successfully'
           };
         } catch (error) {
           // If anything fails, try to mark the call as errored
@@ -233,7 +219,6 @@ export default createOperation.mutation({
             console.error('❌ Error marking call as errored:', markError);
           }
 
-          console.error('❌ Operation error:', error);
           throw error;
         }
       }
@@ -253,7 +238,6 @@ export default createOperation.mutation({
         }
       }
 
-      console.error('❌ Operation error:', error);
       throw error;
     }
   }
