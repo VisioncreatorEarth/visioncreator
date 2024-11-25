@@ -4,6 +4,8 @@
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
+	import Icon from '@iconify/svelte';
+	import OShoppingItems from './o-ShoppingItems.svelte';
 
 	// Create updateShoppingList mutation
 	const addItemsMutation = createMutation({
@@ -11,22 +13,27 @@
 	});
 
 	// Shopping list client tool implementation
+	let currentItems: any[] = [];
+	let addedItems: any[] = [];
+	let removedItems: any[] = [];
+
 	const updateShoppingListTool = async (parameters: any) => {
-		console.log('UpdateShoppingList called with parameters:', parameters);
 		try {
 			const itemsArray =
 				typeof parameters.items === 'string' ? JSON.parse(parameters.items) : parameters.items;
-			console.log('Parsed items array:', itemsArray);
 
 			// Group items by action
-			const addItems = itemsArray.filter((item: any) => item.action === 'add');
-			const removeItems = itemsArray.filter((item: any) => item.action === 'remove');
+			addedItems = itemsArray.filter((item: any) => item.action === 'add');
+			removedItems = itemsArray.filter((item: any) => item.action === 'remove');
 
-			// Process add items
-			if (addItems.length > 0) {
+			// Update display items
+			currentItems = [...addedItems, ...removedItems];
+
+			// Process added items
+			if (addedItems.length > 0) {
 				await $addItemsMutation.mutateAsync({
 					action: 'add',
-					items: addItems.map((item: any) => ({
+					items: addedItems.map((item: any) => ({
 						name: item.name,
 						category: item.category,
 						quantity: item.quantity || 1,
@@ -36,11 +43,11 @@
 				});
 			}
 
-			// Process remove items
-			if (removeItems.length > 0) {
+			// Process removed items
+			if (removedItems.length > 0) {
 				await $addItemsMutation.mutateAsync({
 					action: 'remove',
-					items: removeItems.map((item: any) => ({
+					items: removedItems.map((item: any) => ({
 						name: item.name,
 						category: item.category
 					}))
@@ -48,24 +55,24 @@
 			}
 
 			// Build response message
-			const addedItems = addItems.length > 0
-				? addItems
-					.map((item: any) => `${item.quantity || 1} ${item.unit || 'pcs'} of ${item.name} (${item.category})`)
-					.join(', ')
-				: '';
-			const removedItems = removeItems.length > 0
-				? removeItems
-					.map((item: any) => `${item.name} (${item.category})`)
-					.join(', ')
-				: '';
-
 			let responseMessage = '';
-			if (addedItems) responseMessage += `Added to shopping list: ${addedItems}. `;
-			if (removedItems) responseMessage += `Removed from shopping list: ${removedItems}.`;
+			if (addedItems.length > 0) {
+				const addedText = addedItems
+					.map((item: any) => `${item.quantity || 1} ${item.unit || 'pcs'} of ${item.name}`)
+					.join(', ');
+				responseMessage += `Added: ${addedText}. `;
+			}
+			if (removedItems.length > 0) {
+				const removedText = removedItems.map((item: any) => item.name).join(', ');
+				responseMessage += `Removed: ${removedText}.`;
+			}
 
 			return responseMessage.trim();
 		} catch (error) {
 			console.error('Error processing shopping list items:', error);
+			currentItems = [];
+			addedItems = [];
+			removedItems = [];
 			return 'Failed to process shopping list items';
 		}
 	};
@@ -291,10 +298,11 @@
 
 				try {
 					// First end the call and handle transcript
-					await $askHominioMutation.mutateAsync({
+					const endResponse = await $askHominioMutation.mutateAsync({
 						action: 'end',
 						callId: context.currentCallId
 					});
+					console.log('End call response:', endResponse);
 
 					// Then ensure we leave the call session
 					if (context.session) {
@@ -424,6 +432,24 @@
 						</div>
 					</div>
 				{/each}
+			</div>
+		{/if}
+
+		{#if currentItems.length > 0}
+			<div class="p-4 w-full max-w-md rounded-lg shadow-lg bg-surface-100-800-token">
+				{#if addedItems.length > 0}
+					<div class="mb-4">
+						<h3 class="mb-2 text-sm font-medium text-surface-200">Items to Add:</h3>
+						<OShoppingItems items={addedItems} />
+					</div>
+				{/if}
+				
+				{#if removedItems.length > 0}
+					<div>
+						<h3 class="mb-2 text-sm font-medium text-surface-200">Items to Remove:</h3>
+						<OShoppingItems items={removedItems} />
+					</div>
+				{/if}
 			</div>
 		{/if}
 

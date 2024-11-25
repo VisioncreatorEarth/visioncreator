@@ -2,6 +2,7 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
+	import OShoppingItems from './o-ShoppingItems.svelte';
 
 	export let me;
 	export let title = 'Shopping List';
@@ -152,58 +153,49 @@
 		liveQuery: true
 	});
 
-	const addItemsMutation = createMutation({
+	const addRandomItemsMutation = createMutation({
+		operationName: 'addRandomItemsToShoppingList'
+	});
+
+	const toggleItemMutation = createMutation({
 		operationName: 'addItemsToShoppingList'
 	});
 
-	// Handle adding items
-	async function handleAddItems(items) {
+	// Handle adding random items
+	const addRandomItems = async () => {
 		try {
-			const result = await $addItemsMutation.mutateAsync({
-				action: 'add',
-				items: items.map((item) => ({
-					name: item.name,
-					category: item.category,
-					quantity: item.quantity || 1,
-					unit: item.unit,
-					icon: item.icon
-				}))
-			});
-			await $shoppingListQuery.refetch();
-
-			if (result.error) {
-				throw new Error(result.error.message);
-			}
+			await $addRandomItemsMutation.mutateAsync();
 		} catch (error) {
-			console.error('Error adding items:', error);
+			console.error('Error adding random items:', error);
 		}
-	}
+	};
 
 	// Handle toggling items
-	async function handleToggleItem(item) {
+	const handleToggleItem = async (item: any) => {
 		try {
-			const result = await $addItemsMutation.mutateAsync({
+			await $toggleItemMutation.mutateAsync({
 				action: 'remove',
-				items: [
-					{
-						name: item.name,
-						category: item.category
-					}
-				]
+				items: [{
+					name: item.name,
+					category: item.category
+				}]
 			});
 			await $shoppingListQuery.refetch();
-
-			if (result.error) {
-				throw new Error(result.error.message);
-			}
 		} catch (error) {
 			console.error('Error toggling item:', error);
 		}
-	}
+	};
 
-	onMount(() => {
-		// No need to manually fetch since we're using liveQuery
-	});
+	$: items =
+		$shoppingListQuery.data?.shopping_list_items?.map((item) => ({
+			id: item.id,
+			name: item.shopping_items?.name,
+			category: item.shopping_items?.category,
+			quantity: item.quantity,
+			unit: item.unit,
+			icon: item.shopping_items?.icon,
+			is_checked: item.is_checked
+		})) || [];
 </script>
 
 <div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
@@ -228,7 +220,7 @@
 					<h2 class="text-2xl font-bold">Shopping List</h2>
 					<button
 						class="bg-gradient-to-br btn variant-gradient-secondary-primary"
-						on:click={() => handleAddItems(sampleItems)}
+						on:click={() => addRandomItems()}
 					>
 						Add Random Items
 					</button>
@@ -241,70 +233,7 @@
 						<p class="mt-2 text-sm">Click the button above to add some random items</p>
 					</div>
 				{:else}
-					<div class="space-y-8">
-						<!-- Unchecked Items Grid -->
-						<div class="grid grid-cols-3 gap-4 sm:grid-cols-5 lg:grid-cols-8">
-							{#each categoryOrder as category}
-								{#each $shoppingListQuery.data.shopping_list_items.filter((item) => item.shopping_items?.category === category && !item.is_checked) || [] as item (item.id)}
-									<button
-										class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {categoryColors[
-											item.shopping_items?.category || 'Other'
-										]}"
-										on:click={() => handleToggleItem(item.shopping_items)}
-									>
-										<Icon
-											icon={item.shopping_items?.icon ||
-												FALLBACK_ICONS[item.shopping_items?.category || 'Other'][0]}
-											class="mb-2 w-1/2 h-1/2"
-										/>
-										<span class="overflow-hidden text-xs text-center text-ellipsis">
-											{item.shopping_items?.name}
-										</span>
-										{#if item.quantity > 1 || item.unit}
-											<div
-												class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/10"
-											>
-												{item.quantity}{item.unit ? ` ${item.unit}` : ''}
-											</div>
-										{/if}
-									</button>
-								{/each}
-							{/each}
-						</div>
-
-						<!-- Purchased Items Section -->
-						{#if ($shoppingListQuery.data.shopping_list_items || []).some((item) => item.is_checked)}
-							<div class="space-y-4">
-								<div class="divider divider-surface">Purchased Items</div>
-								<div class="grid grid-cols-3 gap-4 opacity-60 sm:grid-cols-5 lg:grid-cols-8">
-									{#each ($shoppingListQuery.data.shopping_list_items || []).filter((item) => item.is_checked) as item (item.id)}
-										<button
-											class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
-											on:click={() => handleToggleItem(item.shopping_items)}
-										>
-											<Icon
-												icon={item.shopping_items?.icon ||
-													FALLBACK_ICONS[item.shopping_items?.category || 'Other'][0]}
-												class="mb-2 w-1/2 h-1/2 text-surface-200"
-											/>
-											<span
-												class="overflow-hidden text-xs text-center text-ellipsis text-surface-200"
-											>
-												{item.shopping_items?.name}
-											</span>
-											{#if item.quantity > 1 || item.unit}
-												<div
-													class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/10"
-												>
-													{item.quantity}{item.unit ? ` ${item.unit}` : ''}
-												</div>
-											{/if}
-										</button>
-									{/each}
-								</div>
-							</div>
-						{/if}
-					</div>
+					<OShoppingItems {items} onToggle={handleToggleItem} />
 				{/if}
 				<div class="h-48" />
 			{/if}
