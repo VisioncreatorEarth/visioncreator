@@ -13,6 +13,11 @@
 
 	export let onToggle: ((item: any) => void) | undefined = undefined;
 
+	function getItemKey(item: any, index: number, categoryIndex: number) {
+		if (item.id) return item.id;
+		return `${item.category}-${item.name}-${index}-${categoryIndex}-${Date.now()}`;
+	}
+
 	// Category colors with hover states and text colors
 	const categoryColors = {
 		Fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
@@ -68,12 +73,11 @@
 	</div>
 {:else}
 	<div class="space-y-8 @container">
-		<!-- Unchecked Items Grid -->
 		<div
 			class="grid grid-cols-2 @xs:grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
 		>
-			{#each categoryOrder as category}
-				{#each activeItems.filter((item) => item.category === category) || [] as item (item.id)}
+			{#each categoryOrder as category, categoryIndex}
+				{#each activeItems.filter((item) => item.category === category) || [] as item, index (`${category}-${item.name}-${index}-${categoryIndex}`)}
 					<button
 						class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {categoryColors[
 							item.category || 'Other'
@@ -104,7 +108,7 @@
 				<div
 					class="grid grid-cols-2 @2xs:grid-cols-3 @xs:grid-cols-4 @sm:grid-cols-5 @md:grid-cols-6 @lg:grid-cols-7 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4 opacity-60"
 				>
-					{#each purchasedItems as item (item.id)}
+					{#each purchasedItems as item (getItemKey(item))}
 						<button
 							class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
 							on:click={() => onToggle && onToggle(item)}

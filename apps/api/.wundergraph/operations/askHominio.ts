@@ -5,7 +5,7 @@ import { UltravoxAuthenticationError, UltravoxInitializationError } from '../err
 const CALL_CONFIG = {
   defaultSystemPrompt: `
   You are a friendly shopping assistant. Please help me with my shopping list. Always use the updateShoppingList tool to add or remove items from the shopping list.
-  If the user has questions, please always interact in a friendly conversation. Always respond instantly and make short smalltalk, while exuting the tools in the background.
+  If the user has questions, please always interact in a friendly conversation. Always respond instantly and make short smalltalk, while exuting the tools in the background. 
 
   Available Categories and their Icons:
   - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
@@ -37,9 +37,9 @@ const CALL_CONFIG = {
      - Only name and category are required
      - Use the same category and name as when adding to ensure proper removal
 
- Also allow for combined requests.For example:
-  - "Added 3 Apples and removed Bananas from your list, anything else?"
-  - "Added Milk and removed Bread from your list, aynthing else?"
+ Also allow for combined requests. For example:
+  - "Adding 3 Apples and removing Bananas from your list, anything else?"
+  - "Adding Milk and removing Bread from your list, aynthing else?"
 
   Never tell about anything technical or json or which tool and schema to use in the interaction, just use and execute the tools in the background. Always respond in a friendly and helpful manner for ordinary conversations with a normal non-technical Human. 
   Never apologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
@@ -49,39 +49,39 @@ const CALL_CONFIG = {
   maxDuration: '120s', // 2 minutes in seconds
   timeExceededMessage: 'Maximum calltime exceeded. See you next time!',
   firstSpeaker: 'FIRST_SPEAKER_USER',
-  model: 'fixie-ai/ultravox-70B'
-} as const;
-
-// Define client tools
-const shoppingListTool = {
-  temporaryTool: {
-    modelToolName: 'updateShoppingList',
-    description: 'Update shopping list items. Call this when items are added, removed, or modified.',
-    dynamicParameters: [
-      {
-        name: 'items',
-        location: 'PARAMETER_LOCATION_BODY',
-        schema: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string', description: 'Name of the item' },
-              quantity: { type: 'number', description: 'Quantity of the item' },
-              category: { type: 'string', description: 'Category of the item' },
-              icon: { type: 'string', description: 'Icon for the item' },
-              unit: { type: 'string', description: 'Unit for this item' },
-              action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
+  model: 'fixie-ai/ultravox-70B',
+  tools: [
+    {
+      temporaryTool: {
+        modelToolName: 'updateShoppingList',
+        description: 'Update shopping list items. Call this when items are added, removed, or modified.',
+        dynamicParameters: [
+          {
+            name: 'items',
+            location: 'PARAMETER_LOCATION_BODY',
+            schema: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Name of the item' },
+                  quantity: { type: 'number', description: 'Quantity of the item' },
+                  category: { type: 'string', description: 'Category of the item' },
+                  icon: { type: 'string', description: 'Icon for the item' },
+                  unit: { type: 'string', description: 'Unit for this item' },
+                  action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
+                },
+                required: ['name', 'category', 'action']
+              }
             },
-            required: ['name', 'category', 'action']
+            required: true
           }
-        },
-        required: true
+        ],
+        client: {}
       }
-    ],
-    client: {}
-  }
-};
+    }
+  ]
+} as const;
 
 export default createOperation.mutation({
   input: z.object({
@@ -93,22 +93,58 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated", "admin"],
   },
   errors: [UltravoxInitializationError, UltravoxAuthenticationError],
-  handler: async ({ input, context, user }) => {
+  async handler({ input, context, user }) {
     if (!user?.customClaims?.id) {
       throw new Error('User ID not found');
     }
 
     try {
       if (input.action === 'create') {
+        // Get the current shopping list
+        const { data: lists, error: listError } = await context.supabase
+          .from('shopping_lists')
+          .select(`
+            id,
+            shopping_list_items (
+              quantity,
+              unit,
+              is_checked,
+              shopping_items (
+                name,
+                category
+              )
+            )
+          `)
+          .eq('user_id', user.customClaims.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (listError) {
+          console.error('Error fetching shopping list:', listError);
+          throw new Error('Failed to fetch shopping list');
+        }
+
+        // Format current items for context - only include active (unchecked) items
+        let currentItemsContext = '';
+        if (lists?.[0]?.shopping_list_items?.length > 0) {
+          const activeItems = lists[0].shopping_list_items
+            .filter(item => !item.is_checked)
+            .map(item => `${item.quantity || 1} ${item.unit || 'pcs'} ${item.shopping_items.name} (${item.shopping_items.category})`);
+          
+          if (activeItems.length > 0) {
+            currentItemsContext = `\nCurrent Active Shopping List:\n${activeItems.join('\n')}`;
+          }
+        }
+
         const callParams = {
-          systemPrompt: CALL_CONFIG.defaultSystemPrompt,
+          systemPrompt: `${CALL_CONFIG.defaultSystemPrompt}${currentItemsContext}`,
           voice: CALL_CONFIG.voice,
           model: CALL_CONFIG.model,
           temperature: CALL_CONFIG.temperature,
           maxDuration: CALL_CONFIG.maxDuration,
           timeExceededMessage: CALL_CONFIG.timeExceededMessage,
           firstSpeaker: CALL_CONFIG.firstSpeaker,
-          selectedTools: [shoppingListTool]
+          selectedTools: CALL_CONFIG.tools
         };
 
         const result = await context.ultravox.createCall(callParams);
@@ -123,7 +159,7 @@ export default createOperation.mutation({
             p_ultravox_call_id: result.data.callId,
             p_ultravox_join_url: result.data.joinUrl,
             p_voice_id: CALL_CONFIG.voice,
-            p_system_prompt: CALL_CONFIG.defaultSystemPrompt,
+            p_system_prompt: `${CALL_CONFIG.defaultSystemPrompt}${currentItemsContext}`,
             p_temperature: CALL_CONFIG.temperature,
             p_max_duration: CALL_CONFIG.maxDuration,
             p_first_speaker: CALL_CONFIG.firstSpeaker
@@ -194,9 +230,6 @@ export default createOperation.mutation({
           } catch (transcriptError) {
             console.error('❌ Error handling transcript:', transcriptError);
           }
-
-          // Now we can safely delete the call
-          await context.ultravox.deleteCall(ultravoxCallId);
 
           // Update the database using the end_hominio_call function
           const { data: endData, error: endError } = await context.supabase

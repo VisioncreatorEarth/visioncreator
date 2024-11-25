@@ -4,7 +4,6 @@
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
-	import Icon from '@iconify/svelte';
 	import OShoppingItems from './o-ShoppingItems.svelte';
 
 	// Create updateShoppingList mutation
@@ -19,8 +18,14 @@
 
 	const updateShoppingListTool = async (parameters: any) => {
 		try {
-			const itemsArray =
-				typeof parameters.items === 'string' ? JSON.parse(parameters.items) : parameters.items;
+			// Handle double-stringified JSON
+			let itemsArray;
+			if (typeof parameters.items === 'string') {
+				const parsed = JSON.parse(parameters.items);
+				itemsArray = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+			} else {
+				itemsArray = parameters.items;
+			}
 
 			// Group items by action
 			addedItems = itemsArray.filter((item: any) => item.action === 'add');
@@ -36,7 +41,7 @@
 					items: addedItems.map((item: any) => ({
 						name: item.name,
 						category: item.category,
-						quantity: item.quantity || 1,
+						quantity: parseFloat(item.quantity) || 1,
 						unit: item.unit,
 						icon: item.icon
 					}))
@@ -54,26 +59,10 @@
 				});
 			}
 
-			// Build response message
-			let responseMessage = '';
-			if (addedItems.length > 0) {
-				const addedText = addedItems
-					.map((item: any) => `${item.quantity || 1} ${item.unit || 'pcs'} of ${item.name}`)
-					.join(', ');
-				responseMessage += `Added: ${addedText}. `;
-			}
-			if (removedItems.length > 0) {
-				const removedText = removedItems.map((item: any) => item.name).join(', ');
-				responseMessage += `Removed: ${removedText}.`;
-			}
-
-			return responseMessage.trim();
+			return 'Items updated successfully';
 		} catch (error) {
-			console.error('Error processing shopping list items:', error);
-			currentItems = [];
-			addedItems = [];
-			removedItems = [];
-			return 'Failed to process shopping list items';
+			console.error('Error updating shopping list:', error);
+			throw new Error('Failed to process shopping list items');
 		}
 	};
 
@@ -410,112 +399,105 @@
 	});
 </script>
 
-<div class="fixed bottom-20 left-1/2 z-50 transform -translate-x-1/2">
-	<div class="flex flex-col gap-4 items-center">
-		{#if transcripts.length > 0}
-			<div
-				class="w-full max-w-md p-4 rounded-lg shadow-lg bg-surface-100-800-token overflow-y-auto max-h-[60vh]"
-			>
-				{#each transcripts as transcript}
-					<div class="flex flex-col mb-3 last:mb-0">
-						<div class="flex {transcript.speaker === 'agent' ? 'justify-start' : 'justify-end'}">
+<div class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-xl bg-surface-900/30">
+	<div class="relative mx-auto mb-20 w-full max-w-2xl">
+		<div
+			class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
+			style="max-height: calc(100vh - 120px);"
+		>
+			<div class="space-y-3">
+				{#if transcripts.length > 0}
+					<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
+						{#each transcripts as transcript}
+							<div class="flex flex-col mb-3 last:mb-0">
+								<div
+									class="flex {transcript.speaker === 'agent' ? 'justify-start' : 'justify-end'}"
+								>
+									<div
+										class="rounded-lg p-3 max-w-[85%] {transcript.speaker === 'agent'
+											? 'bg-tertiary-500/20'
+											: 'bg-primary-500/20'}"
+									>
+										<p class="text-sm font-medium text-tertiary-200">
+											{transcript.speaker === 'agent' ? 'Assistant' : 'You'}
+										</p>
+										<p class="text-sm text-tertiary-200/80">{transcript.text}</p>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				{#if currentItems.length > 0}
+					<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
+						{#if addedItems.length > 0}
+							<div class="mb-4">
+								<h3 class="mb-2 text-sm font-medium text-tertiary-200">Items to Add:</h3>
+								<OShoppingItems items={addedItems} />
+							</div>
+						{/if}
+
+						{#if removedItems.length > 0}
+							<div>
+								<h3 class="mb-2 text-sm font-medium text-tertiary-200">Items to Remove:</h3>
+								<div class="opacity-60">
+									<OShoppingItems items={removedItems} />
+								</div>
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				{#if error}
+					<div class="p-4 rounded-xl backdrop-blur-xl bg-error-500/10">
+						<p class="text-sm text-error-400">{error}</p>
+					</div>
+				{/if}
+
+				<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
+					{#if status !== 'disconnected'}
+						<div class="flex justify-center">
 							<div
-								class="variant-ghost-{transcript.speaker === 'agent'
-									? 'tertiary'
-									: 'primary'} rounded-lg p-3 max-w-[85%]"
+								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
 							>
-								<p class="text-sm font-medium">
-									{transcript.speaker === 'agent' ? 'Assistant' : 'You'}
-								</p>
-								<p class="text-sm">{transcript.text}</p>
+								<span class="flex relative mr-2 w-2 h-2">
+									<span
+										class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
+									/>
+									<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
+								</span>
+								{displayStatus}
 							</div>
 						</div>
-					</div>
-				{/each}
-			</div>
-		{/if}
+					{/if}
 
-		{#if currentItems.length > 0}
-			<div class="p-4 w-full max-w-md rounded-lg shadow-lg bg-surface-100-800-token">
-				{#if addedItems.length > 0}
-					<div class="mb-4">
-						<h3 class="mb-2 text-sm font-medium text-surface-200">Items to Add:</h3>
-						<OShoppingItems items={addedItems} />
-					</div>
-				{/if}
-				
-				{#if removedItems.length > 0}
-					<div>
-						<h3 class="mb-2 text-sm font-medium text-surface-200">Items to Remove:</h3>
-						<OShoppingItems items={removedItems} />
-					</div>
-				{/if}
-			</div>
-		{/if}
-
-		{#if error}
-			<div class="p-4 text-sm rounded-lg variant-ghost-error">{error}</div>
-		{/if}
-
-		<div
-			class="flex flex-col gap-4 items-center px-12 py-8 w-full max-w-md rounded-xl shadow-lg bg-surface-800"
-		>
-			{#if status !== 'disconnected'}
-				<div
-					class="inline-flex items-center px-4 py-2 text-sm rounded-full shadow-inner text-tertiary-200 bg-surface-700"
-				>
-					<span class="flex relative mr-2 w-2 h-2">
-						<span
-							class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
-						/>
-						<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
-					</span>
-					{displayStatus}
-				</div>
-			{/if}
-
-			{#if showControls}
-				<div class="flex justify-center w-full">
-					{#if !isCallActive}
-						<button
-							class="btn variant-ghost-primary"
-							on:click={() => machine.send('START')}
-							disabled={status === 'connecting' || isLoading}
-						>
-							{status === 'connecting' ? 'Connecting...' : 'Start Call'}
-						</button>
-					{:else}
-						<button
-							class="btn variant-ghost-error"
-							on:click={() => machine.send('DISCONNECT')}
-							disabled={status === 'disconnecting'}
-						>
-							{status === 'disconnecting' ? 'Disconnecting...' : 'Stop'}
-						</button>
+					{#if showControls}
+						<div class="flex justify-center mt-4">
+							{#if !isCallActive}
+								<button
+									class="px-4 py-2 text-white rounded-lg bg-tertiary-500"
+									on:click={() => machine.send('START')}
+									disabled={status === 'connecting' || isLoading}
+								>
+									{status === 'connecting' ? 'Connecting...' : 'Start Call'}
+								</button>
+							{:else}
+								<button
+									class="px-4 py-2 text-white rounded-lg bg-error-500"
+									on:click={() => machine.send('DISCONNECT')}
+									disabled={status === 'disconnecting'}
+								>
+									{status === 'disconnecting' ? 'Disconnecting...' : 'Stop'}
+								</button>
+							{/if}
+						</div>
 					{/if}
 				</div>
-			{/if}
+			</div>
 		</div>
 	</div>
 </div>
 
 <style>
-	/* Add smooth scrolling for transcripts */
-	div :global(.overflow-y-auto) {
-		scrollbar-width: thin;
-		scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-	}
-
-	div :global(.overflow-y-auto::-webkit-scrollbar) {
-		width: 6px;
-	}
-
-	div :global(.overflow-y-auto::-webkit-scrollbar-track) {
-		background: transparent;
-	}
-
-	div :global(.overflow-y-auto::-webkit-scrollbar-thumb) {
-		background-color: rgba(156, 163, 175, 0.5);
-		border-radius: 3px;
-	}
 </style>
