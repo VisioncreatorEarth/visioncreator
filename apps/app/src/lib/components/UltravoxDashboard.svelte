@@ -1,11 +1,15 @@
 <script lang="ts">
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
 
 	// Create the query with proper store syntax
 	const timeUsageQuery = createQuery({
 		operationName: 'queryCallsAndTimeStats',
 		enabled: true,
 		liveQuery: true
+	});
+
+	const endCallMutation = createMutation({
+		operationName: 'askHominio'
 	});
 
 	// Filter state
@@ -26,6 +30,19 @@
 				const dateB = new Date(b.created).getTime();
 				return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
 			}) ?? [];
+
+	// Delete call function
+	async function deleteCall(callId: string) {
+		try {
+			await $endCallMutation.mutateAsync({
+				action: 'end',
+				callId
+			});
+			// The query will automatically refresh due to liveQuery: true
+		} catch (error) {
+			console.error('Error deleting call:', error);
+		}
+	}
 
 	function formatDuration(duration: string): string {
 		const seconds = parseFloat(duration.replace('s', ''));
@@ -49,13 +66,13 @@
 		const seconds = Math.floor(durationMs / 1000);
 		const minutes = Math.floor(seconds / 60);
 		const remainingSeconds = seconds % 60;
-		return minutes > 0 
-			? `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s` 
+		return minutes > 0
+			? `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s`
 			: `${remainingSeconds.toString().padStart(2, '0')}s`;
 	}
 </script>
 
-<div class="p-4 space-y-8">
+<div class="p-4 space-y-8 h-screen">
 	{#if $timeUsageQuery.isLoading}
 		<div class="flex justify-center items-center p-8">
 			<div class="w-8 h-8 rounded-full border-b-2 animate-spin border-primary-500" />
@@ -66,7 +83,7 @@
 			<span class="block sm:inline">{$timeUsageQuery.error.message}</span>
 		</div>
 	{:else}
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 h-ful">
 			<div class="p-6 card variant-filled-surface">
 				<header class="card-header">
 					<h3 class="h3">Time Used</h3>
@@ -95,7 +112,7 @@
 			</div>
 		</div>
 
-		<div class="card variant-filled-surface">
+		<div class="h-full card variant-filled-surface">
 			<header class="flex justify-between items-center p-4 border-b card-header border-surface-600">
 				<h2 class="h2">Call History</h2>
 				<div class="flex gap-4">
@@ -116,7 +133,7 @@
 					<p class="text-surface-300">No calls found matching the selected filters</p>
 				</div>
 			{:else}
-				<div class="table-container">
+				<div class="overflow-y-auto h-full table-container">
 					<table class="table table-hover">
 						<thead>
 							<tr>
@@ -126,6 +143,7 @@
 								<th>Status</th>
 								<th>First Speaker</th>
 								<th>Voice</th>
+								<th class="text-right">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -145,6 +163,14 @@
 									</td>
 									<td>{call.firstSpeaker}</td>
 									<td>{call.voice}</td>
+									<td class="text-right">
+										<button
+											class="btn btn-sm variant-filled-error"
+											on:click={() => deleteCall(call.callId)}
+										>
+											Delete
+										</button>
+									</td>
 								</tr>
 							{/each}
 						</tbody>
