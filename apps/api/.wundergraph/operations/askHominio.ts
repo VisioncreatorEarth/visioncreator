@@ -141,6 +141,9 @@ export default createOperation.mutation({
           throw new Error('Failed to start call tracking: ' + startError.message);
         }
 
+        // Mark the call as joined so it won't be auto-cleaned
+        await context.ultravox.markCallJoined(result.data.callId);
+
         return {
           callId: dbCallId,
           ultravoxCallId: result.data.callId,
@@ -165,18 +168,26 @@ export default createOperation.mutation({
 
           // End the call first
           await context.ultravox.endCall(ultravoxCallId);
-
-          // Wait a moment for the call to fully end
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Wait a bit for the transcript to be processed
+          console.log('⏳ Waiting for transcript processing...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
           // Try to get the transcript
           let transcript = null;
           try {
             const transcriptResponse = await context.ultravox.getCallTranscript(ultravoxCallId);
-            if (transcriptResponse.error) {
-              console.error('❌ Error getting transcript:', transcriptResponse.error);
-            } else if (transcriptResponse.data?.transcript) {
-              transcript = transcriptResponse.data.transcript;
+            console.log('📝 Raw transcript result:', JSON.stringify(transcriptResponse, null, 2));
+
+            if (transcriptResponse?.data?.transcript) {
+              const messages = transcriptResponse.data.transcript;
+              console.log('📝 Found transcript messages:', JSON.stringify(messages, null, 2));
+              transcript = messages
+                .filter(msg => msg.content)
+                .map(msg => `${msg.role}: ${msg.content}`)
+                .join('\n');
+            } else {
+              console.log('⚠️ No transcript found in result');
             }
           } catch (transcriptError) {
             console.error('❌ Error retrieving transcript:', transcriptError);

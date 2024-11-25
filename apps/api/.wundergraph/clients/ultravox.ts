@@ -49,6 +49,7 @@ export class UltravoxClient {
   private apiKey: string;
   private baseUrl = 'https://api.ultravox.ai/api';
   private cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
+  private joinedCalls: Set<string> = new Set();
 
   constructor(apiKey: string) {
     if (!apiKey) {
@@ -58,33 +59,27 @@ export class UltravoxClient {
     this.apiKey = apiKey;
   }
 
+  markCallJoined(callId: string) {
+    console.log('✅ Marking call as joined:', callId);
+    this.joinedCalls.add(callId);
+    // Clear any existing cleanup timer
+    const timer = this.cleanupTimers.get(callId);
+    if (timer) {
+      clearTimeout(timer);
+      this.cleanupTimers.delete(callId);
+    }
+  }
+
   private async checkAndCleanupCall(callId: string) {
+    // Don't cleanup if the call has been joined
+    if (this.joinedCalls.has(callId)) {
+      console.log('✅ Call is joined, skipping cleanup:', callId);
+      return;
+    }
+
+    console.log('🧹 Auto-cleaning unjoined call:', callId);
     try {
-      // Check if the call exists and its status
-      const statusResponse = await fetch(`${this.baseUrl}/calls/${callId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey
-        }
-      });
-
-      // If call doesn't exist, skip cleanup
-      if (statusResponse.status === 404) {
-        console.log('ℹ️ Call no longer exists, skipping cleanup:', callId);
-        return;
-      }
-
-      if (statusResponse.ok) {
-        const callData = await statusResponse.json();
-        // Only cleanup if the call hasn't been joined AND isn't already ended
-        if (!callData.joined && !callData.ended) {
-          console.log('🧹 Auto-cleaning unjoined call:', callId);
-          await this.endCall(callId);
-        } else {
-          console.log('ℹ️ Skipping cleanup - Call is either joined or ended:', callId);
-        }
-      }
+      await this.endCall(callId);
     } catch (error) {
       console.error('❌ Error during auto-cleanup:', error);
     } finally {
