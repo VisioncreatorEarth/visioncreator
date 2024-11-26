@@ -252,7 +252,7 @@
 														</ul>
 													</div>
 													<button
-														class={`px-4 py-2 rounded-lg transition-colors ${currentTier?.config.tier === tier.id ? 'bg-tertiary-500/20 text-tertiary-400' : 'bg-tertiary-500 text-white hover:bg-tertiary-600'}`}
+														class={`px-4 py-2 rounded-lg transition-colors ${currentTier?.config.tier === tier.id ? 'bg-tertiary-500/20 text-tertiary-400' : 'border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10'}`}
 														on:click={() => selectedUserId && handleTierChange(selectedUserId, tier.id)}
 														disabled={changingTierId === tier.id}
 													>

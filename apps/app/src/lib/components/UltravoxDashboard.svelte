@@ -75,8 +75,8 @@
 									<div class="flex items-center space-x-3">
 										<span
 											class="px-2 py-1 text-xs rounded-full {call.ended
-												? 'bg-teal-500/10 text-teal-500'
-												: 'bg-green-900/50 text-green-200'}"
+												? 'bg-success-500/10 text-success-500'
+												: 'bg-warning-900/50 text-warning-200'}"
 										>
 											{call.ended ? `Ended (${call.endReason || 'Unknown'})` : 'Active'}
 										</span>
