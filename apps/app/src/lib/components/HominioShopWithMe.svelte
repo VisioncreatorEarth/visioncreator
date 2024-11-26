@@ -1,57 +1,6 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { onMount } from 'svelte';
-	import Icon from '@iconify/svelte';
 	import OShoppingItems from './o-ShoppingItems.svelte';
-
-	export let me;
-	export let title = 'Shopping List';
-	export let description = 'Manage your shopping list';
-
-	// Category colors with hover states
-	const categoryColors = {
-		Fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
-		Vegetables: 'bg-green-500/10 hover:bg-green-500/20 text-green-500',
-		Dairy: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
-		Meat: 'bg-red-500/10 hover:bg-red-500/20 text-red-500',
-		Grains: 'bg-warning-500/10 hover:bg-amwarningber-500/20 text-warning-500',
-		Bakery: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500',
-		Beverages: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
-		Snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
-		Household: 'bg-tertiary-500/10 hover:bg-tertiary-500/20 text-tertiary-500',
-		'Personal Care': 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-500',
-		Other: 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500'
-	} as const;
-
-	// Maintain consistent category order
-	const categoryOrder = [
-		'Vegetables',
-		'Fruits',
-		'Meat',
-		'Grains',
-		'Bakery',
-		'Beverages',
-		'Dairy',
-		'Snacks',
-		'Personal Care',
-		'Household',
-		'Other'
-	];
-
-	// Simplified but diverse fallback icons per category
-	const FALLBACK_ICONS = {
-		Fruits: ['mdi:fruit-watermelon', 'mdi:food-apple', 'mdi:fruit-cherries'],
-		Vegetables: ['mdi:carrot', 'mdi:food-broccoli', 'mdi:leaf'],
-		Dairy: ['mdi:cheese', 'mdi:milk', 'mdi:egg'],
-		Meat: ['mdi:food-steak', 'mdi:food-turkey', 'mdi:fish'],
-		Bakery: ['mdi:bread-slice', 'mdi:croissant', 'mdi:cookie'],
-		Beverages: ['mdi:cup', 'mdi:bottle-soda', 'mdi:coffee'],
-		Snacks: ['mdi:cookie', 'mdi:food-potato', 'mdi:candy'],
-		Household: ['mdi:home', 'mdi:washing-machine', 'mdi:broom'],
-		Grains: ['mdi:pasta', 'mdi:rice', 'mdi:grain', 'mdi:noodles'],
-		'Personal Care': ['mdi:face-man', 'mdi:toothbrush', 'mdi:lotion'],
-		Other: ['mdi:shopping']
-	} as const;
 
 	// Sample items for random generation
 	const sampleItems = [
@@ -153,18 +102,38 @@
 		liveQuery: true
 	});
 
-	const addRandomItemsMutation = createMutation({
-		operationName: 'addRandomItemsToShoppingList'
+	const addItemsMutation = createMutation({
+		operationName: 'addItemsToShoppingList'
 	});
 
 	const toggleItemMutation = createMutation({
 		operationName: 'addItemsToShoppingList'
 	});
 
+	// Function to get random items
+	const getRandomItems = () => {
+		const shuffled = [...sampleItems].sort(() => 0.5 - Math.random());
+		return shuffled.slice(0, 10).map((item) => ({
+			...item,
+			quantity: Math.ceil(Math.random() * 3), // Random quantity between 1-3
+			unit:
+				item.category === 'Beverages'
+					? 'l'
+					: item.category === 'Fruits' || item.category === 'Vegetables' || item.category === 'Meat'
+					? 'kg'
+					: 'pcs'
+		}));
+	};
+
 	// Handle adding random items
 	const addRandomItems = async () => {
 		try {
-			await $addRandomItemsMutation.mutateAsync();
+			const randomItems = getRandomItems();
+			await $addItemsMutation.mutate({
+				action: 'add',
+				items: randomItems
+			});
+			await $shoppingListQuery.refetch();
 		} catch (error) {
 			console.error('Error adding random items:', error);
 		}
@@ -175,10 +144,12 @@
 		try {
 			await $toggleItemMutation.mutateAsync({
 				action: 'remove',
-				items: [{
-					name: item.name,
-					category: item.category
-				}]
+				items: [
+					{
+						name: item.name,
+						category: item.category
+					}
+				]
 			});
 			await $shoppingListQuery.refetch();
 		} catch (error) {
@@ -217,9 +188,9 @@
 				</div>
 			{:else if $shoppingListQuery.data}
 				<div class="flex justify-between items-center mb-6">
-					<h2 class="text-2xl font-bold">Shopping List</h2>
+					<h2 class="text-2xl font-bold">ShopWithMe</h2>
 					<button
-						class="bg-gradient-to-br btn variant-gradient-secondary-primary"
+						class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
 						on:click={() => addRandomItems()}
 					>
 						Add Random Items

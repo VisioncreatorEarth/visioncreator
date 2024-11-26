@@ -24,13 +24,6 @@ export let view = {
     "children": [
       {
         "id": "BringMe",
-        "map": {
-          "lists": {
-            "query": "queryMyShoppingList"
-          },
-          "title": "Shopping Lists",
-          "description": "Manage your shopping lists"
-        },
         "slot": "main",
         "component": "o-BringMe"
       }

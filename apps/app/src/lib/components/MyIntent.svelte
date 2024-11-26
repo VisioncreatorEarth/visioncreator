@@ -65,7 +65,8 @@
 				entry: ['openModal', 'requestMicrophonePermission'],
 				on: {
 					PERMISSION_GRANTED: {
-						target: 'readyToCall'
+						target: 'readyToCall',
+						actions: ['openModal']
 					},
 					PERMISSION_DENIED: {
 						target: 'permissionBlocked'
@@ -87,6 +88,10 @@
 					LONG_PRESS: {
 						target: 'calling',
 						actions: ['startNewConversation']
+					},
+					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
 					}
 				}
 			},
@@ -329,6 +334,12 @@
 									>
 										Try Again
 									</button>
+								</div>
+							{:else if $currentState === 'readyToCall'}
+								<div class="p-4 text-center">
+									<div class="mb-4 text-4xl">🎤</div>
+									<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
+									<p class="mt-2 text-tertiary-200/80">Press and hold to start recording.</p>
 								</div>
 							{:else if $currentState === 'paywall'}
 								<div class="p-6 text-center">
