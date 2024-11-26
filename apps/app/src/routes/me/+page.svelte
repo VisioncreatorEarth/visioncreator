@@ -190,7 +190,7 @@
 		<div class="flex overflow-hidden h-screen">
 			{#if isAsideOpen}
 				<aside
-					class="fixed bottom-0 right-0 z-10 flex-shrink-0 w-[120px] h-screen transition-transform duration-300 {!isAsideOpen
+					class="fixed bottom-0 right-0 z-20 flex-shrink-0 w-[120px] h-screen transition-transform duration-300 {!isAsideOpen
 						? 'translate-x-full'
 						: ''}"
 				>
@@ -231,7 +231,7 @@
 					class="w-6 h-6 text-surface-200"
 				/>
 			</button>
-			<main class="overflow-auto flex-1 mx-auto max-w-6xl">
+			<main class="overflow-y-auto flex-1 mx-auto max-w-6xl h-full">
 				<ComposeView view={$dynamicView.view || meView} />
 			</main>
 		</div>
@@ -240,7 +240,7 @@
 	<div class="flex overflow-hidden h-screen">
 		{#if isAsideOpen}
 			<aside
-				class="fixed bottom-0 right-0 z-10 flex-shrink-0 w-[120px] h-screen transition-transform duration-300 {!isAsideOpen
+				class="fixed bottom-0 right-0 z-20 flex-shrink-0 w-[120px] h-screen transition-transform duration-300 {!isAsideOpen
 					? 'translate-x-full'
 					: ''}"
 			>
@@ -281,7 +281,7 @@
 				class="w-6 h-6 text-surface-200"
 			/>
 		</button>
-		<main class="overflow-auto flex-1 mx-auto max-w-6xl">
+		<main class="overflow-y-auto flex-1 mx-auto max-w-6xl h-full">
 			<ComposeView view={$dynamicView.view || meView} />
 		</main>
 	</div>

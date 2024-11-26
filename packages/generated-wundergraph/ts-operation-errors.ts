@@ -10,7 +10,6 @@ export type OperationErrors = {
 	askHominio: AskHominioErrors;
 	calculateCID: CalculateCIDErrors;
 	checkCapabilities: CheckCapabilitiesErrors;
-	clearUltravoxCalls: ClearUltravoxCallsErrors;
 	composeView: ComposeViewErrors;
 	createInvite: CreateInviteErrors;
 	createShoppingList: CreateShoppingListErrors;
@@ -61,7 +60,6 @@ export type AskHominioErrors =
 	| ClientOperationErrors;
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CheckCapabilitiesErrors = ClientOperationErrors;
-export type ClearUltravoxCallsErrors = ClientOperationErrors;
 export type ComposeViewErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateShoppingListErrors = ClientOperationErrors;

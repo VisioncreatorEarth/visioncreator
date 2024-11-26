@@ -203,12 +203,12 @@
 						<div class="p-6 rounded-lg bg-surface-800">
 							<div class="flex justify-between items-center mb-8">
 								<h2 class="text-2xl font-bold">ShopWithMe</h2>
-								<button
+								<!-- <button
 									class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
 									on:click={() => addRandomItems()}
 								>
 									Add Random Items
-								</button>
+								</button> -->
 							</div>
 							{#if !activeItems.length}
 								<div class="p-8 text-center text-surface-200">
