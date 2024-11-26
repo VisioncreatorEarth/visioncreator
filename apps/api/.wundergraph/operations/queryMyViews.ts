@@ -25,7 +25,6 @@ export default createOperation.query({
         state_machine,
         custom_config
       `)
-      .eq("created_by", user.customClaims.id)
       .eq("is_active", true)
       .order("created_at", { ascending: false });
 
@@ -51,7 +50,7 @@ export default createOperation.query({
         },
         render: view.render,
         stateMachine: view.state_machine,
-        customConfig: view.custom_config,
+        customConfig: view.custom_config
       }))
     };
   },
