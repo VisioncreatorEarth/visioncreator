@@ -115,9 +115,9 @@
 		}, 0);
 	}
 
-	$: if ($userStatsQuery.data?.stats) {
-		console.log('Raw stats data:', $userStatsQuery.data.stats);
-		console.log('Recent calls:', $userStatsQuery.data.stats.recent_calls);
+	$: if ($userStatsQuery.data) {
+		console.log('Raw stats data:', $userStatsQuery.data);
+		console.log('Recent calls:', $userStatsQuery.data.recent_calls);
 	}
 
 	function handleTierChange(userId: string, tierId: string) {
@@ -189,7 +189,7 @@
 			<UltravoxDashboard />
 		{:else if selectedUserId}
 			<div class="p-6 space-y-6">
-				{#if $userStatsQuery.data?.stats}
+				{#if $userStatsQuery.data}
 					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<!-- Left Column: Usage Overview and Tier Management -->
 						<div class="space-y-6">
@@ -200,30 +200,30 @@
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Total Calls</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
-											{$userStatsQuery.data.stats.total_calls}
+											{$userStatsQuery.data.total_calls}
 										</p>
 									</div>
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Success Rate</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
-											{$userStatsQuery.data.stats.success_rate.toFixed(1)}%
+											{$userStatsQuery.data.success_rate.toFixed(1)}%
 										</p>
 									</div>
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Minutes Used</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
-											{formatDuration(calculatePreciseMinutesUsed($userStatsQuery.data.stats))}
+											{formatDuration(calculatePreciseMinutesUsed($userStatsQuery.data))}
 										</p>
 										<p class="mt-1 text-xs text-surface-300">
-											of {$userStatsQuery.data.stats.minutes_limit}m limit
+											of {$userStatsQuery.data.minutes_limit}m limit
 										</p>
 									</div>
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Minutes Remaining</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
 											{formatDuration(
-												$userStatsQuery.data.stats.minutes_limit -
-													calculatePreciseMinutesUsed($userStatsQuery.data.stats)
+												$userStatsQuery.data.minutes_limit -
+													calculatePreciseMinutesUsed($userStatsQuery.data)
 											)}
 										</p>
 										<p class="mt-1 text-xs text-surface-300">this month</p>
@@ -296,11 +296,11 @@
 
 						<!-- Right Column: Call History -->
 						<div class="space-y-6">
-							{#if $userStatsQuery.data.stats.recent_calls?.length}
+							{#if $userStatsQuery.data.recent_calls?.length}
 								<div class="p-6 rounded-lg bg-surface-800">
 									<h3 class="mb-4 text-lg font-semibold text-white">Call History</h3>
 									<div class="space-y-4">
-										{#each $userStatsQuery.data.stats.recent_calls as call}
+										{#each $userStatsQuery.data.recent_calls as call}
 											<div class="p-4 rounded-lg bg-surface-700/50">
 												<div class="flex justify-between items-center">
 													<span class="text-sm text-surface-200">

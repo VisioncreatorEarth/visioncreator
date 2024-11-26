@@ -399,7 +399,7 @@
 	});
 </script>
 
-<div class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-xl bg-surface-900/30">
+<div class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-xl bg-surface-900/ghost">
 	<div class="relative mx-auto mb-20 w-full max-w-2xl">
 		<div
 			class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"

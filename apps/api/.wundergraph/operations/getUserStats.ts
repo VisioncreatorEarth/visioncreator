@@ -9,6 +9,24 @@ export default createOperation.query({
         requireMatchAll: ["authenticated", "admin"],
     },
     handler: async ({ input, context }) => {
+        // Helper functions
+        const calculateSuccessRate = (calls: any[]) => {
+            if (calls.length === 0) return 0;
+            const successfulCalls = calls.filter(call => call.status === 'completed').length;
+            return Math.round((successfulCalls / calls.length) * 100);
+        };
+
+        const formatRecentCalls = (calls: any[]) => {
+            return calls.slice(0, 5).map(call => ({
+                id: call.id,
+                start_time: call.call_start_time,
+                end_time: call.call_end_time,
+                duration: call.duration_minutes,
+                status: call.status,
+                error: call.error_message
+            }));
+        };
+
         // Get user's hominio calls
         const { data: calls, error: callsError } = await context.supabase
             .from('hominio_calls')
@@ -24,6 +42,7 @@ export default createOperation.query({
             .order('call_start_time', { ascending: false });
 
         if (callsError) {
+            console.error('Error fetching calls:', callsError);
             throw new Error('Failed to fetch user statistics');
         }
 
@@ -36,41 +55,34 @@ export default createOperation.query({
             .eq('active', true)
             .single();
 
-        // Initialize stats with default values
-        const stats = {
-            total_calls: calls.length,
-            total_minutes: 0,
-            minutes_limit: 0,
-            minutes_used: 0,
-            minutes_remaining: 0,
-            success_rate: 0,
-            recent_calls: calls.slice(0, 5).map(call => ({
-                id: call.id,
-                start_time: call.call_start_time,
-                end_time: call.call_end_time,
-                duration: call.duration_minutes,
-                status: call.status,
-                error: call.error_message
-            }))
-        };
-
-        // If there's an active capability, update the stats with its values
-        if (!capError && capabilities) {
-            stats.minutes_limit = capabilities.config.minutesLimit || 0;
-            stats.minutes_used = capabilities.config.minutesUsed || 0;
-            stats.minutes_remaining = Math.max(0, (capabilities.config.minutesLimit || 0) - (capabilities.config.minutesUsed || 0));
+        // Handle case where user has no capabilities
+        if (capError && capError.code === 'PGRST116') { // No rows returned
+            console.log('No capabilities found for user:', input.userId);
+            return {
+                total_calls: calls.length,
+                total_minutes: calls.reduce((sum, call) => sum + (call.duration_minutes || 0), 0),
+                minutes_limit: 0,
+                minutes_used: 0,
+                minutes_remaining: 0,
+                success_rate: calculateSuccessRate(calls),
+                recent_calls: formatRecentCalls(calls)
+            };
         }
 
-        calls.forEach(call => {
-            stats.total_minutes += call.duration_minutes;
-        });
+        if (capError) {
+            console.error('Error fetching capabilities:', capError);
+            throw new Error('Failed to fetch user capabilities');
+        }
 
-        // Calculate success rate
-        const completedCalls = calls.filter(call => call.status === 'completed').length;
-        stats.success_rate = calls.length > 0 ? (completedCalls / calls.length) * 100 : 0;
-
+        // Calculate totals
         return {
-            stats
+            total_calls: calls.length,
+            total_minutes: calls.reduce((sum, call) => sum + (call.duration_minutes || 0), 0),
+            minutes_limit: capabilities?.config?.minutesLimit || 0,
+            minutes_used: capabilities?.config?.minutesUsed || 0,
+            minutes_remaining: Math.max(0, (capabilities?.config?.minutesLimit || 0) - (capabilities?.config?.minutesUsed || 0)),
+            success_rate: calculateSuccessRate(calls),
+            recent_calls: formatRecentCalls(calls)
         };
     }
 });

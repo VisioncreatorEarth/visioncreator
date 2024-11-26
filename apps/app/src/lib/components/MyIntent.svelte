@@ -3,9 +3,7 @@
 	import { derived } from 'svelte/store';
 	import { onDestroy } from 'svelte';
 	import { createMachine, type MachineConfig } from '$lib/composables/svelteMachine';
-	import { createMutation } from '$lib/wundergraph';
-	import { hominioAgent } from '$lib/agents/hominioAgent';
-	import { conversationManager } from '$lib/stores/intentStore';
+	import { createQuery } from '$lib/wundergraph';
 	import { eventBus } from '$lib/composables/eventBus';
 	import { onMount } from 'svelte';
 	import AskHominio from './AskHominio.svelte';
@@ -15,6 +13,11 @@
 
 	let isLongPressActive = false;
 	let askHominioComponent: any;
+
+	const checkCapabilities = createQuery({
+		operationName: 'checkCapabilities',
+		enabled: false
+	});
 
 	interface IntentContext {
 		permissionState: 'prompt' | 'granted' | 'denied';
@@ -156,8 +159,37 @@
 				context.permissionRequesting = false;
 			}
 		},
-		startNewConversation: () => {
-			conversationManager.startNewConversation();
+		startNewConversation: async () => {
+			try {
+				const result = await $checkCapabilities.refetch();
+				console.log('Frontend - Capability check result:', result.data);
+
+				if (result.data?.status === 'NO_CAPABILITY') {
+					console.log('Frontend - No capability');
+					machine.send('WAITINGLIST');
+					return;
+				}
+
+				if (result.data?.status === 'NO_MINUTES') {
+					console.log('Frontend - No minutes available');
+					machine.send('PAYWALL_ERROR');
+					return;
+				}
+
+				if (result.data?.status === 'OK') {
+					console.log('Frontend - Remaining minutes:', result.data.remainingMinutes);
+					if (result.data.remainingMinutes < 0.1667) {
+						console.log('Frontend - Less than 10 seconds remaining');
+						machine.send('PAYWALL_ERROR');
+						return;
+					}
+					// The conversation will be handled by AskHominio component
+					return;
+				}
+			} catch (error) {
+				console.error('Frontend - Error checking capabilities:', error);
+				machine.send('END_CALL');
+			}
 		},
 		cleanup: (context: IntentContext) => {
 			// Don't call stopCall here since it will be triggered by state change
@@ -264,7 +296,7 @@
 		{#if $currentState === 'calling'}
 			<AskHominio
 				bind:this={askHominioComponent}
-				bind:session={session}
+				bind:session
 				onCallEnd={() => machine.send('END_CALL')}
 				showControls={false}
 			/>
@@ -280,7 +312,9 @@
 								<div class="p-6 text-center">
 									<div class="mb-4 text-4xl">🎤</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Required</h2>
-									<p class="mt-2 text-tertiary-200/80">Please allow microphone access to continue</p>
+									<p class="mt-2 text-tertiary-200/80">
+										Please allow microphone access to continue
+									</p>
 								</div>
 							{:else if $currentState === 'permissionBlocked'}
 								<div class="p-6 text-center">

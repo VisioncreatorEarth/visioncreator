@@ -108,16 +108,54 @@ export default createOperation.mutation({
 
     try {
       if (input.action === 'create') {
-        // Check if user has available minutes
+        // Get remaining minutes for max call time calculation
+        const { data: userCapability } = await context.supabase
+          .from('capabilities')
+          .select('config')
+          .eq('user_id', user.customClaims.id)
+          .eq('type', 'TIER')
+          .eq('active', true)
+          .single();
+
+        // Get actual minutes used from calls
+        const { data: calls, error: callsError } = await context.supabase
+          .from('hominio_calls')
+          .select('duration_minutes')
+          .eq('user_id', user.customClaims.id);
+
+        if (callsError) {
+          console.log('Backend - Error fetching calls:', callsError);
+          throw new Error('Failed to fetch call history');
+        }
+
+        const actualMinutesUsed = calls.reduce((total, call) => total + (call.duration_minutes || 0), 0);
+        const minutesLimit = userCapability?.config?.minutesLimit || 0;
+        const remainingMinutes = Math.max(0, minutesLimit - actualMinutesUsed);
+        
+        console.log('Backend - Actual minutes used:', actualMinutesUsed);
+        console.log('Backend - Minutes limit:', minutesLimit);
+        console.log('Backend - Remaining minutes:', remainingMinutes);
+        
+        // Require at least 10 seconds (0.1667 minutes)
+        if (remainingMinutes < 0.1667) {
+          console.log('Backend - Not enough minutes left, minimum required: 0.1667, remaining:', remainingMinutes);
+          throw new Error('No available minutes in your current plan');
+        }
+
+        // Check if user has available minutes and increment
         const { data: capability, error: capError } = await context.supabase
           .rpc('check_and_increment_ai_minutes', {
             p_user_id: user.customClaims.id,
-            p_minutes: 1 // Initial deduction of 1 minute
+            p_minutes: Math.min(1, remainingMinutes) // Only deduct what's available if less than 1
           });
 
         if (capError || !capability) {
+          console.log('Backend - Error incrementing minutes:', capError);
           throw new Error('No available minutes in your current plan');
         }
+
+        const maxCallTimeMinutes = Math.min(2, Math.max(0.1667, remainingMinutes));
+        console.log('Backend - Max call time minutes:', maxCallTimeMinutes);
 
         // Get the current shopping list
         const { data: lists, error: listError } = await context.supabase
@@ -160,7 +198,7 @@ export default createOperation.mutation({
           voice: CALL_CONFIG.voice,
           model: CALL_CONFIG.model,
           temperature: CALL_CONFIG.temperature,
-          maxDuration: CALL_CONFIG.maxDuration,
+          maxDuration: `${maxCallTimeMinutes * 60}s`, // Convert minutes to seconds
           timeExceededMessage: CALL_CONFIG.timeExceededMessage,
           firstSpeaker: CALL_CONFIG.firstSpeaker,
           selectedTools: CALL_CONFIG.tools
@@ -180,7 +218,7 @@ export default createOperation.mutation({
             p_voice_id: CALL_CONFIG.voice,
             p_system_prompt: `${CALL_CONFIG.defaultSystemPrompt}${currentItemsContext}`,
             p_temperature: CALL_CONFIG.temperature,
-            p_max_duration: CALL_CONFIG.maxDuration,
+            p_max_duration: `${maxCallTimeMinutes * 60}s`, // Convert minutes to seconds
             p_first_speaker: CALL_CONFIG.firstSpeaker
           })
           .single();
