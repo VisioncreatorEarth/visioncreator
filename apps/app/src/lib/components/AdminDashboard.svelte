@@ -2,12 +2,6 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import UltravoxDashboard from './UltravoxDashboard.svelte';
 
-	// Types
-	interface User {
-		id: string;
-		name: string;
-	}
-
 	interface Capability {
 		id: string;
 		user_id: string;
@@ -22,17 +16,6 @@
 		granted_at: string;
 		granted_by: string;
 		active: boolean;
-	}
-
-	interface AuditLog {
-		id: string;
-		timestamp: string;
-		action: string;
-		userId: string;
-		details: string;
-		performedBy: string;
-		capabilityId: string;
-		capabilityType: string;
 	}
 
 	let showUltravoxDashboard = true;
@@ -104,15 +87,6 @@
 		// Add leading zero for seconds if needed
 		const secondsStr = displaySeconds < 10 ? `0${displaySeconds}` : displaySeconds;
 		return `${displayMinutes}m ${secondsStr}s`;
-	}
-
-	// Calculate precise minutes used from recent calls
-	function calculatePreciseMinutesUsed(stats: any): number {
-		if (!stats.recent_calls?.length) return 0;
-
-		return stats.recent_calls.reduce((total: number, call: any) => {
-			return total + (call.duration || 0);
-		}, 0);
 	}
 
 	$: if ($userStatsQuery.data) {
@@ -212,7 +186,7 @@
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Minutes Used</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
-											{formatDuration(calculatePreciseMinutesUsed($userStatsQuery.data))}
+											{formatDuration($userStatsQuery.data.minutes_used)}
 										</p>
 										<p class="mt-1 text-xs text-surface-300">
 											of {$userStatsQuery.data.minutes_limit}m limit
@@ -221,10 +195,7 @@
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Minutes Remaining</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
-											{formatDuration(
-												$userStatsQuery.data.minutes_limit -
-													calculatePreciseMinutesUsed($userStatsQuery.data)
-											)}
+											{formatDuration($userStatsQuery.data.minutes_remaining)}
 										</p>
 										<p class="mt-1 text-xs text-surface-300">this month</p>
 									</div>
@@ -298,46 +269,33 @@
 						<div class="space-y-6">
 							{#if $userStatsQuery.data.recent_calls?.length}
 								<div class="p-6 rounded-lg bg-surface-800">
-									<h3 class="mb-4 text-lg font-semibold text-white">Call History</h3>
-									<div class="space-y-4">
+									<h3 class="mb-4 text-lg font-semibold text-white">
+										Call History ({$userStatsQuery.data.recent_calls.length} calls)
+									</h3>
+									<div class="space-y-4 max-h-[800px] overflow-y-auto pr-2">
 										{#each $userStatsQuery.data.recent_calls as call}
 											<div class="p-4 rounded-lg bg-surface-700/50">
-												<div class="flex justify-between items-center">
-													<span class="text-sm text-surface-200">
-														{new Date(call.start_time).toLocaleString()}
-													</span>
+												<div class="flex justify-between items-start">
+													<div>
+														<p class="text-sm font-medium text-surface-200">
+															{new Date(call.start_time).toLocaleString()}
+														</p>
+														<p class="mt-1 text-xs text-surface-300">
+															Duration: {formatDuration(call.duration)}
+														</p>
+													</div>
 													<span
-														class={`px-2 py-1 text-xs rounded-full ${
-															call.status === 'completed'
-																? 'bg-success-500/20 text-success-400'
-																: ''
-														} ${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''} ${
-															call.status === 'active' ? 'bg-tertiary-500/20 text-tertiary-400' : ''
-														}`}
+														class={`px-2 py-1 text-xs font-medium rounded-full
+															${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
+															${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
+															${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
+														`}
 													>
 														{call.status}
 													</span>
 												</div>
-												<div class="grid grid-cols-2 gap-4 mt-3">
-													<div>
-														<p class="text-sm text-surface-200">Duration</p>
-														<p class="text-sm font-medium text-white">
-															{formatDuration(call.duration || 0)}
-														</p>
-													</div>
-													{#if call.end_time}
-														<div>
-															<p class="text-sm text-surface-200">Completed</p>
-															<p class="text-sm font-medium text-white">
-																{new Date(call.end_time).toLocaleString()}
-															</p>
-														</div>
-													{/if}
-												</div>
 												{#if call.error}
-													<div class="p-2 mt-3 rounded bg-error-500/10">
-														<p class="text-sm text-error-400">{call.error}</p>
-													</div>
+													<p class="mt-2 text-xs text-error-400">{call.error}</p>
 												{/if}
 											</div>
 										{/each}

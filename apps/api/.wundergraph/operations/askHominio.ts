@@ -7,7 +7,8 @@ const CALL_CONFIG = {
   You are a friendly shopping assistant. Please help me with my shopping list. 
   If the user has questions, please always interact in a friendly conversation. Always respond instantly and make short smalltalk, while exuting the tools in the background. 
  
-  IMPORTANT RULES: ALWAYS execute the updateShoppingList tool FIRST and then answer to the user, also translate any shoppinglist item into english
+  IMPORTANT RULES: ALWAYS execute the updateShoppingList tool ANYTIME in the conversation, whenever the user adds or removes an item.
+  Please also translate any shoppinglist item into english
 
   Available Categories and their Icons:
   - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
@@ -132,11 +133,11 @@ export default createOperation.mutation({
         const actualMinutesUsed = Number(calls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
         const minutesLimit = userCapability?.config?.minutesLimit || 0;
         const remainingMinutes = Number((minutesLimit - actualMinutesUsed).toFixed(4)); // Keep 4 decimal places for precision
-        
+
         console.log('Backend - Actual minutes used:', actualMinutesUsed.toFixed(4));
         console.log('Backend - Minutes limit:', minutesLimit);
         console.log('Backend - Remaining minutes:', remainingMinutes);
-        
+
         // Require at least 10 seconds (0.1667 minutes)
         if (remainingMinutes < 0.1667) {
           console.log('Backend - Not enough minutes left, minimum required: 0.1667, remaining:', remainingMinutes);

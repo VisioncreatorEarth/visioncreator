@@ -17,7 +17,7 @@ export default createOperation.query({
         };
 
         const formatRecentCalls = (calls: any[]) => {
-            return calls.slice(0, 5).map(call => ({
+            return calls.map(call => ({
                 id: call.id,
                 start_time: call.call_start_time,
                 end_time: call.call_end_time,
@@ -75,12 +75,14 @@ export default createOperation.query({
         }
 
         // Calculate totals
+        const totalMinutes = calls.reduce((sum, call) => sum + (call.duration_minutes || 0), 0);
+        
         return {
             total_calls: calls.length,
-            total_minutes: calls.reduce((sum, call) => sum + (call.duration_minutes || 0), 0),
+            total_minutes: totalMinutes,
             minutes_limit: capabilities?.config?.minutesLimit || 0,
-            minutes_used: capabilities?.config?.minutesUsed || 0,
-            minutes_remaining: Math.max(0, (capabilities?.config?.minutesLimit || 0) - (capabilities?.config?.minutesUsed || 0)),
+            minutes_used: totalMinutes,
+            minutes_remaining: Math.max(0, (capabilities?.config?.minutesLimit || 0) - totalMinutes),
             success_rate: calculateSuccessRate(calls),
             recent_calls: formatRecentCalls(calls)
         };
