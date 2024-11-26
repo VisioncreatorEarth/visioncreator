@@ -9,59 +9,62 @@ export default createOperation.query({
         requireMatchAll: ["authenticated", "admin"],
     },
     handler: async ({ input, context }) => {
-        // Get user's requests for the current week
-        const { data: requests, error } = await context.supabase
-            .from('hominio_requests')
+        // Get user's hominio calls
+        const { data: calls, error: callsError } = await context.supabase
+            .from('hominio_calls')
             .select(`
                 id,
-                timestamp,
-                input_tokens,
-                output_tokens,
-                processing_time,
-                model,
-                success,
-                metadata
+                call_start_time,
+                call_end_time,
+                duration_minutes,
+                status,
+                error_message
             `)
             .eq('user_id', input.userId)
-            .gte('timestamp', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-            .order('timestamp', { ascending: false });
+            .order('call_start_time', { ascending: false });
 
-        if (error) {
+        if (callsError) {
             throw new Error('Failed to fetch user statistics');
+        }
+
+        // Get user's capability information
+        const { data: capabilities, error: capError } = await context.supabase
+            .from('capabilities')
+            .select('*')
+            .eq('user_id', input.userId)
+            .eq('type', 'TIER')
+            .eq('active', true)
+            .single();
+
+        if (capError) {
+            throw new Error('Failed to fetch user capabilities');
         }
 
         // Calculate totals
         const stats = {
-            total_requests: requests.length,
-            total_input_tokens: 0,
-            total_output_tokens: 0,
-            total_processing_time: 0,
-            total_cost: 0,
+            total_calls: calls.length,
+            total_minutes: 0,
+            minutes_limit: capabilities.config.minutesLimit || 0,
+            minutes_used: capabilities.config.minutesUsed || 0,
+            minutes_remaining: Math.max(0, (capabilities.config.minutesLimit || 0) - (capabilities.config.minutesUsed || 0)),
             success_rate: 0,
-            requests_by_model: {} as Record<string, number>,
-            recent_requests: requests.slice(0, 5)
+            recent_calls: calls.slice(0, 5).map(call => ({
+                id: call.id,
+                start_time: call.call_start_time,
+                end_time: call.call_end_time,
+                duration: call.duration_minutes,
+                status: call.status,
+                error: call.error_message
+            }))
         };
 
-        requests.forEach(req => {
-            stats.total_input_tokens += req.input_tokens;
-            stats.total_output_tokens += req.output_tokens;
-            stats.total_processing_time += req.processing_time;
-
-            // Add costs from metadata
-            const cost = req.metadata?.cost || {
-                input: (req.input_tokens / 1000000) * 1,
-                output: (req.output_tokens / 1000000) * 5
-            };
-            stats.total_cost += cost.input + cost.output;
-
-            // Track model usage
-            stats.requests_by_model[req.model] = (stats.requests_by_model[req.model] || 0) + 1;
+        calls.forEach(call => {
+            stats.total_minutes += call.duration_minutes;
         });
 
         // Calculate success rate
-        stats.success_rate = requests.length > 0
-            ? (requests.filter(r => r.success).length / requests.length) * 100
-            : 0;
+        const completedCalls = calls.filter(call => call.status === 'completed').length;
+        stats.success_rate = calls.length > 0 ? (completedCalls / calls.length) * 100 : 0;
 
         return {
             stats

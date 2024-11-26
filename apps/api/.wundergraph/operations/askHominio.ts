@@ -98,7 +98,7 @@ export default createOperation.mutation({
   }),
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["authenticated", "admin"],
+    requireMatchAll: ["authenticated"],
   },
   errors: [UltravoxInitializationError, UltravoxAuthenticationError],
   async handler({ input, context, user }) {
@@ -108,6 +108,17 @@ export default createOperation.mutation({
 
     try {
       if (input.action === 'create') {
+        // Check if user has available minutes
+        const { data: capability, error: capError } = await context.supabase
+          .rpc('check_and_increment_ai_minutes', {
+            p_user_id: user.customClaims.id,
+            p_minutes: 1 // Initial deduction of 1 minute
+          });
+
+        if (capError || !capability) {
+          throw new Error('No available minutes in your current plan');
+        }
+
         // Get the current shopping list
         const { data: lists, error: listError } = await context.supabase
           .from('shopping_lists')
@@ -193,88 +204,87 @@ export default createOperation.mutation({
         };
 
       } else if (input.action === 'end' && input.callId) {
-        try {
-          // Get the Ultravox call ID from the database
-          const { data: callData, error: lookupError } = await context.supabase
-            .from('hominio_calls')
-            .select('ultravox_call_id')
-            .eq('id', input.callId)
-            .single();
+        // Get the call details to calculate duration
+        const { data: callData, error: lookupError } = await context.supabase
+          .from('hominio_calls')
+          .select('ultravox_call_id, call_start_time')
+          .eq('id', input.callId)
+          .single();
 
-          if (lookupError || !callData?.ultravox_call_id) {
-            throw new Error('Could not find call in database');
-          }
+        if (lookupError || !callData?.ultravox_call_id) {
+          throw new Error('Could not find call in database');
+        }
 
-          const ultravoxCallId = callData.ultravox_call_id;
+        // Calculate duration in minutes for final minute update
+        const duration = (Date.now() - new Date(callData.call_start_time).getTime()) / (1000 * 60);
+        const roundedDuration = Math.ceil(duration);
 
-          // End the call first
-          await context.ultravox.endCall(ultravoxCallId);
-
-          // Wait a bit for the transcript to be processed
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          // Try to get the transcript
-          let finalTranscript = null;
-          try {
-            const transcriptResponse = await context.ultravox.getTranscript(ultravoxCallId);
-            console.log('📝 Got transcript response:', transcriptResponse);
-
-            if (transcriptResponse?.results?.length > 0) {
-              const baseTime = Date.now();
-              finalTranscript = [...transcriptResponse.results]
-                .reverse()
-                .map((message, index) => {
-                  const messageTime = new Date(baseTime - ((transcriptResponse.results.length - 1 - index) * 1000));
-                  return {
-                    content: message.text || '',
-                    timestamp: messageTime.toISOString(),
-                    role: message.role || 'unknown',
-                    type: 'text',
-                    sequence: index + 1
-                  };
-                });
-              console.log('📝 Prepared structured transcript for DB:', finalTranscript);
-            }
-          } catch (transcriptError) {
-            console.error('❌ Error handling transcript:', transcriptError);
-          }
-
-          // Update the database using the end_hominio_call function
-          const { data: endData, error: endError } = await context.supabase
-            .rpc('end_hominio_call', {
+        // Update minutes used (subtract initial deduction)
+        if (roundedDuration > 1) {
+          const { error: updateError } = await context.supabase
+            .rpc('check_and_increment_ai_minutes', {
               p_user_id: user.customClaims.id,
-              p_call_id: input.callId,
-              p_end_reason: 'user_ended',
-              p_transcript: finalTranscript, // This will be stored as JSONB
-              p_tool_executions: null
+              p_minutes: roundedDuration - 1
             });
 
-          if (endError) {
-            console.error('❌ Database error:', endError);
-            throw new Error('Failed to update call in database: ' + endError.message);
+          if (updateError) {
+            console.error('Error updating minutes:', updateError);
           }
-
-          console.log('💾 Database update result:', { endData, endError });
-
-          return {
-            success: true,
-            message: 'Call ended successfully'
-          };
-        } catch (error) {
-          // If anything fails, try to mark the call as errored
-          try {
-            await context.supabase
-              .rpc('mark_hominio_call_error', {
-                p_user_id: user.customClaims.id,
-                p_call_id: input.callId,
-                p_error_message: error instanceof Error ? error.message : 'Unknown error'
-              });
-          } catch (markError) {
-            console.error('❌ Error marking call as errored:', markError);
-          }
-
-          throw error;
         }
+
+        // End the call first
+        await context.ultravox.endCall(callData.ultravox_call_id);
+
+        // Wait a bit for the transcript to be processed
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Try to get the transcript
+        let finalTranscript = null;
+        try {
+          const transcriptResponse = await context.ultravox.getTranscript(callData.ultravox_call_id);
+          console.log('📝 Got transcript response:', transcriptResponse);
+
+          if (transcriptResponse?.results?.length > 0) {
+            const baseTime = Date.now();
+            finalTranscript = [...transcriptResponse.results]
+              .reverse()
+              .map((message, index) => {
+                const messageTime = new Date(baseTime - ((transcriptResponse.results.length - 1 - index) * 1000));
+                return {
+                  content: message.text || '',
+                  timestamp: messageTime.toISOString(),
+                  role: message.role || 'unknown',
+                  type: 'text',
+                  sequence: index + 1
+                };
+              });
+            console.log('📝 Prepared structured transcript for DB:', finalTranscript);
+          }
+        } catch (transcriptError) {
+          console.error('❌ Error handling transcript:', transcriptError);
+        }
+
+        // Update the database using the end_hominio_call function
+        const { data: endData, error: endError } = await context.supabase
+          .rpc('end_hominio_call', {
+            p_user_id: user.customClaims.id,
+            p_call_id: input.callId,
+            p_end_reason: 'user_ended',
+            p_transcript: finalTranscript, // This will be stored as JSONB
+            p_tool_executions: null
+          });
+
+        if (endError) {
+          console.error('❌ Database error:', endError);
+          throw new Error('Failed to update call in database: ' + endError.message);
+        }
+
+        console.log('💾 Database update result:', { endData, endError });
+
+        return {
+          success: true,
+          message: 'Call ended successfully'
+        };
       }
 
       throw new Error('Invalid action or missing callId');

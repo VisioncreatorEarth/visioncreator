@@ -4,7 +4,7 @@ export default createOperation.mutation({
     input: z.object({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
-        tier: z.enum(['free', 'homino', 'visioncreator'])
+        tier: z.enum(['FREE', 'HOMINIO', 'HOMINIO_PLUS'])
     }),
     requireAuthentication: true,
     rbac: {
@@ -27,9 +27,18 @@ export default createOperation.mutation({
 
         const now = new Date().toISOString();
         const tierConfig = {
-            free: { aiRequestsLimit: 10 },
-            homino: { aiRequestsLimit: 150 },
-            visioncreator: { aiRequestsLimit: 500 }
+            FREE: { 
+                minutesLimit: 2,
+                isOneTime: true
+            },
+            HOMINIO: { 
+                minutesLimit: 60,
+                isOneTime: false
+            },
+            HOMINIO_PLUS: { 
+                minutesLimit: 240,
+                isOneTime: false
+            }
         };
 
         // Get the current tier capability for this user
@@ -47,10 +56,10 @@ export default createOperation.mutation({
         if (input.action === 'grant') {
             const newConfig = {
                 tier: input.tier,
-                type: 'TIER',
+                minutesLimit: tierConfig[input.tier].minutesLimit,
+                minutesUsed: 0,
                 lastResetAt: now,
-                aiRequestsUsed: 0,
-                aiRequestsLimit: tierConfig[input.tier].aiRequestsLimit
+                isOneTime: tierConfig[input.tier].isOneTime
             };
 
             let capabilityId: string;
@@ -80,7 +89,7 @@ export default createOperation.mutation({
                         user_id: input.userId,
                         type: 'TIER',
                         name: `${input.tier} Tier`,
-                        description: `${input.tier} tier subscription`,
+                        description: getTierDescription(input.tier),
                         config: newConfig,
                         granted_at: now,
                         granted_by: user.customClaims.id,
@@ -96,50 +105,50 @@ export default createOperation.mutation({
                 capabilityId = newCapability.id;
             }
 
-            // Create audit log
-            await context.supabase.from('capability_audit_trail').insert({
-                user_id: input.userId,
-                performed_by: user.customClaims.id,
-                capability_id: capabilityId,
-                action: 'GRANT_TIER',
-                details: {
-                    tier: input.tier,
-                    timestamp: now,
-                    description: existingCapability
-                        ? `Changed tier to ${input.tier}`
-                        : `Granted ${input.tier} tier`,
-                    previousConfig: existingCapability?.config || null,
-                    newConfig,
-                    aiRequestsLimit: tierConfig[input.tier].aiRequestsLimit
-                }
-            });
-        } else if (input.action === 'revoke' && existingCapability) {
-            // Deactivate the capability
-            const { error: updateError } = await context.supabase
-                .from('capabilities')
-                .update({ active: false })
-                .eq('id', existingCapability.id);
-
-            if (updateError) {
-                throw new Error(`Failed to revoke capability: ${updateError.message}`);
+            return {
+                success: true,
+                message: `Successfully granted ${input.tier} tier to user`,
+                capabilityId
+            };
+        } else {
+            // Revoke action
+            if (!existingCapability) {
+                throw new Error('No active capability found for this user');
             }
 
-            // Create audit log
-            await context.supabase.from('capability_audit_trail').insert({
-                user_id: input.userId,
-                performed_by: user.customClaims.id,
-                capability_id: existingCapability.id,
-                action: 'REVOKE_TIER',
-                details: {
-                    tier: existingCapability.config.tier,
-                    timestamp: now,
-                    description: `Revoked ${existingCapability.config.tier} tier`,
-                    previousConfig: existingCapability.config,
-                    aiRequestsLimit: 0
-                }
-            });
-        }
+            const { error: revokeError } = await context.supabase
+                .from('capabilities')
+                .update({
+                    active: false,
+                    config: {
+                        ...existingCapability.config,
+                        revokedAt: now
+                    }
+                })
+                .eq('id', existingCapability.id);
 
-        return { success: true };
+            if (revokeError) {
+                throw new Error(`Failed to revoke capability: ${revokeError.message}`);
+            }
+
+            return {
+                success: true,
+                message: `Successfully revoked tier from user`,
+                capabilityId: existingCapability.id
+            };
+        }
     }
 });
+
+function getTierDescription(tier: 'FREE' | 'HOMINIO' | 'HOMINIO_PLUS'): string {
+    switch (tier) {
+        case 'FREE':
+            return 'Free tier with 2 minutes one-time usage';
+        case 'HOMINIO':
+            return 'Standard tier with 60 minutes per month';
+        case 'HOMINIO_PLUS':
+            return 'Premium tier with 240 minutes per month';
+        default:
+            return `${tier} tier subscription`;
+    }
+}

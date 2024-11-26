@@ -14,8 +14,8 @@
 		name: string;
 		description: string;
 		config: {
-			tier: 'free' | 'homino' | 'visioncreator';
-			aiRequestsLimit?: number;
+			tier: 'FREE' | 'HOMINIO' | 'HOMINIO_PLUS';
+			minutesLimit?: number;
 			[key: string]: any;
 		};
 		granted_at: string;
@@ -69,26 +69,26 @@
 	// Constants
 	const tiers = [
 		{
-			id: 'free',
+			id: 'FREE',
 			name: 'Free Tier',
-			aiLimit: 10,
-			features: ['Unlimited Shopping Lists', '10 Agent requests per week', 'Shopping Agent']
+			minutesLimit: 2,
+			features: ['2 minutes one-time usage', 'Shopping List Management', 'Basic Shopping Assistant']
 		},
 		{
-			id: 'homino',
-			name: 'Homino',
-			aiLimit: 150,
-			features: ['Everything in Free, plus:', '150 Agent requests per week', 'Todo Agent']
+			id: 'HOMINIO',
+			name: 'Hominio',
+			minutesLimit: 60,
+			features: ['60 minutes per month', 'Everything in Free', 'Advanced Shopping Assistant', 'Todo Management']
 		},
 		{
-			id: 'visioncreator',
-			name: 'Vision Creator',
-			aiLimit: 500,
+			id: 'HOMINIO_PLUS',
+			name: 'Hominio+',
+			minutesLimit: 240,
 			features: [
-				'Everything in Homino, plus:',
-				'500 Agent requests per week',
-				'Email Agent',
-				'Beta Access to New Features & Skills'
+				'240 minutes per month',
+				'Everything in Hominio',
+				'Priority Support',
+				'Beta Access to New Features'
 			]
 		}
 	];
@@ -105,7 +105,7 @@
 		selectedUserId = user.id;
 	}
 
-	async function manageTier(userId: string | null, tier: 'free' | 'homino' | 'visioncreator') {
+	async function manageTier(userId: string | null, tier: 'FREE' | 'HOMINIO' | 'HOMINIO_PLUS') {
 		if (!userId || changingTierId) return;
 		changingTierId = tier;
 
@@ -214,90 +214,56 @@
 					<div class="overflow-y-auto flex-1 p-6 pt-0">
 						{#if $userStatsQuery.data?.stats}
 							<div class="p-4 mb-6 rounded-lg bg-surface-700">
-								<h3 class="mb-4 text-lg font-semibold text-white">
-									Usage Statistics (Last 7 Days)
-								</h3>
+								<h3 class="mb-4 text-lg font-semibold text-white">Usage Statistics</h3>
 								<div class="grid grid-cols-2 gap-4">
-									<div class="p-3 rounded bg-surface-600">
-										<p class="text-sm text-white/60">Total Requests</p>
-										<p class="text-xl font-semibold text-white">
-											{$userStatsQuery.data.stats.total_requests}
-										</p>
+									<div>
+										<p class="text-sm text-surface-200">Total Calls</p>
+										<p class="text-lg font-semibold">{$userStatsQuery.data.stats.total_calls}</p>
 									</div>
-									<div class="p-3 rounded bg-surface-600">
-										<p class="text-sm text-white/60">Success Rate</p>
-										<p class="text-xl font-semibold text-white">
+									<div>
+										<p class="text-sm text-surface-200">Success Rate</p>
+										<p class="text-lg font-semibold">
 											{$userStatsQuery.data.stats.success_rate.toFixed(1)}%
 										</p>
 									</div>
-									<div class="p-3 rounded bg-surface-600">
-										<p class="text-sm text-white/60">Total Tokens</p>
-										<p class="text-xl font-semibold text-white">
-											{$userStatsQuery.data.stats.total_input_tokens +
-												$userStatsQuery.data.stats.total_output_tokens}
+									<div>
+										<p class="text-sm text-surface-200">Minutes Used</p>
+										<p class="text-lg font-semibold">
+											{$userStatsQuery.data.stats.minutes_used} / {$userStatsQuery.data.stats.minutes_limit}
 										</p>
-										<div class="mt-1 text-xs text-white/60">
-											<p>Input: {$userStatsQuery.data.stats.total_input_tokens}</p>
-											<p>Output: {$userStatsQuery.data.stats.total_output_tokens}</p>
-										</div>
 									</div>
-									<div class="p-3 rounded bg-surface-600">
-										<p class="text-sm text-white/60">Total Cost</p>
-										<p class="text-xl font-semibold text-white">
-											${$userStatsQuery.data.stats.total_cost.toFixed(4)}
-										</p>
+									<div>
+										<p class="text-sm text-surface-200">Minutes Remaining</p>
+										<p class="text-lg font-semibold">{$userStatsQuery.data.stats.minutes_remaining}</p>
 									</div>
 								</div>
-
-								<!-- Model Usage -->
-								{#if Object.keys($userStatsQuery.data.stats.requests_by_model).length > 0}
-									<div class="mt-4">
-										<h4 class="mb-2 text-sm font-semibold text-white">Model Usage</h4>
-										<div class="space-y-2">
-											{#each Object.entries($userStatsQuery.data.stats.requests_by_model) as [model, count]}
-												<div class="flex justify-between items-center p-2 rounded bg-surface-600">
-													<span class="text-sm text-white">{model}</span>
-													<span class="text-sm font-semibold text-white">{count} requests</span>
-												</div>
-											{/each}
-										</div>
-									</div>
-								{/if}
-
-								<!-- Recent Requests -->
-								<!-- {#if $userStatsQuery.data.stats.recent_requests.length > 0}
-									<div class="mt-4">
-										<h4 class="mb-2 text-sm font-semibold text-white">Recent Requests</h4>
-										<div class="space-y-2">
-											{#each $userStatsQuery.data.stats.recent_requests as request}
-												<div class="p-2 rounded bg-surface-600">
-													<div class="flex justify-between items-center">
-														<span class="text-sm text-white">
-															{new Date(request.timestamp).toLocaleString()}
-														</span>
-														<span
-															class="text-sm font-semibold {request.success
-																? 'text-green-400'
-																: 'text-red-400'}"
-														>
-															{request.success ? 'Success' : 'Failed'}
-														</span>
-													</div>
-													<div class="mt-1 text-xs text-white/60">
-														<p>Input Tokens: {request.input_tokens}</p>
-														<p>Output Tokens: {request.output_tokens}</p>
-														<p>
-															Cost: ${(
-																request.metadata?.cost?.input + request.metadata?.cost?.output
-															).toFixed(4)}
-														</p>
-													</div>
-												</div>
-											{/each}
-										</div>
-									</div>
-								{/if} -->
 							</div>
+
+							{#if $userStatsQuery.data.stats.recent_calls?.length > 0}
+								<div class="mt-6">
+									<h3 class="mb-4 text-lg font-semibold text-white">Recent Calls</h3>
+									<div class="space-y-3">
+										{#each $userStatsQuery.data.stats.recent_calls as call}
+											<div class="p-3 rounded-lg bg-surface-700">
+												<div class="flex justify-between items-center">
+													<span class="text-sm text-surface-200">
+														{new Date(call.start_time).toLocaleString()}
+													</span>
+													<span class="px-2 py-1 text-xs rounded-full" class:bg-green-700={call.status === 'completed'} class:bg-red-700={call.status === 'error'} class:bg-blue-700={call.status === 'active'}>
+														{call.status}
+													</span>
+												</div>
+												<div class="mt-2">
+													<p class="text-sm">Duration: {call.duration?.toFixed(1) || 0} minutes</p>
+													{#if call.error}
+														<p class="mt-1 text-sm text-red-400">{call.error}</p>
+													{/if}
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
 						{:else if $userStatsQuery.isLoading}
 							<div class="flex justify-center p-4">
 								<div class="loading loading-spinner loading-md" />

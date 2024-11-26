@@ -6,16 +6,23 @@ GRANT USAGE ON SCHEMA cron TO postgres;
 
 -- Enums for capability types and tiers
 CREATE TYPE capability_type AS ENUM ('TIER', 'RESOURCE');
-CREATE TYPE tier_level AS ENUM ('free', 'homino', 'visioncreator');
+DROP TYPE IF EXISTS tier_level CASCADE;
+CREATE TYPE tier_level AS ENUM ('FREE', 'HOMINIO', 'HOMINIO_PLUS');
 
 -- Capabilities table with flexible JSONB config
+DROP TABLE IF EXISTS capabilities;
 CREATE TABLE capabilities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     type capability_type NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    config JSONB NOT NULL DEFAULT '{
+        "minutesLimit": 2,
+        "minutesUsed": 0,
+        "lastResetAt": null,
+        "isOneTime": true
+    }'::jsonb,
     granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     granted_by UUID NOT NULL REFERENCES public.profiles(id),
     active BOOLEAN NOT NULL DEFAULT true
@@ -47,13 +54,14 @@ CREATE TABLE hominio_requests (
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
--- Function to check and increment AI request count
-CREATE OR REPLACE FUNCTION check_and_increment_ai_requests(p_user_id UUID)
+-- Function to check and increment AI minutes
+CREATE OR REPLACE FUNCTION check_and_increment_ai_minutes(p_user_id UUID, p_minutes NUMERIC)
 RETURNS BOOLEAN AS $$
 DECLARE
     capability_record RECORD;
-    current_count INTEGER;
-    request_limit INTEGER;
+    current_minutes NUMERIC;
+    minutes_limit NUMERIC;
+    is_one_time BOOLEAN;
 BEGIN
     -- Get user's active tier capability
     SELECT * INTO capability_record
@@ -66,11 +74,12 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    current_count := (capability_record.config->>'aiRequestsUsed')::integer;
-    request_limit := (capability_record.config->>'aiRequestsLimit')::integer;
+    current_minutes := (capability_record.config->>'minutesUsed')::numeric;
+    minutes_limit := (capability_record.config->>'minutesLimit')::numeric;
+    is_one_time := (capability_record.config->>'isOneTime')::boolean;
 
     -- Check if user has reached their limit
-    IF current_count >= request_limit THEN
+    IF current_minutes >= minutes_limit THEN
         RETURN FALSE;
     END IF;
 
@@ -78,8 +87,8 @@ BEGIN
     UPDATE capabilities
     SET config = jsonb_set(
         config,
-        '{aiRequestsUsed}',
-        to_jsonb(current_count + 1)
+        '{minutesUsed}',
+        to_jsonb(current_minutes + p_minutes)
     )
     WHERE id = capability_record.id;
 
@@ -87,32 +96,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to reset AI request counts weekly
-CREATE OR REPLACE FUNCTION reset_weekly_ai_requests()
+-- Function to reset monthly AI minutes (only for non-one-time tiers)
+CREATE OR REPLACE FUNCTION reset_monthly_ai_minutes()
 RETURNS void AS $$
 BEGIN
     UPDATE capabilities
     SET config = jsonb_set(
         config,
-        '{aiRequestsUsed}',
-        '0'::jsonb
+        '{minutesUsed}',
+        '0'
     )
     WHERE type = 'TIER'
-    AND (config->>'lastResetAt')::timestamptz <= NOW() - INTERVAL '7 days';
+    AND active = true
+    AND (config->>'isOneTime')::boolean = false;
 END;
 $$ LANGUAGE plpgsql;
 
--- Schedule weekly reset
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-        PERFORM cron.schedule(
-            'reset-ai-requests',
-            '0 0 * * 0',
-            'SELECT reset_weekly_ai_requests()'
-        );
-    END IF;
-END $$;
+-- Schedule monthly reset using pg_cron
+SELECT cron.schedule('reset-monthly-ai-minutes', '0 0 1 * *', 'SELECT reset_monthly_ai_minutes()');
 
 -- RLS Policies
 ALTER TABLE capabilities ENABLE ROW LEVEL SECURITY;
