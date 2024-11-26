@@ -5,9 +5,10 @@ import { UltravoxAuthenticationError, UltravoxInitializationError } from '../err
 const CALL_CONFIG = {
   defaultSystemPrompt: `
   You are a friendly shopping assistant. Please help me with my shopping list. 
-  If the user has questions, please always interact in a friendly conversation. Always respond instantly and make short smalltalk, while exuting the tools in the background. 
- 
-  IMPORTANT RULES: ALWAYS execute the updateShoppingList tool ANYTIME in the conversation, whenever the user adds or removes an item.
+  If the user has questions, please always interact in a friendly conversation. 
+  
+  Always respond instantly and make short smalltalk, while exuting the tools in the background. 
+
   Please also translate any shoppinglist item into english
 
   Available Categories and their Icons:
@@ -41,7 +42,6 @@ const CALL_CONFIG = {
      - Use the same category and name as when adding to ensure proper removal
 
   ADDITIONAL INSTRUCTIONS:
-    - ALWAYS use the updateShoppingList tool to add or remove items from the shopping list.
     - Also allow for combined requests. For example:
       - "Adding 3 Apples and removing Bananas from your list, anything else?"
       - "Adding Milk and removing Bread from your list, aynthing else?"
@@ -63,31 +63,35 @@ const CALL_CONFIG = {
     {
       temporaryTool: {
         modelToolName: 'updateShoppingList',
-        description: 'Update shopping list items. Call this when items are added, removed, or modified.',
+        description: 'Update shopping list items. ALWAYS call this when items are added, removed, or modified. ALWAYS use this tool in the background during the conversation.',
         dynamicParameters: [
           {
-            name: 'items',
+            name: 'orderDetailsData',
             location: 'PARAMETER_LOCATION_BODY',
-            schema: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string', description: 'Name of the item' },
-                  quantity: { type: 'number', description: 'Quantity of the item' },
-                  category: { type: 'string', description: 'Category of the item' },
-                  icon: { type: 'string', description: 'Icon for the item' },
-                  unit: { type: 'string', description: 'Unit for this item' },
-                  action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
+            dynamicParameters: [
+              {
+                name: 'items',
+                location: 'PARAMETER_LOCATION_BODY',
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      name: { type: 'string', description: 'Name of the item' },
+                      quantity: { type: 'number', description: 'Quantity of the item' },
+                      category: { type: 'string', description: 'Category of the item' },
+                      icon: { type: 'string', description: 'Icon for the item' },
+                      unit: { type: 'string', description: 'Unit for this item' },
+                      action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
+                    },
+                    required: ['name', 'category', 'action']
+                  }
                 },
-                required: ['name', 'category', 'action']
+                required: true
               }
-            },
-            required: true
+            ],
+            client: {}
           }
-        ],
-        client: {}
-      }
     }
   ]
 } as const;
