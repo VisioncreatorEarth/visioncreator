@@ -61,6 +61,32 @@
 		Other: ['mdi:shopping']
 	};
 
+	let groupedItems = [];
+
+	$: {
+		if (items) {
+			// Only group items if they are not purchased (checked)
+			if (!items.every((item) => item.is_checked)) {
+				const grouped = items.reduce((acc, item) => {
+					if (!acc[item.category]) {
+						acc[item.category] = [];
+					}
+					acc[item.category].push(item);
+					return acc;
+				}, {});
+				groupedItems = Object.entries(grouped).map(([category, items]) => ({
+					category,
+					items
+				}));
+			} else {
+				// For purchased items, don't group, just put each item in its own "group"
+				groupedItems = [{ category: '', items: items }];
+			}
+		} else {
+			groupedItems = [];
+		}
+	}
+
 	$: activeItems = items.filter((item) => !item.is_checked);
 	$: purchasedItems = items.filter((item) => item.is_checked);
 </script>
@@ -72,7 +98,7 @@
 		<p class="mt-2 text-sm">Click the button above to add some items</p>
 	</div>
 {:else}
-	<div class="space-y-8 @container">
+	<div class="@container">
 		<div
 			class="grid grid-cols-2 @xs:grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
 		>
@@ -111,31 +137,28 @@
 
 		<!-- Purchased Items Section -->
 		{#if purchasedItems.length > 0}
-			<div class="space-y-4">
-				<div class="divider divider-surface">Purchased Items</div>
-				<div
-					class="grid grid-cols-2 @xs:grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
-				>
-					{#each purchasedItems as item (getItemKey(item))}
-						<button
-							class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
-							on:click={() => onToggle && onToggle(item)}
-						>
-							<Icon
-								icon={item.icon || FALLBACK_ICONS[item.category || 'Other'][0]}
-								class="mb-2 w-1/2 h-1/2 text-surface-200/60"
-							/>
-							<span class="overflow-hidden text-xs text-center text-ellipsis text-surface-200/60">
-								{item.name}
-							</span>
-							{#if item.quantity > 1 || item.unit}
-								<div class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/20">
-									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
-								</div>
-							{/if}
-						</button>
-					{/each}
-				</div>
+			<div
+				class="grid grid-cols-2 @xs:grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
+			>
+				{#each purchasedItems as item (getItemKey(item))}
+					<button
+						class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
+						on:click={() => onToggle && onToggle(item)}
+					>
+						<Icon
+							icon={item.icon || FALLBACK_ICONS[item.category || 'Other'][0]}
+							class="mb-2 w-1/2 h-1/2 text-surface-200/60"
+						/>
+						<span class="overflow-hidden text-xs text-center text-ellipsis text-surface-200/60">
+							{item.name}
+						</span>
+						{#if item.quantity > 1 || item.unit}
+							<div class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/20">
+								{item.quantity}{item.unit ? ` ${item.unit}` : ''}
+							</div>
+						{/if}
+					</button>
+				{/each}
 			</div>
 		{/if}
 	</div>

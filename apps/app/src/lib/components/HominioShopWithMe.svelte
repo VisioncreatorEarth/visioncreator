@@ -145,7 +145,7 @@
 	const handleToggleItem = async (item: any) => {
 		try {
 			await $toggleItemMutation.mutateAsync({
-				action: 'remove',
+				action: item.is_checked ? 'add' : 'remove',
 				items: [
 					{
 						name: item.name,
@@ -159,6 +159,8 @@
 		}
 	};
 
+	let purchasedItems: any[] = [];
+
 	$: items =
 		$shoppingListQuery.data?.shopping_list_items?.map((item) => ({
 			id: item.id,
@@ -167,55 +169,67 @@
 			quantity: item.quantity,
 			unit: item.unit,
 			icon: item.shopping_items?.icon,
-			is_checked: item.is_checked
+			is_checked: item.is_checked,
+			last_modified: new Date(item.updated_at).getTime()
 		})) || [];
 
 	$: activeItems = items.filter((item) => !item.is_checked);
-	$: purchasedItems = items.filter((item) => item.is_checked);
+	$: purchasedItems = items
+		.filter((item) => item.is_checked)
+		.sort((a, b) => b.last_modified - a.last_modified);
 </script>
 
 <div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
 	<div class="flex overflow-hidden flex-grow w-full h-full">
 		<!-- Main Content -->
-		<div class="overflow-y-auto flex-1 p-4 h-full">
-			{#if $shoppingListQuery.isLoading}
-				<div class="py-12 text-center text-surface-300">
-					<p class="text-lg">Loading shopping list...</p>
-				</div>
-			{:else if $shoppingListQuery.error}
-				<div class="py-12 text-center text-surface-300">
-					<p class="text-lg text-error-500">
-						Error loading shopping list: {$shoppingListQuery.error.message}
-					</p>
-					<button class="mt-4 btn variant-filled" on:click={() => $shoppingListQuery.refetch()}>
-						Try Again
-					</button>
-				</div>
-			{:else if $shoppingListQuery.data}
-				<!-- Shopping List Section -->
-				<div class="p-6 mb-6 rounded-2xl bg-surface-800">
-					<div class="flex justify-between items-center mb-6">
-						<h2 class="text-2xl font-bold">ShopWithMe</h2>
-						<button
-							class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
-							on:click={() => addRandomItems()}
-						>
-							Add Random Items
+		<div class="overflow-y-auto flex-grow w-full h-full">
+			<div class="container p-4 mx-auto">
+				{#if $shoppingListQuery.isLoading}
+					<div class="py-12 text-center text-surface-300">
+						<p class="text-lg">Loading shopping list...</p>
+					</div>
+				{:else if $shoppingListQuery.error}
+					<div class="py-12 text-center text-surface-300">
+						<p class="text-lg text-error-500">
+							Error loading shopping list: {$shoppingListQuery.error.message}
+						</p>
+						<button class="mt-4 btn variant-filled" on:click={() => $shoppingListQuery.refetch()}>
+							Try Again
 						</button>
 					</div>
-
-					{#if !activeItems.length}
-						<div class="p-8 text-center text-surface-200">
-							<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
-							<p>No items in this list yet</p>
-							<p class="mt-2 text-sm">Click the button above to add some random items</p>
+				{:else if $shoppingListQuery.data}
+					<div class="flex flex-col gap-4">
+						<!-- Active Items Section -->
+						<div class="p-6 rounded-lg bg-surface-800">
+							<div class="flex justify-between items-center mb-8">
+								<h2 class="text-2xl font-bold">ShopWithMe</h2>
+								<button
+									class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
+									on:click={() => addRandomItems()}
+								>
+									Add Random Items
+								</button>
+							</div>
+							{#if !activeItems.length}
+								<div class="p-8 text-center text-surface-200">
+									<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
+									<p>No active items in this list yet</p>
+									<p class="mt-2 text-sm">Click the button above to add some random items</p>
+								</div>
+							{:else}
+								<OShoppingItems items={activeItems} onToggle={handleToggleItem} />
+							{/if}
 						</div>
-					{:else}
-						<OShoppingItems {items} onToggle={handleToggleItem} />
-					{/if}
-				</div>
-				<div class="h-12" />
-			{/if}
+
+						<!-- Purchased Items Section -->
+						{#if purchasedItems.length}
+							<div class="p-6 rounded-lg bg-surface-800">
+								<OShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 </div>
