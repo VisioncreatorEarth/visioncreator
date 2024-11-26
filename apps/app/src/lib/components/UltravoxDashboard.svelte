@@ -71,7 +71,7 @@
 					<div class="space-y-4">
 						{#each $timeUsageQuery.data.calls ?? [] as call}
 							<div class="p-4 rounded bg-surface-700/50">
-								<div class="flex items-center justify-between">
+								<div class="flex justify-between items-center">
 									<div class="flex items-center space-x-3">
 										<span
 											class="px-2 py-1 text-xs rounded-full {call.ended
@@ -81,10 +81,10 @@
 											{call.ended ? `Ended (${call.endReason || 'Unknown'})` : 'Active'}
 										</span>
 										<span class="text-sm text-surface-200">
-											{call.voice === 'b0e6b5c1-3100-44d5-8578-9015aa3023ae' ? 'jessica' : call.voice}
+											by {call.userName}
 										</span>
 										<span class="text-sm text-surface-100">
-											Duration: {calculateDuration(call.created, call.ended)}
+											{calculateDuration(call.created, call.ended)}
 										</span>
 									</div>
 									<span class="text-xs text-surface-300">{formatTimestamp(call.created)}</span>
