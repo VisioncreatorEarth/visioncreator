@@ -117,22 +117,23 @@ export default createOperation.mutation({
           .eq('active', true)
           .single();
 
-        // Get actual minutes used from calls
+        // Get actual minutes used from completed calls
         const { data: calls, error: callsError } = await context.supabase
           .from('hominio_calls')
           .select('duration_minutes')
-          .eq('user_id', user.customClaims.id);
+          .eq('user_id', user.customClaims.id)
+          .eq('status', 'completed');
 
         if (callsError) {
           console.log('Backend - Error fetching calls:', callsError);
           throw new Error('Failed to fetch call history');
         }
 
-        const actualMinutesUsed = calls.reduce((total, call) => total + (call.duration_minutes || 0), 0);
+        const actualMinutesUsed = Number(calls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
         const minutesLimit = userCapability?.config?.minutesLimit || 0;
-        const remainingMinutes = Math.max(0, minutesLimit - actualMinutesUsed);
+        const remainingMinutes = Number((minutesLimit - actualMinutesUsed).toFixed(4)); // Keep 4 decimal places for precision
         
-        console.log('Backend - Actual minutes used:', actualMinutesUsed);
+        console.log('Backend - Actual minutes used:', actualMinutesUsed.toFixed(4));
         console.log('Backend - Minutes limit:', minutesLimit);
         console.log('Backend - Remaining minutes:', remainingMinutes);
         

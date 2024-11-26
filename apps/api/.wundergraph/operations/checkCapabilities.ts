@@ -31,17 +31,34 @@ export default createOperation.query({
             };
         }
 
-        // Check if user has available minutes
-        const minutesUsed = capability.config?.minutesUsed || 0;
-        const minutesLimit = capability.config?.minutesLimit || 0;
+        // Get actual minutes used from completed calls
+        const { data: calls, error: callsError } = await context.supabase
+            .from('hominio_calls')
+            .select('duration_minutes')
+            .eq('user_id', user.customClaims.id)
+            .eq('status', 'completed');
 
-        if (minutesUsed >= minutesLimit) {
+        if (callsError) {
+            console.error('Error fetching calls:', callsError);
+            throw new Error('Failed to fetch call history');
+        }
+
+        const actualMinutesUsed = Number(calls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
+        const minutesLimit = capability.config?.minutesLimit || 0;
+        const remainingMinutes = Number((minutesLimit - actualMinutesUsed).toFixed(4));
+
+        console.log('Minutes used:', actualMinutesUsed);
+        console.log('Minutes limit:', minutesLimit);
+        console.log('Remaining minutes:', remainingMinutes);
+
+        if (remainingMinutes <= 0) {
             return {
                 status: 'NO_MINUTES',
                 message: 'No available minutes in current plan',
                 tier: capability.config.tier,
                 minutesLimit,
-                minutesUsed
+                minutesUsed: actualMinutesUsed,
+                remainingMinutes: 0
             };
         }
 
@@ -50,8 +67,8 @@ export default createOperation.query({
             status: 'OK',
             tier: capability.config.tier,
             minutesLimit,
-            minutesUsed,
-            remainingMinutes: minutesLimit - minutesUsed
+            minutesUsed: actualMinutesUsed,
+            remainingMinutes
         };
     }
 });

@@ -55,13 +55,12 @@ CREATE TABLE hominio_requests (
 );
 
 -- Function to check and increment AI minutes
-CREATE OR REPLACE FUNCTION check_and_increment_ai_minutes(p_user_id UUID, p_minutes NUMERIC(10,2))
+CREATE OR REPLACE FUNCTION check_and_increment_ai_minutes(p_user_id UUID, p_minutes NUMERIC(10,4))
 RETURNS BOOLEAN AS $$
 DECLARE
     capability_record RECORD;
-    current_minutes NUMERIC(10,2);
-    minutes_limit NUMERIC(10,2);
-    is_one_time BOOLEAN;
+    actual_minutes_used NUMERIC(10,4);
+    minutes_limit NUMERIC(10,4);
 BEGIN
     -- Get user's active tier capability
     SELECT * INTO capability_record
@@ -74,23 +73,18 @@ BEGIN
         RETURN FALSE;
     END IF;
 
-    current_minutes := (capability_record.config->>'minutesUsed')::numeric(10,2);
-    minutes_limit := (capability_record.config->>'minutesLimit')::numeric(10,2);
-    is_one_time := (capability_record.config->>'isOneTime')::boolean;
+    -- Calculate actual minutes used from completed calls
+    SELECT COALESCE(SUM(duration_minutes), 0) INTO actual_minutes_used
+    FROM hominio_calls
+    WHERE user_id = p_user_id
+    AND status = 'completed';
+
+    minutes_limit := (capability_record.config->>'minutesLimit')::numeric(10,4);
 
     -- Check if user has reached their limit
-    IF current_minutes >= minutes_limit THEN
+    IF actual_minutes_used >= minutes_limit THEN
         RETURN FALSE;
     END IF;
-
-    -- Increment the usage count with proper decimal precision
-    UPDATE capabilities
-    SET config = jsonb_set(
-        config,
-        '{minutesUsed}',
-        to_jsonb(ROUND((current_minutes + p_minutes)::numeric, 2))
-    )
-    WHERE id = capability_record.id;
 
     RETURN TRUE;
 END;
