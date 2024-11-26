@@ -165,7 +165,7 @@
 				</div>
 			{:else if $usersQuery.data?.users}
 				<div class="space-y-2">
-					{#each $usersQuery.data.users as user}
+					{#each $usersQuery.data?.users || [] as user}
 						<button
 							class="w-full p-3 text-left rounded-lg transition-colors {selectedUserId === user.id
 								? 'bg-tertiary-500/20 text-tertiary-400'
@@ -175,8 +175,8 @@
 								showUltravoxDashboard = false;
 							}}
 						>
-							{user.name}
-							<span class="text-sm opacity-75">({user.id})</span>
+							<span class="block font-medium">{user.name}</span>
+							<span class="block mt-0.5 text-xs opacity-75">{user.id}</span>
 						</button>
 					{/each}
 				</div>
