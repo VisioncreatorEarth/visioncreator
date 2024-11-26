@@ -295,7 +295,7 @@
 
 {#if $context.isOpen}
 	<div
-		class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-xl bg-surface-900/30"
+		class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-sm bg-surface-900/30"
 		transition:fade={{ duration: 200 }}
 	>
 		{#if $currentState === 'calling'}
@@ -306,13 +306,13 @@
 				showControls={false}
 			/>
 		{:else}
-			<div class="relative mx-auto mb-20 w-full max-w-2xl">
+			<div class="relative mx-auto mb-20 w-full max-w-4xl">
 				<div
 					class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
 					style="max-height: calc(100vh - 120px);"
 				>
 					<div class="space-y-3">
-						<div class="rounded-xl backdrop-blur-xl bg-tertiary-200/10">
+						<div class="rounded-xl backdrop-blur-xl bg-surface-400/10">
 							{#if $currentState === 'requestPermissions'}
 								<div class="p-6 text-center">
 									<div class="mb-4 text-4xl">🎤</div>

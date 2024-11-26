@@ -399,7 +399,7 @@
 	});
 </script>
 
-<div class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-xl bg-surface-500/ghost">
+<div class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-sm bg-surface-900/30">
 	<div class="relative mx-auto mb-20 w-full max-w-2xl">
 		<div
 			class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
@@ -432,17 +432,17 @@
 				-->
 
 				{#if currentItems.length > 0}
-					<div class="p-4 rounded-xl backdrop-blur-xl bg-surface-50/ghost">
+					<div class="p-4 rounded-xl backdrop-blur-xl bg-surface-800">
 						{#if addedItems.length > 0}
 							<div class="mb-4">
-								<h3 class="mb-2 text-sm font-medium text-surface-900">Items to Add:</h3>
+								<h3 class="mb-2 text-sm font-medium text-tertiary-300">Added</h3>
 								<OShoppingItems items={addedItems} />
 							</div>
 						{/if}
 
 						{#if removedItems.length > 0}
 							<div>
-								<h3 class="mb-2 text-sm font-medium text-surface-900">Items to Remove:</h3>
+								<h3 class="mb-2 text-sm font-medium text-tertiary-300">Removed</h3>
 								<OShoppingItems
 									items={removedItems.map((item) => ({ ...item, is_checked: true }))}
 								/>
@@ -457,7 +457,7 @@
 					</div>
 				{/if}
 
-				<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
+				<div class="p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
 					{#if status !== 'disconnected'}
 						<div class="flex justify-center">
 							<div
