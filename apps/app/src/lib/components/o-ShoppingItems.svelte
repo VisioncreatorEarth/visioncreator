@@ -30,7 +30,7 @@
 		Snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
 		Household: 'bg-tertiary-500/10 hover:bg-tertiary-500/20 text-tertiary-500',
 		'Personal Care': 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-500',
-		Other: 'bg-gray-500/10 hover:bg-gray-500/20 text-gray-500'
+		Other: 'bg-gray-500/20 hover:bg-gray-500/40 text-gray-300'
 	};
 
 	const categoryOrder = [
