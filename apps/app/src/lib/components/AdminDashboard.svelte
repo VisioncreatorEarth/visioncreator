@@ -55,12 +55,6 @@
 		enabled: !!selectedUserId
 	});
 
-	$: auditLogsQuery = createQuery({
-		operationName: 'getAuditLogs',
-		input: { userId: selectedUserId || '' },
-		enabled: !!selectedUserId
-	});
-
 	const manageCapabilitiesMutation = createMutation({
 		operationName: 'manageCapabilities'
 	});
@@ -78,7 +72,12 @@
 			id: 'HOMINIO',
 			name: 'Hominio',
 			minutesLimit: 60,
-			features: ['60 minutes per month', 'Everything in Free', 'Advanced Shopping Assistant', 'Todo Management']
+			features: [
+				'60 minutes per month',
+				'Everything in Free',
+				'Advanced Shopping Assistant',
+				'Todo Management'
+			]
 		},
 		{
 			id: 'HOMINIO_PLUS',
@@ -96,12 +95,12 @@
 	// Helper function to format duration with proper rounding
 	function formatDuration(minutes: number): string {
 		if (minutes === undefined || minutes === null) return '0m 00s';
-		
+
 		// Convert to seconds and round to avoid floating point issues
 		const totalSeconds = Math.round(minutes * 60);
 		const displayMinutes = Math.floor(totalSeconds / 60);
 		const displaySeconds = totalSeconds % 60;
-		
+
 		// Add leading zero for seconds if needed
 		const secondsStr = displaySeconds < 10 ? `0${displaySeconds}` : displaySeconds;
 		return `${displayMinutes}m ${secondsStr}s`;
@@ -110,7 +109,7 @@
 	// Calculate precise minutes used from recent calls
 	function calculatePreciseMinutesUsed(stats: any): number {
 		if (!stats.recent_calls?.length) return 0;
-		
+
 		return stats.recent_calls.reduce((total: number, call: any) => {
 			return total + (call.duration || 0);
 		}, 0);
@@ -128,8 +127,8 @@
 		try {
 			$manageCapabilitiesMutation.mutateAsync({
 				userId,
-				action: 'grant',
-				tier: tierId
+				action: tierId === 'revoke' ? 'revoke' : 'grant',
+				tier: tierId === 'revoke' ? null : tierId
 			});
 		} catch (error) {
 			console.error('Failed to manage tier:', error);
@@ -145,7 +144,7 @@
 
 <div class="flex h-screen">
 	<!-- Left Sidebar - User Selection -->
-	<aside class="w-80 overflow-y-auto border-r border-surface-700 bg-surface-800">
+	<aside class="overflow-y-auto w-80 border-r border-surface-700 bg-surface-800">
 		<div class="p-4">
 			<!-- Special UltravoxDashboard Link -->
 			<button
@@ -185,13 +184,13 @@
 	</aside>
 
 	<!-- Main Content Area -->
-	<main class="flex-1 overflow-y-auto bg-surface-900">
+	<main class="overflow-y-auto flex-1 bg-surface-900">
 		{#if showUltravoxDashboard}
 			<UltravoxDashboard />
 		{:else if selectedUserId}
 			<div class="p-6 space-y-6">
 				{#if $userStatsQuery.data?.stats}
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<!-- Left Column: Usage Overview and Tier Management -->
 						<div class="space-y-6">
 							<!-- Usage Overview -->
@@ -222,11 +221,12 @@
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<p class="text-sm text-surface-200">Minutes Remaining</p>
 										<p class="mt-1 text-2xl font-semibold text-white">
-											{formatDuration($userStatsQuery.data.stats.minutes_limit - calculatePreciseMinutesUsed($userStatsQuery.data.stats))}
+											{formatDuration(
+												$userStatsQuery.data.stats.minutes_limit -
+													calculatePreciseMinutesUsed($userStatsQuery.data.stats)
+											)}
 										</p>
-										<p class="mt-1 text-xs text-surface-300">
-											this month
-										</p>
+										<p class="mt-1 text-xs text-surface-300">this month</p>
 									</div>
 								</div>
 							</div>
@@ -234,30 +234,52 @@
 							<!-- Tier Management -->
 							{#if $getUserCapabilitiesQuery.data?.capabilities}
 								<div class="p-6 rounded-lg bg-surface-800">
-									<h3 class="mb-4 text-lg font-semibold text-white">Tier Management</h3>
+									<div class="flex justify-between items-center mb-4">
+										<h3 class="text-lg font-semibold text-white">Tier Management</h3>
+										{#if getCurrentTier($getUserCapabilitiesQuery.data.capabilities)}
+											<button
+												class="px-4 py-2 rounded-lg border transition-colors border-error-500 text-error-500 hover:bg-error-500/10"
+												on:click={() =>
+													selectedUserId && handleTierChange(selectedUserId, 'revoke')}
+												disabled={changingTierId === 'revoke'}
+											>
+												{#if changingTierId === 'revoke'}
+													<span class="inline-block w-4 h-4 rounded-full border-2 animate-spin" />
+												{:else}
+													Remove Tier
+												{/if}
+											</button>
+										{/if}
+									</div>
 									<div class="space-y-4">
 										{#each tiers as tier}
-											{@const currentTier = getCurrentTier($getUserCapabilitiesQuery.data.capabilities)}
+											{@const currentTier = getCurrentTier(
+												$getUserCapabilitiesQuery.data.capabilities
+											)}
 											<div class="p-4 rounded-lg bg-surface-700/50">
-												<div class="flex justify-between items-start">
+												<div class="flex justify-between items-center">
 													<div>
 														<h4 class="font-medium text-white">{tier.name}</h4>
-														<ul class="mt-2 space-y-1 text-sm text-surface-200">
-															{#each tier.features as feature}
-																<li class="flex gap-2 items-center">
-																	<span class="text-success-400">✓</span>
-																	{feature}
-																</li>
-															{/each}
-														</ul>
+														<p class="mt-1 text-sm text-surface-200">
+															{tier.minutesLimit} minutes {tier.id === 'FREE'
+																? '(one-time)'
+																: 'per month'}
+														</p>
 													</div>
 													<button
-														class={`px-4 py-2 rounded-lg transition-colors ${currentTier?.config.tier === tier.id ? 'bg-tertiary-500/20 text-tertiary-400' : 'border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10'}`}
-														on:click={() => selectedUserId && handleTierChange(selectedUserId, tier.id)}
+														class={`px-4 py-2 rounded-lg transition-colors ${
+															currentTier?.config.tier === tier.id
+																? 'bg-tertiary-500/20 text-tertiary-400'
+																: 'border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10'
+														}`}
+														on:click={() =>
+															selectedUserId && handleTierChange(selectedUserId, tier.id)}
 														disabled={changingTierId === tier.id}
 													>
 														{#if changingTierId === tier.id}
-															<span class="inline-block w-4 h-4 border-2 rounded-full animate-spin" />
+															<span
+																class="inline-block w-4 h-4 rounded-full border-2 animate-spin"
+															/>
 														{:else if currentTier?.config.tier === tier.id}
 															Active
 														{:else}
@@ -285,12 +307,18 @@
 														{new Date(call.start_time).toLocaleString()}
 													</span>
 													<span
-														class={`px-2 py-1 text-xs rounded-full ${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''} ${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''} ${call.status === 'active' ? 'bg-tertiary-500/20 text-tertiary-400' : ''}`}
+														class={`px-2 py-1 text-xs rounded-full ${
+															call.status === 'completed'
+																? 'bg-success-500/20 text-success-400'
+																: ''
+														} ${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''} ${
+															call.status === 'active' ? 'bg-tertiary-500/20 text-tertiary-400' : ''
+														}`}
 													>
 														{call.status}
 													</span>
 												</div>
-												<div class="mt-3 grid grid-cols-2 gap-4">
+												<div class="grid grid-cols-2 gap-4 mt-3">
 													<div>
 														<p class="text-sm text-surface-200">Duration</p>
 														<p class="text-sm font-medium text-white">
@@ -307,7 +335,7 @@
 													{/if}
 												</div>
 												{#if call.error}
-													<div class="mt-3 p-2 rounded bg-error-500/10">
+													<div class="p-2 mt-3 rounded bg-error-500/10">
 														<p class="text-sm text-error-400">{call.error}</p>
 													</div>
 												{/if}
@@ -319,22 +347,22 @@
 						</div>
 					</div>
 				{:else if $userStatsQuery.isLoading}
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<!-- Loading State: Left Column -->
 						<div class="space-y-6">
-							<div class="p-6 rounded-lg bg-surface-800 animate-pulse">
-								<div class="h-6 w-48 mb-6 rounded bg-surface-700" />
+							<div class="p-6 rounded-lg animate-pulse bg-surface-800">
+								<div class="mb-6 w-48 h-6 rounded bg-surface-700" />
 								<div class="grid grid-cols-2 gap-4">
 									{#each Array(4) as _}
 										<div class="p-4 rounded-lg bg-surface-700/50">
-											<div class="h-4 w-24 mb-2 rounded bg-surface-600" />
-											<div class="h-8 w-16 rounded bg-surface-600" />
+											<div class="mb-2 w-24 h-4 rounded bg-surface-600" />
+											<div class="w-16 h-8 rounded bg-surface-600" />
 										</div>
 									{/each}
 								</div>
 							</div>
-							<div class="p-6 rounded-lg bg-surface-800 animate-pulse">
-								<div class="h-6 w-48 mb-6 rounded bg-surface-700" />
+							<div class="p-6 rounded-lg animate-pulse bg-surface-800">
+								<div class="mb-6 w-48 h-6 rounded bg-surface-700" />
 								<div class="space-y-4">
 									{#each Array(3) as _}
 										<div class="p-4 rounded-lg bg-surface-700/50">
@@ -346,14 +374,14 @@
 						</div>
 
 						<!-- Loading State: Right Column -->
-						<div class="p-6 rounded-lg bg-surface-800 animate-pulse">
-							<div class="h-6 w-48 mb-6 rounded bg-surface-700" />
+						<div class="p-6 rounded-lg animate-pulse bg-surface-800">
+							<div class="mb-6 w-48 h-6 rounded bg-surface-700" />
 							<div class="space-y-4">
 								{#each Array(5) as _}
 									<div class="p-4 rounded-lg bg-surface-700/50">
 										<div class="flex justify-between items-center mb-4">
-											<div class="h-4 w-32 rounded bg-surface-600" />
-											<div class="h-6 w-16 rounded bg-surface-600" />
+											<div class="w-32 h-4 rounded bg-surface-600" />
+											<div class="w-16 h-6 rounded bg-surface-600" />
 										</div>
 										<div class="grid grid-cols-2 gap-4">
 											<div class="h-12 rounded bg-surface-600" />

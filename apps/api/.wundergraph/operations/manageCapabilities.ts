@@ -4,7 +4,7 @@ export default createOperation.mutation({
     input: z.object({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
-        tier: z.enum(['FREE', 'HOMINIO', 'HOMINIO_PLUS'])
+        tier: z.enum(['FREE', 'HOMINIO', 'HOMINIO_PLUS']).nullable()
     }),
     requireAuthentication: true,
     rbac: {
@@ -113,29 +113,35 @@ export default createOperation.mutation({
         } else {
             // Revoke action
             if (!existingCapability) {
-                throw new Error('No active capability found for this user');
+                throw new Error('No tier capability found to revoke');
             }
 
-            const { error: revokeError } = await context.supabase
+            // Deactivate the capability
+            const { error: updateError } = await context.supabase
                 .from('capabilities')
                 .update({
                     active: false,
-                    config: {
-                        ...existingCapability.config,
-                        revokedAt: now
-                    }
+                    config: { ...existingCapability.config, deactivatedAt: now }
                 })
                 .eq('id', existingCapability.id);
 
-            if (revokeError) {
-                throw new Error(`Failed to revoke capability: ${revokeError.message}`);
+            if (updateError) {
+                throw new Error(`Failed to revoke capability: ${updateError.message}`);
             }
 
-            return {
-                success: true,
-                message: `Successfully revoked tier from user`,
-                capabilityId: existingCapability.id
-            };
+            // Log the action
+            await context.supabase
+                .from('audit_logs')
+                .insert({
+                    user_id: input.userId,
+                    action: 'TIER_REVOKED',
+                    performed_by: user.customClaims.id,
+                    capability_id: existingCapability.id,
+                    capability_type: 'TIER',
+                    details: `Tier capability revoked`
+                });
+
+            return { success: true };
         }
     }
 });

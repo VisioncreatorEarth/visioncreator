@@ -36,17 +36,13 @@ export default createOperation.query({
             .eq('active', true)
             .single();
 
-        if (capError) {
-            throw new Error('Failed to fetch user capabilities');
-        }
-
-        // Calculate totals
+        // Initialize stats with default values
         const stats = {
             total_calls: calls.length,
             total_minutes: 0,
-            minutes_limit: capabilities.config.minutesLimit || 0,
-            minutes_used: capabilities.config.minutesUsed || 0,
-            minutes_remaining: Math.max(0, (capabilities.config.minutesLimit || 0) - (capabilities.config.minutesUsed || 0)),
+            minutes_limit: 0,
+            minutes_used: 0,
+            minutes_remaining: 0,
             success_rate: 0,
             recent_calls: calls.slice(0, 5).map(call => ({
                 id: call.id,
@@ -57,6 +53,13 @@ export default createOperation.query({
                 error: call.error_message
             }))
         };
+
+        // If there's an active capability, update the stats with its values
+        if (!capError && capabilities) {
+            stats.minutes_limit = capabilities.config.minutesLimit || 0;
+            stats.minutes_used = capabilities.config.minutesUsed || 0;
+            stats.minutes_remaining = Math.max(0, (capabilities.config.minutesLimit || 0) - (capabilities.config.minutesUsed || 0));
+        }
 
         calls.forEach(call => {
             stats.total_minutes += call.duration_minutes;
