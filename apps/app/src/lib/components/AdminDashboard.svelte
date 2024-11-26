@@ -65,8 +65,8 @@
 		{
 			id: 'FREE',
 			name: 'Free Tier',
-			minutesLimit: 2,
-			features: ['2 minutes one-time usage', 'Shopping List Management', 'Basic Shopping Assistant']
+			minutesLimit: 5,
+			features: ['5 minutes one-time usage', 'Shopping List Management', 'Basic Shopping Assistant']
 		},
 		{
 			id: 'HOMINIO',

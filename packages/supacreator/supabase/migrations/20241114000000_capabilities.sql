@@ -18,7 +18,7 @@ CREATE TABLE capabilities (
     name TEXT NOT NULL,
     description TEXT,
     config JSONB NOT NULL DEFAULT '{
-        "minutesLimit": 2,
+        "minutesLimit": 5,
         "minutesUsed": 0,
         "lastResetAt": null,
         "isOneTime": true

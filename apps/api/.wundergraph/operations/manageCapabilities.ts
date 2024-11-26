@@ -28,7 +28,7 @@ export default createOperation.mutation({
         const now = new Date().toISOString();
         const tierConfig = {
             FREE: { 
-                minutesLimit: 2,
+                minutesLimit: 5,
                 isOneTime: true
             },
             HOMINIO: { 
@@ -149,7 +149,7 @@ export default createOperation.mutation({
 function getTierDescription(tier: 'FREE' | 'HOMINIO' | 'HOMINIO_PLUS'): string {
     switch (tier) {
         case 'FREE':
-            return 'Free tier with 2 minutes one-time usage';
+            return 'Free tier with 5 minutes one-time usage';
         case 'HOMINIO':
             return 'Standard tier with 60 minutes per month';
         case 'HOMINIO_PLUS':
