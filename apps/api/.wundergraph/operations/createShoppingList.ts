@@ -6,7 +6,7 @@ export default createOperation.mutation({
   }),
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["authenticated", "admin"],
+    requireMatchAll: ["authenticated"],
   },
   handler: async ({ input, context, user }) => {
     if (!user?.customClaims?.id) {

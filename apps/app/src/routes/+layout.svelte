@@ -106,7 +106,7 @@
 	<ActionModal {session} {supabase} on:signout={handleSignOut} />
 </QueryClientProvider>
 
-<footer class="fixed bottom-0 left-0 py-2 @sm:py-2 text-white z-40">
+<footer class="fixed bottom-0 right-0 py-2 @sm:py-2 text-white z-40">
 	<div class="px-4 @sm:px-4">
 		<div class="flex space-x-2 @sm:space-x-4">
 			<button
@@ -128,8 +128,8 @@
 	</div>
 </footer>
 
-<div class="fixed bottom-0 left-0 right-0 z-30 h-24 pointer-events-none">
+<div class="fixed right-0 bottom-0 left-0 z-30 h-24 pointer-events-none">
 	<div
-		class="absolute inset-0 bg-gradient-to-t from-surface-900 via-surface-900/50 to-transparent"
+		class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
 	/>
 </div>
