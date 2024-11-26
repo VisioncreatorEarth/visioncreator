@@ -2,6 +2,8 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import OShoppingItems from './o-ShoppingItems.svelte';
 
+	export let me;
+
 	// Sample items for random generation
 	const sampleItems = [
 		// Fruits
@@ -167,6 +169,9 @@
 			icon: item.shopping_items?.icon,
 			is_checked: item.is_checked
 		})) || [];
+
+	$: activeItems = items.filter((item) => !item.is_checked);
+	$: purchasedItems = items.filter((item) => item.is_checked);
 </script>
 
 <div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
@@ -187,26 +192,29 @@
 					</button>
 				</div>
 			{:else if $shoppingListQuery.data}
-				<div class="flex justify-between items-center mb-6">
-					<h2 class="text-2xl font-bold">ShopWithMe</h2>
-					<button
-						class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
-						on:click={() => addRandomItems()}
-					>
-						Add Random Items
-					</button>
-				</div>
-
-				{#if !$shoppingListQuery.data.shopping_list_items?.length}
-					<div class="p-8 text-center text-surface-200">
-						<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
-						<p>No items in this list yet</p>
-						<p class="mt-2 text-sm">Click the button above to add some random items</p>
+				<!-- Shopping List Section -->
+				<div class="p-6 mb-6 rounded-2xl bg-surface-800">
+					<div class="flex justify-between items-center mb-6">
+						<h2 class="text-2xl font-bold">ShopWithMe</h2>
+						<button
+							class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
+							on:click={() => addRandomItems()}
+						>
+							Add Random Items
+						</button>
 					</div>
-				{:else}
-					<OShoppingItems {items} onToggle={handleToggleItem} />
-				{/if}
-				<div class="h-48" />
+
+					{#if !activeItems.length}
+						<div class="p-8 text-center text-surface-200">
+							<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
+							<p>No items in this list yet</p>
+							<p class="mt-2 text-sm">Click the button above to add some random items</p>
+						</div>
+					{:else}
+						<OShoppingItems {items} onToggle={handleToggleItem} />
+					{/if}
+				</div>
+				<div class="h-12" />
 			{/if}
 		</div>
 	</div>

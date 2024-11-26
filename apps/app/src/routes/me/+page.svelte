@@ -2,6 +2,7 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
+	import { onMount } from 'svelte';
 
 	export let data;
 
@@ -10,6 +11,24 @@
 
 	let showComposeView = false;
 	let initialSetupComplete = false;
+	let selectedView: any = null;
+	let isAsideOpen = true;
+	let isMobile = false;
+
+	onMount(() => {
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	});
+
+	function checkMobile() {
+		isMobile = window.innerWidth < 768;
+		isAsideOpen = !isMobile;
+	}
+
+	function toggleAside() {
+		isAsideOpen = !isAsideOpen;
+	}
 
 	const updateNameMutation = createMutation({
 		operationName: 'updateMe'
@@ -21,6 +40,10 @@
 
 	const toggleOnboardedMutation = createMutation({
 		operationName: 'toggleOnboarded'
+	});
+
+	const viewsQuery = createQuery({
+		operationName: 'queryMyViews'
 	});
 
 	interface MeQueryResult {
@@ -36,6 +59,16 @@
 	});
 
 	$: meData = $meQuery.data as MeQueryResult | null;
+
+	$: views = $viewsQuery.data?.views || [];
+
+	function handleViewSelect(view: any) {
+		selectedView = view;
+		dynamicView.set({ view });
+		if (isMobile) {
+			isAsideOpen = false;
+		}
+	}
 
 	async function handleInitialSetup() {
 		if (!initialSetupComplete && session?.user) {
@@ -154,10 +187,104 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView view={$dynamicView.view || meView} />
+		<div class="flex overflow-hidden h-screen">
+			{#if isAsideOpen}
+				<aside
+					class="fixed bottom-0 right-0 z-10 flex-shrink-0 w-[120px] h-screen transition-transform duration-300 {!isAsideOpen
+						? 'translate-x-full'
+						: ''}"
+				>
+					<div class="flex flex-col h-full">
+						<div class="flex-grow" />
+						<div class="flex flex-col gap-2 items-end p-4 pr-2 mb-12">
+							{#each views as view}
+								<div
+									on:click={() => handleViewSelect(view)}
+									on:keydown={(e) => e.key === 'Enter' && handleViewSelect(view)}
+									class="flex flex-col items-center justify-center w-[50px] h-[50px] transition-colors duration-200 rounded-lg cursor-pointer {selectedView
+										?.metadata?.id === view.metadata.id
+										? 'bg-surface-700/60 text-surface-200'
+										: 'bg-surface-700/40 text-surface-400 hover:bg-surface-700/50'}"
+									tabindex="0"
+									role="button"
+								>
+									<Icon
+										icon={view.metadata.name === 'MyDashboard'
+											? 'mdi:account'
+											: view.metadata.name === 'ShopWithMe'
+											? 'mdi:shopping'
+											: 'mdi:circle-outline'}
+										class="w-6 h-6"
+									/>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</aside>
+			{/if}
+			<button
+				class="fixed bottom-4 right-[12px] z-50 p-2 rounded-full bg-surface-900 border border-surface-600 hover:bg-surface-800"
+				on:click={toggleAside}
+			>
+				<Icon
+					icon={isAsideOpen ? 'mdi:view-dashboard' : 'mdi:view-dashboard'}
+					class="w-6 h-6 text-surface-200"
+				/>
+			</button>
+			<main class="overflow-auto flex-1 mx-auto max-w-6xl">
+				<ComposeView view={$dynamicView.view || meView} />
+			</main>
+		</div>
 	{/if}
 {:else if meData}
-	<ComposeView view={$dynamicView.view || meView} />
+	<div class="flex overflow-hidden h-screen">
+		{#if isAsideOpen}
+			<aside
+				class="fixed bottom-0 right-0 z-10 flex-shrink-0 w-[120px] h-screen transition-transform duration-300 {!isAsideOpen
+					? 'translate-x-full'
+					: ''}"
+			>
+				<div class="flex flex-col h-full">
+					<div class="flex-grow" />
+					<div class="flex flex-col gap-2 items-end p-4 pr-2 mb-12">
+						{#each views as view}
+							<div
+								on:click={() => handleViewSelect(view)}
+								on:keydown={(e) => e.key === 'Enter' && handleViewSelect(view)}
+								class="flex flex-col items-center justify-center w-[50px] h-[50px] transition-colors duration-200 rounded-lg cursor-pointer {selectedView
+									?.metadata?.id === view.metadata.id
+									? 'bg-surface-700/60 text-surface-200'
+									: 'bg-surface-700/40 text-surface-400 hover:bg-surface-700/50'}"
+								tabindex="0"
+								role="button"
+							>
+								<Icon
+									icon={view.metadata.name === 'MyDashboard'
+										? 'mdi:account'
+										: view.metadata.name === 'ShopWithMe'
+										? 'mdi:shopping'
+										: 'mdi:circle-outline'}
+									class="w-6 h-6"
+								/>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</aside>
+		{/if}
+		<button
+			class="fixed bottom-4 right-[12px] z-50 p-2 rounded-full bg-surface-900 border border-surface-600 hover:bg-surface-800"
+			on:click={toggleAside}
+		>
+			<Icon
+				icon={isAsideOpen ? 'mdi:view-dashboard' : 'mdi:view-dashboard'}
+				class="w-6 h-6 text-surface-200"
+			/>
+		</button>
+		<main class="overflow-auto flex-1 mx-auto max-w-6xl">
+			<ComposeView view={$dynamicView.view || meView} />
+		</main>
+	</div>
 {:else}
 	<div class="flex justify-center items-center h-screen text-red-500">Error loading user data</div>
 {/if}

@@ -106,7 +106,7 @@
 	<ActionModal {session} {supabase} on:signout={handleSignOut} />
 </QueryClientProvider>
 
-<footer class="fixed bottom-0 right-0 py-2 @sm:py-2 text-white z-40">
+<footer class="fixed bottom-0 left-0 py-2 @sm:py-2 text-white z-40">
 	<div class="px-4 @sm:px-4">
 		<div class="flex space-x-2 @sm:space-x-4">
 			<button
