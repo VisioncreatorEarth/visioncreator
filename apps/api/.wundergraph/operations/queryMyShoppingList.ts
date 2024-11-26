@@ -3,7 +3,7 @@ import { createOperation, z, AuthorizationError } from '../generated/wundergraph
 export default createOperation.query({
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["authenticated", "admin"],
+    requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, user }) => {
     if (!user?.customClaims?.id) {

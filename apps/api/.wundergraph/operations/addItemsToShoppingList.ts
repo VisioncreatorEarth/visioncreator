@@ -55,6 +55,9 @@ export default createOperation.mutation({
     }))
   }),
   requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["authenticated"],
+  },
   handler: async ({ input, context, user }) => {
     if (!user?.customClaims?.id) {
       throw new AuthorizationError({ message: 'No authenticated user found.' });
@@ -88,7 +91,7 @@ export default createOperation.mutation({
       // 2. Process items in batches
       const results = await Promise.all(input.items.map(async (item) => {
         const categoryDefaults = getCategoryDefaults(item.category);
-        
+
         // Find or create the item
         const itemId = await retryOperation(async () => {
           const { data: existingItems, error: findError } = await context.supabase
