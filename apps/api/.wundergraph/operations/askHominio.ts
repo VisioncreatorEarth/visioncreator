@@ -9,6 +9,8 @@ const CALL_CONFIG = {
   
   Always respond instantly and make short smalltalk, while exuting the tools in the background. 
 
+  ALWAYS use the updateShoppingList tool BEFORE you respond back to the user.
+
   Please also translate any shoppinglist item into english
 
   Available Categories and their Icons:
@@ -63,35 +65,31 @@ const CALL_CONFIG = {
     {
       temporaryTool: {
         modelToolName: 'updateShoppingList',
-        description: 'Update shopping list items. ALWAYS call this when items are added, removed, or modified. ALWAYS use this tool in the background during the conversation.',
+        description: 'Update shopping list items. ALWAYS call this when items should be added, removed, or modified. ALWAYS use this tool BEFORE you talk back to the user',
         dynamicParameters: [
           {
-            name: 'orderDetailsData',
+            name: 'items',
             location: 'PARAMETER_LOCATION_BODY',
-            dynamicParameters: [
-              {
-                name: 'items',
-                location: 'PARAMETER_LOCATION_BODY',
-                schema: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      name: { type: 'string', description: 'Name of the item' },
-                      quantity: { type: 'number', description: 'Quantity of the item' },
-                      category: { type: 'string', description: 'Category of the item' },
-                      icon: { type: 'string', description: 'Icon for the item' },
-                      unit: { type: 'string', description: 'Unit for this item' },
-                      action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
-                    },
-                    required: ['name', 'category', 'action']
-                  }
+            schema: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Name of the item' },
+                  quantity: { type: 'number', description: 'Quantity of the item' },
+                  category: { type: 'string', description: 'Category of the item' },
+                  icon: { type: 'string', description: 'Icon for the item, choose the best you kind find from Iconify' },
+                  unit: { type: 'string', description: 'Unit for this item' },
+                  action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
                 },
-                required: true
+                required: ['name', 'category', 'action']
               }
-            ],
-            client: {}
+            },
+            required: true
           }
+        ],
+        client: {}
+      }
     }
   ]
 } as const;
