@@ -17,6 +17,7 @@ export type OperationErrors = {
 	getUserCapabilities: GetUserCapabilitiesErrors;
 	getUserStats: GetUserStatsErrors;
 	getUsers: GetUsersErrors;
+	getVoices: GetVoicesErrors;
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
 	manageCapabilities: ManageCapabilitiesErrors;
@@ -67,6 +68,7 @@ export type GetAuditLogsErrors = ClientOperationErrors;
 export type GetUserCapabilitiesErrors = ClientOperationErrors;
 export type GetUserStatsErrors = ClientOperationErrors;
 export type GetUsersErrors = ClientOperationErrors;
+export type GetVoicesErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;
 export type ManageCapabilitiesErrors = ClientOperationErrors;

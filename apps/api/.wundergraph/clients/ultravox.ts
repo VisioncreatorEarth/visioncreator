@@ -45,6 +45,20 @@ interface CallResponse {
   error?: string;
 }
 
+interface VoicesResponse {
+  data?: {
+    next: string | null;
+    previous: string | null;
+    results: Array<{
+      voiceId: string;
+      name: string;
+      description: string;
+      previewUrl: string | null;
+    }>;
+  };
+  error?: string;
+}
+
 export class UltravoxClient {
   private apiKey: string;
   private baseUrl = 'https://api.ultravox.ai/api';
@@ -295,6 +309,30 @@ export class UltravoxClient {
     } catch (error) {
       console.error('❌ Error getting transcript:', error);
       throw error;
+    }
+  }
+
+  async getVoices(): Promise<VoicesResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/voices`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return { data };
+    } catch (error) {
+      if (error instanceof UltravoxAuthenticationError) {
+        throw error;
+      }
+      return { error: error instanceof Error ? error.message : 'Unknown error occurred' };
     }
   }
 }
