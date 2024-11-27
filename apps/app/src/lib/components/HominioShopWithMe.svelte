@@ -199,17 +199,17 @@
 					</div>
 				{:else if $shoppingListQuery.data}
 					<div class="flex flex-col gap-4">
-						<!-- Active Items Section -->
-						<div class="p-6 rounded-lg bg-surface-800">
-							<div class="flex justify-between items-center mb-8">
-								<h2 class="text-2xl font-bold">ShopWithMe</h2>
-								<!-- <button
-									class="bg-gradient-to-br btn btn-sm variant-gradient-secondary-primary"
-									on:click={() => addRandomItems()}
+						<div class="flex justify-center">
+							<div class="inline-block px-6 py-2 rounded-2xl bg-surface-800">
+								<h1
+									class="text-xl @xs:text-2xl @sm:text-2xl @md:text-2xl @lg:text-3xl @xl:text-4xl text-center text-surface-300 h3 font-bold whitespace-nowrap"
 								>
-									Add Random Items
-								</button> -->
+									Hominio ShopWithMe
+								</h1>
 							</div>
+						</div>
+						<!-- Active Items Section -->
+						<div class="p-4 rounded-2xl bg-surface-800">
 							{#if !activeItems.length}
 								<div class="p-8 text-center text-surface-200">
 									<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
@@ -223,7 +223,7 @@
 
 						<!-- Purchased Items Section -->
 						{#if purchasedItems.length}
-							<div class="p-6 rounded-lg bg-surface-800">
+							<div class="p-4 rounded-2xl bg-surface-800">
 								<OShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
 							</div>
 						{/if}

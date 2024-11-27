@@ -100,7 +100,7 @@
 {:else}
 	<div class="@container">
 		<div
-			class="grid grid-cols-2 @xs:grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
+			class="grid grid-cols-3 @xs:grid-cols-4 @sm:grid-cols-5 @md:grid-cols-6 @lg:grid-cols-7 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
 		>
 			{#each categoryOrder as category, categoryIndex}
 				{#each activeItems.filter((item) => item.category === category) || [] as item, index (`${category}-${item.name}-${index}-${categoryIndex}`)}
@@ -112,34 +112,21 @@
 					>
 						<Icon
 							icon={item.icon || FALLBACK_ICONS[item.category || 'Other'][0]}
-							class="mb-2 w-1/2 h-1/2 {item.is_checked ? 'text-surface-200/60' : ''}"
+							class="mb-2 w-1/2 h-1/2"
 						/>
-						<span
-							class="overflow-hidden text-xs text-center text-ellipsis {item.is_checked
-								? 'text-surface-200/60'
-								: ''}"
-						>
+						<span class="overflow-hidden text-xs font-semibold text-center text-ellipsis">
 							{item.name}
 						</span>
 						{#if item.quantity > 1 || item.unit}
-							<div
-								class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full {item.is_checked
-									? 'bg-surface-900/20'
-									: 'bg-surface-900/10'}"
-							>
+							<div class="px-2 font-medium rounded-full text-2xs">
 								{item.quantity}{item.unit ? ` ${item.unit}` : ''}
 							</div>
 						{/if}
 					</button>
 				{/each}
 			{/each}
-		</div>
 
-		<!-- Purchased Items Section -->
-		{#if purchasedItems.length > 0}
-			<div
-				class="grid grid-cols-2 @xs:grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
-			>
+			{#if purchasedItems.length > 0}
 				{#each purchasedItems as item (getItemKey(item))}
 					<button
 						class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
@@ -149,17 +136,21 @@
 							icon={item.icon || FALLBACK_ICONS[item.category || 'Other'][0]}
 							class="mb-2 w-1/2 h-1/2 text-surface-200/60"
 						/>
-						<span class="overflow-hidden text-xs text-center text-ellipsis text-surface-200/60">
+						<span
+							class="overflow-hidden text-xs font-semibold text-center text-ellipsis text-surface-200/60"
+						>
 							{item.name}
 						</span>
 						{#if item.quantity > 1 || item.unit}
-							<div class="px-2 py-0.5 mt-1 text-xs font-medium rounded-full bg-surface-900/20">
+							<div
+								class="px-2 font-medium rounded-full text-2xs bg-surface-900/20 text-surface-200/60"
+							>
 								{item.quantity}{item.unit ? ` ${item.unit}` : ''}
 							</div>
 						{/if}
 					</button>
 				{/each}
-			</div>
-		{/if}
+			{/if}
+		</div>
 	</div>
 {/if}
