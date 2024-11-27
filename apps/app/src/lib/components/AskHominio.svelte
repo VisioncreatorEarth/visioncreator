@@ -130,26 +130,27 @@
 		try {
 			const name = parameters.name;
 			console.log('Name update requested:', name);
-			
+
 			return new Promise((resolve, reject) => {
-				$updateMeMutation.mutateAsync({
-					name: name
-				})
-				.then(result => {
-					console.log('Name updated:', result);
-					if (result.success) {
-						resolve({
-							result: result.message,
-							responseType: 'text'
-						});
-					} else {
-						reject(new Error(result.message || 'Failed to update name'));
-					}
-				})
-				.catch(error => {
-					console.error('Error updating name:', error);
-					reject(error);
-				});
+				$updateMeMutation
+					.mutateAsync({
+						name: name
+					})
+					.then((result) => {
+						console.log('Name updated:', result);
+						if (result.success) {
+							resolve({
+								result: result.message,
+								responseType: 'text'
+							});
+						} else {
+							reject(new Error(result.message || 'Failed to update name'));
+						}
+					})
+					.catch((error) => {
+						console.error('Error updating name:', error);
+						reject(error);
+					});
 			});
 		} catch (error) {
 			console.error('Error in updateNameTool:', error);
@@ -496,18 +497,6 @@
 	});
 </script>
 
-<style>
-	.gradient-overlay {
-		height: 24rem; /* h-96 = 24rem */
-	}
-
-	@media (max-width: 768px) {
-		.gradient-overlay {
-			height: 12rem; /* Reduced height for mobile */
-		}
-	}
-</style>
-
 <div class="flex fixed inset-0 z-50 flex-col justify-end">
 	<div class="fixed right-0 bottom-0 left-0 z-30 pointer-events-none gradient-overlay">
 		<div
@@ -516,7 +505,7 @@
 	</div>
 	<div class="relative mx-auto mb-20 w-full max-w-2xl">
 		<div
-			class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
+			class="overflow-y-auto absolute inset-x-0 bottom-0 z-40 px-4"
 			style="max-height: calc(100vh - 120px);"
 		>
 			<div class="space-y-3">
@@ -546,7 +535,7 @@
 				-->
 
 				{#if currentItems.length > 0}
-					<div class="p-4 rounded-xl backdrop-blur-xl bg-surface-800">
+					<div class="z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-800">
 						{#if addedItems.length > 0}
 							<div class="mb-4">
 								<h3 class="mb-2 text-sm font-medium text-tertiary-300">Added</h3>
@@ -571,7 +560,7 @@
 					</div>
 				{/if}
 
-				<div class="p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
+				<div class="relative z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
 					{#if status !== 'disconnected'}
 						<div class="flex justify-center">
 							<div
@@ -589,7 +578,7 @@
 					{/if}
 
 					{#if showControls}
-						<div class="flex justify-center mt-4">
+						<div class="flex z-50 justify-center mt-4">
 							{#if !isCallActive}
 								<button
 									class="px-4 py-2 text-white rounded-lg bg-tertiary-500"
@@ -614,3 +603,15 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.gradient-overlay {
+		height: 24rem; /* h-96 = 24rem */
+	}
+
+	@media (max-width: 768px) {
+		.gradient-overlay {
+			height: 12rem; /* Reduced height for mobile */
+		}
+	}
+</style>
