@@ -5,6 +5,7 @@
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
 	import OShoppingItems from './o-ShoppingItems.svelte';
+	import { dynamicView } from '$lib/stores';
 
 	// Create updateShoppingList mutation
 	const addItemsMutation = createMutation({
@@ -59,10 +60,63 @@
 				});
 			}
 
+			// Switch to HominioShopWithMe view
+			const viewConfig = {
+				id: 'HominioShopWithMe',
+				layout: {
+					areas: `
+						"main"
+					`,
+					overflow: 'auto',
+					style: 'mx-auto max-w-6xl'
+				},
+				children: [
+					{
+						id: 'xyz1',
+						component: 'HominioShopWithMe',
+						slot: 'main'
+					}
+				]
+			};
+
+			dynamicView.set({ view: viewConfig });
+
 			return 'Items updated successfully';
 		} catch (error) {
 			console.error('Error updating shopping list:', error);
 			throw new Error('Failed to process shopping list items');
+		}
+	};
+
+	// Switch view tool implementation
+	const switchViewTool = async (parameters: any) => {
+		try {
+			const component = parameters.component;
+			console.log('Switching to component:', component);
+
+			const viewConfig = {
+				id: component,
+				layout: {
+					areas: `
+						"main"
+					`,
+					overflow: 'auto',
+					style: 'mx-auto max-w-6xl'
+				},
+				children: [
+					{
+						id: 'xyz1',
+						component: component,
+						slot: 'main'
+					}
+				]
+			};
+
+			dynamicView.set({ view: viewConfig });
+			return `Switched to ${component} view`;
+		} catch (error) {
+			console.error('Error switching view:', error);
+			throw new Error('Failed to switch view');
 		}
 	};
 
@@ -221,6 +275,9 @@
 
 					// Register the shopping list tool
 					session.registerToolImplementation('updateShoppingList', updateShoppingListTool);
+
+					// Register the switch view tool
+					session.registerToolImplementation('switchView', switchViewTool);
 
 					context.session = session;
 

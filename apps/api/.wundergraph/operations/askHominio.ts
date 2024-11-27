@@ -9,8 +9,6 @@ const CALL_CONFIG = {
   
   Always respond instantly and make short smalltalk, while exuting the tools in the background. 
 
-  ALWAYS use the updateShoppingList tool BEFORE you respond back to the user.
-
   Please also translate any shoppinglist item into english
 
   Available Categories and their Icons:
@@ -65,7 +63,7 @@ const CALL_CONFIG = {
     {
       temporaryTool: {
         modelToolName: 'updateShoppingList',
-        description: 'Update shopping list items. ALWAYS call this when items should be added, removed, or modified. ALWAYS use this tool BEFORE you talk back to the user',
+        description: 'Update shopping list items. ALWAYS use this tool when items should be added, removed, or modified to the shoppinglist.',
         dynamicParameters: [
           {
             name: 'items',
@@ -84,6 +82,25 @@ const CALL_CONFIG = {
                 },
                 required: ['name', 'category', 'action']
               }
+            },
+            required: true
+          }
+        ],
+        client: {}
+      }
+    },
+    {
+      temporaryTool: {
+        modelToolName: 'switchView',
+        description: 'Switch to a different view component based on the context of the conversation. Use this tool when the conversation indicates a need to switch to a different functionality.',
+        dynamicParameters: [
+          {
+            name: 'component',
+            location: 'PARAMETER_LOCATION_BODY',
+            schema: {
+              type: 'string',
+              enum: ['HominioShopWithMe', 'HominioTodoMe', 'HominioHostMe', 'HominioBankMe'],
+              description: 'The component to switch to based on the conversation context: HominioShopWithMe for shopping lists, HominioTodoMe for tasks and scheduling, HominioHostMe for booking and hosting, HominioBankMe for banking and payments'
             },
             required: true
           }
