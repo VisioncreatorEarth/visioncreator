@@ -294,10 +294,7 @@
 </script>
 
 {#if $context.isOpen}
-	<div
-		class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-sm bg-surface-900/30"
-		transition:fade={{ duration: 200 }}
-	>
+	<div class="flex fixed inset-0 z-50 flex-col justify-end" transition:fade={{ duration: 200 }}>
 		{#if $currentState === 'calling'}
 			<AskHominio
 				bind:this={askHominioComponent}
@@ -383,5 +380,10 @@
 				</div>
 			</div>
 		{/if}
+	</div>
+	<div class="fixed right-0 bottom-0 left-0 z-30 h-96 pointer-events-none">
+		<div
+			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
+		/>
 	</div>
 {/if}

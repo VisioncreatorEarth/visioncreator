@@ -4,6 +4,8 @@ import { UltravoxAuthenticationError, UltravoxInitializationError } from '../err
 // Call configuration
 const CALL_CONFIG = {
   defaultSystemPrompt: `
+  You are Hominio, a personal service assistant for the user. You can switch interface views / apps / services and you have a Shoppinglist Skill. 
+
   You are a friendly shopping assistant. Please help me with my shopping list. 
   If the user has questions, please always interact in a friendly conversation. 
   
@@ -121,13 +123,18 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated"],
   },
   errors: [UltravoxInitializationError, UltravoxAuthenticationError],
-  async handler({ input, context, user }) {
+  async handler({ input, context, user, operations }) {
     if (!user?.customClaims?.id) {
       throw new Error('User ID not found');
     }
 
     try {
       if (input.action === 'create') {
+        // Get user profile data
+        const { data: profile } = await operations.query({
+          operationName: 'queryMe'
+        });
+
         // Get remaining minutes for max call time calculation
         const { data: userCapability } = await context.supabase
           .from('capabilities')
@@ -215,7 +222,7 @@ export default createOperation.mutation({
         }
 
         const callParams = {
-          systemPrompt: `${CALL_CONFIG.defaultSystemPrompt}${currentItemsContext}`,
+          systemPrompt: `${CALL_CONFIG.defaultSystemPrompt}${currentItemsContext} This is the users name, always address the user by his name: ${profile?.name}`,
           voice: CALL_CONFIG.voice,
           model: CALL_CONFIG.model,
           temperature: CALL_CONFIG.temperature,
