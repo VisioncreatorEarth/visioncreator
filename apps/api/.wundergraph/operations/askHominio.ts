@@ -57,7 +57,7 @@ const CALL_CONFIG = {
   `,
   voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
   temperature: 0.6,
-  maxDuration: '120s', // 2 minutes in seconds
+  maxDuration: '60s',
   timeExceededMessage: 'Maximum calltime exceeded. See you next time!',
   firstSpeaker: 'FIRST_SPEAKER_USER',
   model: 'fixie-ai/ultravox-70B',
