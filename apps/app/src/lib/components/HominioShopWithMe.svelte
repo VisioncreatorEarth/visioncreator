@@ -182,7 +182,7 @@
 <div class="relative h-screen bg-surface-900">
 	<!-- Scrollable Content - Full height and starts from top -->
 	<div class="overflow-y-auto absolute inset-0">
-		<div class="max-w-6xl mx-auto px-4">
+		<div class="px-4 mx-auto max-w-6xl">
 			{#if $shoppingListQuery.isLoading}
 				<div class="py-12 text-center text-surface-300">
 					<p class="text-lg">Loading shopping list...</p>
@@ -228,7 +228,7 @@
 		<div
 			class="absolute inset-0 h-20 bg-gradient-to-b to-transparent pointer-events-none from-surface-900 via-surface-900/95"
 		/>
-		<div class="max-w-6xl mx-auto px-4">
+		<div class="px-4 mx-auto max-w-6xl">
 			<div class="flex relative justify-center p-4">
 				<div class="inline-block px-6 py-2 rounded-2xl bg-surface-800">
 					<h1
