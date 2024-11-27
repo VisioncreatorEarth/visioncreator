@@ -48,7 +48,7 @@
 				audioElements[currentlyPlaying].pause();
 				audioElements[currentlyPlaying].currentTime = 0;
 			}
-			audio.play().catch(error => {
+			audio.play().catch((error) => {
 				console.error('Error playing audio:', error);
 				currentlyPlaying = null;
 			});
@@ -125,17 +125,23 @@
 					</div>
 				</div>
 			{:else if $timeUsageQuery.data}
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 					<div class="p-6 rounded-lg bg-surface-800">
-						<h3 class="mb-4 text-lg font-semibold text-surface-200">Time Used</h3>
+						<h3 class="mb-4 text-lg font-semibold text-surface-200">Total Calls</h3>
 						<div class="text-3xl font-bold text-white">
-							{formatDuration($timeUsageQuery.data.timeUsed)}
+							{$timeUsageQuery.data.totalCalls}
 						</div>
 					</div>
 					<div class="p-6 rounded-lg bg-surface-800">
-						<h3 class="mb-4 text-lg font-semibold text-surface-200">Time Remaining</h3>
+						<h3 class="mb-4 text-lg font-semibold text-surface-200">Total Minutes</h3>
 						<div class="text-3xl font-bold text-white">
-							{formatDuration($timeUsageQuery.data.timeRemaining)}
+							{$timeUsageQuery.data.totalMinutes}
+						</div>
+					</div>
+					<div class="p-6 rounded-lg bg-surface-800">
+						<h3 class="mb-4 text-lg font-semibold text-surface-200">Total Cost</h3>
+						<div class="text-3xl font-bold text-white">
+							${$timeUsageQuery.data.totalCost}
 						</div>
 					</div>
 				</div>
@@ -170,33 +176,33 @@
 			{/if}
 		</div>
 	</main>
-	<aside class="w-96 overflow-y-auto bg-surface-800 p-6">
-		<h2 class="text-xl font-semibold mb-4">Available Voices</h2>
+	<aside class="overflow-y-auto p-6 w-96 bg-surface-800">
+		<h2 class="mb-4 text-xl font-semibold">Available Voices</h2>
 		{#if $voicesQuery.isLoading}
 			<div class="space-y-4">
 				{#each Array(3) as _}
 					<div class="p-4 rounded-lg animate-pulse bg-surface-700">
-						<div class="w-1/2 h-4 mb-2 rounded bg-surface-600" />
+						<div class="mb-2 w-1/2 h-4 rounded bg-surface-600" />
 						<div class="w-3/4 h-3 rounded bg-surface-600" />
 					</div>
 				{/each}
 			</div>
 		{:else if $voicesQuery.error}
-			<div class="p-4 rounded-lg bg-surface-700 text-red-400">
+			<div class="p-4 text-red-400 rounded-lg bg-surface-700">
 				Error loading voices: {$voicesQuery.error.message}
 			</div>
 		{:else if $voicesQuery.data?.voices}
 			<div class="space-y-6">
 				{#each Object.entries(groupVoicesByCategory($voicesQuery.data.voices)) as [language, languageVoices]}
 					<div>
-						<h3 class="text-sm font-medium text-surface-300 mb-3">{language}</h3>
+						<h3 class="mb-3 text-sm font-medium text-surface-300">{language}</h3>
 						<div class="space-y-3">
 							{#each languageVoices as voice}
-								<div class="p-4 rounded-lg bg-surface-700 hover:bg-surface-600 transition-colors">
-									<div class="flex items-start justify-between">
+								<div class="p-4 rounded-lg transition-colors bg-surface-700 hover:bg-surface-600">
+									<div class="flex justify-between items-start">
 										<div class="flex-1">
 											<h4 class="font-medium">{voice.name}</h4>
-											<p class="text-xs text-surface-400 mt-1">({voice.voiceId})</p>
+											<p class="mt-1 text-xs text-surface-400">({voice.voiceId})</p>
 											{#if voice.previewUrl}
 												<div class="mt-3">
 													<audio
@@ -205,28 +211,40 @@
 														on:ended={() => handleEnded(voice.voiceId)}
 														on:timeupdate={() => handleTimeUpdate(voice.voiceId)}
 													>
-														<source src={voice.previewUrl} type="audio/mpeg">
+														<source src={voice.previewUrl} type="audio/mpeg" />
 														Your browser does not support the audio element.
 													</audio>
-													<div class="flex items-center gap-3">
+													<div class="flex gap-3 items-center">
 														<button
-															class="text-primary-400 hover:text-primary-300 transition-colors"
+															class="transition-colors text-primary-400 hover:text-primary-300"
 															on:click={() => playPreview(voice.voiceId)}
 														>
 															{#if currentlyPlaying === voice.voiceId}
-																<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-																	<path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	class="w-5 h-5"
+																	viewBox="0 0 20 20"
+																	fill="currentColor"
+																>
+																	<path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z" />
 																</svg>
 															{:else}
-																<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-																	<path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"/>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	class="w-5 h-5"
+																	viewBox="0 0 20 20"
+																	fill="currentColor"
+																>
+																	<path
+																		d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+																	/>
 																</svg>
 															{/if}
 														</button>
-														<div class="flex-1 h-1 bg-surface-600 rounded-full overflow-hidden">
+														<div class="overflow-hidden flex-1 h-1 rounded-full bg-surface-600">
 															<div
 																id="progress-{voice.voiceId}"
-																class="h-full bg-primary-400 transition-all duration-100"
+																class="h-full transition-all duration-100 bg-primary-400"
 																style="width: 0%"
 															/>
 														</div>

@@ -8,7 +8,7 @@ export default createOperation.subscription({
   handler: async function* ({ context }) {
     while (true) {
       try {
-        // Get time usage
+        // Get usage stats
         const timeResponse = await context.ultravox.getTimeUsage();
         if (timeResponse.error) {
           console.error(`[TimeUsage] Error received:`, timeResponse.error);
@@ -24,10 +24,10 @@ export default createOperation.subscription({
 
         const ultravoxCalls = callsResponse.data?.calls || [];
         
-        // Get all call IDs
+        // Get all call IDs from the last 50 calls
         const callIds = ultravoxCalls.map(call => call.callId);
         
-        // Batch fetch hominio calls
+        // Batch fetch hominio calls for the last 50 calls
         const { data: hominioCalls, error: hominioError } = await context.supabase
           .from('hominio_calls')
           .select('ultravox_call_id, user_id')
@@ -60,33 +60,31 @@ export default createOperation.subscription({
           profiles?.map(profile => [profile.id, profile.name]) || []
         );
 
-        // Combine all the data
-        const calls = ultravoxCalls.map(call => {
-          const userId = callUserMap.get(call.callId);
-          return {
+        // Return the combined data
+        yield {
+          totalCalls: callsResponse.data?.totalCount || 0,
+          totalMinutes: timeResponse.data?.totalMinutes || 0,
+          totalCost: timeResponse.data?.totalCost || 0,
+          hasActiveSubscription: timeResponse.data?.hasActiveSubscription || false,
+          calls: ultravoxCalls.map(call => ({
             ...call,
-            userName: userId ? userNameMap.get(userId) || 'Unknown' : 'Not Found'
-          };
-        });
-
-        const result = {
-          timeUsed: timeResponse.data?.timeUsed || '0s',
-          timeRemaining: timeResponse.data?.timeRemaining || '0s',
-          calls
+            userName: userNameMap.get(callUserMap.get(call.callId) || '') || 'Unknown'
+          }))
         };
 
-        yield result;
-
-        await new Promise(resolve => setTimeout(resolve, 30000));
+        // Wait for 5 seconds before next update
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (error) {
-        console.error('[TimeUsage] Failed to get data:', error);
+        console.error('Error in subscription:', error);
         throw error;
       }
     }
   },
   response: z.object({
-    timeUsed: z.string(),
-    timeRemaining: z.string(),
+    totalCalls: z.number(),
+    totalMinutes: z.number(),
+    totalCost: z.number(),
+    hasActiveSubscription: z.boolean(),
     calls: z.array(z.object({
       callId: z.string(),
       created: z.string(),

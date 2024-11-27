@@ -22,8 +22,9 @@ interface UltravoxResponse {
 
 interface TimeUsageResponse {
   data?: {
-    timeUsed: string;
-    timeRemaining: string;
+    totalCalls: number;
+    totalMinutes: number;
+    totalCost: number;
     hasActiveSubscription: boolean;
   };
   error?: string;
@@ -41,6 +42,7 @@ interface CallResponse {
       voice: string;
     }>;
     nextCursor?: string;
+    totalCount?: number;
   };
   error?: string;
 }
@@ -205,7 +207,49 @@ export class UltravoxClient {
 
   async getTimeUsage(): Promise<TimeUsageResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/accounts/me`, {
+      // Get total calls
+      const callsResponse = await this.getCalls();
+      if (callsResponse.error) {
+        return { error: callsResponse.error };
+      }
+
+      const calls = callsResponse.data?.calls || [];
+      let totalMinutes = 0;
+
+      // Calculate total minutes from all calls
+      calls.forEach(call => {
+        if (call.ended) {
+          const startTime = new Date(call.created).getTime();
+          const endTime = new Date(call.ended).getTime();
+          const durationMinutes = (endTime - startTime) / (1000 * 60);
+          totalMinutes += durationMinutes;
+        }
+      });
+
+      const roundedMinutes = Math.round(totalMinutes);
+      const totalCost = roundedMinutes * 0.05; // $0.05 per minute
+
+      return {
+        data: {
+          totalCalls: callsResponse.data?.totalCount || 0,
+          totalMinutes: roundedMinutes,
+          totalCost: Number(totalCost.toFixed(2)), // Round to 2 decimal places
+          hasActiveSubscription: true // Since we're on a paid plan
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error getting usage stats:', error);
+      return { error: error.message };
+    }
+  }
+
+  async getCalls(): Promise<CallResponse> {
+    try {
+      // Fetch only the first page which should contain the most recent calls
+      const url = new URL(`${this.baseUrl}/calls`);
+      url.searchParams.append('limit', '50'); // Request 50 calls
+
+      const response = await fetch(url.toString(), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -222,66 +266,19 @@ export class UltravoxClient {
         if (response.status === 401) {
           throw new UltravoxAuthenticationError('Invalid API key');
         }
-        throw new Error(`Failed to get time usage: ${response.statusText}`);
+        throw new Error(`Failed to get calls: ${response.statusText}`);
       }
 
-      const accountData = await response.json();
-      return {
-        data: {
-          timeUsed: accountData.freeTimeUsed,
-          timeRemaining: accountData.freeTimeRemaining,
-          hasActiveSubscription: accountData.hasActiveSubscription
-        }
-      };
-    } catch (error) {
-      console.error('❌ Error getting time usage:', error);
-      return { error: error.message };
-    }
-  }
+      const data = await response.json();
+      const calls = data.results || [];
+      const totalCount = data.total_count || calls.length; // Use total_count if available
 
-  async getCalls(): Promise<CallResponse> {
-    try {
-      let allCalls = [];
-      let nextCursor: string | undefined;
-
-      // Keep fetching until we have all calls
-      do {
-        const url = new URL(`${this.baseUrl}/calls`);
-        if (nextCursor) {
-          url.searchParams.append('cursor', nextCursor);
-        }
-
-        const response = await fetch(url.toString(), {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': this.apiKey
-          }
-        });
-
-        if (!response.ok) {
-          console.error('❌ Response not OK:', {
-            status: response.status,
-            statusText: response.statusText
-          });
-
-          if (response.status === 401) {
-            throw new UltravoxAuthenticationError('Invalid API key');
-          }
-          throw new Error(`Failed to get calls: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        allCalls = [...allCalls, ...(data.results || [])];
-        nextCursor = data.next_cursor;
-
-      } while (nextCursor);
-
-      console.log(`📞 Fetched all ${allCalls.length} calls`);
+      console.log(`📞 Fetched last ${calls.length} calls out of ${totalCount} total`);
 
       return {
         data: {
-          calls: allCalls
+          calls: calls,
+          totalCount: totalCount
         }
       };
     } catch (error) {
