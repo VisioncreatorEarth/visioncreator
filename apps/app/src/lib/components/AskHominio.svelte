@@ -496,7 +496,24 @@
 	});
 </script>
 
+<style>
+	.gradient-overlay {
+		height: 24rem; /* h-96 = 24rem */
+	}
+
+	@media (max-width: 768px) {
+		.gradient-overlay {
+			height: 12rem; /* Reduced height for mobile */
+		}
+	}
+</style>
+
 <div class="flex fixed inset-0 z-50 flex-col justify-end">
+	<div class="fixed right-0 bottom-0 left-0 z-30 pointer-events-none gradient-overlay">
+		<div
+			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
+		/>
+	</div>
 	<div class="relative mx-auto mb-20 w-full max-w-2xl">
 		<div
 			class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"

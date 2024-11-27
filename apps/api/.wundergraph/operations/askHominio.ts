@@ -16,7 +16,7 @@ const CALL_CONFIG = {
 
   Please also translate any shoppinglist item into english
 
-  Available Categories and their Icons:
+  Available Categories and their Icons: (those are just examples, please find always the best fitting catgories and icons for the items):
   - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
   - Fruits (mdi:fruit-watermelon, mdi:food-apple, mdi:fruit-cherries)
   - Meat (mdi:food-steak, mdi:food-turkey, mdi:fish)
