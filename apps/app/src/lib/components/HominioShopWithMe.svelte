@@ -179,56 +179,62 @@
 		.sort((a, b) => b.last_modified - a.last_modified);
 </script>
 
-<div class="overflow-hidden flex-col w-full h-full h-screen bg-surface-900">
-	<div class="flex overflow-hidden flex-grow w-full h-full">
-		<!-- Main Content -->
-		<div class="overflow-y-auto flex-grow w-full h-full">
-			<div class="container p-4 mx-auto">
-				{#if $shoppingListQuery.isLoading}
-					<div class="py-12 text-center text-surface-300">
-						<p class="text-lg">Loading shopping list...</p>
-					</div>
-				{:else if $shoppingListQuery.error}
-					<div class="py-12 text-center text-surface-300">
-						<p class="text-lg text-error-500">
-							Error loading shopping list: {$shoppingListQuery.error.message}
-						</p>
-						<button class="mt-4 btn variant-filled" on:click={() => $shoppingListQuery.refetch()}>
-							Try Again
-						</button>
-					</div>
-				{:else if $shoppingListQuery.data}
-					<div class="flex flex-col gap-4">
-						<div class="flex justify-center">
-							<div class="inline-block px-6 py-2 rounded-2xl bg-surface-800">
-								<h1
-									class="text-xl @xs:text-2xl @sm:text-2xl @md:text-2xl @lg:text-3xl @xl:text-4xl text-center text-surface-300 h3 font-bold whitespace-nowrap"
-								>
-									Hominio ShopWithMe
-								</h1>
-							</div>
+<div class="relative w-full h-screen bg-surface-900">
+	<!-- Scrollable Content - Full height and starts from top -->
+	<div class="overflow-y-auto absolute inset-0">
+		<div class="container px-4 mx-auto space-y-4">
+			{#if $shoppingListQuery.isLoading}
+				<div class="py-12 text-center text-surface-300">
+					<p class="text-lg">Loading shopping list...</p>
+				</div>
+			{:else if $shoppingListQuery.error}
+				<div class="py-12 text-center text-surface-300">
+					<p class="text-lg text-error-500">
+						Error loading shopping list: {$shoppingListQuery.error.message}
+					</p>
+					<button class="mt-4 btn variant-filled" on:click={() => $shoppingListQuery.refetch()}>
+						Try Again
+					</button>
+				</div>
+			{:else if $shoppingListQuery.data}
+				<!-- Active Items Section -->
+				<div class="p-4 pt-20 rounded-2xl bg-surface-800">
+					{#if !activeItems.length}
+						<div class="p-8 text-center text-surface-200">
+							<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
+							<p>No active items in this list yet</p>
+							<p class="mt-2 text-sm">Click the button above to add some random items</p>
 						</div>
-						<!-- Active Items Section -->
-						<div class="p-4 rounded-2xl bg-surface-800">
-							{#if !activeItems.length}
-								<div class="p-8 text-center text-surface-200">
-									<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
-									<p>No active items in this list yet</p>
-									<p class="mt-2 text-sm">Click the button above to add some random items</p>
-								</div>
-							{:else}
-								<OShoppingItems items={activeItems} onToggle={handleToggleItem} />
-							{/if}
-						</div>
+					{:else}
+						<OShoppingItems items={activeItems} onToggle={handleToggleItem} />
+					{/if}
+				</div>
 
-						<!-- Purchased Items Section -->
-						{#if purchasedItems.length}
-							<div class="p-4 rounded-2xl bg-surface-800">
-								<OShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
-							</div>
-						{/if}
+				<!-- Purchased Items Section -->
+				{#if purchasedItems.length}
+					<div class="p-4 rounded-2xl bg-surface-800">
+						<OShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
 					</div>
 				{/if}
+
+				<!-- Bottom Spacer -->
+				<div class="h-24" />
+			{/if}
+		</div>
+	</div>
+
+	<!-- Fixed Header with Fade - Overlays the content -->
+	<div class="absolute top-0 right-0 left-0 z-10">
+		<div
+			class="absolute inset-0 h-20 bg-gradient-to-b to-transparent pointer-events-none from-surface-900 via-surface-900/95"
+		/>
+		<div class="flex relative justify-center p-4">
+			<div class="inline-block px-6 py-2 rounded-2xl bg-surface-800">
+				<h1
+					class="text-xl @xs:text-2xl @sm:text-2xl @md:text-2xl @lg:text-3xl @xl:text-4xl text-center text-surface-300 h3 font-bold whitespace-nowrap"
+				>
+					Hominio ShopWithMe
+				</h1>
 			</div>
 		</div>
 	</div>
