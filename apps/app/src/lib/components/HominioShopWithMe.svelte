@@ -179,10 +179,10 @@
 		.sort((a, b) => b.last_modified - a.last_modified);
 </script>
 
-<div class="relative w-full h-screen bg-surface-900">
+<div class="relative h-screen bg-surface-900">
 	<!-- Scrollable Content - Full height and starts from top -->
 	<div class="overflow-y-auto absolute inset-0">
-		<div class="container px-4 mx-auto space-y-4">
+		<div class="max-w-6xl mx-auto px-4">
 			{#if $shoppingListQuery.isLoading}
 				<div class="py-12 text-center text-surface-300">
 					<p class="text-lg">Loading shopping list...</p>
@@ -218,7 +218,7 @@
 				{/if}
 
 				<!-- Bottom Spacer -->
-				<div class="h-24" />
+				<div class="h-80" />
 			{/if}
 		</div>
 	</div>
@@ -228,13 +228,15 @@
 		<div
 			class="absolute inset-0 h-20 bg-gradient-to-b to-transparent pointer-events-none from-surface-900 via-surface-900/95"
 		/>
-		<div class="flex relative justify-center p-4">
-			<div class="inline-block px-6 py-2 rounded-2xl bg-surface-800">
-				<h1
-					class="text-xl @xs:text-2xl @sm:text-2xl @md:text-2xl @lg:text-3xl @xl:text-4xl text-center text-surface-300 h3 font-bold whitespace-nowrap"
-				>
-					Hominio ShopWithMe
-				</h1>
+		<div class="max-w-6xl mx-auto px-4">
+			<div class="flex relative justify-center p-4">
+				<div class="inline-block px-6 py-2 rounded-2xl bg-surface-800">
+					<h1
+						class="text-xl @xs:text-2xl @sm:text-2xl @md:text-2xl @lg:text-3xl @xl:text-4xl text-center text-surface-300 h3 font-bold whitespace-nowrap"
+					>
+						Hominio ShopWithMe
+					</h1>
+				</div>
 			</div>
 		</div>
 	</div>
