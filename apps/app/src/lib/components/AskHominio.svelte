@@ -12,6 +12,11 @@
 		operationName: 'addItemsToShoppingList'
 	});
 
+	// Create updateMe mutation
+	const updateMeMutation = createMutation({
+		operationName: 'updateMe'
+	});
+
 	// Shopping list client tool implementation
 	let currentItems: any[] = [];
 	let addedItems: any[] = [];
@@ -117,6 +122,38 @@
 		} catch (error) {
 			console.error('Error switching view:', error);
 			throw new Error('Failed to switch view');
+		}
+	};
+
+	// Update name tool implementation
+	const updateNameTool = async (parameters: any) => {
+		try {
+			const name = parameters.name;
+			console.log('Name update requested:', name);
+			
+			return new Promise((resolve, reject) => {
+				$updateMeMutation.mutateAsync({
+					name: name
+				})
+				.then(result => {
+					console.log('Name updated:', result);
+					if (result.success) {
+						resolve({
+							result: result.message,
+							responseType: 'text'
+						});
+					} else {
+						reject(new Error(result.message || 'Failed to update name'));
+					}
+				})
+				.catch(error => {
+					console.error('Error updating name:', error);
+					reject(error);
+				});
+			});
+		} catch (error) {
+			console.error('Error in updateNameTool:', error);
+			throw error;
 		}
 	};
 
@@ -278,6 +315,9 @@
 
 					// Register the switch view tool
 					session.registerToolImplementation('switchView', switchViewTool);
+
+					// Register the update name tool
+					session.registerToolImplementation('updateName', updateNameTool);
 
 					context.session = session;
 

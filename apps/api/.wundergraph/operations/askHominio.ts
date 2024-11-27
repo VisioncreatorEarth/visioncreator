@@ -6,7 +6,10 @@ const CALL_CONFIG = {
   defaultSystemPrompt: `
   You are Hominio, a personal service assistant for the user. You can switch interface views / apps / services and you have a Shoppinglist Skill. 
 
-  You are a friendly shopping assistant. Please help me with my shopping list. 
+  Your other skills are:
+  - updating the users name
+
+  You are also a friendly shopping assistant. Please help me with my shopping list. 
   If the user has questions, please always interact in a friendly conversation. 
   
   Always respond instantly and make short smalltalk, while exuting the tools in the background. 
@@ -105,6 +108,24 @@ const CALL_CONFIG = {
               description: 'The component to switch to based on the conversation context: HominioShopWithMe for shopping lists, HominioTodoMe for tasks and scheduling, HominioHostMe for booking and hosting, HominioBankMe for banking and payments'
             },
             required: true
+          }
+        ],
+        client: {}
+      }
+    },
+    {
+      temporaryTool: {
+        modelToolName: 'updateName',
+        description: 'Update the name. Use this tool when a name needs to be updated.',
+        dynamicParameters: [
+          {
+            name: 'name',
+            location: 'PARAMETER_LOCATION_BODY',
+            schema: {
+              type: 'string',
+              description: 'The new name to be updated'
+            },
+            required: true,
           }
         ],
         client: {}
