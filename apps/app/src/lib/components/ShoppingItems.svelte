@@ -4,12 +4,12 @@
 	import { onMount } from 'svelte';
 
 	const CATEGORY_ICONS = {
-		Vegetables: 'mdi:food-broccoli',
+		Vegetables: 'mdi:food-carrots',
 		Fruits: 'mdi:fruit-watermelon',
 		Meat: 'mdi:food-steak',
 		Grains: 'mdi:grain',
 		Bakery: 'mdi:baguette',
-		Beverages: 'mdi:bottle-soda',
+		Beverages: 'mdi:bottle',
 		Dairy: 'mdi:cheese',
 		Snacks: 'mdi:cookie',
 		'Personal Care': 'mdi:toothbrush',

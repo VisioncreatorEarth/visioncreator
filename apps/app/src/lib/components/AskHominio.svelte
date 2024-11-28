@@ -1,6 +1,6 @@
 <!-- AskHominio.svelte -->
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
@@ -391,9 +391,15 @@
 					});
 					console.log('End call response:', endResponse);
 
-					// Then ensure we leave the call session
+					// Then ensure we leave the call session and stop microphone
 					if (context.session) {
 						await context.session.leaveCall();
+						// Ensure microphone is stopped
+						if (context.session.mediaStream) {
+							context.session.mediaStream.getTracks().forEach(track => {
+								track.stop();
+							});
+						}
 					}
 				} catch (e) {
 					context.error = e instanceof Error ? e.message : 'Failed to end call';
@@ -407,6 +413,12 @@
 			},
 			handleError: (context) => {
 				if (context.session) {
+					// Stop all media tracks before leaving the call
+					if (context.session.mediaStream) {
+						context.session.mediaStream.getTracks().forEach(track => {
+							track.stop();
+						});
+					}
 					context.session.leaveCall().catch(() => {});
 					context.session = null;
 				}
@@ -423,6 +435,37 @@
 			isDisconnected: (context) => !context.session || context.session?.status === 'disconnected'
 		}
 	);
+
+	let microphoneStream: MediaStream | null = null;
+	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
+
+	onMount(async () => {
+		try {
+			// Request microphone access as soon as component mounts
+			microphoneStream = await navigator.mediaDevices.getUserMedia({ 
+				audio: true,
+				video: false 
+			});
+			microphoneStatus = 'ready';
+		} catch (err) {
+			console.error('Error initializing microphone:', err);
+			microphoneStatus = 'error';
+		}
+	});
+
+	// Cleanup function to stop all microphone tracks
+	function cleanupMicrophone() {
+		if (microphoneStream) {
+			microphoneStream.getTracks().forEach(track => track.stop());
+			microphoneStream = null;
+		}
+		microphoneStatus = 'initializing';
+	}
+
+	onDestroy(() => {
+		cleanupMicrophone();
+		cleanupCall();
+	});
 
 	// Reactive values from machine state
 	$: ({ value: status, context } = $machine);
@@ -473,8 +516,14 @@
 
 	function cleanupCall() {
 		if (context.session) {
-			// Ensure we properly leave the call
+			// Ensure we properly leave the call and stop microphone
 			try {
+				// Stop all media tracks
+				if (context.session.mediaStream) {
+					context.session.mediaStream.getTracks().forEach(track => {
+						track.stop();
+					});
+				}
 				context.session.leaveCall().catch(() => {});
 			} catch (e) {
 				console.error('Error leaving call:', e);
@@ -488,13 +537,6 @@
 		// Notify parent component
 		onCallEnd();
 	}
-
-	onDestroy(() => {
-		// Always ensure cleanup happens on destroy
-		if (!isCleaningUp) {
-			cleanupCall();
-		}
-	});
 </script>
 
 <div class="flex fixed inset-0 z-50 flex-col justify-end">
@@ -561,7 +603,7 @@
 				{/if}
 
 				<div class="relative z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
-					{#if status !== 'disconnected'}
+					{#if microphoneStatus === 'initializing'}
 						<div class="flex justify-center">
 							<div
 								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
@@ -572,9 +614,34 @@
 									/>
 									<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
 								</span>
-								{displayStatus}
+								Preparing my best...
 							</div>
 						</div>
+					{:else if microphoneStatus === 'error'}
+						<div class="flex justify-center">
+							<div
+								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-error-200 bg-error-500/20"
+							>
+								<span class="mr-2 i-mdi-microphone-off text-lg" />
+								Could not access microphone
+							</div>
+						</div>
+					{:else}
+						{#if status !== 'disconnected'}
+							<div class="flex justify-center">
+								<div
+									class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
+								>
+									<span class="flex relative mr-2 w-2 h-2">
+										<span
+											class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
+										/>
+										<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
+									</span>
+									{displayStatus}
+								</div>
+							</div>
+						{/if}
 					{/if}
 
 					{#if showControls}
