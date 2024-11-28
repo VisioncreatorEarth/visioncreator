@@ -22,20 +22,20 @@ export default defineConfig({
 		purgeCss()
 	],
 	server: {
-		host: '192.168.178.26',
+		host: true, // This will listen on all network interfaces (0.0.0.0)
 		port: 3000,
 		https: {
 			key: fs.readFileSync('./localhost+1-key.pem'),
 			cert: fs.readFileSync('./localhost+1.pem'),
 		},
 	},
+	assetsInclude: ['**/*.txt'],
+	define: {
+		'import.meta.env.BASE_PATH': JSON.stringify('/src/')
+	},
 	build: {
 		rollupOptions: {
 			preserveEntrySignatures: 'strict'
 		}
-	},
-	assetsInclude: ['**/*.txt'],
-	define: {
-		'import.meta.env.BASE_PATH': JSON.stringify('/src/')
 	}
 });
