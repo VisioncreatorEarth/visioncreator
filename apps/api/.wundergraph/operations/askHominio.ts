@@ -30,9 +30,16 @@ const CALL_CONFIG = {
 
   Common Items Per Category (those are just examples, please find always the best fitting catgories for the items):
   - Fruits: Bananas, Apples, Oranges, Strawberries, Grapes, Peaches, Pineapple, Mango
-  - Vegetables: Broccoli, Carrots, Tomatoes, Lettuce, Cucumber, Bell Peppers, Spinach, Onions, Potatoes, Garlic
+  - Vegetables: Broccoli, Carrots, Tomatoes, Lettuce, Cucumber, Bell Peppers, Spinach, Onions, Potatoes, Garlic, Avocado
+  - Meat: Chicken, Beef, Pork, Fish, Turkey, Lamb, Sausages
+  - Grains: Rice, Pasta, Cereal, Oatmeal, Quinoa, Flour
   - Dairy: Milk, Cheese, Yogurt, Butter, Cream, Sour Cream, Cottage Cheese
   - Bakery: Bread, Croissant, Bagels, Muffins, Baguette, Donuts, Cake
+  - Beverages: Water, Coffee, Tea, Juice, Soda, Beer, Wine
+  - Snacks: Chips, Cookies, Popcorn, Nuts, Pretzels, Crackers, Chocolate
+  - Personal Care: Shampoo, Conditioner, Toothpaste, Toothbrush, Deodorant, Body Wash, Shaving Cream
+  - Household: Cleaning Supplies, Laundry Detergent, Soap, Paper Towels, Toilet Paper, Tissues, Paper Plates, Napkins, Towels
+  - Other: TV, Playstation, Router, Phone, Hammer, Nails, Soldering Iron, etc anyhitng that does not belong to any of the above categories
 
   For each item in the request:
   1. Always specify the category from the list above

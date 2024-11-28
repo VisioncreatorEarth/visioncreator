@@ -1,5 +1,89 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import { loadIcon, addIcon } from '@iconify/svelte';
+	import { onMount } from 'svelte';
+
+	// Category default icons - these are guaranteed to exist in MDI
+	const CATEGORY_ICONS = {
+		Vegetables: 'mdi:carrot',
+		Fruits: 'mdi:food-apple',
+		Meat: 'mdi:food-steak',
+		Grains: 'mdi:grain',
+		Bakery: 'mdi:bread',
+		Beverages: 'mdi:cup',
+		Dairy: 'mdi:cheese',
+		Snacks: 'mdi:cookie',
+		'Personal Care': 'mdi:face-man',
+		Household: 'mdi:home',
+		Other: 'mdi:shopping'
+	};
+
+	// Keep track of validated icons
+	const validatedIcons = new Set<string>();
+
+	// Validate and cache icon existence
+	async function validateIcon(iconName: string): Promise<boolean> {
+		if (validatedIcons.has(iconName)) {
+			return true;
+		}
+
+		try {
+			const iconData = await loadIcon(iconName);
+			if (iconData) {
+				validatedIcons.add(iconName);
+				return true;
+			}
+		} catch (error) {
+			return false;
+		}
+		return false;
+	}
+
+	// Function to get icon for an item with validation
+	async function getValidIcon(item: any): Promise<string> {
+		// First try the item's custom icon if it exists
+		if (item.icon) {
+			const isValid = await validateIcon(item.icon);
+			if (isValid) {
+				return item.icon;
+			}
+		}
+
+		// Then try the category default icon
+		const categoryIcon = CATEGORY_ICONS[item.category];
+		if (categoryIcon) {
+			const isValid = await validateIcon(categoryIcon);
+			if (isValid) {
+				return categoryIcon;
+			}
+		}
+
+		// Finally, use the "Other" category icon as ultimate fallback
+		return CATEGORY_ICONS.Other;
+	}
+
+	// Reactive statement to handle icon validation
+	let iconPromises = new Map<string, Promise<string>>();
+
+	$: {
+		// Update icon promises whenever items change
+		items.forEach((item) => {
+			const key = `${item.category}-${item.name}-${item.icon || ''}`;
+			if (!iconPromises.has(key)) {
+				iconPromises.set(key, getValidIcon(item));
+			}
+		});
+	}
+
+	// Preload all category icons on mount
+	onMount(async () => {
+		await Promise.all(Object.values(CATEGORY_ICONS).map((icon) => validateIcon(icon)));
+	});
+
+	// Function to get icon for an item
+	function getIcon(item: any) {
+		return CATEGORY_ICONS[item.category] || CATEGORY_ICONS.Other;
+	}
 
 	export let items: Array<{
 		id?: string;
@@ -18,15 +102,14 @@
 		return `${item.category}-${item.name}-${index}-${categoryIndex}-${Date.now()}`;
 	}
 
-	// Category colors with hover states and text colors
 	const categoryColors = {
-		Fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
 		Vegetables: 'bg-green-500/10 hover:bg-green-500/20 text-green-500',
-		Dairy: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
+		Fruits: 'bg-orange-500/10 hover:bg-orange-500/20 text-orange-500',
 		Meat: 'bg-red-500/10 hover:bg-red-500/20 text-red-500',
 		Grains: 'bg-warning-500/10 hover:bg-warning-500/20 text-warning-500',
 		Bakery: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500',
 		Beverages: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-500',
+		Dairy: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-500',
 		Snacks: 'bg-pink-500/10 hover:bg-pink-500/20 text-pink-500',
 		Household: 'bg-tertiary-500/10 hover:bg-tertiary-500/20 text-tertiary-500',
 		'Personal Care': 'bg-teal-500/10 hover:bg-teal-500/20 text-teal-500',
@@ -46,20 +129,6 @@
 		'Household',
 		'Other'
 	];
-
-	const FALLBACK_ICONS = {
-		Fruits: ['mdi:fruit-watermelon', 'mdi:food-apple', 'mdi:fruit-cherries'],
-		Vegetables: ['mdi:carrot', 'mdi:food-broccoli', 'mdi:leaf'],
-		Dairy: ['mdi:cheese', 'mdi:milk', 'mdi:egg'],
-		Meat: ['mdi:food-steak', 'mdi:food-turkey', 'mdi:fish'],
-		Bakery: ['mdi:bread-slice', 'mdi:croissant', 'mdi:cookie'],
-		Beverages: ['mdi:cup', 'mdi:bottle-soda', 'mdi:coffee'],
-		Snacks: ['mdi:cookie', 'mdi:food-potato', 'mdi:candy'],
-		Household: ['mdi:home', 'mdi:washing-machine', 'mdi:broom'],
-		Grains: ['mdi:pasta', 'mdi:rice', 'mdi:grain', 'mdi:noodles'],
-		'Personal Care': ['mdi:face-man', 'mdi:toothbrush', 'mdi:lotion'],
-		Other: ['mdi:shopping']
-	};
 
 	let groupedItems = [];
 
@@ -104,51 +173,85 @@
 		>
 			{#each categoryOrder as category, categoryIndex}
 				{#each activeItems.filter((item) => item.category === category) || [] as item, index (`${category}-${item.name}-${index}-${categoryIndex}`)}
-					<button
-						class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {item.is_checked
-							? 'bg-surface-700/50'
-							: categoryColors[item.category || 'Other']}"
-						on:click={() => onToggle && onToggle(item)}
-					>
-						<Icon
-							icon={item.icon || FALLBACK_ICONS[item.category || 'Other'][0]}
-							class="mb-2 w-1/2 h-1/2"
-						/>
-						<span class="overflow-hidden text-xs font-semibold text-center text-ellipsis">
-							{item.name}
-						</span>
-						{#if item.quantity > 1 || item.unit}
-							<div class="px-2 font-medium rounded-full text-2xs">
-								{item.quantity}{item.unit ? ` ${item.unit}` : ''}
-							</div>
-						{/if}
-					</button>
+					{#await iconPromises.get(`${item.category}-${item.name}-${item.icon || ''}`) || getValidIcon(item) then validIcon}
+						<button
+							class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {item.is_checked
+								? 'bg-surface-700/50'
+								: categoryColors[item.category || 'Other']}"
+							on:click={() => onToggle && onToggle(item)}
+						>
+							<Icon icon={validIcon} class="mb-2 w-1/2 h-1/2" />
+							<span class="overflow-hidden text-xs font-semibold text-center text-ellipsis">
+								{item.name}
+							</span>
+							{#if item.quantity > 1 || item.unit}
+								<div class="px-2 font-medium rounded-full text-2xs">
+									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
+								</div>
+							{/if}
+						</button>
+					{:catch}
+						<button
+							class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square {item.is_checked
+								? 'bg-surface-700/50'
+								: categoryColors[item.category || 'Other']}"
+							on:click={() => onToggle && onToggle(item)}
+						>
+							<Icon icon={CATEGORY_ICONS.Other} class="mb-2 w-1/2 h-1/2" />
+							<span class="overflow-hidden text-xs font-semibold text-center text-ellipsis">
+								{item.name}
+							</span>
+							{#if item.quantity > 1 || item.unit}
+								<div class="px-2 font-medium rounded-full text-2xs">
+									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
+								</div>
+							{/if}
+						</button>
+					{/await}
 				{/each}
 			{/each}
 
 			{#if purchasedItems.length > 0}
 				{#each purchasedItems as item (getItemKey(item))}
-					<button
-						class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
-						on:click={() => onToggle && onToggle(item)}
-					>
-						<Icon
-							icon={item.icon || FALLBACK_ICONS[item.category || 'Other'][0]}
-							class="mb-2 w-1/2 h-1/2 text-surface-200/60"
-						/>
-						<span
-							class="overflow-hidden text-xs font-semibold text-center text-ellipsis text-surface-200/60"
+					{#await iconPromises.get(getItemKey(item)) || getValidIcon(item) then validIcon}
+						<button
+							class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
+							on:click={() => onToggle && onToggle(item)}
 						>
-							{item.name}
-						</span>
-						{#if item.quantity > 1 || item.unit}
-							<div
-								class="px-2 font-medium rounded-full text-2xs bg-surface-900/20 text-surface-200/60"
+							<Icon icon={validIcon} class="mb-2 w-1/2 h-1/2 text-surface-200/60" />
+							<span
+								class="overflow-hidden text-xs font-semibold text-center text-ellipsis text-surface-200/60"
 							>
-								{item.quantity}{item.unit ? ` ${item.unit}` : ''}
-							</div>
-						{/if}
-					</button>
+								{item.name}
+							</span>
+							{#if item.quantity > 1 || item.unit}
+								<div
+									class="px-2 font-medium rounded-full text-2xs bg-surface-900/20 text-surface-200/60"
+								>
+									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
+								</div>
+							{/if}
+						</button>
+					{:catch}
+						<button
+							class="flex relative flex-col justify-center items-center p-2 rounded-lg transition-colors duration-200 aspect-square bg-surface-700/50"
+							on:click={() => onToggle && onToggle(item)}
+						>
+							<Icon icon={CATEGORY_ICONS.Other} class="mb-2 w-1/2 h-1/2 text-surface-200/60" />
+							<span
+								class="overflow-hidden text-xs font-semibold text-center text-ellipsis text-surface-200/60"
+							>
+								{item.name}
+							</span>
+							{#if item.quantity > 1 || item.unit}
+								<div
+									class="px-2 font-medium rounded-full text-2xs bg-surface-900/20 text-surface-200/60"
+								>
+									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
+								</div>
+							{/if}
+						</button>
+					{/await}
 				{/each}
 			{/if}
 		</div>
