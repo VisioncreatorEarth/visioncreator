@@ -312,6 +312,7 @@
 								},
 								video: false 
 							});
+							activeStreams.push(microphoneStream);
 							microphoneStatus = 'ready';
 						} catch (err) {
 							console.error('Error initializing microphone:', err);
@@ -466,6 +467,69 @@
 
 	let microphoneStream: MediaStream | null = null;
 	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
+	let activeStreams: MediaStream[] = [];
+
+	// Enhanced cleanup function
+	async function cleanupMicrophone() {
+		try {
+			// Cleanup our manual stream
+			if (microphoneStream) {
+				const tracks = microphoneStream.getTracks();
+				for (const track of tracks) {
+					try {
+						track.enabled = false;
+						track.stop();
+						microphoneStream.removeTrack(track);
+					} catch (e) {
+						console.error('Error stopping track:', e);
+					}
+				}
+				microphoneStream = null;
+			}
+
+			// Cleanup any tracked streams
+			for (const stream of activeStreams) {
+				try {
+					const tracks = stream.getTracks();
+					for (const track of tracks) {
+						track.enabled = false;
+						track.stop();
+						stream.removeTrack(track);
+					}
+				} catch (e) {
+					console.error('Error cleaning up tracked stream:', e);
+				}
+			}
+			activeStreams = [];
+			
+			// Force release microphone on iOS with multiple attempts
+			for (let i = 0; i < 3; i++) {
+				try {
+					const tempStream = await navigator.mediaDevices.getUserMedia({ 
+						audio: {
+							echoCancellation: true,
+							noiseSuppression: true,
+							autoGainControl: true
+						}
+					});
+					const tracks = tempStream.getTracks();
+					for (const track of tracks) {
+						track.enabled = false;
+						track.stop();
+					}
+					await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between attempts
+				} catch (e) {
+					// If we get a NotAllowedError, the mic is probably already released
+					if (e.name === 'NotAllowedError') break;
+					console.error('Error in iOS cleanup attempt ${i + 1}:', e);
+				}
+			}
+			
+			microphoneStatus = 'initializing';
+		} catch (err) {
+			console.error('Error in cleanupMicrophone:', err);
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -478,6 +542,7 @@
 				},
 				video: false 
 			});
+			activeStreams.push(microphoneStream);
 			microphoneStatus = 'ready';
 		} catch (err) {
 			console.error('Error initializing microphone:', err);
@@ -485,53 +550,17 @@
 		}
 	});
 
-	// Ensure microphone is properly cleaned up
-	async function cleanupMicrophone() {
-		try {
-			if (microphoneStream) {
-				const tracks = microphoneStream.getTracks();
-				for (const track of tracks) {
-					track.enabled = false;
-					track.stop();
-					microphoneStream.removeTrack(track);
-				}
-				microphoneStream = null;
-			}
-			
-			// Force release microphone on iOS
-			try {
-				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-				stream.getTracks().forEach(track => {
-					track.enabled = false;
-					track.stop();
-				});
-			} catch (e) {
-				// Ignore errors here as we're just trying to force release
-			}
-			
-			microphoneStatus = 'initializing';
-		} catch (err) {
-			console.error('Error cleaning up microphone:', err);
-		}
-	}
-
-	// Ensure cleanup happens in all scenarios
-	onDestroy(() => {
-		cleanupMicrophone();
-		cleanupCall();
-	});
-
-	// Add cleanup to the cleanupCall function as well
+	// Enhanced cleanup call function
 	async function cleanupCall() {
-		if (isCleaningUp) return; // Prevent recursive cleanup
+		if (isCleaningUp) return;
 		isCleaningUp = true;
 		
 		try {
 			if (context.session) {
-				// Ensure we properly leave the call and stop microphone
 				try {
 					// Stop all media tracks from the session
 					if (context.session.mediaStream) {
+						activeStreams.push(context.session.mediaStream);
 						const tracks = context.session.mediaStream.getTracks();
 						for (const track of tracks) {
 							track.enabled = false;
@@ -560,6 +589,12 @@
 	}
 
 	let isCleaningUp = false;
+
+	// Ensure cleanup happens in all scenarios
+	onDestroy(() => {
+		cleanupMicrophone();
+		cleanupCall();
+	});
 
 	export let session: any;
 	export let onCallEnd: () => void = () => {};
