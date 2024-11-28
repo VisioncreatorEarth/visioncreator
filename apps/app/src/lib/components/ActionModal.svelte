@@ -107,7 +107,7 @@
 			isMenuMode = type === 'menu';
 
 			if (type === 'menu') {
-				activeTab = 'views';
+				activeTab = 'actions';
 			}
 		}, 0);
 	}
@@ -228,7 +228,7 @@
 	/>
 
 	<button
-		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 hover:shadow-xl hover:scale-105"
+		class="flex fixed bottom-4 left-1/2 z-50 justify-center items-center w-14 h-14 rounded-full shadow-lg transition-all duration-300 -translate-x-1/2 hover:shadow-xl hover:scale-105"
 		class:bg-error-500={isRecording}
 		class:bg-surface-800={isProcessing}
 		class:bg-surface-600={!isRecording && !isProcessing}
@@ -257,7 +257,7 @@
 	</button>
 {:else if !isModalOpen}
 	<button
-		class="fixed z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary bottom-4 left-1/2"
+		class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary"
 		on:click={() => toggleModal('login')}
 	>
 		<span>Login</span>
@@ -266,7 +266,7 @@
 
 {#if isModalOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6 bg-surface-900/50 backdrop-blur-sm"
+		class="flex fixed inset-0 z-50 justify-center items-end p-4 backdrop-blur-sm sm:p-6 bg-surface-900/50"
 		on:click={handleClose}
 		on:keydown={(e) => e.key === 'Escape' && handleClose()}
 		role="dialog"
@@ -281,11 +281,11 @@
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
-				<div class="relative flex flex-col">
+				<div class="flex relative flex-col">
 					<Auth modalType={currentModalType} {supabase} />
 					<div class="flex justify-center mb-3">
 						<button
-							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+							class="flex justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 							on:click={() => toggleModal()}
 						>
 							<svg
@@ -323,7 +323,7 @@
 						</svelte:fragment>
 					</TabMenu>
 					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-2 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						class="flex absolute bottom-2 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
 					>
 						<svg
@@ -342,7 +342,7 @@
 				<div class="relative">
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-4 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						class="flex absolute top-4 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
 					>
 						<svg

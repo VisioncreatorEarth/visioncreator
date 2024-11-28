@@ -7,6 +7,7 @@
 	import { view as hominioDoView } from '$lib/views/HominioDoMe';
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	export let data;
 
@@ -101,6 +102,13 @@
 	function handleViewSelect(view: any) {
 		selectedView = view;
 		dynamicView.set(view);
+		if (isMobile) {
+			isAsideOpen = false;
+		}
+	}
+
+	function handleEpisodesClick() {
+		goto('/episodes');
 		if (isMobile) {
 			isAsideOpen = false;
 		}
@@ -275,6 +283,15 @@
 								/>
 							</div>
 						{/each}
+						<div
+							on:click={handleEpisodesClick}
+							on:keydown={(e) => e.key === 'Enter' && handleEpisodesClick()}
+							class="flex flex-col items-center justify-center w-[50px] h-[50px] transition-colors duration-200 rounded-lg cursor-pointer bg-surface-700/40 text-surface-400 hover:bg-surface-700/50"
+							tabindex="0"
+							role="button"
+						>
+							<Icon icon="mdi:play-circle" class="w-6 h-6" />
+						</div>
 					</div>
 				</div>
 			</aside>
@@ -328,6 +345,15 @@
 							/>
 						</div>
 					{/each}
+					<div
+						on:click={handleEpisodesClick}
+						on:keydown={(e) => e.key === 'Enter' && handleEpisodesClick()}
+						class="flex flex-col items-center justify-center w-[50px] h-[50px] transition-colors duration-200 rounded-lg cursor-pointer bg-surface-700/40 text-surface-400 hover:bg-surface-700/50"
+						tabindex="0"
+						role="button"
+					>
+						<Icon icon="mdi:play-circle" class="w-6 h-6" />
+					</div>
 				</div>
 			</div>
 		</aside>
