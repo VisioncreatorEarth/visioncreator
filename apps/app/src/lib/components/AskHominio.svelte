@@ -304,14 +304,7 @@
 					// Check if we have a pre-initialized microphone stream
 					if (!microphoneStream || microphoneStatus !== 'ready') {
 						try {
-							microphoneStream = await navigator.mediaDevices.getUserMedia({ 
-								audio: {
-									echoCancellation: true,
-									noiseSuppression: true,
-									autoGainControl: true
-								},
-								video: false 
-							});
+							microphoneStream = await getAndTrackMicrophone();
 							activeStreams.push(microphoneStream);
 							microphoneStatus = 'ready';
 						} catch (err) {
@@ -468,6 +461,22 @@
 	let microphoneStream: MediaStream | null = null;
 	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
 	let activeStreams: MediaStream[] = [];
+	let allStreams = new Set();
+
+	// iOS detection
+	const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+	async function forceStopTrack(track) {
+		try {
+			track.enabled = false;
+			await new Promise(resolve => setTimeout(resolve, 50));
+			track.stop();
+			await new Promise(resolve => setTimeout(resolve, 50));
+		} catch (e) {
+			console.error('Error stopping track:', e);
+		}
+	}
 
 	// Enhanced cleanup function
 	async function cleanupMicrophone() {
@@ -476,52 +485,54 @@
 			if (microphoneStream) {
 				const tracks = microphoneStream.getTracks();
 				for (const track of tracks) {
-					try {
-						track.enabled = false;
-						track.stop();
-						microphoneStream.removeTrack(track);
-					} catch (e) {
-						console.error('Error stopping track:', e);
-					}
+					await forceStopTrack(track);
+					microphoneStream.removeTrack(track);
 				}
+				allStreams.delete(microphoneStream);
 				microphoneStream = null;
 			}
 
 			// Cleanup any tracked streams
 			for (const stream of activeStreams) {
-				try {
-					const tracks = stream.getTracks();
-					for (const track of tracks) {
-						track.enabled = false;
-						track.stop();
-						stream.removeTrack(track);
-					}
-				} catch (e) {
-					console.error('Error cleaning up tracked stream:', e);
+				const tracks = stream.getTracks();
+				for (const track of tracks) {
+					await forceStopTrack(track);
+					stream.removeTrack(track);
 				}
+				allStreams.delete(stream);
 			}
 			activeStreams = [];
 			
-			// Force release microphone on iOS with multiple attempts
-			for (let i = 0; i < 3; i++) {
-				try {
-					const tempStream = await navigator.mediaDevices.getUserMedia({ 
-						audio: {
-							echoCancellation: true,
-							noiseSuppression: true,
-							autoGainControl: true
+			// iOS Safari specific cleanup
+			if (isIOS) {
+				for (let i = 0; i < 3; i++) {
+					try {
+						const tempStream = await navigator.mediaDevices.getUserMedia({ 
+							audio: {
+								echoCancellation: false,
+								noiseSuppression: false,
+								autoGainControl: false
+							}
+						});
+						const tracks = tempStream.getTracks();
+						for (const track of tracks) {
+							await forceStopTrack(track);
 						}
-					});
-					const tracks = tempStream.getTracks();
-					for (const track of tracks) {
-						track.enabled = false;
-						track.stop();
+						await new Promise(resolve => setTimeout(resolve, 100));
+					} catch (e) {
+						if (e.name === 'NotAllowedError') {
+							break;
+						}
+						await new Promise(resolve => setTimeout(resolve, 200));
 					}
-					await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between attempts
+				}
+				
+				// Final reset attempt
+				try {
+					const noAudioStream = await navigator.mediaDevices.getUserMedia({ audio: false });
+					noAudioStream.getTracks().forEach(track => track.stop());
 				} catch (e) {
-					// If we get a NotAllowedError, the mic is probably already released
-					if (e.name === 'NotAllowedError') break;
-					console.error('Error in iOS cleanup attempt ${i + 1}:', e);
+					// Ignore errors here
 				}
 			}
 			
@@ -531,17 +542,23 @@
 		}
 	}
 
+	// Track new streams when created
+	async function getAndTrackMicrophone() {
+		const stream = await navigator.mediaDevices.getUserMedia({ 
+			audio: {
+				echoCancellation: true,
+				noiseSuppression: true,
+				autoGainControl: true
+			},
+			video: false 
+		});
+		allStreams.add(stream);
+		return stream;
+	}
+
 	onMount(async () => {
 		try {
-			// Request microphone access as soon as component mounts
-			microphoneStream = await navigator.mediaDevices.getUserMedia({ 
-				audio: {
-					echoCancellation: true,
-					noiseSuppression: true,
-					autoGainControl: true
-				},
-				video: false 
-			});
+			microphoneStream = await getAndTrackMicrophone();
 			activeStreams.push(microphoneStream);
 			microphoneStatus = 'ready';
 		} catch (err) {
@@ -558,30 +575,24 @@
 		try {
 			if (context.session) {
 				try {
-					// Stop all media tracks from the session
 					if (context.session.mediaStream) {
-						activeStreams.push(context.session.mediaStream);
+						allStreams.add(context.session.mediaStream);
 						const tracks = context.session.mediaStream.getTracks();
 						for (const track of tracks) {
-							track.enabled = false;
-							track.stop();
+							await forceStopTrack(track);
 							context.session.mediaStream.removeTrack(track);
 						}
 					}
 					await context.session.leaveCall();
+					context.session.mediaStream = null;
 				} catch (e) {
 					console.error('Error leaving call:', e);
 				}
 				context.session = null;
 			}
 			
-			// Always cleanup microphone
 			await cleanupMicrophone();
-
-			// Reset machine state
 			machine.reset();
-
-			// Notify parent component
 			onCallEnd();
 		} finally {
 			isCleaningUp = false;
