@@ -1,9 +1,10 @@
 <!-- AskHominio.svelte -->
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
+	import OShoppingItems from './ShoppingItems.svelte';
 	import { dynamicView } from '$lib/stores';
 
 	// Create updateShoppingList mutation
@@ -299,9 +300,6 @@
 					}
 
 					context.currentCallId = result.callId;
-
-					// Start microphone
-					const microphoneStream = await startMic();
 					const session = new UltravoxSession({
 						joinUrl: result.joinUrl,
 						transcriptOptional: false,
@@ -310,9 +308,7 @@
 							reconnect: true,
 							maxRetries: 3,
 							retryDelay: 1000
-						},
-						// Pass our pre-initialized stream to Ultravox
-						mediaStream: microphoneStream
+						}
 					});
 
 					// Register the shopping list tool
@@ -395,13 +391,9 @@
 					});
 					console.log('End call response:', endResponse);
 
-					// Then ensure we leave the call session and stop microphone
+					// Then ensure we leave the call session
 					if (context.session) {
 						await context.session.leaveCall();
-						// Ensure microphone is stopped
-						if (context.session.mediaStream) {
-							context.session.mediaStream.getTracks().forEach((track) => track.stop());
-						}
 					}
 				} catch (e) {
 					context.error = e instanceof Error ? e.message : 'Failed to end call';
@@ -415,10 +407,6 @@
 			},
 			handleError: (context) => {
 				if (context.session) {
-					// Stop all media tracks before leaving the call
-					if (context.session.mediaStream) {
-						context.session.mediaStream.getTracks().forEach((track) => track.stop());
-					}
 					context.session.leaveCall().catch(() => {});
 					context.session = null;
 				}
@@ -436,86 +424,32 @@
 		}
 	);
 
-	let microphoneStream: MediaStream | null = null;
-	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
+	// Reactive values from machine state
+	$: ({ value: status, context } = $machine);
+	$: isCallActive = ['idle', 'listening', 'thinking', 'speaking'].includes(status);
+	$: ({ error, transcripts, isLoading } = context);
 
-	// Simple microphone functions from MicTest.svelte
-	async function startMic() {
-		try {
-			console.log('Starting microphone...');
-			microphoneStream = await navigator.mediaDevices.getUserMedia({
-				audio: {
-					echoCancellation: true,
-					noiseSuppression: true,
-					sampleRate: 44100
-				}
-			});
-			microphoneStatus = 'ready';
-			console.log('Microphone started successfully');
-			return microphoneStream;
-		} catch (error) {
-			console.error('Microphone error:', error);
-			microphoneStatus = 'error';
-			throw error;
+	// Helper for UI status display
+	$: displayStatus = (() => {
+		switch (status) {
+			case 'connecting':
+				return 'Connecting...';
+			case 'idle':
+				return 'Ready';
+			case 'listening':
+				return 'Listening';
+			case 'thinking':
+				return 'Thinking';
+			case 'speaking':
+				return 'Speaking';
+			case 'disconnecting':
+				return 'Disconnecting...';
+			default:
+				return 'Disconnected';
 		}
-	}
-
-	function stopMic() {
-		if (microphoneStream) {
-			microphoneStream.getTracks().forEach((track) => track.stop());
-			microphoneStream = null;
-		}
-		microphoneStatus = 'initializing';
-		console.log('Microphone stopped');
-	}
-
-	onMount(async () => {
-		try {
-			await startMic();
-		} catch (err) {
-			console.error('Error in onMount:', err);
-		}
-	});
-
-	// Cleanup function using simple logic
-	async function cleanupMicrophone() {
-		stopMic();
-	}
-
-	// Cleanup call function using simple mic handling
-	async function cleanupCall() {
-		if (isCleaningUp) return;
-		isCleaningUp = true;
-
-		try {
-			if (context.session) {
-				try {
-					if (context.session.mediaStream) {
-						context.session.mediaStream.getTracks().forEach((track) => track.stop());
-					}
-					await context.session.leaveCall();
-					context.session.mediaStream = null;
-				} catch (e) {
-					console.error('Error leaving call:', e);
-				}
-				context.session = null;
-			}
-
-			stopMic();
-			machine.reset();
-			onCallEnd();
-		} finally {
-			isCleaningUp = false;
-		}
-	}
+	})();
 
 	let isCleaningUp = false;
-
-	// Ensure cleanup happens in all scenarios
-	onDestroy(() => {
-		cleanupMicrophone();
-		cleanupCall();
-	});
 
 	export let session: any;
 	export let onCallEnd: () => void = () => {};
@@ -537,30 +471,30 @@
 		isCleaningUp = false;
 	}
 
-	// Reactive values from machine state
-	$: ({ value: status, context } = $machine);
-	$: isCallActive = ['idle', 'listening', 'thinking', 'speaking'].includes(status);
-	$: ({ error, isLoading } = context);
-
-	// Helper for UI status display
-	$: displayStatus = (() => {
-		switch (status) {
-			case 'connecting':
-				return 'Connecting...';
-			case 'idle':
-				return 'Ready';
-			case 'listening':
-				return 'Listening';
-			case 'thinking':
-				return 'Thinking';
-			case 'speaking':
-				return 'Speaking';
-			case 'disconnecting':
-				return 'Disconnecting...';
-			default:
-				return 'Disconnected';
+	function cleanupCall() {
+		if (context.session) {
+			// Ensure we properly leave the call
+			try {
+				context.session.leaveCall().catch(() => {});
+			} catch (e) {
+				console.error('Error leaving call:', e);
+			}
+			context.session = null;
 		}
-	})();
+
+		// Reset machine state
+		machine.reset();
+
+		// Notify parent component
+		onCallEnd();
+	}
+
+	onDestroy(() => {
+		// Always ensure cleanup happens on destroy
+		if (!isCleaningUp) {
+			cleanupCall();
+		}
+	});
 </script>
 
 <div class="flex fixed inset-0 z-50 flex-col justify-end">
@@ -627,30 +561,7 @@
 				{/if}
 
 				<div class="relative z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
-					{#if microphoneStatus === 'initializing'}
-						<div class="flex justify-center">
-							<div
-								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
-							>
-								<span class="flex relative mr-2 w-2 h-2">
-									<span
-										class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
-									/>
-									<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
-								</span>
-								Preparing my best...
-							</div>
-						</div>
-					{:else if microphoneStatus === 'error'}
-						<div class="flex justify-center">
-							<div
-								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-error-200 bg-error-500/20"
-							>
-								<span class="mr-2 text-lg i-mdi-microphone-off" />
-								Could not access microphone
-							</div>
-						</div>
-					{:else if status !== 'disconnected'}
+					{#if status !== 'disconnected'}
 						<div class="flex justify-center">
 							<div
 								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
