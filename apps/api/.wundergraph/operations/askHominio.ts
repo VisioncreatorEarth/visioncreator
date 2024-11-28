@@ -15,7 +15,7 @@ const CALL_CONFIG = {
 
   Please also translate any shoppinglist item into english
 
-  Available Categories and their Icons:
+  Available Categories and their fallback Icons:
   - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
   - Fruits (mdi:fruit-watermelon, mdi:food-apple, mdi:fruit-cherries)
   - Meat (mdi:food-steak, mdi:food-turkey, mdi:fish)
@@ -40,7 +40,7 @@ const CALL_CONFIG = {
   3. For 'add' actions:
      - Include quantity (default to 1 if not specified)
      - Use appropriate units (e.g., kg, pcs, l)
-     - Try to match items with their correct icons
+     - Try to match items with their correct icons, choose the fallback category icon if no icon is available or you are unsure if that icon exists
   4. For 'remove' actions:
      - Only name and category are required
      - Use the same category and name as when adding to ensure proper removal
@@ -84,7 +84,7 @@ const CALL_CONFIG = {
                   name: { type: 'string', description: 'Name of the item' },
                   quantity: { type: 'number', description: 'Quantity of the item' },
                   category: { type: 'string', description: 'Category of the item' },
-                  icon: { type: 'string', description: 'Icon for the item, choose the best you kind find from Iconify' },
+                  icon: { type: 'string', description: 'Icon for the item, choose the best you kind find from Iconify, if unsure use one ofthe fallback category icons' },
                   unit: { type: 'string', description: 'Unit for this item' },
                   action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
                 },

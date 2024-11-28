@@ -30,5 +30,4 @@ export let view = {
     ]
   },
   "stateMachine": {},
-  "customConfig": { showSpacer: true }
 }

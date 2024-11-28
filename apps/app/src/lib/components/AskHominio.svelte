@@ -4,7 +4,7 @@
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
-	import OShoppingItems from './o-ShoppingItems.svelte';
+	import OShoppingItems from './ShoppingItems.svelte';
 	import { dynamicView } from '$lib/stores';
 
 	// Create updateShoppingList mutation
@@ -539,14 +539,14 @@
 						{#if addedItems.length > 0}
 							<div class="mb-4">
 								<h3 class="mb-2 text-sm font-medium text-tertiary-300">Added</h3>
-								<OShoppingItems items={addedItems} />
+								<ShoppingItems items={addedItems} />
 							</div>
 						{/if}
 
 						{#if removedItems.length > 0}
 							<div>
 								<h3 class="mb-2 text-sm font-medium text-tertiary-300">Removed</h3>
-								<OShoppingItems
+								<ShoppingItems
 									items={removedItems.map((item) => ({ ...item, is_checked: true }))}
 								/>
 							</div>

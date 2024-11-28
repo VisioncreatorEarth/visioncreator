@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import OShoppingItems from './o-ShoppingItems.svelte';
 
 	export let me;
 
@@ -206,19 +205,17 @@
 							<p class="mt-2 text-sm">Click the button above to add some random items</p>
 						</div>
 					{:else}
-						<OShoppingItems items={activeItems} onToggle={handleToggleItem} />
+						<ShoppingItems items={activeItems} onToggle={handleToggleItem} />
 					{/if}
 				</div>
 
 				<!-- Purchased Items Section -->
 				{#if purchasedItems.length}
 					<div class="p-4 rounded-2xl bg-surface-800">
-						<OShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
+						<ShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
 					</div>
 				{/if}
-
-				<!-- Bottom Spacer -->
-				<div class="h-80" />
+				<div class="h-20" />
 			{/if}
 		</div>
 	</div>
