@@ -2,6 +2,10 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
+	import { view as hominioHostView } from '$lib/views/HominioHostMe';
+	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
+	import { view as hominioDoView } from '$lib/views/HominioDoMe';
+	import { view as hominioBankView } from '$lib/views/HominioBankMe';
 	import { onMount } from 'svelte';
 
 	export let data;
@@ -42,9 +46,43 @@
 		operationName: 'toggleOnboarded'
 	});
 
-	const viewsQuery = createQuery({
-		operationName: 'queryMyViews'
-	});
+	const views = [
+		{ 
+			metadata: {
+				id: 'me',
+				name: 'MyDashboard'
+			},
+			view: meView
+		},
+		{ 
+			metadata: {
+				id: 'host',
+				name: 'HostWithMe'
+			},
+			view: hominioHostView
+		},
+		{ 
+			metadata: {
+				id: 'shop',
+				name: 'ShopWithMe'
+			},
+			view: hominioShopView
+		},
+		{ 
+			metadata: {
+				id: 'do',
+				name: 'DoWithMe'
+			},
+			view: hominioDoView
+		},
+		{ 
+			metadata: {
+				id: 'bank',
+				name: 'BankWithMe'
+			},
+			view: hominioBankView
+		}
+	];
 
 	interface MeQueryResult {
 		id: string;
@@ -60,11 +98,9 @@
 
 	$: meData = $meQuery.data as MeQueryResult | null;
 
-	$: views = $viewsQuery.data?.views || [];
-
 	function handleViewSelect(view: any) {
 		selectedView = view;
-		dynamicView.set({ view });
+		dynamicView.set(view);
 		if (isMobile) {
 			isAsideOpen = false;
 		}
@@ -228,6 +264,12 @@
 										? 'mdi:account'
 										: view.metadata.name === 'ShopWithMe'
 										? 'mdi:shopping'
+										: view.metadata.name === 'HostWithMe'
+										? 'mdi:hotel'
+										: view.metadata.name === 'DoWithMe'
+										? 'mdi:check-circle'
+										: view.metadata.name === 'BankWithMe'
+										? 'mdi:bank'
 										: 'mdi:circle-outline'}
 									class="w-6 h-6"
 								/>
@@ -275,6 +317,12 @@
 									? 'mdi:account'
 									: view.metadata.name === 'ShopWithMe'
 									? 'mdi:shopping'
+									: view.metadata.name === 'HostWithMe'
+									? 'mdi:hotel'
+									: view.metadata.name === 'DoWithMe'
+									? 'mdi:check-circle'
+									: view.metadata.name === 'BankWithMe'
+									? 'mdi:bank'
 									: 'mdi:circle-outline'}
 								class="w-6 h-6"
 							/>

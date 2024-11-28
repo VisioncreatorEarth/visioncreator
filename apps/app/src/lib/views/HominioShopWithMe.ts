@@ -1,9 +1,9 @@
 export let view = {
   "metadata": {
     "id": "5b7cecca-c106-4766-ba7d-a65e1d290a7d",
-    "version": "0.0.3",
+    "version": "0.0.1",
     "isActive": true,
-    "name": "BringMe",
+    "name": "HominioShopWithMe",
     "description": "",
     "author": "00000000-0000-0000-0000-000000000001",
     "composer": "ComposeView241119",
@@ -13,7 +13,7 @@ export let view = {
     "updatedBy": "00000000-0000-0000-0000-000000000001"
   },
   "render": {
-    "id": "ShoppingListsContainer",
+    "id": "HominioShopWithMe",
     "layout": {
       "gap": "1rem",
       "rows": "auto",
@@ -23,9 +23,9 @@ export let view = {
     },
     "children": [
       {
-        "id": "BringMe",
+        "id": "HominioShopWithMe",
         "slot": "main",
-        "component": "o-BringMe"
+        "component": "HominioShopWithMe"
       }
     ]
   },
