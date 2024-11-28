@@ -168,7 +168,7 @@
 {:else}
 	<div class="@container">
 		<div
-			class="grid grid-cols-3 @xs:grid-cols-4 @sm:grid-cols-5 @md:grid-cols-6 @lg:grid-cols-7 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
+			class="grid grid-cols-3 @sm:grid-cols-4 @md:grid-cols-5 @lg:grid-cols-6 @xl:grid-cols-8 @2xl:grid-cols-10 gap-4"
 		>
 			{#each categoryOrder as category, categoryIndex}
 				{#each activeItems.filter((item) => item.category === category) || [] as item, index (`${category}-${item.name}-${index}-${categoryIndex}`)}
