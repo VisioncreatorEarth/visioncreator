@@ -15,18 +15,18 @@ const CALL_CONFIG = {
 
   Please also translate any shoppinglist item into english
 
-  Available Categories and their fallback Icons:
-  - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
-  - Fruits (mdi:fruit-watermelon, mdi:food-apple, mdi:fruit-cherries)
-  - Meat (mdi:food-steak, mdi:food-turkey, mdi:fish)
-  - Grains (mdi:pasta, mdi:rice, mdi:grain)
-  - Bakery (mdi:bread-slice, mdi:croissant, mdi:cookie)
-  - Beverages (mdi:cup, mdi:bottle-soda, mdi:coffee)
-  - Dairy (mdi:cheese, mdi:milk, mdi:egg)
-  - Snacks (mdi:cookie, mdi:food-potato, mdi:candy)
-  - Personal Care (mdi:face-man, mdi:toothbrush, mdi:lotion)
-  - Household (mdi:home, mdi:washing-machine, mdi:broom)
-  - Other (mdi:shopping)
+  Available Categories:
+  - Vegetables
+  - Fruits 
+  - Meat
+  - Grains
+  - Bakery 
+  - Beverages 
+  - Dairy
+  - Snacks 
+  - Personal Care 
+  - Household 
+  - Other 
 
   Common Items Per Category (those are just examples, please find always the best fitting catgories for the items):
   - Fruits: Bananas, Apples, Oranges, Strawberries, Grapes, Peaches, Pineapple, Mango
@@ -41,6 +41,10 @@ const CALL_CONFIG = {
   - Household: Cleaning Supplies, Laundry Detergent, Soap, Paper Towels, Toilet Paper, Tissues, Paper Plates, Napkins, Towels
   - Other: TV, Playstation, Router, Phone, Hammer, Nails, Soldering Iron, etc anyhitng that does not belong to any of the above categories
 
+  INSTRUCTIONS REGARDING ICON SELECTION:
+  - please doublecheck that the icon name exisits in the iconify mdi library
+  - please exlusively use mdi icon sets
+ 
   For each item in the request:
   1. Always specify the category from the list above
   2. Set the action field to 'add' or 'remove' based on what to do with the item

@@ -1,21 +1,20 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { loadIcon, addIcon } from '@iconify/svelte';
+	import { loadIcon } from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
-	// Category default icons - these are guaranteed to exist in MDI
 	const CATEGORY_ICONS = {
-		Vegetables: 'mdi:carrot',
-		Fruits: 'mdi:food-apple',
+		Vegetables: 'mdi:food-broccoli',
+		Fruits: 'mdi:fruit-watermelon',
 		Meat: 'mdi:food-steak',
 		Grains: 'mdi:grain',
-		Bakery: 'mdi:bread',
-		Beverages: 'mdi:cup',
+		Bakery: 'mdi:baguette',
+		Beverages: 'mdi:bottle-soda',
 		Dairy: 'mdi:cheese',
 		Snacks: 'mdi:cookie',
-		'Personal Care': 'mdi:face-man',
-		Household: 'mdi:home',
-		Other: 'mdi:shopping'
+		'Personal Care': 'mdi:toothbrush',
+		Household: 'mdi:spray-bottle',
+		Other: 'mdi:basket'
 	};
 
 	// Keep track of validated icons
