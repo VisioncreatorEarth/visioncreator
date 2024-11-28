@@ -398,6 +398,7 @@
 						if (context.session.mediaStream) {
 							context.session.mediaStream.getTracks().forEach(track => {
 								track.stop();
+								track.enabled = false;
 							});
 						}
 					}
@@ -417,6 +418,7 @@
 					if (context.session.mediaStream) {
 						context.session.mediaStream.getTracks().forEach(track => {
 							track.stop();
+							track.enabled = false;
 						});
 					}
 					context.session.leaveCall().catch(() => {});
@@ -439,6 +441,20 @@
 	let microphoneStream: MediaStream | null = null;
 	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
 
+	// Ensure microphone is properly cleaned up
+	function cleanupMicrophone() {
+		if (microphoneStream) {
+			// Stop all tracks
+			microphoneStream.getTracks().forEach(track => {
+				track.stop();
+				track.enabled = false;
+			});
+			// Clear the stream
+			microphoneStream = null;
+		}
+		microphoneStatus = 'initializing';
+	}
+
 	onMount(async () => {
 		try {
 			// Request microphone access as soon as component mounts
@@ -453,19 +469,62 @@
 		}
 	});
 
-	// Cleanup function to stop all microphone tracks
-	function cleanupMicrophone() {
-		if (microphoneStream) {
-			microphoneStream.getTracks().forEach(track => track.stop());
-			microphoneStream = null;
-		}
-		microphoneStatus = 'initializing';
-	}
-
+	// Ensure cleanup happens in all scenarios
 	onDestroy(() => {
 		cleanupMicrophone();
 		cleanupCall();
 	});
+
+	// Add cleanup to the cleanupCall function as well
+	function cleanupCall() {
+		if (context.session) {
+			// Ensure we properly leave the call and stop microphone
+			try {
+				// Stop all media tracks
+				if (context.session.mediaStream) {
+					context.session.mediaStream.getTracks().forEach(track => {
+						track.stop();
+						track.enabled = false;
+					});
+				}
+				context.session.leaveCall().catch(() => {});
+			} catch (e) {
+				console.error('Error leaving call:', e);
+			}
+			context.session = null;
+		}
+		
+		// Always cleanup microphone
+		cleanupMicrophone();
+
+		// Reset machine state
+		machine.reset();
+
+		// Notify parent component
+		onCallEnd();
+	}
+
+	let isCleaningUp = false;
+
+	export let session: any;
+	export let onCallEnd: () => void = () => {};
+	export let showControls: boolean = true; // Default to showing controls
+
+	// Create a method to start the call
+	export function startCall() {
+		machine.send('START');
+	}
+
+	// Create a method to stop the call
+	export function stopCall() {
+		if (isCleaningUp) return; // Prevent recursive calls
+		isCleaningUp = true;
+
+		machine.send('DISCONNECT');
+		cleanupCall();
+
+		isCleaningUp = false;
+	}
 
 	// Reactive values from machine state
 	$: ({ value: status, context } = $machine);
@@ -491,52 +550,6 @@
 				return 'Disconnected';
 		}
 	})();
-
-	let isCleaningUp = false;
-
-	export let session: any;
-	export let onCallEnd: () => void = () => {};
-	export let showControls: boolean = true; // Default to showing controls
-
-	// Create a method to start the call
-	export function startCall() {
-		machine.send('START');
-	}
-
-	// Create a method to stop the call
-	export function stopCall() {
-		if (isCleaningUp) return; // Prevent recursive calls
-		isCleaningUp = true;
-
-		machine.send('DISCONNECT');
-		cleanupCall();
-
-		isCleaningUp = false;
-	}
-
-	function cleanupCall() {
-		if (context.session) {
-			// Ensure we properly leave the call and stop microphone
-			try {
-				// Stop all media tracks
-				if (context.session.mediaStream) {
-					context.session.mediaStream.getTracks().forEach(track => {
-						track.stop();
-					});
-				}
-				context.session.leaveCall().catch(() => {});
-			} catch (e) {
-				console.error('Error leaving call:', e);
-			}
-			context.session = null;
-		}
-
-		// Reset machine state
-		machine.reset();
-
-		// Notify parent component
-		onCallEnd();
-	}
 </script>
 
 <div class="flex fixed inset-0 z-50 flex-col justify-end">
