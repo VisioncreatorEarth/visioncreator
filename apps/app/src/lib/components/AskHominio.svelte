@@ -4,7 +4,6 @@
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
-	import OShoppingItems from './ShoppingItems.svelte';
 	import { dynamicView } from '$lib/stores';
 
 	// Create updateShoppingList mutation
@@ -300,20 +299,9 @@
 					}
 
 					context.currentCallId = result.callId;
-					
-					// Check if we have a pre-initialized microphone stream
-					if (!microphoneStream || microphoneStatus !== 'ready') {
-						try {
-							microphoneStream = await getAndTrackMicrophone();
-							activeStreams.push(microphoneStream);
-							microphoneStatus = 'ready';
-						} catch (err) {
-							console.error('Error initializing microphone:', err);
-							microphoneStatus = 'error';
-							throw new Error('Failed to initialize microphone');
-						}
-					}
 
+					// Start microphone
+					const microphoneStream = await startMic();
 					const session = new UltravoxSession({
 						joinUrl: result.joinUrl,
 						transcriptOptional: false,
@@ -412,12 +400,7 @@
 						await context.session.leaveCall();
 						// Ensure microphone is stopped
 						if (context.session.mediaStream) {
-							const tracks = context.session.mediaStream.getTracks();
-							for (const track of tracks) {
-								track.enabled = false;
-								track.stop();
-								context.session.mediaStream.removeTrack(track);
-							}
+							context.session.mediaStream.getTracks().forEach(track => track.stop());
 						}
 					}
 				} catch (e) {
@@ -434,12 +417,7 @@
 				if (context.session) {
 					// Stop all media tracks before leaving the call
 					if (context.session.mediaStream) {
-						const tracks = context.session.mediaStream.getTracks();
-						for (const track of tracks) {
-							track.enabled = false;
-							track.stop();
-							context.session.mediaStream.removeTrack(track);
-						}
+						context.session.mediaStream.getTracks().forEach(track => track.stop());
 					}
 					context.session.leaveCall().catch(() => {});
 					context.session = null;
@@ -460,128 +438,60 @@
 
 	let microphoneStream: MediaStream | null = null;
 	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
-	let activeStreams: MediaStream[] = [];
-	let allStreams = new Set();
 
-	// iOS detection
-	const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-		(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-	async function forceStopTrack(track) {
+	// Simple microphone functions from MicTest.svelte
+	async function startMic() {
 		try {
-			track.enabled = false;
-			await new Promise(resolve => setTimeout(resolve, 50));
-			track.stop();
-			await new Promise(resolve => setTimeout(resolve, 50));
-		} catch (e) {
-			console.error('Error stopping track:', e);
+			console.log('Starting microphone...');
+			microphoneStream = await navigator.mediaDevices.getUserMedia({ 
+				audio: {
+					echoCancellation: true,
+					noiseSuppression: true,
+					sampleRate: 44100
+				}
+			});
+			microphoneStatus = 'ready';
+			console.log('Microphone started successfully');
+			return microphoneStream;
+		} catch (error) {
+			console.error('Microphone error:', error);
+			microphoneStatus = 'error';
+			throw error;
 		}
 	}
 
-	// Enhanced cleanup function
-	async function cleanupMicrophone() {
-		try {
-			// Cleanup our manual stream
-			if (microphoneStream) {
-				const tracks = microphoneStream.getTracks();
-				for (const track of tracks) {
-					await forceStopTrack(track);
-					microphoneStream.removeTrack(track);
-				}
-				allStreams.delete(microphoneStream);
-				microphoneStream = null;
-			}
-
-			// Cleanup any tracked streams
-			for (const stream of activeStreams) {
-				const tracks = stream.getTracks();
-				for (const track of tracks) {
-					await forceStopTrack(track);
-					stream.removeTrack(track);
-				}
-				allStreams.delete(stream);
-			}
-			activeStreams = [];
-			
-			// iOS Safari specific cleanup
-			if (isIOS) {
-				for (let i = 0; i < 3; i++) {
-					try {
-						const tempStream = await navigator.mediaDevices.getUserMedia({ 
-							audio: {
-								echoCancellation: false,
-								noiseSuppression: false,
-								autoGainControl: false
-							}
-						});
-						const tracks = tempStream.getTracks();
-						for (const track of tracks) {
-							await forceStopTrack(track);
-						}
-						await new Promise(resolve => setTimeout(resolve, 100));
-					} catch (e) {
-						if (e.name === 'NotAllowedError') {
-							break;
-						}
-						await new Promise(resolve => setTimeout(resolve, 200));
-					}
-				}
-				
-				// Final reset attempt
-				try {
-					const noAudioStream = await navigator.mediaDevices.getUserMedia({ audio: false });
-					noAudioStream.getTracks().forEach(track => track.stop());
-				} catch (e) {
-					// Ignore errors here
-				}
-			}
-			
-			microphoneStatus = 'initializing';
-		} catch (err) {
-			console.error('Error in cleanupMicrophone:', err);
+	function stopMic() {
+		if (microphoneStream) {
+			microphoneStream.getTracks().forEach(track => track.stop());
+			microphoneStream = null;
 		}
-	}
-
-	// Track new streams when created
-	async function getAndTrackMicrophone() {
-		const stream = await navigator.mediaDevices.getUserMedia({ 
-			audio: {
-				echoCancellation: true,
-				noiseSuppression: true,
-				autoGainControl: true
-			},
-			video: false 
-		});
-		allStreams.add(stream);
-		return stream;
+		microphoneStatus = 'initializing';
+		console.log('Microphone stopped');
 	}
 
 	onMount(async () => {
 		try {
-			microphoneStream = await getAndTrackMicrophone();
-			activeStreams.push(microphoneStream);
-			microphoneStatus = 'ready';
+			await startMic();
 		} catch (err) {
-			console.error('Error initializing microphone:', err);
-			microphoneStatus = 'error';
+			console.error('Error in onMount:', err);
 		}
 	});
 
-	// Enhanced cleanup call function
+	// Cleanup function using simple logic
+	async function cleanupMicrophone() {
+		stopMic();
+	}
+
+	// Cleanup call function using simple mic handling
 	async function cleanupCall() {
 		if (isCleaningUp) return;
 		isCleaningUp = true;
-		
+
 		try {
 			if (context.session) {
 				try {
 					if (context.session.mediaStream) {
-						allStreams.add(context.session.mediaStream);
-						const tracks = context.session.mediaStream.getTracks();
-						for (const track of tracks) {
-							await forceStopTrack(track);
-							context.session.mediaStream.removeTrack(track);
-						}
+						context.session.mediaStream.getTracks().forEach(track => track.stop());
 					}
 					await context.session.leaveCall();
 					context.session.mediaStream = null;
@@ -590,8 +500,8 @@
 				}
 				context.session = null;
 			}
-			
-			await cleanupMicrophone();
+
+			stopMic();
 			machine.reset();
 			onCallEnd();
 		} finally {
@@ -736,26 +646,24 @@
 							<div
 								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-error-200 bg-error-500/20"
 							>
-								<span class="mr-2 i-mdi-microphone-off text-lg" />
+								<span class="mr-2 text-lg i-mdi-microphone-off" />
 								Could not access microphone
 							</div>
 						</div>
-					{:else}
-						{#if status !== 'disconnected'}
-							<div class="flex justify-center">
-								<div
-									class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
-								>
-									<span class="flex relative mr-2 w-2 h-2">
-										<span
-											class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
-										/>
-										<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
-									</span>
-									{displayStatus}
-								</div>
+					{:else if status !== 'disconnected'}
+						<div class="flex justify-center">
+							<div
+								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
+							>
+								<span class="flex relative mr-2 w-2 h-2">
+									<span
+										class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
+									/>
+									<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
+								</span>
+								{displayStatus}
 							</div>
-						{/if}
+						</div>
 					{/if}
 
 					{#if showControls}

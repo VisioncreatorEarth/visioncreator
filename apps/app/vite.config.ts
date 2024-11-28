@@ -24,10 +24,10 @@ export default defineConfig({
 	server: {
 		host: true, // This will listen on all network interfaces (0.0.0.0)
 		port: 3000,
-		https: {
-			key: fs.readFileSync('./localhost+1-key.pem'),
-			cert: fs.readFileSync('./localhost+1.pem'),
-		},
+		// https: {
+		// 	key: fs.readFileSync('./localhost+1-key.pem'),
+		// 	cert: fs.readFileSync('./localhost+1.pem'),
+		// },
 	},
 	assetsInclude: ['**/*.txt'],
 	define: {
