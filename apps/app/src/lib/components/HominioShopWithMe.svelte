@@ -182,7 +182,7 @@
 <div class="relative h-screen bg-surface-900">
 	<!-- Scrollable Content - Full height and starts from top -->
 	<div class="overflow-y-auto absolute inset-0">
-		<div class="px-4 mx-auto space-y-8 max-w-6xl">
+		<div class="mx-auto space-y-8 max-w-6xl">
 			{#if $shoppingListQuery.isLoading}
 				<div class="py-12 text-center text-surface-300">
 					<p class="text-lg">Loading shopping list...</p>

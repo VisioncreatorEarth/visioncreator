@@ -10,6 +10,7 @@
 	import { dynamicView } from '$lib/stores';
 	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
 	import { page } from '$app/stores';
+	import ViewMenu from './ViewMenu.svelte';
 
 	export let session: any;
 	export let supabase: any;
@@ -27,6 +28,7 @@
 	let lastToggleTime = 0;
 	let myIntentRef: MyIntent;
 	let isIntentModalOpen = false;
+	let selectedView: any = null;
 	const DEBOUNCE_DELAY = 300;
 
 	// Keep track of the initial modal type
@@ -176,6 +178,16 @@
 		isProcessing = proc;
 	}
 
+	function handleViewSelect({ detail: { view } }: CustomEvent) {
+		selectedView = view;
+		dynamicView.set(view);
+		dispatch('closeModal');
+	}
+
+	function handleEpisodesClick() {
+		dispatch('closeModal');
+	}
+
 	// Update onMount to better handle legal modal trigger
 	onMount(() => {
 		const handleViewUpdate = (event: CustomEvent) => {
@@ -266,7 +278,7 @@
 
 {#if isModalOpen}
 	<div
-		class="flex fixed inset-0 z-50 justify-center items-end p-4 backdrop-blur-sm sm:p-6 bg-surface-900/50"
+		class="flex fixed inset-0 z-50 justify-center items-end p-4 backdrop-blur-sm sm:p-6 bg-surface-900/40"
 		on:click={handleClose}
 		on:keydown={(e) => e.key === 'Escape' && handleClose()}
 		role="dialog"
@@ -274,7 +286,7 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-full bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
 			class:max-w-6xl={currentModalType === 'menu'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
@@ -322,6 +334,16 @@
 							{/if}
 						</svelte:fragment>
 					</TabMenu>
+					<div class="pt-2 mt-2 border-t border-surface-700/30">
+						<ViewMenu
+							{selectedView}
+							layout="horizontal"
+							showLabels={true}
+							on:viewSelect={handleViewSelect}
+							on:episodesClick={handleEpisodesClick}
+							on:close={() => toggleModal()}
+						/>
+					</div>
 					<button
 						class="flex absolute bottom-2 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
