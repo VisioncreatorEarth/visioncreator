@@ -157,3 +157,8 @@ apps/api/generated
 
 .branches
 .temp
+
+localhost.pem
+localhost-key.pem
+
+.pem

@@ -1,4 +1,6 @@
-<script lang="ts">
+<MicTest />
+
+<!-- <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -169,4 +171,4 @@
 			max-height: 40vh;
 		}
 	}
-</style>
+</style> -->

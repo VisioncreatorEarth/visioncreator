@@ -2,6 +2,7 @@ import { purgeCss } from 'vite-plugin-tailwind-purgecss';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import autoImport from 'composer';
+import fs from 'fs';
 
 export default defineConfig({
 	plugins: [
@@ -20,16 +21,21 @@ export default defineConfig({
 		sveltekit(),
 		purgeCss()
 	],
-	assetsInclude: ['**/*.txt'],
-	define: {
-		'import.meta.env.BASE_PATH': JSON.stringify('/src/')
+	server: {
+		host: '192.168.178.26',
+		port: 3000,
+		https: {
+			key: fs.readFileSync('./localhost+1-key.pem'),
+			cert: fs.readFileSync('./localhost+1.pem'),
+		},
 	},
 	build: {
 		rollupOptions: {
 			preserveEntrySignatures: 'strict'
 		}
 	},
-	server: {
-		host: true
+	assetsInclude: ['**/*.txt'],
+	define: {
+		'import.meta.env.BASE_PATH': JSON.stringify('/src/')
 	}
 });
