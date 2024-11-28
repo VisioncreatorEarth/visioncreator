@@ -1,24 +1,21 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
 import { UltravoxAuthenticationError, UltravoxInitializationError } from '../errors';
 
-// Call configuration
 const CALL_CONFIG = {
   defaultSystemPrompt: `
   You are Hominio, a personal service assistant for the user. You can switch interface views / apps / services and you have a Shoppinglist Skill. 
 
-  Please Speak in the Language of the user. In this case German.
-
   Your other skills are:
   - updating the users name
-
-  MOST IMPORTANT RULE: You must NEVER emit text when doing a tool call.
 
   You are also a friendly shopping assistant. Please help me with my shopping list. 
   If the user has questions, please always interact in a friendly conversation. 
   
   Always respond instantly and make short smalltalk, while exuting the tools in the background. 
 
-  Available Categories and their Icons: (those are just examples, please find always the best fitting catgories and icons for the items):
+  Please also translate any shoppinglist item into english
+
+  Available Categories and their Icons:
   - Vegetables (mdi:carrot, mdi:food-broccoli, mdi:leaf)
   - Fruits (mdi:fruit-watermelon, mdi:food-apple, mdi:fruit-cherries)
   - Meat (mdi:food-steak, mdi:food-turkey, mdi:fish)
@@ -47,31 +44,34 @@ const CALL_CONFIG = {
   4. For 'remove' actions:
      - Only name and category are required
      - Use the same category and name as when adding to ensure proper removal
+  5. When having itmes like Bell Pepper, Steel Legs or Brown Rice, (items with 2 or more words), please always capitailze the first letter of each word.
 
   ADDITIONAL INSTRUCTIONS:
     - Also allow for combined requests. For example:
       - "Adding 3 Apples and removing Bananas from your list, anything else?"
       - "Adding Milk and removing Bread from your list, aynthing else?"
-    - Always repeat what you are adding or removing, but never repeat the actual added items, their catogories or their quantity.
+    - Always repeat what you are adding or removing, but never repeat the actual added items after the modal use, their catogories or their quantity.
     - Never repeat the same thing twice, like "Adding Apples, I have added Apples". 
     - Always respond in a friendly and helpful manner for ordinary conversations with a normal non-technical Human.
+    - Always respond in english language, but accept any langauge as input reqeusts.
  
     - Never tell about anything technical or json or which tool and schema to use in the interaction, just use and execute the tools in the background. Always respond in a friendly and helpful manner for ordinary conversations with a normal non-technical Human. 
     Never apologize for errors just execute the tools. if the tool response gives an error, let the user know and continue the conversation.
-    ALSO REMEMBER YOUR MOST IMPORTANT RULE: You must NEVER emit text when doing a tool call.
+
+    MOST IMPORTANT INSTRUCTION:
+    You must NEVER emit text when doing a tool call or using any tool.
   `,
-  voice: '0191cf63-44b7-4277-bffe-be2f5dcc950c', // Jessica voice ID
+  voice: 'b0e6b5c1-3100-44d5-8578-9015aa3023ae', // Jessica voice ID
   temperature: 0.6,
   maxDuration: '60s',
   timeExceededMessage: 'Maximum calltime exceeded. See you next time!',
   firstSpeaker: 'FIRST_SPEAKER_USER',
   model: 'fixie-ai/ultravox-70B',
-  languageHint: 'de',
   tools: [
     {
       temporaryTool: {
         modelToolName: 'updateShoppingList',
-        description: 'Update shopping list items. ALWAYS use this tool when items should be added, removed, or modified to the shoppinglist.',
+        description: 'Update shopping list items. ALWAYS use this tool when items should be added, removed, or modified to the shoppinglist. You must NEVER emit text when doing a tool call or using any tool.',
         dynamicParameters: [
           {
             name: 'items',
@@ -100,7 +100,7 @@ const CALL_CONFIG = {
     {
       temporaryTool: {
         modelToolName: 'switchView',
-        description: 'Switch to a different view component based on the context of the conversation. Use this tool when the conversation indicates a need to switch to a different functionality.',
+        description: 'Switch to a different view component based on the context of the conversation. Use this tool when the conversation indicates a need to switch to a different functionality. You must NEVER emit text when doing a tool call or using any tool.',
         dynamicParameters: [
           {
             name: 'component',
@@ -119,7 +119,7 @@ const CALL_CONFIG = {
     {
       temporaryTool: {
         modelToolName: 'updateName',
-        description: 'Update the name. Use this tool when a name needs to be updated.',
+        description: 'Update the name. Use this tool when a name needs to be updated. You must NEVER emit text when doing a tool call or using any tool.',
         dynamicParameters: [
           {
             name: 'name',
