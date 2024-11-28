@@ -300,6 +300,26 @@
 					}
 
 					context.currentCallId = result.callId;
+					
+					// Check if we have a pre-initialized microphone stream
+					if (!microphoneStream || microphoneStatus !== 'ready') {
+						try {
+							microphoneStream = await navigator.mediaDevices.getUserMedia({ 
+								audio: {
+									echoCancellation: true,
+									noiseSuppression: true,
+									autoGainControl: true
+								},
+								video: false 
+							});
+							microphoneStatus = 'ready';
+						} catch (err) {
+							console.error('Error initializing microphone:', err);
+							microphoneStatus = 'error';
+							throw new Error('Failed to initialize microphone');
+						}
+					}
+
 					const session = new UltravoxSession({
 						joinUrl: result.joinUrl,
 						transcriptOptional: false,
@@ -308,7 +328,9 @@
 							reconnect: true,
 							maxRetries: 3,
 							retryDelay: 1000
-						}
+						},
+						// Pass our pre-initialized stream to Ultravox
+						mediaStream: microphoneStream
 					});
 
 					// Register the shopping list tool
@@ -396,10 +418,12 @@
 						await context.session.leaveCall();
 						// Ensure microphone is stopped
 						if (context.session.mediaStream) {
-							context.session.mediaStream.getTracks().forEach(track => {
-								track.stop();
+							const tracks = context.session.mediaStream.getTracks();
+							for (const track of tracks) {
 								track.enabled = false;
-							});
+								track.stop();
+								context.session.mediaStream.removeTrack(track);
+							}
 						}
 					}
 				} catch (e) {
@@ -416,10 +440,12 @@
 				if (context.session) {
 					// Stop all media tracks before leaving the call
 					if (context.session.mediaStream) {
-						context.session.mediaStream.getTracks().forEach(track => {
-							track.stop();
+						const tracks = context.session.mediaStream.getTracks();
+						for (const track of tracks) {
 							track.enabled = false;
-						});
+							track.stop();
+							context.session.mediaStream.removeTrack(track);
+						}
 					}
 					context.session.leaveCall().catch(() => {});
 					context.session = null;
@@ -441,25 +467,15 @@
 	let microphoneStream: MediaStream | null = null;
 	let microphoneStatus: 'initializing' | 'ready' | 'error' = 'initializing';
 
-	// Ensure microphone is properly cleaned up
-	function cleanupMicrophone() {
-		if (microphoneStream) {
-			// Stop all tracks
-			microphoneStream.getTracks().forEach(track => {
-				track.stop();
-				track.enabled = false;
-			});
-			// Clear the stream
-			microphoneStream = null;
-		}
-		microphoneStatus = 'initializing';
-	}
-
 	onMount(async () => {
 		try {
 			// Request microphone access as soon as component mounts
 			microphoneStream = await navigator.mediaDevices.getUserMedia({ 
-				audio: true,
+				audio: {
+					echoCancellation: true,
+					noiseSuppression: true,
+					autoGainControl: true
+				},
 				video: false 
 			});
 			microphoneStatus = 'ready';
@@ -469,6 +485,36 @@
 		}
 	});
 
+	// Ensure microphone is properly cleaned up
+	async function cleanupMicrophone() {
+		try {
+			if (microphoneStream) {
+				const tracks = microphoneStream.getTracks();
+				for (const track of tracks) {
+					track.enabled = false;
+					track.stop();
+					microphoneStream.removeTrack(track);
+				}
+				microphoneStream = null;
+			}
+			
+			// Force release microphone on iOS
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				stream.getTracks().forEach(track => {
+					track.enabled = false;
+					track.stop();
+				});
+			} catch (e) {
+				// Ignore errors here as we're just trying to force release
+			}
+			
+			microphoneStatus = 'initializing';
+		} catch (err) {
+			console.error('Error cleaning up microphone:', err);
+		}
+	}
+
 	// Ensure cleanup happens in all scenarios
 	onDestroy(() => {
 		cleanupMicrophone();
@@ -476,32 +522,41 @@
 	});
 
 	// Add cleanup to the cleanupCall function as well
-	function cleanupCall() {
-		if (context.session) {
-			// Ensure we properly leave the call and stop microphone
-			try {
-				// Stop all media tracks
-				if (context.session.mediaStream) {
-					context.session.mediaStream.getTracks().forEach(track => {
-						track.stop();
-						track.enabled = false;
-					});
-				}
-				context.session.leaveCall().catch(() => {});
-			} catch (e) {
-				console.error('Error leaving call:', e);
-			}
-			context.session = null;
-		}
+	async function cleanupCall() {
+		if (isCleaningUp) return; // Prevent recursive cleanup
+		isCleaningUp = true;
 		
-		// Always cleanup microphone
-		cleanupMicrophone();
+		try {
+			if (context.session) {
+				// Ensure we properly leave the call and stop microphone
+				try {
+					// Stop all media tracks from the session
+					if (context.session.mediaStream) {
+						const tracks = context.session.mediaStream.getTracks();
+						for (const track of tracks) {
+							track.enabled = false;
+							track.stop();
+							context.session.mediaStream.removeTrack(track);
+						}
+					}
+					await context.session.leaveCall();
+				} catch (e) {
+					console.error('Error leaving call:', e);
+				}
+				context.session = null;
+			}
+			
+			// Always cleanup microphone
+			await cleanupMicrophone();
 
-		// Reset machine state
-		machine.reset();
+			// Reset machine state
+			machine.reset();
 
-		// Notify parent component
-		onCallEnd();
+			// Notify parent component
+			onCallEnd();
+		} finally {
+			isCleaningUp = false;
+		}
 	}
 
 	let isCleaningUp = false;
