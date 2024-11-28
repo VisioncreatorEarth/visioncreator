@@ -400,7 +400,7 @@
 						await context.session.leaveCall();
 						// Ensure microphone is stopped
 						if (context.session.mediaStream) {
-							context.session.mediaStream.getTracks().forEach(track => track.stop());
+							context.session.mediaStream.getTracks().forEach((track) => track.stop());
 						}
 					}
 				} catch (e) {
@@ -417,7 +417,7 @@
 				if (context.session) {
 					// Stop all media tracks before leaving the call
 					if (context.session.mediaStream) {
-						context.session.mediaStream.getTracks().forEach(track => track.stop());
+						context.session.mediaStream.getTracks().forEach((track) => track.stop());
 					}
 					context.session.leaveCall().catch(() => {});
 					context.session = null;
@@ -443,7 +443,7 @@
 	async function startMic() {
 		try {
 			console.log('Starting microphone...');
-			microphoneStream = await navigator.mediaDevices.getUserMedia({ 
+			microphoneStream = await navigator.mediaDevices.getUserMedia({
 				audio: {
 					echoCancellation: true,
 					noiseSuppression: true,
@@ -462,7 +462,7 @@
 
 	function stopMic() {
 		if (microphoneStream) {
-			microphoneStream.getTracks().forEach(track => track.stop());
+			microphoneStream.getTracks().forEach((track) => track.stop());
 			microphoneStream = null;
 		}
 		microphoneStatus = 'initializing';
@@ -491,7 +491,7 @@
 			if (context.session) {
 				try {
 					if (context.session.mediaStream) {
-						context.session.mediaStream.getTracks().forEach(track => track.stop());
+						context.session.mediaStream.getTracks().forEach((track) => track.stop());
 					}
 					await context.session.leaveCall();
 					context.session.mediaStream = null;
@@ -540,7 +540,7 @@
 	// Reactive values from machine state
 	$: ({ value: status, context } = $machine);
 	$: isCallActive = ['idle', 'listening', 'thinking', 'speaking'].includes(status);
-	$: ({ error, transcripts, isLoading } = context);
+	$: ({ error, isLoading } = context);
 
 	// Helper for UI status display
 	$: displayStatus = (() => {

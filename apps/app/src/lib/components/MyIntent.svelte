@@ -153,7 +153,10 @@
 		requestMicrophonePermission: async (context: IntentContext) => {
 			context.permissionRequesting = true;
 			try {
-				await navigator.mediaDevices.getUserMedia({ audio: true });
+				// Just check permission without keeping the stream
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				// Immediately stop the test stream
+				stream.getTracks().forEach(track => track.stop());
 				context.permissionState = 'granted';
 				machine.send('PERMISSION_GRANTED');
 			} catch (error) {
