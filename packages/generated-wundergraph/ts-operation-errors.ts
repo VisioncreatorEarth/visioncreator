@@ -34,7 +34,6 @@ export type OperationErrors = {
 	sendMailWIP: SendMailWIPErrors;
 	toggleOnboarded: ToggleOnboardedErrors;
 	updateMe: UpdateMeErrors;
-	updateView: UpdateViewErrors;
 };
 
 export type OperationUltravoxInitializationError = {
@@ -82,4 +81,3 @@ export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
-export type UpdateViewErrors = ClientOperationErrors;
