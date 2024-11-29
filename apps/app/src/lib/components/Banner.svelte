@@ -8,16 +8,16 @@
 	// Default texts for each mode, can be overridden by query.data.text
 	$: defaultText =
 		mode === 'alpha'
-			? 'This potential future Skill is just an idea mockup for now: Voting for new skills opens soon!'
+			? 'This potential future Skill is just on of many mockup ideas: Voting for new skills opens soon!'
 			: mode === 'beta'
-			? 'This skill is currently in Beta Testing. To give Feedback, just talk to Hominio, with: "Can you please write a message to the Team"'
+			? 'Things can break anytime. We love to hear your feedback! Open the "Message Us" form by clicking on Hominio at the bottom'
 			: 'Set Your Message Here';
 
 	$: text = $query.data?.text || defaultText;
 
 	$: bannerClass =
 		mode === 'alpha'
-			? 'bg-error-500 text-error-50'
+			? 'bg-error-600 text-error-100'
 			: mode === 'beta'
 			? 'bg-primary-600 text-primary-900'
 			: 'bg-secondary-900 text-secondary-200';
@@ -29,7 +29,7 @@
 			? 'mdi:information-outline'
 			: 'mdi:lightbulb-outline';
 
-	$: label = mode === 'alpha' ? 'ALPHA' : mode === 'beta' ? 'BETA' : 'INFO';
+	$: label = mode === 'alpha' ? 'PRE-ALPHA' : mode === 'beta' ? 'BETA' : 'INFO';
 </script>
 
 <div class="flex justify-left items-start p-4 w-full {bannerClass} font-semibold shadow-lg">
