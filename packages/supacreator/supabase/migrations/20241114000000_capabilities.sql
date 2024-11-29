@@ -7,7 +7,7 @@ GRANT USAGE ON SCHEMA cron TO postgres;
 -- Enums for capability types and tiers
 CREATE TYPE capability_type AS ENUM ('TIER', 'RESOURCE');
 DROP TYPE IF EXISTS tier_level CASCADE;
-CREATE TYPE tier_level AS ENUM ('FREE', 'HOMINIO', 'HOMINIO_PLUS');
+CREATE TYPE tier_level AS ENUM ('FREE', 'HOMINIO', 'VISIONCREATOR');
 
 -- Capabilities table with flexible JSONB config
 DROP TABLE IF EXISTS capabilities;

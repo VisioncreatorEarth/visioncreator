@@ -1,5 +1,9 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
 export default createOperation.query({
+  requireAuthentication: true,
+  rbac: {
+    requireMatchAll: ["authenticated", "admin"],
+  },
   handler: async ({ context }) => {
     try {
       const response = await context.ultravox.getVoices();

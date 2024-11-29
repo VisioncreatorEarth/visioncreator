@@ -31,8 +31,8 @@
 		$userCapabilitiesQuery.data?.capabilities?.some(
 			(cap) =>
 				cap.type === 'TIER' &&
-				(['FREE Tier', 'HOMINIO Tier', 'HOMINIO PLUS Tier'].includes(cap.name) ||
-					(cap.config?.tier && ['FREE', 'HOMINIO', 'HOMINIO_PLUS'].includes(cap.config.tier)))
+				(['FREE Tier', 'HOMINIO Tier', 'VISIONCREATOR Tier'].includes(cap.name) ||
+					(cap.config?.tier && ['FREE', 'HOMINIO', 'VISIONCREATOR'].includes(cap.config.tier)))
 		) ?? false;
 
 	// Define available views matching ViewMenu structure

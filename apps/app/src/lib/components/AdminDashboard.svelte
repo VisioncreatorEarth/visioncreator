@@ -9,7 +9,7 @@
 		name: string;
 		description: string;
 		config: {
-			tier: 'FREE' | 'HOMINIO' | 'HOMINIO_PLUS';
+			tier: 'FREE' | 'HOMINIO' | 'VISIONCREATOR';
 			minutesLimit?: number;
 			[key: string]: any;
 		};
@@ -63,8 +63,8 @@
 			]
 		},
 		{
-			id: 'HOMINIO_PLUS',
-			name: 'Hominio+',
+			id: 'VISIONCREATOR',
+			name: 'Visioncreator',
 			minutesLimit: 240,
 			features: [
 				'240 minutes per month',
@@ -104,6 +104,7 @@
 				action: tierId === 'revoke' ? 'revoke' : 'grant',
 				tier: tierId === 'revoke' ? null : tierId
 			});
+			$getUserCapabilitiesQuery.refetch();
 		} catch (error) {
 			console.error('Failed to manage tier:', error);
 		} finally {

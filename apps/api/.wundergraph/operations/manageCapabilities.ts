@@ -4,7 +4,7 @@ export default createOperation.mutation({
     input: z.object({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
-        tier: z.enum(['FREE', 'HOMINIO', 'HOMINIO_PLUS']).nullable()
+        tier: z.enum(['FREE', 'HOMINIO', 'VISIONCREATOR']).nullable()
     }),
     requireAuthentication: true,
     rbac: {
@@ -35,7 +35,7 @@ export default createOperation.mutation({
                 minutesLimit: 60,
                 isOneTime: false
             },
-            HOMINIO_PLUS: { 
+            VISIONCREATOR: { 
                 minutesLimit: 240,
                 isOneTime: false
             }
@@ -146,15 +146,15 @@ export default createOperation.mutation({
     }
 });
 
-function getTierDescription(tier: 'FREE' | 'HOMINIO' | 'HOMINIO_PLUS'): string {
+function getTierDescription(tier: 'FREE' | 'HOMINIO' | 'VISIONCREATOR'): string {
     switch (tier) {
         case 'FREE':
-            return 'Free tier with 5 minutes one-time usage';
+            return 'Free Tier - 5 minutes per month';
         case 'HOMINIO':
-            return 'Standard tier with 60 minutes per month';
-        case 'HOMINIO_PLUS':
-            return 'Premium tier with 240 minutes per month';
+            return 'Hominio Tier - 60 minutes per month';
+        case 'VISIONCREATOR':
+            return 'Visioncreator Tier - 240 minutes per month';
         default:
-            return `${tier} tier subscription`;
+            return 'Unknown Tier';
     }
 }
