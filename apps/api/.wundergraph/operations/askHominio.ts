@@ -118,8 +118,8 @@ const CALL_CONFIG = {
             location: 'PARAMETER_LOCATION_BODY',
             schema: {
               type: 'string',
-              enum: ['HominioShopWithMe', 'HominioDoMe', 'HominioHostMe', 'HominioBankMe'],
-              description: 'The component to switch to based on the conversation context: Just "Me" for Dashboard / Home / MyProfile, "HominioShopWithMe" for shopping lists, "HominioDoMe" for tasks and scheduling, "HominioHostMe" for booking and hosting, "HominioBankMe" for banking and payments'
+              enum: ['Me', 'HominioShopWithMe', 'HominioDoMe', 'HominioHostMe', 'HominioBankMe'],
+              description: 'The component to switch to based on the conversation context: Just "Me" for Dashboard / Back to Home / MyProfile, "HominioShopWithMe" for shopping lists, "HominioDoMe" for tasks and scheduling, "HominioHostMe" for booking and hosting of hotels or appartments, "HominioBankMe" for banking and payments'
             },
             required: true
           }

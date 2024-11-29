@@ -10,7 +10,7 @@
 		mode === 'alpha'
 			? 'This potential future Skill is just on of many mockup ideas: Voting for new skills opens soon!'
 			: mode === 'beta'
-			? 'Things can break anytime. We love to hear your feedback! Open the "Message Us" form by clicking on Hominio at the bottom'
+			? 'Things can break anytime. We love to hear your feedback! "Message Us" via clicking on Hominio at the bottom'
 			: 'Set Your Message Here';
 
 	$: text = $query.data?.text || defaultText;
@@ -29,20 +29,16 @@
 			? 'mdi:information-outline'
 			: 'mdi:lightbulb-outline';
 
-	$: label = mode === 'alpha' ? 'PRE-ALPHA' : mode === 'beta' ? 'BETA' : 'INFO';
+	$: label = mode === 'alpha' ? 'ALPHA' : mode === 'beta' ? 'BETA' : 'INFO';
 </script>
 
-<div class="flex justify-left items-start p-4 w-full {bannerClass} font-semibold shadow-lg">
-	<div class="flex gap-2 items-start w-full sm:items-center">
+<div class="flex justify-left items-start p-2 sm:p-4 w-full {bannerClass} font-semibold shadow-lg">
+	<div class="flex gap-1 items-start w-full sm:gap-2 sm:items-center">
 		<!-- Mobile: Stack vertically, Desktop: Stay horizontal -->
-		<div class="flex flex-col gap-2 items-center w-full sm:flex-row sm:items-start">
-			<!-- Label always centered on mobile -->
-			<div class="flex gap-2 justify-center items-center w-full sm:w-auto sm:justify-start">
-				<Icon {icon} class="w-5 h-5 sm:w-6 sm:h-6" />
-				<span class="text-sm font-bold sm:text-base">{label}</span>
-			</div>
+		<div class="flex flex-col gap-1 items-center w-full sm:gap-2 sm:flex-row sm:items-start">
 			<!-- Text centered and smaller on mobile -->
-			<p class="text-sm text-center sm:text-left sm:text-base">
+			<p class="text-xs text-center sm:text-left sm:text-sm">
+				<span class="text-xs font-bold sm:text-sm">{label} -</span>
 				{text}
 			</p>
 		</div>

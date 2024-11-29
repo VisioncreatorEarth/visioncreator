@@ -157,11 +157,6 @@
 		operationName: 'askHominio'
 	});
 
-	// Set default view
-	if (browser) {
-		dynamicView.set(meView);
-	}
-
 	// Define available views
 	const views = [
 		{
