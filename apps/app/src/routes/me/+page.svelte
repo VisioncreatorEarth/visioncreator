@@ -2,13 +2,6 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
-	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
-	import { view as hominioDoView } from '$lib/views/HominioDoMe';
-	import { view as hominioBankView } from '$lib/views/HominioBankMe';
-	import { view as hominioHostView } from '$lib/views/HominioHostMe';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { browser } from '$app/environment';
 
 	export let data;
 
@@ -17,128 +10,6 @@
 
 	let showComposeView = false;
 	let initialSetupComplete = false;
-	let selectedView: any = null;
-	let isInitialized = false;
-
-	// Query for user capabilities to determine available views
-	const userCapabilitiesQuery = createQuery({
-		operationName: 'queryMyCapabilities',
-		enabled: true,
-		refetchOnWindowFocus: true
-	});
-
-	$: hasRequiredCapability =
-		$userCapabilitiesQuery.data?.capabilities?.some(
-			(cap) =>
-				cap.type === 'TIER' &&
-				(['FREE Tier', 'HOMINIO Tier', 'VISIONCREATOR Tier'].includes(cap.name) ||
-					(cap.config?.tier && ['FREE', 'HOMINIO', 'VISIONCREATOR'].includes(cap.config.tier)))
-		) ?? false;
-
-	// Define available views matching ViewMenu structure
-	$: viewsArray = [
-		{
-			metadata: {
-				id: 'MyDashboard',
-				name: 'MyDashboard',
-				icon: 'mdi:account'
-			},
-			view: meView
-		},
-		{
-			metadata: {
-				id: 'HominioShopWithMe',
-				name: 'ShopWithMe',
-				icon: 'mdi:shopping'
-			},
-			view: hominioShopView
-		},
-		{
-			metadata: {
-				id: 'HominioDoMe',
-				name: 'DoWithMe',
-				icon: 'mdi:clipboard-list'
-			},
-			view: hominioDoView
-		},
-		{
-			metadata: {
-				id: 'HominioBankMe',
-				name: 'BankWithMe',
-				icon: 'mdi:bank'
-			},
-			view: hominioBankView
-		},
-		{
-			metadata: {
-				id: 'HominioHostMe',
-				name: 'HostWithMe',
-				icon: 'mdi:home'
-			},
-			view: hominioHostView
-		},
-		{
-			metadata: {
-				id: 'Episodes',
-				name: 'Episodes',
-				icon: 'mdi:play-circle'
-			},
-			view: {
-				id: 'Episodes',
-				layout: {
-					areas: `"main"`,
-					overflow: 'auto',
-					style: 'mx-auto max-w-6xl'
-				},
-				children: [
-					{
-						id: 'episodes',
-						component: 'Episodes',
-						slot: 'main'
-					}
-				]
-			}
-		}
-	];
-
-	// Initialize view based on URL parameter or default
-	$: if (browser && !isInitialized) {
-		const viewParam = $page.url.searchParams.get('view');
-		initializeView();
-		isInitialized = true;
-	}
-
-	// Watch for URL changes after initial load
-	$: if (browser && $page && isInitialized) {
-		const viewParam = $page.url.searchParams.get('view');
-		initializeView();
-	}
-
-	function initializeView() {
-		if (!browser) return;
-
-		const viewParam = $page.url.searchParams.get('view');
-
-		// Handle both direct component names and view IDs
-		let targetId = viewParam;
-		if (
-			['HominioShopWithMe', 'HominioDoMe', 'HominioBankMe', 'HominioHostMe'].includes(viewParam)
-		) {
-			targetId = viewParam;
-		} else if (viewParam === 'Me') {
-			targetId = 'MyDashboard';
-		}
-
-		const viewItem = viewsArray.find((v) => v.metadata.id === (targetId || 'MyDashboard'));
-
-		if (viewItem) {
-			dynamicView.set(viewItem.view);
-			showComposeView = true;
-		} else {
-			dynamicView.set(meView);
-			showComposeView = true;
-		}
-	}
 
 	const updateNameMutation = createMutation({
 		operationName: 'updateMe'
@@ -156,6 +27,7 @@
 		id: string;
 		name: string;
 		onboarded: boolean;
+		active: boolean;
 	}
 
 	$: meQuery = createQuery<MeQueryResult>({
@@ -166,42 +38,6 @@
 
 	$: meData = $meQuery.data as MeQueryResult | null;
 
-	function handleViewSelect({ detail: { view } }: CustomEvent) {
-		selectedView = view;
-		dynamicView.set(view);
-	}
-
-	function handleEpisodesClick() {
-		goto('/episodes');
-	}
-
-	function handleViewUpdate(event: CustomEvent) {
-		const viewData = event.detail?.view;
-		if (viewData) {
-			// Update URL for all known views
-			const knownViews = [
-				'HominioShopWithMe',
-				'HominioDoMe',
-				'HominioBankMe',
-				'HominioHostMe',
-				'MyDashboard'
-			];
-			if (knownViews.includes(viewData.id)) {
-				const url = new URL(window.location.href);
-				url.searchParams.set('view', viewData.id === 'MyDashboard' ? 'Me' : viewData.id);
-				goto(url.toString(), { replaceState: true });
-			}
-
-			dynamicView.set(viewData);
-
-			// Force re-render of ComposeView
-			showComposeView = false;
-			requestAnimationFrame(() => {
-				showComposeView = true;
-			});
-		}
-	}
-
 	async function handleInitialSetup() {
 		if (!initialSetupComplete && session?.user) {
 			const {
@@ -211,11 +47,17 @@
 			// Only proceed if we don't have an inviter set and have a visionid
 			if (!user?.user_metadata.inviter && $futureMe.visionid) {
 				try {
+					console.log('Starting initial setup...', {
+						currentName: user?.user_metadata.name,
+						futureMeName: $futureMe.name,
+						visionId: $futureMe.visionid
+					});
+
 					// Update user metadata with inviter and name
 					await supabase.auth.updateUser({
 						data: {
 							inviter: $futureMe.visionid,
-							name: $futureMe.name || 'UpdateMyName'
+							name: user.user_metadata.name || $futureMe.name || 'UpdateMyName'
 						}
 					});
 
@@ -229,6 +71,7 @@
 						// Update name in database if needed
 						if ($futureMe.name) {
 							await $updateNameMutation.mutateAsync({
+								id: session.user.id,
 								name: $futureMe.name
 							});
 						}
@@ -238,7 +81,7 @@
 					Me.update((store) => ({
 						...store,
 						id: session.user.id,
-						name: $futureMe.name || 'UpdateMyName'
+						name: $futureMe.name || user.user_metadata.name || 'UpdateMyName'
 					}));
 
 					// Refetch user data
@@ -260,6 +103,19 @@
 		}
 	}
 
+	function handleViewUpdate(event: CustomEvent) {
+		const viewData = event.detail?.view;
+		if (viewData) {
+			dynamicView.set({ view: viewData });
+
+			// Force re-render of ComposeView
+			showComposeView = false;
+			requestAnimationFrame(() => {
+				showComposeView = true;
+			});
+		}
+	}
+
 	// Handle initial setup on mount and when session changes
 	$: if (session?.user && !initialSetupComplete) {
 		handleInitialSetup();
@@ -271,7 +127,8 @@
 			...store,
 			id: meData.id,
 			name: meData.name,
-			onboarded: meData.onboarded
+			onboarded: meData.onboarded,
+			active: meData.active
 		}));
 	}
 
@@ -306,10 +163,10 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView view={$dynamicView} />
+		<ComposeView view={$dynamicView.view || meView} />
 	{/if}
 {:else if meData}
-	<ComposeView view={$dynamicView} />
+	<ComposeView view={$dynamicView.view || meView} />
 {:else}
 	<div class="flex justify-center items-center h-screen text-red-500">Error loading user data</div>
 {/if}

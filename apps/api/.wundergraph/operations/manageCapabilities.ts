@@ -27,15 +27,15 @@ export default createOperation.mutation({
 
         const now = new Date().toISOString();
         const tierConfig = {
-            FREE: { 
+            FREE: {
                 minutesLimit: 5,
                 isOneTime: true
             },
-            HOMINIO: { 
+            HOMINIO: {
                 minutesLimit: 60,
                 isOneTime: false
             },
-            VISIONCREATOR: { 
+            VISIONCREATOR: {
                 minutesLimit: 240,
                 isOneTime: false
             }
@@ -128,18 +128,6 @@ export default createOperation.mutation({
             if (updateError) {
                 throw new Error(`Failed to revoke capability: ${updateError.message}`);
             }
-
-            // Log the action
-            await context.supabase
-                .from('audit_logs')
-                .insert({
-                    user_id: input.userId,
-                    action: 'TIER_REVOKED',
-                    performed_by: user.customClaims.id,
-                    capability_id: existingCapability.id,
-                    capability_type: 'TIER',
-                    details: `Tier capability revoked`
-                });
 
             return { success: true };
         }

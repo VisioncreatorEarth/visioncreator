@@ -19,7 +19,7 @@ export default createOperation.mutation({
 
     const { data, error } = await context.supabase
       .from("profiles")
-      .update({ onboarded: true })
+      .update({ onboarded: true, active: true })
       .eq("id", input.id)
       .select();
 

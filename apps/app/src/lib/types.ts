@@ -16,14 +16,3 @@ export interface Capability {
         name: string;
     };
 }
-
-export interface AuditLog {
-    id: string;
-    timestamp: string;
-    action: string;
-    userId: string;
-    details: string;
-    performedBy: string;
-    capabilityId: string;
-    capabilityType: string;
-}
