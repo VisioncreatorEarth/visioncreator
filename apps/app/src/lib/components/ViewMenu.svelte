@@ -8,10 +8,8 @@
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
 	import { createQuery } from '$lib/wundergraph';
 
-	export let layout: 'horizontal' | 'vertical' = 'vertical';
 	export let showLabels = false;
-	export let selectedView: any = null;
-	export let itemSize = layout === 'horizontal' ? 100 : 50;
+	export let itemSize = 100;
 
 	const dispatch = createEventDispatcher();
 	let isMobile: boolean;
@@ -26,48 +24,24 @@
 	$: isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 	$: isTablet =
 		typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-	$: effectiveItemSize = layout === 'horizontal' ? (isMobile ? 50 : isTablet ? 80 : 100) : 50;
-	$: iconSize = layout === 'horizontal' ? (isMobile ? 6 : isTablet ? 7 : 8) : 6;
+	$: effectiveItemSize = isMobile ? 50 : isTablet ? 80 : 100;
+	$: iconSize = isMobile ? 6 : isTablet ? 7 : 8;
 	$: showEffectiveLabels = showLabels && !isMobile;
 
-	$: {
-		console.log('User Capabilities Query Data:', $userCapabilitiesQuery.data);
-		console.log('User Capabilities Array:', $userCapabilitiesQuery.data?.capabilities);
-		if ($userCapabilitiesQuery.data?.capabilities) {
-			console.log('Filtered Capabilities:', $userCapabilitiesQuery.data.capabilities.filter(cap => 
-				cap.type === 'TIER' && (
-					// Check both the name and the tier in config
-					['FREE Tier', 'HOMINIO Tier', 'HOMINIO PLUS Tier'].includes(cap.name) ||
-					(cap.config?.tier && ['FREE', 'HOMINIO', 'HOMINIO_PLUS'].includes(cap.config.tier))
-				)
-			));
-		}
-		console.log('Has Required Capability:', hasRequiredCapability);
-	}
-
-	$: hasRequiredCapability = $userCapabilitiesQuery.data?.capabilities?.some(
-		(cap) => cap.type === 'TIER' && (
-			// Check both the name and the tier in config
-			['FREE Tier', 'HOMINIO Tier', 'HOMINIO PLUS Tier'].includes(cap.name) ||
-			(cap.config?.tier && ['FREE', 'HOMINIO', 'HOMINIO_PLUS'].includes(cap.config.tier))
-		)
-	) ?? false;
-
-	$: {
-		console.log('Current views array:', views);
-		console.log('hasRequiredCapability in views:', hasRequiredCapability);
-	}
-
-	$: containerClass =
-		layout === 'horizontal'
-			? 'flex flex-wrap gap-2 md:gap-3 lg:gap-4 px-4 pb-4'
-			: 'flex flex-col gap-2 items-end p-4 pr-2 mb-12';
+	$: hasRequiredCapability =
+		$userCapabilitiesQuery.data?.capabilities?.some(
+			(cap) =>
+				cap.type === 'TIER' &&
+				(['FREE Tier', 'HOMINIO Tier', 'HOMINIO PLUS Tier'].includes(cap.name) ||
+					(cap.config?.tier && ['FREE', 'HOMINIO', 'HOMINIO_PLUS'].includes(cap.config.tier)))
+		) ?? false;
 
 	$: views = [
 		{
 			metadata: {
-				id: 'me',
-				name: 'MyDashboard'
+				id: 'MyDashboard',
+				name: 'MyDashboard',
+				icon: 'mdi:account'
 			},
 			view: meView
 		},
@@ -75,84 +49,84 @@
 			? [
 					{
 						metadata: {
-							id: 'shop',
-							name: 'ShopWithMe'
+							id: 'HominioShopWithMe',
+							name: 'ShopWithMe',
+							icon: 'mdi:shopping'
 						},
 						view: hominioShopView
 					}
 			  ]
-			: [])
+			: []),
+		{
+			metadata: {
+				id: 'Episodes',
+				name: 'Episodes',
+				icon: 'mdi:play-circle'
+			},
+			view: {
+				id: 'Episodes',
+				layout: {
+					areas: `"main"`,
+					overflow: 'auto',
+					style: 'mx-auto max-w-6xl'
+				},
+				children: [
+					{
+						id: 'episodes',
+						component: 'Episodes',
+						slot: 'main'
+					}
+				]
+			}
+		}
 	];
 
-	function handleViewSelect(view: any) {
-		selectedView = view;
-		dynamicView.set(view);
-		if ($page.url.pathname !== '/me') {
+	function handleViewSelect(viewItem: any) {
+		if (viewItem.metadata.id !== 'MyDashboard') {
+			// Only add URL param for non-dashboard views
+			const searchParams = new URLSearchParams($page.url.searchParams);
+			searchParams.set('view', viewItem.metadata.id);
+			goto(`/me?${searchParams.toString()}`);
+		} else {
+			// For dashboard, go to clean /me URL
 			goto('/me');
 		}
-		dispatch('viewSelect', { view });
+		dynamicView.set(viewItem.view);
+		dispatch('viewSelect', { view: viewItem.view });
 		dispatch('close');
 	}
 
-	function handleEpisodesClick() {
-		goto('/episodes');
-		dispatch('episodesClick');
-		dispatch('close');
-	}
+	$: activeViewId = $page.url.searchParams.get('view') || 'MyDashboard';
 </script>
 
-<svelte:window on:resize={() => (isMobile = window.innerWidth < 768)} />
-
-<div class={containerClass}>
-	{#each views as view}
+<div class="flex flex-wrap gap-2 px-4 pb-4 md:gap-3 lg:gap-4">
+	{#each views as viewItem}
 		<div
-			on:click={() => handleViewSelect(view)}
-			on:keydown={(e) => e.key === 'Enter' && handleViewSelect(view)}
-			class="flex flex-col items-center justify-center transition-colors duration-200 rounded-lg cursor-pointer {selectedView
-				?.metadata?.id === view.metadata.id
-				? 'bg-surface-600/60 text-surface-200'
-				: 'bg-surface-600/40 text-surface-400 hover:bg-surface-600/50'}"
+			on:click={() => handleViewSelect(viewItem)}
+			on:keydown={(e) => e.key === 'Enter' && handleViewSelect(viewItem)}
+			class="flex relative flex-col items-center justify-center transition-colors duration-200 rounded-lg cursor-pointer {activeViewId === viewItem.metadata.id
+				? 'bg-surface-600/70 text-surface-100'
+				: 'bg-surface-600/50 text-surface-300 hover:bg-surface-600/60'}"
 			style="width: {effectiveItemSize}px; height: {effectiveItemSize}px;"
 			tabindex="0"
 			role="button"
 		>
+			{#if activeViewId === viewItem.metadata.id}
+				<div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-500" />
+			{/if}
 			<Icon
-				icon={view.metadata.name === 'MyDashboard'
-					? 'mdi:account'
-					: view.metadata.name === 'ShopWithMe'
-					? 'mdi:shopping'
-					: view.metadata.name === 'DoWithMe'
-					? 'mdi:check-circle'
-					: 'mdi:circle-outline'}
+				icon={viewItem.metadata.icon}
 				class="w-{iconSize} h-{iconSize} {showEffectiveLabels ? 'mb-1 md:mb-2' : ''}"
 			/>
 			{#if showEffectiveLabels}
 				<span class="text-xs md:text-sm">
-					{view.metadata.name === 'MyDashboard'
+					{viewItem.metadata.name === 'MyDashboard'
 						? 'Me'
-						: view.metadata.name === 'ShopWithMe'
+						: viewItem.metadata.name === 'ShopWithMe'
 						? 'ShopWithMe'
-						: view.metadata.name === 'DoWithMe'
-						? 'DoMe'
-						: view.metadata.name}
+						: viewItem.metadata.name}
 				</span>
 			{/if}
 		</div>
 	{/each}
-	<div
-		on:click={handleEpisodesClick}
-		on:keydown={(e) => e.key === 'Enter' && handleEpisodesClick()}
-		class="flex flex-col justify-center items-center rounded-lg transition-colors duration-200 cursor-pointer bg-surface-600/40 text-surface-400 hover:bg-surface-600/50"
-		style="width: {effectiveItemSize}px; height: {effectiveItemSize}px;"
-		tabindex="0"
-		role="button"
-	>
-		<Icon
-			icon="mdi:play-circle"
-			class="w-{iconSize} h-{iconSize} {showEffectiveLabels ? 'mb-1 md:mb-2' : ''}"
-		/>
-		{#if showEffectiveLabels}
-			<span class="text-xs md:text-sm">Episodes</span>
-		{/if}
-	</div>
 </div>

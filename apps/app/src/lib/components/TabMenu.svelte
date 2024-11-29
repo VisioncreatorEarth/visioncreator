@@ -19,8 +19,8 @@
 					<button
 						class="inline-block px-2 py-2 rounded-lg transition-colors duration-200 sm:px-3 {
 							activeTab === tab
-								? 'bg-surface-600/60 text-surface-200'
-								: 'bg-surface-600/40 text-surface-400 hover:bg-surface-600/50'
+								? 'bg-surface-600/70 text-surface-100'
+								: 'bg-surface-600/50 text-surface-300 hover:bg-surface-600/60'
 						}"
 						on:click={() => dispatch('setActiveTab', tab)}
 					>

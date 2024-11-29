@@ -2,8 +2,11 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
+	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 
 	export let data;
 
@@ -13,22 +16,98 @@
 	let showComposeView = false;
 	let initialSetupComplete = false;
 	let selectedView: any = null;
-	let isAsideOpen = true;
-	let isMobile = false;
+	let isInitialized = false;
 
-	onMount(() => {
-		checkMobile();
-		window.addEventListener('resize', checkMobile);
-		return () => window.removeEventListener('resize', checkMobile);
+	// Set default view immediately to prevent flashing
+	dynamicView.set(meView);
+
+	// Query for user capabilities to determine available views
+	const userCapabilitiesQuery = createQuery({
+		operationName: 'queryMyCapabilities',
+		enabled: true,
+		refetchOnWindowFocus: true
 	});
 
-	function checkMobile() {
-		isMobile = window.innerWidth < 768;
-		isAsideOpen = !isMobile;
+	$: hasRequiredCapability =
+		$userCapabilitiesQuery.data?.capabilities?.some(
+			(cap) =>
+				cap.type === 'TIER' &&
+				(['FREE Tier', 'HOMINIO Tier', 'HOMINIO PLUS Tier'].includes(cap.name) ||
+					(cap.config?.tier && ['FREE', 'HOMINIO', 'HOMINIO_PLUS'].includes(cap.config.tier)))
+		) ?? false;
+
+	// Define available views matching ViewMenu structure
+	$: viewsArray = [
+		{
+			metadata: {
+				id: 'MyDashboard',
+				name: 'MyDashboard',
+				icon: 'mdi:account'
+			},
+			view: meView
+		},
+		...(hasRequiredCapability
+			? [
+					{
+						metadata: {
+							id: 'HominioShopWithMe',
+							name: 'ShopWithMe',
+							icon: 'mdi:shopping'
+						},
+						view: hominioShopView
+					}
+			  ]
+			: []),
+		{
+			metadata: {
+				id: 'Episodes',
+				name: 'Episodes',
+				icon: 'mdi:play-circle'
+			},
+			view: {
+				id: 'Episodes',
+				layout: {
+					areas: `"main"`,
+					overflow: 'auto',
+					style: 'mx-auto max-w-6xl'
+				},
+				children: [
+					{
+						id: 'episodes',
+						component: 'Episodes',
+						slot: 'main'
+					}
+				]
+			}
+		}
+	];
+
+	// Initialize view on mount
+	onMount(() => {
+		if (!isInitialized) {
+			initializeView();
+			isInitialized = true;
+		}
+	});
+
+	// Watch for URL changes after initial load
+	$: if (browser && $page && isInitialized) {
+		initializeView();
 	}
 
-	function toggleAside() {
-		isAsideOpen = !isAsideOpen;
+	function initializeView() {
+		if (!browser) return;
+		
+		const viewParam = $page.url.searchParams.get('view');
+		const viewItem = viewsArray.find(v => v.metadata.id === (viewParam || 'MyDashboard'));
+		
+		if (viewItem) {
+			if (!$dynamicView || viewItem.view.id !== $dynamicView.id) {
+				dynamicView.set(viewItem.view);
+			}
+		} else if (!$dynamicView || $dynamicView.id !== meView.id) {
+			dynamicView.set(meView);
+		}
 	}
 
 	const updateNameMutation = createMutation({
@@ -60,15 +139,22 @@
 	function handleViewSelect({ detail: { view } }: CustomEvent) {
 		selectedView = view;
 		dynamicView.set(view);
-		if (isMobile) {
-			isAsideOpen = false;
-		}
 	}
 
 	function handleEpisodesClick() {
 		goto('/episodes');
-		if (isMobile) {
-			isAsideOpen = false;
+	}
+
+	function handleViewUpdate(event: CustomEvent) {
+		const viewData = event.detail?.view;
+		if (viewData) {
+			dynamicView.set(viewData);
+
+			// Force re-render of ComposeView
+			showComposeView = false;
+			requestAnimationFrame(() => {
+				showComposeView = true;
+			});
 		}
 	}
 
@@ -130,19 +216,6 @@
 		}
 	}
 
-	function handleViewUpdate(event: CustomEvent) {
-		const viewData = event.detail?.view;
-		if (viewData) {
-			dynamicView.set({ view: viewData });
-
-			// Force re-render of ComposeView
-			showComposeView = false;
-			requestAnimationFrame(() => {
-				showComposeView = true;
-			});
-		}
-	}
-
 	// Handle initial setup on mount and when session changes
 	$: if (session?.user && !initialSetupComplete) {
 		handleInitialSetup();
@@ -189,10 +262,10 @@
 			</div>
 		</div>
 	{:else}
-		<ComposeView view={$dynamicView.view || meView} />
+		<ComposeView view={$dynamicView} />
 	{/if}
 {:else if meData}
-	<ComposeView view={$dynamicView.view || meView} />
+	<ComposeView view={$dynamicView} />
 {:else}
 	<div class="flex justify-center items-center h-screen text-red-500">Error loading user data</div>
 {/if}
