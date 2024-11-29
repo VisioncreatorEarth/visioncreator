@@ -3,7 +3,9 @@
 	import { futureMe, Me, dynamicView } from '$lib/stores';
 	import { view as meView } from '$lib/views/Me';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
-	import { onMount } from 'svelte';
+	import { view as hominioDoView } from '$lib/views/HominioDoMe';
+	import { view as hominioBankView } from '$lib/views/HominioBankMe';
+	import { view as hominioHostView } from '$lib/views/HominioHostMe';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { browser } from '$app/environment';
@@ -17,9 +19,6 @@
 	let initialSetupComplete = false;
 	let selectedView: any = null;
 	let isInitialized = false;
-
-	// Set default view immediately to prevent flashing
-	dynamicView.set(meView);
 
 	// Query for user capabilities to determine available views
 	const userCapabilitiesQuery = createQuery({
@@ -46,18 +45,38 @@
 			},
 			view: meView
 		},
-		...(hasRequiredCapability
-			? [
-					{
-						metadata: {
-							id: 'HominioShopWithMe',
-							name: 'ShopWithMe',
-							icon: 'mdi:shopping'
-						},
-						view: hominioShopView
-					}
-			  ]
-			: []),
+		{
+			metadata: {
+				id: 'HominioShopWithMe',
+				name: 'ShopWithMe',
+				icon: 'mdi:shopping'
+			},
+			view: hominioShopView
+		},
+		{
+			metadata: {
+				id: 'HominioDoMe',
+				name: 'DoWithMe',
+				icon: 'mdi:clipboard-list'
+			},
+			view: hominioDoView
+		},
+		{
+			metadata: {
+				id: 'HominioBankMe',
+				name: 'BankWithMe',
+				icon: 'mdi:bank'
+			},
+			view: hominioBankView
+		},
+		{
+			metadata: {
+				id: 'HominioHostMe',
+				name: 'HostWithMe',
+				icon: 'mdi:home'
+			},
+			view: hominioHostView
+		},
 		{
 			metadata: {
 				id: 'Episodes',
@@ -82,31 +101,42 @@
 		}
 	];
 
-	// Initialize view on mount
-	onMount(() => {
-		if (!isInitialized) {
-			initializeView();
-			isInitialized = true;
-		}
-	});
+	// Initialize view based on URL parameter or default
+	$: if (browser && !isInitialized) {
+		const viewParam = $page.url.searchParams.get('view');
+		initializeView();
+		isInitialized = true;
+	}
 
 	// Watch for URL changes after initial load
 	$: if (browser && $page && isInitialized) {
+		const viewParam = $page.url.searchParams.get('view');
 		initializeView();
 	}
 
 	function initializeView() {
 		if (!browser) return;
-		
+
 		const viewParam = $page.url.searchParams.get('view');
-		const viewItem = viewsArray.find(v => v.metadata.id === (viewParam || 'MyDashboard'));
-		
+
+		// Handle both direct component names and view IDs
+		let targetId = viewParam;
+		if (
+			['HominioShopWithMe', 'HominioDoMe', 'HominioBankMe', 'HominioHostMe'].includes(viewParam)
+		) {
+			targetId = viewParam;
+		} else if (viewParam === 'Me') {
+			targetId = 'MyDashboard';
+		}
+
+		const viewItem = viewsArray.find((v) => v.metadata.id === (targetId || 'MyDashboard'));
+
 		if (viewItem) {
-			if (!$dynamicView || viewItem.view.id !== $dynamicView.id) {
-				dynamicView.set(viewItem.view);
-			}
-		} else if (!$dynamicView || $dynamicView.id !== meView.id) {
+			dynamicView.set(viewItem.view);
+			showComposeView = true;
+		} else {
 			dynamicView.set(meView);
+			showComposeView = true;
 		}
 	}
 
@@ -148,6 +178,20 @@
 	function handleViewUpdate(event: CustomEvent) {
 		const viewData = event.detail?.view;
 		if (viewData) {
+			// Update URL for all known views
+			const knownViews = [
+				'HominioShopWithMe',
+				'HominioDoMe',
+				'HominioBankMe',
+				'HominioHostMe',
+				'MyDashboard'
+			];
+			if (knownViews.includes(viewData.id)) {
+				const url = new URL(window.location.href);
+				url.searchParams.set('view', viewData.id === 'MyDashboard' ? 'Me' : viewData.id);
+				goto(url.toString(), { replaceState: true });
+			}
+
 			dynamicView.set(viewData);
 
 			// Force re-render of ComposeView

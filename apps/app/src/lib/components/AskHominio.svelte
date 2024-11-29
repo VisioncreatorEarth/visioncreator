@@ -72,7 +72,7 @@
 			}
 
 			// Switch to HominioShopWithMe view
-			const selectedView = views.find(v => v.metadata.id === 'HominioShop');
+			const selectedView = views.find((v) => v.metadata.id === 'HominioShop');
 			if (selectedView) {
 				dynamicView.set(selectedView.view);
 			}
@@ -209,7 +209,7 @@
 	// Handle view updates
 	function handleViewUpdate(event: CustomEvent) {
 		const viewId = event.detail?.viewId;
-		const selectedView = views.find(v => v.metadata.id === viewId);
+		const selectedView = views.find((v) => v.metadata.id === viewId);
 		if (selectedView) {
 			dynamicView.set(selectedView.view);
 		}
