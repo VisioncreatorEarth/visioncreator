@@ -2,7 +2,6 @@ import { purgeCss } from 'vite-plugin-tailwind-purgecss';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import autoImport from 'composer';
-import fs from 'fs';
 
 export default defineConfig({
 	plugins: [
@@ -10,7 +9,6 @@ export default defineConfig({
 			include: ['**/*.(svelte)'],
 			components: ['./src/lib/components'],
 			mapping: {
-				testMe: `import testMe from '$lib/composables/testMe.ts'`,
 				UserSchema: `import { UserSchema } from '$lib/composables/UserSchema'`,
 				Icon: `import Icon from '@iconify/svelte';`
 			},

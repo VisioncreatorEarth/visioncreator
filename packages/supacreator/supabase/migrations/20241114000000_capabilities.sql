@@ -28,17 +28,6 @@ CREATE TABLE capabilities (
     active BOOLEAN NOT NULL DEFAULT true
 );
 
--- Audit trail for capability changes
-CREATE TABLE capability_audit_trail (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    capability_id UUID REFERENCES capabilities(id),
-    action TEXT NOT NULL,
-    user_id UUID NOT NULL REFERENCES public.profiles(id),
-    performed_by UUID NOT NULL REFERENCES public.profiles(id),
-    details JSONB NOT NULL DEFAULT '{}'::jsonb
-);
-
 -- Hominio requests tracking
 CREATE TABLE hominio_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -111,20 +100,11 @@ SELECT cron.schedule('reset-monthly-ai-minutes', '0 0 1 * *', 'SELECT reset_mont
 
 -- RLS Policies
 ALTER TABLE capabilities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE capability_audit_trail ENABLE ROW LEVEL SECURITY;
 ALTER TABLE hominio_requests ENABLE ROW LEVEL SECURITY;
 
 -- Service role policies for full access
 CREATE POLICY "Service role has full access to capabilities"
     ON capabilities
-    AS PERMISSIVE
-    FOR ALL
-    TO service_role
-    USING (true)
-    WITH CHECK (true);
-
-CREATE POLICY "Service role has full access to audit trail"
-    ON capability_audit_trail
     AS PERMISSIVE
     FOR ALL
     TO service_role
@@ -141,5 +121,4 @@ CREATE POLICY "Service role has full access to hominio requests"
 
 -- Grants
 GRANT ALL ON TABLE capabilities TO service_role;
-GRANT ALL ON TABLE capability_audit_trail TO service_role;
 GRANT ALL ON TABLE hominio_requests TO service_role;

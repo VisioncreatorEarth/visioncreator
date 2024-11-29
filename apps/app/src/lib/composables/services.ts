@@ -12,7 +12,4 @@ export const coreServices = {
         const store = getComposerStore(storeID);
         return store;
     },
-    testAlert: () => {
-        alert("core service alert")
-    }
 };

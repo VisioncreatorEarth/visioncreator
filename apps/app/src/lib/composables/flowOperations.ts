@@ -2,7 +2,6 @@ import { client } from '$lib/wundergraph';
 import { get } from 'svelte/store';
 import { Me } from '$lib/stores';
 import { eventBus } from '$lib/composables/eventBus';
-import { conversationManager } from '$lib/stores/intentStore';
 
 interface SubmitFormParams {
 	operation: string;
