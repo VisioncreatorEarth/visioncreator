@@ -111,35 +111,6 @@
 		operationName: 'addItemsToShoppingList'
 	});
 
-	// Function to get random items
-	const getRandomItems = () => {
-		const shuffled = [...sampleItems].sort(() => 0.5 - Math.random());
-		return shuffled.slice(0, 10).map((item) => ({
-			...item,
-			quantity: Math.ceil(Math.random() * 3), // Random quantity between 1-3
-			unit:
-				item.category === 'Beverages'
-					? 'l'
-					: item.category === 'Fruits' || item.category === 'Vegetables' || item.category === 'Meat'
-					? 'kg'
-					: 'pcs'
-		}));
-	};
-
-	// Handle adding random items
-	const addRandomItems = async () => {
-		try {
-			const randomItems = getRandomItems();
-			await $addItemsMutation.mutate({
-				action: 'add',
-				items: randomItems
-			});
-			await $shoppingListQuery.refetch();
-		} catch (error) {
-			console.error('Error adding random items:', error);
-		}
-	};
-
 	// Handle toggling items
 	const handleToggleItem = async (item: any) => {
 		try {

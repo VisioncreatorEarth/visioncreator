@@ -1,6 +1,5 @@
 import { writable } from 'svelte/store';
 import { persist, createLocalStorage } from '@macfja/svelte-persistent-store';
-import { view as meView } from '$lib/views/Me';
 
 type EventType = 'updateMe' | 'otherEventType';
 
