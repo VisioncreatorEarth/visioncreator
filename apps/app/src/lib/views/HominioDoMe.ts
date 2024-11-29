@@ -3,7 +3,7 @@ export let view = {
     "id": "5b7cecca-c106-4766-ba7d-a65e1d290a7d",
     "version": "0.0.1",
     "isActive": true,
-    "name": "HominioDoMe",
+    "name": "HominioHostMe",
     "description": "",
     "author": "00000000-0000-0000-0000-000000000001",
     "composer": "ComposeView241119",
@@ -15,13 +15,22 @@ export let view = {
   "render": {
     "id": "HominioDoMe",
     "layout": {
-      "gap": "1rem",
-      "rows": "auto",
-      "areas": "\n        \"main\"\n      ",
-      "style": "p-4 max-w-6xl mx-auto",
+      "rows": "auto 1fr",
+      "areas": `
+        "banner"
+        "main"`,
+      "style": "max-w-6xl mx-auto",
       "overflow": "auto"
     },
     "children": [
+      {
+        "id": "Banner",
+        "slot": "banner",
+        "component": "Banner",
+        "map": {
+          "mode": "alpha"
+        }
+      },
       {
         "id": "HominioDoMe",
         "slot": "main",
@@ -30,5 +39,5 @@ export let view = {
     ]
   },
   "stateMachine": {},
-  "customConfig": { showSpacer: true }
+  "customConfig": { "showSpacer": true }
 }

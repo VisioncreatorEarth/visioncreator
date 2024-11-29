@@ -15,13 +15,22 @@ export let view = {
   "render": {
     "id": "HominioShopWithMe",
     "layout": {
-      "gap": "1rem",
-      "rows": "auto",
-      "areas": "\n        \"main\"\n      ",
-      "style": "p-4 max-w-6xl mx-auto",
+      "rows": "auto 1fr",
+      "areas": `
+        "banner"
+        "main"`,
+      "style": "max-w-6xl mx-auto",
       "overflow": "auto"
     },
     "children": [
+      {
+        "id": "Banner",
+        "slot": "banner",
+        "component": "Banner",
+        "map": {
+          "mode": "beta"
+        }
+      },
       {
         "id": "HominioShopWithMe",
         "slot": "main",
@@ -30,4 +39,5 @@ export let view = {
     ]
   },
   "stateMachine": {},
+  "customConfig": { "showSpacer": true }
 }
