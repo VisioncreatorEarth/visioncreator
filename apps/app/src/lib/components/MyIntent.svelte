@@ -156,7 +156,7 @@
 				// Just check permission without keeping the stream
 				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 				// Immediately stop the test stream
-				stream.getTracks().forEach(track => track.stop());
+				stream.getTracks().forEach((track) => track.stop());
 				context.permissionState = 'granted';
 				machine.send('PERMISSION_GRANTED');
 			} catch (error) {
@@ -297,7 +297,10 @@
 </script>
 
 {#if $context.isOpen}
-	<div class="flex fixed inset-0 z-50 flex-col justify-end" transition:fade={{ duration: 200 }}>
+	<div
+		class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-sm bg-surface-900/10"
+		transition:fade={{ duration: 200 }}
+	>
 		{#if $currentState === 'calling'}
 			<AskHominio
 				bind:this={askHominioComponent}

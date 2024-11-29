@@ -172,8 +172,12 @@
 					{#if !activeItems.length}
 						<div class="p-8 text-center text-surface-200">
 							<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
-							<p>No active items in this list yet</p>
-							<p class="mt-2 text-sm">Click the button above to add some random items</p>
+							<p>No items in your shopping list yet</p>
+							<p class="mt-2 text-sm text-primary-300">
+								Long press the Hominio Logo Button at the bottom to start talking to Hominio and ask
+								her to add Items to your shopping list. <br />Keep the button pressed as long as you
+								want to have a conversation or Hominio is working on your requests.
+							</p>
 						</div>
 					{:else}
 						<ShoppingItems items={activeItems} onToggle={handleToggleItem} />
