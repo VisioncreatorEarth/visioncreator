@@ -119,7 +119,7 @@ const CALL_CONFIG = {
             schema: {
               type: 'string',
               enum: ['HominioShopWithMe', 'HominioDoMe', 'HominioHostMe', 'HominioBankMe'],
-              description: 'The component to switch to based on the conversation context: HominioShopWithMe for shopping lists, HominioDoMe for tasks and scheduling, HominioHostMe for booking and hosting, HominioBankMe for banking and payments'
+              description: 'The component to switch to based on the conversation context: Just "Me" for Dashboard / Home / MyProfile, "HominioShopWithMe" for shopping lists, "HominioDoMe" for tasks and scheduling, "HominioHostMe" for booking and hosting, "HominioBankMe" for banking and payments'
             },
             required: true
           }

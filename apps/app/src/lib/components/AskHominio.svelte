@@ -6,6 +6,12 @@
 	import { createMachine } from '$lib/composables/svelteMachine';
 	import OShoppingItems from './ShoppingItems.svelte';
 	import { dynamicView } from '$lib/stores';
+	import { view as meView } from '$lib/views/Me';
+	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
+	import { view as hominioDoView } from '$lib/views/HominioDoMe';
+	import { view as hominioBankView } from '$lib/views/HominioBankMe';
+	import { view as hominioHostView } from '$lib/views/HominioHostMe';
+	import { browser } from '$app/environment';
 
 	// Create updateShoppingList mutation
 	const addItemsMutation = createMutation({
@@ -66,25 +72,10 @@
 			}
 
 			// Switch to HominioShopWithMe view
-			const viewConfig = {
-				id: 'HominioShopWithMe',
-				layout: {
-					areas: `
-						"main"
-					`,
-					overflow: 'auto',
-					style: 'mx-auto max-w-6xl'
-				},
-				children: [
-					{
-						id: 'xyz1',
-						component: 'HominioShopWithMe',
-						slot: 'main'
-					}
-				]
-			};
-
-			dynamicView.set({ view: viewConfig });
+			const selectedView = views.find(v => v.metadata.id === 'HominioShop');
+			if (selectedView) {
+				dynamicView.set(selectedView.view);
+			}
 
 			return 'Items updated successfully';
 		} catch (error) {
@@ -99,25 +90,29 @@
 			const component = parameters.component;
 			console.log('Switching to component:', component);
 
-			const viewConfig = {
-				id: component,
-				layout: {
-					areas: `
-						"main"
-					`,
-					overflow: 'auto',
-					style: 'mx-auto max-w-6xl'
-				},
-				children: [
-					{
-						id: 'xyz1',
-						component: component,
-						slot: 'main'
-					}
-				]
-			};
+			let selectedView;
+			switch (component) {
+				case 'Me':
+					selectedView = meView;
+					break;
+				case 'HominioShopWithMe':
+					selectedView = hominioShopView;
+					break;
+				case 'HominioDoMe':
+					selectedView = hominioDoView;
+					break;
+				case 'HominioBankMe':
+					selectedView = hominioBankView;
+					break;
+				case 'HominioHostMe':
+					selectedView = hominioHostView;
+					break;
+				default:
+					console.warn(`Unknown component: ${component}`);
+					return `Could not find view for ${component}`;
+			}
 
-			dynamicView.set({ view: viewConfig });
+			dynamicView.set(selectedView);
 			return `Switched to ${component} view`;
 		} catch (error) {
 			console.error('Error switching view:', error);
@@ -161,6 +156,64 @@
 	const askHominioMutation = createMutation({
 		operationName: 'askHominio'
 	});
+
+	// Set default view
+	if (browser) {
+		dynamicView.set(meView);
+	}
+
+	// Define available views
+	const views = [
+		{
+			metadata: {
+				id: 'MyDashboard',
+				name: 'MyDashboard',
+				icon: 'mdi:account'
+			},
+			view: meView
+		},
+		{
+			metadata: {
+				id: 'HominioShop',
+				name: 'HominioShop',
+				icon: 'mdi:shopping'
+			},
+			view: hominioShopView
+		},
+		{
+			metadata: {
+				id: 'HominioDo',
+				name: 'HominioDo',
+				icon: 'mdi:clipboard-list'
+			},
+			view: hominioDoView
+		},
+		{
+			metadata: {
+				id: 'HominioBank',
+				name: 'HominioBank',
+				icon: 'mdi:bank'
+			},
+			view: hominioBankView
+		},
+		{
+			metadata: {
+				id: 'HominioHost',
+				name: 'HominioHost',
+				icon: 'mdi:server'
+			},
+			view: hominioHostView
+		}
+	];
+
+	// Handle view updates
+	function handleViewUpdate(event: CustomEvent) {
+		const viewId = event.detail?.viewId;
+		const selectedView = views.find(v => v.metadata.id === viewId);
+		if (selectedView) {
+			dynamicView.set(selectedView.view);
+		}
+	}
 
 	// Machine context type
 	type Context = {
