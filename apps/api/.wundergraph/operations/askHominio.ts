@@ -49,8 +49,8 @@ const CALL_CONFIG = {
   1. Always specify the category from the list above
   2. Set the action field to 'add' or 'remove' based on what to do with the item
   3. For 'add' actions:
-     - Include quantity (default to 1 if not specified)
-     - Use appropriate units (e.g., kg, pcs, l)
+     - Optionally include quantity if the user provided them (ignore quantity if not specified)
+     - If quantity is specified, use appropriate units (e.g., kg, pcs, l)
      - Try to match items with their correct icons, choose the fallback category icon if no icon is available or you are unsure if that icon exists
   4. For 'remove' actions:
      - Only name and category are required
@@ -249,7 +249,13 @@ export default createOperation.mutation({
         if (lists?.[0]?.shopping_list_items?.length > 0) {
           const activeItems = lists[0].shopping_list_items
             .filter(item => !item.is_checked)
-            .map(item => `${item.quantity || 1} ${item.unit || 'pcs'} ${item.shopping_items.name} (${item.shopping_items.category})`);
+            .map(item => {
+              const itemText = item.shopping_items.name;
+              if (item.quantity !== null && item.quantity !== undefined) {
+                return `${item.quantity} ${item.unit || 'pcs'} ${itemText} (${item.shopping_items.category})`;
+              }
+              return `${itemText} (${item.shopping_items.category})`;
+            });
 
           if (activeItems.length > 0) {
             currentItemsContext = `\nCurrent Active Shopping List:\n${activeItems.join('\n')}`;

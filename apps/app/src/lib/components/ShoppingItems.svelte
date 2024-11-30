@@ -183,7 +183,7 @@
 							<span class="overflow-hidden text-xs font-semibold text-center text-ellipsis">
 								{item.name}
 							</span>
-							{#if item.quantity > 1 || item.unit}
+							{#if item.quantity !== undefined && item.quantity !== null}
 								<div class="px-2 font-medium rounded-full text-2xs">
 									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
 								</div>
@@ -200,7 +200,7 @@
 							<span class="overflow-hidden text-xs font-semibold text-center text-ellipsis">
 								{item.name}
 							</span>
-							{#if item.quantity > 1 || item.unit}
+							{#if item.quantity !== undefined && item.quantity !== null}
 								<div class="px-2 font-medium rounded-full text-2xs">
 									{item.quantity}{item.unit ? ` ${item.unit}` : ''}
 								</div>
@@ -223,7 +223,7 @@
 							>
 								{item.name}
 							</span>
-							{#if item.quantity > 1 || item.unit}
+							{#if item.quantity !== undefined && item.quantity !== null}
 								<div
 									class="px-2 font-medium rounded-full text-2xs bg-surface-900/20 text-surface-200/60"
 								>
@@ -242,7 +242,7 @@
 							>
 								{item.name}
 							</span>
-							{#if item.quantity > 1 || item.unit}
+							{#if item.quantity !== undefined && item.quantity !== null}
 								<div
 									class="px-2 font-medium rounded-full text-2xs bg-surface-900/20 text-surface-200/60"
 								>

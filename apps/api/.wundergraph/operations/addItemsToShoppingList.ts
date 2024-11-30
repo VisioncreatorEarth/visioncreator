@@ -109,8 +109,7 @@ export default createOperation.mutation({
               .insert([{
                 name: capitalizeFirstLetter(item.name),
                 category: categoryDefaults.category,
-                icon: item.icon || categoryDefaults.icon,
-                default_unit: categoryDefaults.defaultUnit
+                icon: item.icon || categoryDefaults.icon
               }])
               .select()
               .single();
@@ -124,15 +123,21 @@ export default createOperation.mutation({
         // Update shopping list items
         await retryOperation(async () => {
           if (input.action === 'add') {
+            const upsertData: any = {
+              shopping_list_id: listId,
+              item_id: itemId,
+              is_checked: false
+            };
+
+            // Only add quantity and unit if quantity is provided
+            if (item.quantity !== undefined && item.quantity !== null) {
+              upsertData.quantity = item.quantity;
+              upsertData.unit = item.unit || categoryDefaults.defaultUnit;
+            }
+
             const { error: upsertError } = await context.supabase
               .from('shopping_list_items')
-              .upsert([{
-                shopping_list_id: listId,
-                item_id: itemId,
-                quantity: item.quantity || 1,
-                unit: item.unit || categoryDefaults.defaultUnit,
-                is_checked: false
-              }], {
+              .upsert([upsertData], {
                 onConflict: 'shopping_list_id,item_id'
               });
 

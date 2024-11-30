@@ -30,8 +30,7 @@ export default createOperation.query({
               id,
               name,
               category,
-              icon,
-              default_unit
+              icon
             )
           )
         `)
@@ -68,8 +67,7 @@ export default createOperation.query({
                 id,
                 name,
                 category,
-                icon,
-                default_unit
+                icon
               )
             )
           `)

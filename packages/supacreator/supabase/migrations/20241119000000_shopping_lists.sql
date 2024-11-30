@@ -4,8 +4,6 @@ CREATE TABLE IF NOT EXISTS shopping_items (
     name TEXT NOT NULL,
     category TEXT NOT NULL,
     icon TEXT,
-    default_unit TEXT,
-    variant_units JSONB DEFAULT '[]',  -- Add support for variant units
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(name, category)
@@ -25,7 +23,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     shopping_list_id UUID NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
     item_id UUID NOT NULL REFERENCES shopping_items(id),
-    quantity DECIMAL DEFAULT 1,
+    quantity DECIMAL,
     unit TEXT,
     is_checked BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -123,17 +121,15 @@ BEGIN
         FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
         LOOP
             -- Create or get shopping item
-            INSERT INTO shopping_items (name, category, icon, default_unit)
+            INSERT INTO shopping_items (name, category, icon)
             VALUES (
                 v_item->>'name',
                 v_item->>'category',
-                v_item->>'icon',
-                v_item->>'default_unit'
+                v_item->>'icon'
             )
             ON CONFLICT (name, category) 
             DO UPDATE SET
                 icon = EXCLUDED.icon,
-                default_unit = EXCLUDED.default_unit,
                 updated_at = NOW()
             RETURNING id INTO v_item_id;
 
@@ -149,7 +145,7 @@ BEGIN
                 v_list_id,
                 v_item_id,
                 (v_item->>'quantity')::decimal,
-                COALESCE(v_item->>'unit', v_item->>'default_unit'),
+                COALESCE(v_item->>'unit', ''),
                 COALESCE((v_item->>'is_checked')::boolean, false)
             )
             ON CONFLICT (shopping_list_id, item_id)
@@ -176,8 +172,7 @@ BEGIN
                             'id', si.id,
                             'name', si.name,
                             'category', si.category,
-                            'icon', si.icon,
-                            'default_unit', si.default_unit
+                            'icon', si.icon
                         )
                     )
                 ) FILTER (WHERE sli.id IS NOT NULL),
