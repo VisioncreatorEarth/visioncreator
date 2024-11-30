@@ -298,9 +298,14 @@
 
 {#if $context.isOpen}
 	<div
-		class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-sm bg-surface-900/10"
+		class="flex fixed inset-0 z-50 flex-col justify-end"
 		transition:fade={{ duration: 200 }}
+		on:click|self={() => machine.send('CLOSE')}
 	>
+		<!-- Separate backdrop div with iOS-compatible blur -->
+		<div
+			class="absolute inset-0 -z-10 bg-surface-900/30 supports-[backdrop-filter]:bg-surface-900/10 backdrop-blur-[6px] supports-[backdrop-filter]:backdrop-blur-sm"
+		/>
 		{#if $currentState === 'calling'}
 			<AskHominio
 				bind:this={askHominioComponent}
@@ -342,14 +347,18 @@
 								<div class="p-4 text-center">
 									<div class="mb-4 text-4xl">🎤</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
-									<p class="mt-2 text-tertiary-200/80">Press and hold to start recording.</p>
+									<p class="mt-2 text-tertiary-200/80">
+										Press and hold to start talking to Hominio.
+									</p>
 								</div>
 							{:else if $currentState === 'paywall'}
 								<div class="p-6 text-center">
 									<div class="mb-4 text-4xl">🔒</div>
-									<h2 class="text-2xl font-bold text-tertiary-200">AI Request Limit Reached</h2>
+									<h2 class="text-2xl font-bold text-tertiary-200">Your Hominio Minutes are Up</h2>
 									<p class="mt-2 text-tertiary-200/80">
-										Upgrade your plan to continue using this feature
+										Upgrade your plan to continue using this feature, or for now just drop us a
+										quick message to get a few more free Minutes. Just click on the Hominio Logo
+										Button at the bottom and select the "Message us" action.
 									</p>
 									<div class="mt-4 space-x-4">
 										<button
@@ -369,9 +378,11 @@
 							{:else if $currentState === 'waitinglist'}
 								<div class="p-6 text-center">
 									<div class="mb-4 text-4xl">📝</div>
-									<h2 class="text-2xl font-bold text-tertiary-200">Join the Waiting List</h2>
+									<h2 class="text-2xl font-bold text-tertiary-200">Coming Soon</h2>
 									<p class="mt-2 text-tertiary-200/80">
-										This feature is currently in beta. Join the waiting list to get early access.
+										Rise on the leaderboard to get early access. The more new Visioncreators you
+										inspire to sign up via your link, the earlier you get invited to play with
+										Hominio.
 									</p>
 									<button
 										class="px-4 py-2 mt-4 text-white rounded-lg bg-tertiary-500"

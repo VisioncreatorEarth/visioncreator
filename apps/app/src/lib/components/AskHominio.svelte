@@ -529,7 +529,9 @@
 	});
 </script>
 
-<div class="flex fixed inset-0 z-50 flex-col justify-end backdrop-blur-sm bg-surface-900/10">
+<div class="flex fixed inset-0 z-50 flex-col justify-end">
+	<!-- Separate backdrop div with iOS-compatible blur -->
+	<div class="absolute inset-0 -z-10 bg-surface-900/30 supports-[backdrop-filter]:bg-surface-900/10 backdrop-blur-[6px] supports-[backdrop-filter]:backdrop-blur-sm" />
 	<div class="fixed right-0 bottom-0 left-0 z-30 pointer-events-none gradient-overlay">
 		<div
 			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
