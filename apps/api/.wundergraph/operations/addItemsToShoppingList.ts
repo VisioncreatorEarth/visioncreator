@@ -129,10 +129,13 @@ export default createOperation.mutation({
               is_checked: false
             };
 
-            // Only add quantity and unit if quantity is provided
+            // Only add quantity if explicitly provided
             if (item.quantity !== undefined && item.quantity !== null) {
               upsertData.quantity = item.quantity;
-              upsertData.unit = item.unit || categoryDefaults.defaultUnit;
+              // Only add unit if quantity is provided and unit is specified
+              if (item.unit) {
+                upsertData.unit = item.unit;
+              }
             }
 
             const { error: upsertError } = await context.supabase

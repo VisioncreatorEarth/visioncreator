@@ -53,7 +53,7 @@
 					items: addedItems.map((item: any) => ({
 						name: item.name,
 						category: item.category,
-						quantity: parseFloat(item.quantity) || 1,
+						quantity: item.quantity ? parseFloat(item.quantity) : undefined,
 						unit: item.unit,
 						icon: item.icon
 					}))
@@ -107,30 +107,18 @@
 			const name = parameters.name;
 			console.log('Name update requested:', name);
 
-			return new Promise((resolve, reject) => {
-				$updateMeMutation
-					.mutateAsync({
-						name: name
-					})
-					.then((result) => {
-						console.log('Name updated:', result);
-						if (result.success) {
-							resolve({
-								result: result.message,
-								responseType: 'text'
-							});
-						} else {
-							reject(new Error(result.message || 'Failed to update name'));
-						}
-					})
-					.catch((error) => {
-						console.error('Error updating name:', error);
-						reject(error);
-					});
+			const result = await $updateMeMutation.mutateAsync({
+				name: name
 			});
+
+			console.log('Name update result:', result);
+			
+			// Return a simple success message
+			return "Your name has been updated successfully!";
+			
 		} catch (error) {
 			console.error('Error in updateNameTool:', error);
-			throw error;
+			throw new Error('Failed to update name');
 		}
 	};
 

@@ -49,7 +49,7 @@ const CALL_CONFIG = {
   1. Always specify the category from the list above
   2. Set the action field to 'add' or 'remove' based on what to do with the item
   3. For 'add' actions:
-     - Optionally include quantity if the user provided them (ignore quantity if not specified)
+     - Optionally include quantity and units if the user provided them (ignore quantity or units if not specified)
      - If quantity is specified, use appropriate units (e.g., kg, pcs, l)
      - Try to match items with their correct icons, choose the fallback category icon if no icon is available or you are unsure if that icon exists
   4. For 'remove' actions:
@@ -93,10 +93,10 @@ const CALL_CONFIG = {
                 type: 'object',
                 properties: {
                   name: { type: 'string', description: 'Name of the item' },
-                  quantity: { type: 'number', description: 'Quantity of the item' },
+                  quantity: { type: 'number', description: 'Quantity of the item, optional only use if the user provided them' },
                   category: { type: 'string', description: 'Category of the item' },
                   icon: { type: 'string', description: 'Icon for the item, choose the best you kind find from Iconify, if unsure use one ofthe fallback category icons' },
-                  unit: { type: 'string', description: 'Unit for this item' },
+                  unit: { type: 'string', description: 'Unit for this item, optional only use if the user provided them' },
                   action: { type: 'string', enum: ['add', 'remove'], description: 'Action to perform with this item' }
                 },
                 required: ['name', 'category', 'action']
