@@ -5,13 +5,13 @@
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
 	import OShoppingItems from './ShoppingItems.svelte';
-	import { dynamicView } from '$lib/stores';
+	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
 	import { view as meView } from '$lib/views/Me';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
 	import { view as hominioDoView } from '$lib/views/HominioDoMe';
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
 	import { view as hominioHostView } from '$lib/views/HominioHostMe';
-	import { browser } from '$app/environment';
 
 	// Create updateShoppingList mutation
 	const addItemsMutation = createMutation({
@@ -71,10 +71,9 @@
 				});
 			}
 
-			// Switch to HominioShopWithMe view
-			const selectedView = views.find((v) => v.metadata.id === 'HominioShop');
-			if (selectedView) {
-				dynamicView.set(selectedView.view);
+			// Switch to HominioShopWithMe view using routing
+			if (browser) {
+				goto('/me?view=HominioShopWithMe', { replaceState: true });
 			}
 
 			return 'Items updated successfully';
@@ -90,29 +89,11 @@
 			const component = parameters.component;
 			console.log('Switching to component:', component);
 
-			let selectedView;
-			switch (component) {
-				case 'Me':
-					selectedView = meView;
-					break;
-				case 'HominioShopWithMe':
-					selectedView = hominioShopView;
-					break;
-				case 'HominioDoMe':
-					selectedView = hominioDoView;
-					break;
-				case 'HominioBankMe':
-					selectedView = hominioBankView;
-					break;
-				case 'HominioHostMe':
-					selectedView = hominioHostView;
-					break;
-				default:
-					console.warn(`Unknown component: ${component}`);
-					return `Could not find view for ${component}`;
+			// Use routing to switch views
+			if (browser) {
+				goto(`/me?view=${component}`, { replaceState: true });
 			}
 
-			dynamicView.set(selectedView);
 			return `Switched to ${component} view`;
 		} catch (error) {
 			console.error('Error switching view:', error);
@@ -206,7 +187,10 @@
 		const viewId = event.detail?.viewId;
 		const selectedView = views.find((v) => v.metadata.id === viewId);
 		if (selectedView) {
-			dynamicView.set(selectedView.view);
+			// Use routing to switch views
+			if (browser) {
+				goto(`/me?view=${selectedView.metadata.id}`, { replaceState: true });
+			}
 		}
 	}
 

@@ -1,14 +1,12 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { futureMe, Me, dynamicView } from '$lib/stores';
-	import { view as meView } from '$lib/views/Me';
+	import { futureMe, Me } from '$lib/stores';
+	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
 
 	export let data;
-
 	let { session, supabase } = data;
 	$: ({ session } = data);
 
-	let showComposeView = false;
 	let initialSetupComplete = false;
 
 	const updateNameMutation = createMutation({
@@ -44,16 +42,8 @@
 				data: { user }
 			} = await supabase.auth.getUser();
 
-			// Only proceed if we don't have an inviter set and have a visionid
 			if (!user?.user_metadata.inviter && $futureMe.visionid) {
 				try {
-					console.log('Starting initial setup...', {
-						currentName: user?.user_metadata.name,
-						futureMeName: $futureMe.name,
-						visionId: $futureMe.visionid
-					});
-
-					// Update user metadata with inviter and name
 					await supabase.auth.updateUser({
 						data: {
 							inviter: $futureMe.visionid,
@@ -61,14 +51,12 @@
 						}
 					});
 
-					// Create invite relationship if we have a valid visionid
 					if ($futureMe.visionid) {
 						await $createInviteMutation.mutateAsync({
 							invitee: session.user.id,
 							inviter: $futureMe.visionid
 						});
 
-						// Update name in database if needed
 						if ($futureMe.name) {
 							await $updateNameMutation.mutateAsync({
 								id: session.user.id,
@@ -77,42 +65,19 @@
 						}
 					}
 
-					// Update Me store
 					Me.update((store) => ({
 						...store,
 						id: session.user.id,
 						name: $futureMe.name || user.user_metadata.name || 'UpdateMyName'
 					}));
 
-					// Refetch user data
 					await $meQuery.refetch();
-
-					console.log('Initial setup completed successfully');
 				} catch (error) {
 					console.error('Error during initial setup:', error);
-					initialSetupComplete = true;
 				}
-			} else {
-				console.log('No initial setup needed', {
-					hasInviter: !!user?.user_metadata.inviter,
-					hasVisionId: !!$futureMe.visionid
-				});
 			}
 
 			initialSetupComplete = true;
-		}
-	}
-
-	function handleViewUpdate(event: CustomEvent) {
-		const viewData = event.detail?.view;
-		if (viewData) {
-			dynamicView.set({ view: viewData });
-
-			// Force re-render of ComposeView
-			showComposeView = false;
-			requestAnimationFrame(() => {
-				showComposeView = true;
-			});
 		}
 	}
 
@@ -137,36 +102,25 @@
 			await $toggleOnboardedMutation.mutateAsync({
 				id: session.user.id
 			});
-
 			await $meQuery.refetch();
-			showComposeView = true;
 		} catch (error) {
 			console.error('Error updating onboarded status:', error);
-			showComposeView = false;
 		}
 	}
 </script>
 
-<svelte:window on:updateView={handleViewUpdate} />
-
 {#if $meQuery.isLoading}
 	<div class="flex justify-center items-center h-screen">Loading...</div>
 {:else if meData && !meData.onboarded}
-	{#if !showComposeView}
-		<div class="flex justify-center items-center px-4 w-full min-h-screen sm:px-6 md:px-8">
-			<div class="w-full max-w-3xl">
-				<SubscribeToNewsletter
-					userId={session.user.id}
-					userEmail={session.user.email || ''}
-					on:next={handleNewsletterCompleted}
-				/>
-			</div>
+	<div class="flex justify-center items-center px-4 w-full min-h-screen sm:px-6 md:px-8">
+		<div class="w-full max-w-3xl">
+			<SubscribeToNewsletter
+				userId={session.user.id}
+				userEmail={session.user.email || ''}
+				on:next={handleNewsletterCompleted}
+			/>
 		</div>
-	{:else}
-		<ComposeView view={$dynamicView.view || meView} />
-	{/if}
-{:else if meData}
-	<ComposeView view={$dynamicView.view || meView} />
-{:else}
+	</div>
+{:else if !meData}
 	<div class="flex justify-center items-center h-screen text-red-500">Error loading user data</div>
 {/if}

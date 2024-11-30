@@ -8,7 +8,7 @@
 	// Default texts for each mode, can be overridden by query.data.text
 	$: defaultText =
 		mode === 'alpha'
-			? 'This potential future Skill is just on of many mockup ideas: Voting for new skills opens soon!'
+			? 'This potential future Skill is just one of many mockup ideas: Voting for new skills opens soon!'
 			: mode === 'beta'
 			? 'Things can break anytime. We love to hear your feedback! "Message Us" via clicking on Hominio at the bottom'
 			: 'Set Your Message Here';
