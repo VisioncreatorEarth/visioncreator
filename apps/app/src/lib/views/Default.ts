@@ -4,7 +4,6 @@ export const view = {
         areas: `
 			"main"
 		`,
-        overflow: 'auto',
     },
     children: [
         {

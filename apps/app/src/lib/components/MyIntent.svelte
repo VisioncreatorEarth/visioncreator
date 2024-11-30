@@ -1,483 +1,406 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher } from 'svelte';
-	import AudioVisualizer from './AudioVisualizer.svelte';
-	import { onMount, onDestroy } from 'svelte';
-	import { conversationManager, conversationStore } from '$lib/stores/intentStore';
-	import dayjs from 'dayjs';
-	import relativeTime from 'dayjs/plugin/relativeTime';
-	import MessageItem from './MessageItem.svelte';
-	import { hominioAgent } from '$lib/agents/hominioAgent';
-	import { goto } from '$app/navigation';
-	import { dynamicView } from '$lib/stores';
+	import { derived } from 'svelte/store';
+	import { onDestroy } from 'svelte';
+	import { createMachine, type MachineConfig } from '$lib/composables/svelteMachine';
+	import { createQuery } from '$lib/wundergraph';
+	import { eventBus } from '$lib/composables/eventBus';
+	import { onMount } from 'svelte';
+	import AskHominio from './AskHominio.svelte';
 
-	// Initialize dayjs relative time plugin
-	dayjs.extend(relativeTime);
-
-	export let isOpen = false;
 	export let session: any;
+	export let onRecordingStateChange: (isRecording: boolean, isProcessing: boolean) => void;
 
-	const dispatch = createEventDispatcher();
-	let currentAction: { action: string; view: any } | null = null;
-	let modalState:
-		| 'idle'
-		| 'recording'
-		| 'transcribing'
-		| 'result'
-		| 'need-permissions'
-		| 'permissions-denied' = 'idle';
-	let currentConversation: any;
-	let audioStream: MediaStream | null = null;
-	let mediaRecorder: MediaRecorder | null = null;
-	let audioChunks: Blob[] = [];
-	let messageContainer: HTMLDivElement;
+	let isLongPressActive = false;
+	let askHominioComponent: any;
 
-	let hominioAudio: HTMLAudioElement | null = null;
-	let visualizerMode: 'user' | 'hominio' = 'user';
+	const checkCapabilities = createQuery({
+		operationName: 'checkCapabilities',
+		enabled: false
+	});
 
-	// Type definitions
-	interface Message {
-		id: string;
-		// Add other message properties as needed
+	interface IntentContext {
+		permissionState: 'prompt' | 'granted' | 'denied';
+		permissionRequesting: boolean;
+		isOpen: boolean;
+		callState: {
+			duration: number;
+			status: 'connecting' | 'active' | 'ending';
+			systemPrompt: string;
+		};
 	}
 
-	interface Conversation {
-		id: string;
-		messages: Message[];
+	const intentConfig: MachineConfig<IntentContext> = {
+		id: 'intentMachine',
+		initial: 'init',
+		context: {
+			permissionState: 'prompt',
+			permissionRequesting: false,
+			isOpen: false,
+			callState: {
+				duration: 0,
+				status: 'connecting',
+				systemPrompt: 'You are a friendly AI assistant. Keep your responses brief and clear.'
+			}
+		},
+		states: {
+			init: {
+				entry: ['initializePermissions', 'closeModal'],
+				on: {
+					LONG_PRESS: [
+						{
+							target: 'calling',
+							guard: 'isPermissionGranted',
+							actions: ['startNewConversation', 'openModal']
+						},
+						{
+							target: 'requestPermissions',
+							guard: 'isPermissionNotGranted',
+							actions: ['openModal']
+						}
+					]
+				}
+			},
+			requestPermissions: {
+				entry: ['openModal', 'requestMicrophonePermission'],
+				on: {
+					PERMISSION_GRANTED: {
+						target: 'readyToCall',
+						actions: ['openModal']
+					},
+					PERMISSION_DENIED: {
+						target: 'permissionBlocked'
+					}
+				}
+			},
+			permissionBlocked: {
+				entry: ['openModal'],
+				on: {
+					TRY_AGAIN: {
+						target: 'requestPermissions',
+						actions: ['requestMicrophonePermission']
+					}
+				}
+			},
+			readyToCall: {
+				entry: ['openModal'],
+				on: {
+					LONG_PRESS: {
+						target: 'calling',
+						actions: ['startNewConversation']
+					},
+					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
+					}
+				}
+			},
+			calling: {
+				entry: ['openModal'],
+				on: {
+					END_CALL: {
+						target: 'init',
+						actions: ['cleanup']
+					},
+					WAITINGLIST: {
+						target: 'waitinglist',
+						actions: ['cleanup']
+					},
+					PAYWALL_ERROR: {
+						target: 'paywall',
+						actions: ['cleanup']
+					}
+				}
+			},
+			paywall: {
+				entry: ['openModal'],
+				on: {
+					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
+					},
+					UPGRADE: {
+						target: 'init',
+						actions: ['navigateToUpgrade']
+					}
+				}
+			},
+			waitinglist: {
+				entry: ['openModal'],
+				on: {
+					CLOSE: {
+						target: 'init',
+						actions: ['cleanup']
+					}
+				}
+			}
+		}
+	};
+
+	const intentActions = {
+		initializePermissions: async (context: IntentContext) => {
+			try {
+				const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+				context.permissionState = permissionStatus.state;
+				permissionStatus.addEventListener('change', () => {
+					context.permissionState = permissionStatus.state;
+				});
+			} catch (error) {
+				console.error('Error querying permissions:', error);
+				context.permissionState = 'prompt';
+			}
+		},
+		requestMicrophonePermission: async (context: IntentContext) => {
+			context.permissionRequesting = true;
+			try {
+				// Just check permission without keeping the stream
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				// Immediately stop the test stream
+				stream.getTracks().forEach((track) => track.stop());
+				context.permissionState = 'granted';
+				machine.send('PERMISSION_GRANTED');
+			} catch (error) {
+				console.error('Error requesting microphone permission:', error);
+				context.permissionState = 'denied';
+				machine.send('PERMISSION_DENIED');
+			} finally {
+				context.permissionRequesting = false;
+			}
+		},
+		startNewConversation: async () => {
+			try {
+				const result = await $checkCapabilities.refetch();
+				console.log('Frontend - Capability check result:', result.data);
+
+				if (result.data?.status === 'NO_CAPABILITY') {
+					console.log('Frontend - No capability');
+					machine.send('WAITINGLIST');
+					return;
+				}
+
+				if (result.data?.status === 'NO_MINUTES') {
+					console.log('Frontend - No minutes available');
+					machine.send('PAYWALL_ERROR');
+					return;
+				}
+
+				if (result.data?.status === 'OK') {
+					console.log('Frontend - Remaining minutes:', result.data.remainingMinutes);
+					if (result.data.remainingMinutes < 0.1667) {
+						console.log('Frontend - Less than 10 seconds remaining');
+						machine.send('PAYWALL_ERROR');
+						return;
+					}
+					// The conversation will be handled by AskHominio component
+					return;
+				}
+			} catch (error) {
+				console.error('Frontend - Error checking capabilities:', error);
+				machine.send('END_CALL');
+			}
+		},
+		cleanup: (context: IntentContext) => {
+			// Don't call stopCall here since it will be triggered by state change
+			context.callState.status = 'connecting';
+			context.callState.duration = 0;
+			context.isOpen = false;
+		},
+		closeModal: (context: IntentContext) => {
+			context.isOpen = false;
+		},
+		openModal: (context: IntentContext) => {
+			context.isOpen = true;
+		},
+		navigateToUpgrade: () => {
+			window.location.href = '/upgrade';
+		}
+	};
+
+	const intentGuards = {
+		isPermissionGranted: (context: IntentContext) => context.permissionState === 'granted',
+		isPermissionNotGranted: (context: IntentContext) => context.permissionState !== 'granted'
+	};
+
+	const machine = createMachine(intentConfig, intentActions, intentGuards);
+	const currentState = derived(machine, ($machine) => $machine.value);
+	const context = derived(machine, ($machine) => $machine.context);
+
+	// Mock call duration timer
+	let durationInterval: ReturnType<typeof setInterval>;
+
+	$: if ($currentState === 'calling' && !durationInterval) {
+		// Start duration timer when entering calling state
+		durationInterval = setInterval(() => {
+			machine.getState().context.callState.duration += 1;
+		}, 1000);
+	} else if ($currentState !== 'calling' && durationInterval) {
+		// Clear timer when leaving calling state
+		clearInterval(durationInterval);
+		durationInterval = undefined;
 	}
 
-	// Safe store subscription with proper typing
-	conversationStore.subscribe((state) => {
-		if (!state) {
-			currentConversation = null;
-			return;
-		}
+	$: if ($currentState === 'calling' && askHominioComponent) {
+		askHominioComponent.startCall();
+	}
 
-		const conversations = state.conversations || [];
-		const currentConversationId = state.currentConversationId;
+	$: if ($currentState !== 'calling' && askHominioComponent) {
+		askHominioComponent.stopCall();
+	}
 
-		if (currentConversationId && Array.isArray(conversations)) {
-			currentConversation = conversations.find((conv) => conv.id === currentConversationId) || null;
-		} else {
-			currentConversation = null;
+	// Format duration as mm:ss
+	function formatDuration(seconds: number): string {
+		const minutes = Math.floor(seconds / 60);
+		const remainingSeconds = seconds % 60;
+		return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+	}
+
+	$: {
+		const isRecording = $currentState === 'calling';
+		const isProcessing = false;
+		onRecordingStateChange(isRecording, isProcessing);
+	}
+
+	export const handleLongPressStart = () => {
+		isLongPressActive = true;
+		machine.send('LONG_PRESS');
+	};
+
+	export const handleLongPressEnd = () => {
+		isLongPressActive = false;
+		if ($currentState === 'calling') {
+			machine.send('END_CALL');
 		}
+	};
+
+	onDestroy(() => {
+		if (durationInterval) {
+			clearInterval(durationInterval);
+		}
+		// Only call stopCall if we're still in the calling state
+		if ($currentState === 'calling' && askHominioComponent) {
+			askHominioComponent.stopCall();
+		}
+		intentActions.cleanup(machine.getState().context);
 	});
 
 	onMount(() => {
-		if (isOpen) {
-			conversationManager.startNewConversation();
-		}
-	});
+		const handleStateChange = (event: string) => {
+			machine.send(event);
+		};
 
-	onDestroy(() => {
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-			audioStream = null;
-		}
-	});
+		eventBus.on('intent:stateChange', handleStateChange);
 
-	function handleClose() {
-		resetConversationState();
-		dispatch('close');
-	}
-
-	type ModalState =
-		| 'idle'
-		| 'recording'
-		| 'transcribing'
-		| 'result'
-		| 'need-permissions'
-		| 'permissions-denied';
-
-	let hasPermissions = false;
-	let permissionRequesting = false;
-
-	onMount(async () => {
-		try {
-			const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-			if (result.state === 'granted') {
-				hasPermissions = true;
-				modalState = 'idle'; // Set to idle to show default message view
-			} else if (result.state === 'denied') {
-				modalState = 'permissions-denied';
-			} else {
-				modalState = 'need-permissions';
-			}
-		} catch (error) {
-			console.error('[Error] Permission check failed:', error);
-			modalState = 'need-permissions';
-		}
-	});
-
-	async function requestMicrophonePermissions() {
-		if (hasPermissions) return true;
-		if (permissionRequesting) return false;
-
-		try {
-			permissionRequesting = true;
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			stream.getTracks().forEach((track) => track.stop());
-			hasPermissions = true;
-			modalState = 'idle'; // Set to idle first
-			return true;
-		} catch (error) {
-			console.error('[Error] Microphone permission denied:', error);
-			modalState = 'permissions-denied';
-			return false;
-		} finally {
-			permissionRequesting = false;
-		}
-	}
-
-	export async function handleLongPressStart() {
-		// First check/request permissions
-		if (!hasPermissions) {
-			const granted = await requestMicrophonePermissions();
-			if (!granted) {
-				return; // Exit early if permissions weren't granted
-			}
-			// Don't automatically start recording after getting permissions
-			return;
-		}
-
-		// Only start recording if we already had permissions
-		modalState = 'recording';
-		try {
-			// Clean up any existing stream
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => track.stop());
-			}
-
-			audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			mediaRecorder = new MediaRecorder(audioStream);
-			audioChunks = [];
-
-			mediaRecorder.ondataavailable = (e) => {
-				if (e.data.size > 0) {
-					audioChunks.push(e.data);
-				}
-			};
-
-			mediaRecorder.start();
-		} catch (error) {
-			console.error('[Error] Recording failed:', error);
-			modalState = 'idle';
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => track.stop());
-				audioStream = null;
-			}
-		}
-	}
-
-	export async function handleLongPressEnd() {
-		if (!mediaRecorder || !audioStream || mediaRecorder.state === 'inactive') return;
-
-		modalState = 'transcribing';
-
-		try {
-			// Stop the media recorder
-			mediaRecorder.stop();
-
-			// Wait for the data to be available
-			await new Promise<void>((resolve) => {
-				mediaRecorder!.onstop = () => resolve();
-			});
-
-			// Create blob from recorded chunks
-			const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-			const formData = new FormData();
-			formData.append('audio', audioBlob, 'recording.webm');
-
-			// Send to transcription API
-			const response = await fetch('/local/api/speech-to-text', {
-				method: 'POST',
-				body: formData
-			});
-
-			const data = await response.json();
-			if (data.text) {
-				modalState = 'result';
-				await handleTranscriptionComplete(data.text);
-			}
-		} catch (error) {
-			console.error('[Error] Audio processing failed:', error);
-			modalState = 'idle';
-		} finally {
-			// Cleanup
-			if (audioStream) {
-				audioStream.getTracks().forEach((track) => track.stop());
-			}
-			audioStream = null;
-			mediaRecorder = null;
-			audioChunks = [];
-		}
-	}
-
-	function handleActionComplete() {
-		currentAction = null;
-	}
-
-	// Add this helper function at the top with other functions
-	function getRandomWorkingAudio() {
-		const audioNum = Math.floor(Math.random() * 5) + 1;
-		return `/audio/workingonit${audioNum}.mp3`;
-	}
-
-	async function playHominioResponse() {
-		visualizerMode = 'hominio';
-		hominioAudio = new Audio(getRandomWorkingAudio());
-
-		hominioAudio.play();
-		return new Promise((resolve) => {
-			hominioAudio!.addEventListener('ended', () => {
-				resolve(true);
-			});
-		});
-	}
-
-	// Update the handleTranscriptionComplete function
-	async function handleTranscriptionComplete(text: string) {
-		try {
-			modalState = 'processing';
-			visualizerMode = 'hominio';
-
-			// Start both the audio playback and request processing in parallel
-			const [response] = await Promise.all([
-				hominioAgent.processRequest(text, conversationManager.getMessageContext() || []),
-				playHominioResponse()
-			]);
-
-			modalState = 'result';
-			visualizerMode = 'user';
-
-			// Handle different payload types
-			if (response?.message?.payload) {
-				switch (response.message.payload.type) {
-					case 'view':
-						handleViewPayload(response.message.payload);
-						break;
-					case 'form':
-						handleFormPayload(response.message.payload);
-						break;
-					case 'action':
-						handleActionPayload(response.message.payload);
-						break;
-					case 'data':
-						handleDataPayload(response.message.payload);
-						break;
-				}
-			}
-
-			scrollToBottom();
-		} catch (error) {
-			console.error('Error processing request:', error);
-			modalState = 'error';
-			conversationManager.addMessage(
-				'Sorry, I encountered an error processing your request.',
-				'system',
-				'error'
-			);
-		} finally {
-			// Cleanup audio
-			if (hominioAudio) {
-				hominioAudio.pause();
-				hominioAudio = null;
-			}
-		}
-	}
-
-	async function handleViewPayload(payload: any) {
-		if (payload?.data?.view) {
-			try {
-				// Update the view
-				dynamicView.set({ view: payload.data.view });
-
-				// Wait a brief moment to ensure view update is processed
-				await new Promise((resolve) => setTimeout(resolve, 100));
-
-				// Close the modal and reset state
-				if (payload.data.success) {
-					resetConversationState();
-					dispatch('close');
-
-					// Navigate if needed
-					if (window.location.pathname !== '/me') {
-						await goto('/me');
-					}
-				}
-			} catch (error) {
-				console.error('Error handling view payload:', error);
-			}
-		}
-	}
-
-	function handleFormPayload(payload: FormPayload) {
-		// Handle form rendering logic
-	}
-
-	function handleActionPayload(payload: ActionPayload) {
-		// Handle action execution logic
-	}
-
-	function handleDataPayload(payload: DataPayload) {
-		// Handle data display logic
-	}
-
-	function scrollToBottom() {
-		if (messageContainer) {
-			requestAnimationFrame(() => {
-				messageContainer.scrollTop = messageContainer.scrollHeight;
-			});
-		}
-	}
-
-	// Add function to reset conversation state
-	function resetConversationState() {
-		// Reset audio state
-		if (audioStream) {
-			audioStream.getTracks().forEach((track) => track.stop());
-		}
-		audioStream = null;
-		mediaRecorder = null;
-		audioChunks = [];
-
-		// Reset modal state
-		modalState = 'idle';
-
-		// Reset conversation
-		conversationManager.endCurrentConversation();
-	}
-
-	// Clean up on component destroy
-	onDestroy(() => {
-		resetConversationState();
+		return () => {
+			eventBus.off('intent:stateChange', handleStateChange);
+		};
 	});
 </script>
 
-{#if isOpen}
+{#if $context.isOpen}
 	<div
-		class="fixed inset-0 z-40 bg-surface-800/50 {!currentAction?.type?.includes('ai')
-			? 'backdrop-blur-sm'
-			: ''}"
-		class:hidden={!isOpen}
-		on:click|self={() => dispatch('close')}
+		class="flex fixed inset-0 z-50 flex-col justify-end"
 		transition:fade={{ duration: 200 }}
+		on:click|self={() => machine.send('CLOSE')}
 	>
-		<div class="container h-full max-w-2xl mx-auto" on:click|stopPropagation>
-			<div class="fixed inset-x-0 bottom-0 z-50 flex justify-center p-4 mb-16">
+		<!-- Separate backdrop div with iOS-compatible blur -->
+		<div
+			class="absolute inset-0 -z-10 bg-surface-900/30 supports-[backdrop-filter]:bg-surface-900/10 backdrop-blur-[6px] supports-[backdrop-filter]:backdrop-blur-sm"
+		/>
+		{#if $currentState === 'calling'}
+			<AskHominio
+				bind:this={askHominioComponent}
+				bind:session
+				onCallEnd={() => machine.send('END_CALL')}
+				showControls={false}
+			/>
+		{:else}
+			<div class="relative mx-auto mb-20 w-full max-w-4xl">
 				<div
-					class="w-full max-w-6xl overflow-hidden border shadow-xl rounded-xl bg-surface-700 border-surface-600"
+					class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
+					style="max-height: calc(100vh - 120px);"
 				>
-					<!-- Header -->
-					<div class="flex items-center justify-between p-4 border-b border-surface-600">
-						<h2 class="text-lg font-semibold text-tertiary-200">
-							{#if modalState === 'recording'}
-								Recording...
-							{:else if modalState === 'transcribing'}
-								Transcribing...
-							{:else if modalState === 'need-permissions'}
-								Microphone Access
-							{:else if modalState === 'permissions-denied'}
-								Access Denied
-							{:else}
-								Your Message
-							{/if}
-						</h2>
-						<button
-							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-surface-600/50"
-							on:click={handleClose}
-						>
-							<svg
-								class="w-6 h-6 text-tertiary-200"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
-					</div>
-
-					<!-- Content -->
-					<div class="flex flex-col min-h-[200px] max-h-[60vh] overflow-y-auto p-6">
-						{#if modalState === 'need-permissions'}
-							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
-								<div class="text-4xl">🎤</div>
-								<h3 class="text-xl font-semibold text-tertiary-200">Microphone Access Needed</h3>
-								<p class="text-surface-200">
-									Please allow microphone access to start making voice requests.
-								</p>
-							</div>
-						{:else if modalState === 'permissions-denied'}
-							<div class="flex flex-col items-center justify-center flex-1 space-y-4 text-center">
-								<div class="text-4xl">🚫</div>
-								<h3 class="text-xl font-semibold text-tertiary-200">Microphone Access Denied</h3>
-								<p class="text-surface-200">
-									Please enable microphone access in your browser settings.
-								</p>
-								<div class="text-sm text-surface-300">
-									<p>How to enable:</p>
-									<ol class="mt-2 text-left list-decimal list-inside">
-										<li>Click the lock icon in your browser's address bar</li>
-										<li>Find "Microphone" in the permissions list</li>
-										<li>Change the setting to "Allow"</li>
-										<li>Refresh the page</li>
-									</ol>
+					<div class="space-y-3">
+						<div class="rounded-xl backdrop-blur-xl bg-surface-400/10">
+							{#if $currentState === 'requestPermissions'}
+								<div class="p-6 text-center">
+									<div class="mb-4 text-4xl">🎤</div>
+									<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Required</h2>
+									<p class="mt-2 text-tertiary-200/80">
+										Please allow microphone access to continue
+									</p>
 								</div>
-							</div>
-						{:else if modalState === 'recording' || modalState === 'processing'}
-							<div class="flex items-center justify-center flex-1">
-								<AudioVisualizer
-									isRecording={modalState === 'recording'}
-									audioStream={modalState === 'recording' ? audioStream : null}
-									mode={visualizerMode}
-									audioElement={modalState === 'processing' ? hominioAudio : null}
-								/>
-							</div>
-						{:else if modalState === 'transcribing'}
-							<div class="flex items-center justify-center flex-1">
-								<div
-									class="w-12 h-12 border-4 rounded-full border-primary-500 border-t-transparent animate-spin"
-								/>
-							</div>
-						{:else if modalState === 'result'}
-							<div class="flex-1 space-y-4 overflow-y-auto" bind:this={messageContainer}>
-								{#if currentConversation?.messages?.length}
-									{#each currentConversation.messages as message (message.id)}
-										<MessageItem {message} {session} on:actionComplete={handleActionComplete} />
-									{/each}
-								{:else}
-									<div class="flex items-center justify-center flex-1">
-										<p class="text-lg text-tertiary-200">Press and hold to record your message</p>
+							{:else if $currentState === 'permissionBlocked'}
+								<div class="p-6 text-center">
+									<div class="mb-4 text-4xl">🚫</div>
+									<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Blocked</h2>
+									<p class="mt-2 text-tertiary-200/80">
+										Please enable microphone access in your browser settings and try again
+									</p>
+									<button
+										class="px-4 py-2 mt-4 text-white rounded-lg bg-tertiary-500"
+										on:click={() => machine.send('TRY_AGAIN')}
+									>
+										Try Again
+									</button>
+								</div>
+							{:else if $currentState === 'readyToCall'}
+								<div class="p-4 text-center">
+									<div class="mb-4 text-4xl">🎤</div>
+									<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
+									<p class="mt-2 text-tertiary-200/80">
+										Press and hold to start talking to Hominio.
+									</p>
+								</div>
+							{:else if $currentState === 'paywall'}
+								<div class="p-6 text-center">
+									<div class="mb-4 text-4xl">🔒</div>
+									<h2 class="text-2xl font-bold text-tertiary-200">Your Hominio Minutes are Up</h2>
+									<p class="mt-2 text-tertiary-200/80">
+										Upgrade your plan to continue using this feature, or for now just drop us a
+										quick message to get a few more free Minutes. Just click on the Hominio Logo
+										Button at the bottom and select the "Message us" action.
+									</p>
+									<div class="mt-4 space-x-4">
+										<button
+											class="px-4 py-2 text-white rounded-lg bg-tertiary-500"
+											on:click={() => machine.send('UPGRADE')}
+										>
+											Upgrade Now
+										</button>
+										<button
+											class="px-4 py-2 rounded-lg border border-tertiary-500 text-tertiary-200"
+											on:click={() => machine.send('CLOSE')}
+										>
+											Maybe Later
+										</button>
 									</div>
-								{/if}
-							</div>
-						{:else}
-							<div class="flex items-center justify-center flex-1">
-								<p class="text-lg text-tertiary-200">Press and hold to record your message</p>
-							</div>
-						{/if}
+								</div>
+							{:else if $currentState === 'waitinglist'}
+								<div class="p-6 text-center">
+									<div class="mb-4 text-4xl">📝</div>
+									<h2 class="text-2xl font-bold text-tertiary-200">Coming Soon</h2>
+									<p class="mt-2 text-tertiary-200/80">
+										Rise on the leaderboard to get early access. The more new Visioncreators you
+										inspire to sign up via your link, the earlier you get invited to play with
+										Hominio.
+									</p>
+									<button
+										class="px-4 py-2 mt-4 text-white rounded-lg bg-tertiary-500"
+										on:click={() => machine.send('CLOSE')}
+									>
+										Close
+									</button>
+								</div>
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		{/if}
+	</div>
+	<div class="fixed right-0 bottom-0 left-0 z-30 h-96 pointer-events-none">
+		<div
+			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
+		/>
 	</div>
 {/if}
-
-<style>
-	/* Add some styles for better interaction feedback */
-	[role='button']:focus-visible {
-		outline: 2px solid rgb(var(--color-tertiary-400));
-		outline-offset: -2px;
-	}
-
-	.modal-container {
-		@apply bg-surface-800 dark:bg-surface-900 rounded-lg shadow-xl;
-	}
-</style>

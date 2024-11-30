@@ -2,17 +2,12 @@ import type { PageLoad } from './$types';
 import { browser } from '$app/environment';
 import { dynamicView, futureMe } from '$lib/stores';
 
+export const ssr = false; // Disable SSR for this route to prevent redirect issues
+
 export const load: PageLoad = async ({ parent }) => {
     const { supabase } = await parent();
 
     if (browser) {
-        // Handle view updates
-        window.addEventListener('updateView', ((event: CustomEvent) => {
-            const view = event.detail;
-            if (view) {
-                dynamicView.update(store => ({ ...store, view }));
-            }
-        }) as EventListener);
 
         // Get initial auth data
         const { data: { user } } = await supabase.auth.getUser();
@@ -27,7 +22,5 @@ export const load: PageLoad = async ({ parent }) => {
         }
     }
 
-    return {
-        supabase
-    };
+    return { supabase };
 };

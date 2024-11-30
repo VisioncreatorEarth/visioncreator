@@ -1,4 +1,4 @@
-import { createOperation, z } from "../generated/wundergraph.factory";
+import { createOperation, z, AuthorizationError } from "../generated/wundergraph.factory";
 
 // Define tool schema
 const ToolSchema = z.object({
@@ -48,25 +48,50 @@ export default createOperation.mutation({
     }),
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated", "admin"],
+        requireMatchAll: ["authenticated"],
     },
-    handler: async ({ input, context }) => {
+    handler: async ({ input, context, user }) => {
+
+        // Check if user is authenticated
+        if (!user?.customClaims?.id) {
+            throw new AuthorizationError({
+                message: 'You must be logged in to use this feature'
+            });
+        }
+
         console.log('askClaude - Starting operation with input:', {
             messages: input.messages,
             systemPromptLength: input.system.length,
             toolsCount: input.tools?.length,
-            temperature: input.temperature
+            temperature: input.temperature,
+            userId: user.customClaims.id
         });
 
         if (!context.anthropic) {
-            console.error('askClaude - Anthropic client missing in context');
             throw new Error('Anthropic client not configured');
+        }
+
+        // Check and increment AI request count
+        const { data: incrementResult, error: incrementError } = await context.supabase
+            .rpc('check_and_increment_ai_requests', {
+                p_user_id: user.customClaims.id
+            })
+            .single();
+
+        if (incrementError) {
+            console.error('Error checking AI request limit:', incrementError);
+            throw new Error('Failed to check AI request limit.');
+        }
+
+        if (!incrementResult) {
+            throw new Error('PAYWALL: You have reached your AI request limit for this period.');
         }
 
         try {
             console.log('askClaude - Calling Anthropic API');
+            const startTime = Date.now();
             const response = await context.anthropic.messages.create({
-                model: "claude-3-5-sonnet-20241022",
+                model: "claude-3-5-haiku-20241022",
                 max_tokens: 1024,
                 temperature: input.temperature,
                 system: input.system,
@@ -82,6 +107,45 @@ export default createOperation.mutation({
                 stopReason: response.stop_reason,
                 usage: response.usage
             });
+
+            // Track successful request
+            try {
+                const { error } = await context.supabase.from('hominio_requests').insert({
+                    user_id: user.customClaims.id,
+                    input: {
+                        messages: input.messages,
+                        system: input.system,
+                        tools: input.tools,
+                        temperature: input.temperature
+                    },
+                    response: {
+                        id: response.id,
+                        model: response.model,
+                        content: response.content,
+                        stop_reason: response.stop_reason,
+                        usage: response.usage
+                    },
+                    input_tokens: response.usage.input_tokens,
+                    output_tokens: response.usage.output_tokens,
+                    processing_time: (Date.now() - startTime) / 1000, // Convert ms to seconds
+                    model: response.model,
+                    success: true,
+                    metadata: {
+                        stop_reason: response.stop_reason,
+                        content_types: response.content.map(c => c.type),
+                        cost: {
+                            input: (response.usage.input_tokens / 1000000) * 1, // $1 per MTok
+                            output: (response.usage.output_tokens / 1000000) * 5 // $5 per MTok
+                        }
+                    }
+                });
+
+                if (error) {
+                    console.error('Failed to track request:', error);
+                }
+            } catch (trackingError) {
+                console.error('Error tracking request:', trackingError);
+            }
 
             // Validate response structure
             if (!response.content || !Array.isArray(response.content)) {
@@ -119,6 +183,15 @@ export default createOperation.mutation({
             return structuredResponse;
 
         } catch (error) {
+            // Enhanced error handling
+            if (error instanceof AuthorizationError) {
+                return {
+                    success: false,
+                    message: error.message,
+                    code: error.code
+                };
+            }
+
             console.error('askClaude - Operation failed:', {
                 error: error instanceof Error ? {
                     name: error.name,
@@ -129,14 +202,15 @@ export default createOperation.mutation({
                     messageCount: input.messages.length,
                     systemPromptLength: input.system.length,
                     toolsCount: input.tools?.length
-                }
+                },
+                userId: user.customClaims.id
             });
 
-            // Rethrow with more context
-            if (error instanceof Error) {
-                throw new Error(`Claude API error: ${error.message}`);
-            }
-            throw new Error('Unknown error occurred while calling Claude API');
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : 'Unknown error occurred while calling Claude API',
+                code: 'INTERNAL_ERROR'
+            };
         }
     }
 });

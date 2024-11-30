@@ -4,10 +4,11 @@
 	import QRCode from '@castlenine/svelte-qrcode';
 
 	export let me;
+	const query = $me.query;
 
 	let linkCopied = writable(false);
 	let showQRCode = writable(false);
-	let invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$me.authID}`;
+	let invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$query.data.qrCodeId}`;
 
 	async function copyInvitationLink() {
 		try {
@@ -28,28 +29,20 @@
 </script>
 
 <div
-	class="w-full max-w-6xl p-2 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4"
+	class="w-full max-w-6xl p-4 @2xl:p-5 @3xl:p-6 overflow-auto text-center rounded-3xl bg-surface-800 flex flex-col items-center justify-center space-y-4 @2xl:space-y-5 @3xl:space-y-6"
 >
-	<div class="p-4 text-lg rounded-lg">
-		<!-- 	<ul class="space-y-2">
-			<li>Claim your exclusive - once-in-a-lifetime surprise - limited to the top 21 pioneers!</li>
-			<li>+1 free ticket to our inaugural event</li>
-		</ul>
-		<p class="mt-4 text-lg font-semibold text-secondary-300 sm:text-xl md:text-2xl">
-			Time's running!
-		</p>
-		-->
-	</div>
-
-	<!-- <Countdown /> -->
-	<div class="">
+	<div class="space-y-2 @2xl:space-y-3 @3xl:space-y-4">
 		<h3 class="text-primary-300">
-			<span class="text-4xl font-bold h1">
-				Inspire & Rise <br />
+			<span class="text-2xl @2xl:text-3xl @3xl:text-4xl font-bold">
+				{$query.data.title}<br />
 			</span>
-			<p class="text-xl font-medium">Become one of the 1st to unlock early access</p>
+			<p class="mt-2 text-base @2xl:text-lg @3xl:text-xl font-medium">
+				{$query.data.subtitle}
+			</p>
 		</h3>
-		The more fellows you inspire, the higher you rise in your rank and the faster you get invited.
+		<p class="text-sm @2xl:text-base @3xl:text-lg text-tertiary-400">
+			{$query.data.description}
+		</p>
 	</div>
 
 	{#if $showQRCode}
@@ -64,21 +57,24 @@
 			logoPadding="4"
 		/>
 	{/if}
-	<div class="flex flex-row items-center p-4 space-x-2">
+
+	<div
+		class="flex flex-row items-center p-2 @2xl:p-3 @3xl:p-4 space-x-2 @2xl:space-x-3 @3xl:space-x-4"
+	>
 		<button
 			type="button"
-			class="btn btn-sm @3xl:btn-lg variant-ghost-primary"
+			class="btn btn-sm @2xl:btn-md @3xl:btn-lg variant-ghost-primary"
 			on:click={toggleQRCode}
 		>
-			{$showQRCode ? 'Hide QR Code' : 'Show QR Code'}
+			{$showQRCode ? $query.data.hideQrText : $query.data.showQrText}
 		</button>
 		<button
 			type="button"
-			class="btn btn-sm @3xl:btn-lg variant-filled-primary"
+			class="btn btn-sm @2xl:btn-md @3xl:btn-lg variant-filled-primary"
 			on:click={copyInvitationLink}
 			disabled={$linkCopied}
 		>
-			{$linkCopied ? 'Link Copied!' : 'Copy Inspire Link'}
+			{$linkCopied ? $query.data.linkCopiedText : $query.data.copyLinkText}
 		</button>
 	</div>
 </div>

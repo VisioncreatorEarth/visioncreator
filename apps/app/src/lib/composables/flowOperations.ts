@@ -1,8 +1,5 @@
 import { client } from '$lib/wundergraph';
-import { get } from 'svelte/store';
-import { Me } from '$lib/stores';
 import { eventBus } from '$lib/composables/eventBus';
-import { conversationManager } from '$lib/stores/intentStore';
 
 interface SubmitFormParams {
 	operation: string;
@@ -12,22 +9,10 @@ interface SubmitFormParams {
 
 export async function submitForm({ operation, input, view = null }: SubmitFormParams) {
 	try {
-		let fullInput = { ...input };
-
-		// Get the current user ID from the Me store only if 'id' is not provided in the input
-		if (!('id' in fullInput)) {
-			const currentUser = get(Me);
-			if (typeof currentUser === 'object' && currentUser && 'id' in currentUser) {
-				const userId = currentUser.id;
-				if (userId) {
-					fullInput.id = userId;
-				}
-			}
-		}
 
 		const result = await client.mutate({
 			operationName: operation,
-			input: fullInput
+			input: input
 		});
 
 		// Check for proper success conditions

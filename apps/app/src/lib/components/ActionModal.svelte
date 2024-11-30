@@ -1,17 +1,16 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher } from 'svelte';
-	import { dev } from '$app/environment';
+	import { createEventDispatcher, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import TabMenu from './TabMenu.svelte';
 	import ActionButtons from './ActionButtons.svelte';
 	import Newsletter from './Newsletter.svelte';
 	import Auth from './Auth.svelte';
 	import MyIntent from './MyIntent.svelte';
-	import { onMount } from 'svelte';
 	import { dynamicView } from '$lib/stores';
 	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
 	import { page } from '$app/stores';
+	import ViewMenu from './ViewMenu.svelte';
 
 	export let session: any;
 	export let supabase: any;
@@ -24,13 +23,15 @@
 	let isMenuMode = true;
 	let isPressed = false;
 	let isRecording = false;
+	let isProcessing = false;
 	let pressStartTime = 0;
 	let lastToggleTime = 0;
-	let myIntentRef: any;
+	let myIntentRef: MyIntent;
 	let isIntentModalOpen = false;
+	let selectedView: any = null;
 	const DEBOUNCE_DELAY = 300;
 
-	// Keep track of the initial modal type to prevent unwanted changes
+	// Keep track of the initial modal type
 	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
 
 	function handleClose(event?: MouseEvent) {
@@ -43,16 +44,17 @@
 		event.stopPropagation();
 	}
 
-	function handleMouseDown() {
+	async function handleMouseDown() {
 		isPressed = true;
 		pressStartTime = performance.now();
 
-		setTimeout(() => {
+		setTimeout(async () => {
 			if (isPressed) {
-				if (dev && isPressed && performance.now() - pressStartTime >= 500) {
+				if (performance.now() - pressStartTime >= 500) {
 					isIntentModalOpen = true;
-					if (isIntentModalOpen && myIntentRef) {
-						myIntentRef.handleLongPressStart();
+					await tick();
+					if (isIntentModalOpen && myIntentRef?.handleLongPressStart) {
+						await myIntentRef.handleLongPressStart();
 					}
 				} else if (performance.now() - pressStartTime < 500) {
 					if (session) {
@@ -65,15 +67,15 @@
 		}, 500);
 	}
 
-	function handleMouseUp() {
+	async function handleMouseUp() {
 		const currentTime = performance.now();
 		const pressDuration = currentTime - pressStartTime;
 
 		if (isPressed) {
 			isPressed = false;
-			if (dev && pressDuration >= 500) {
-				if (isIntentModalOpen && myIntentRef) {
-					myIntentRef.handleLongPressEnd();
+			if (pressDuration >= 500) {
+				if (isIntentModalOpen && myIntentRef?.handleLongPressEnd) {
+					await myIntentRef.handleLongPressEnd();
 				}
 			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 				if (session) {
@@ -107,7 +109,7 @@
 			isMenuMode = type === 'menu';
 
 			if (type === 'menu') {
-				activeTab = 'views';
+				activeTab = 'actions';
 			}
 		}, 0);
 	}
@@ -171,6 +173,21 @@
 		}, 0);
 	}
 
+	function handleIntentStateChange(rec: boolean, proc: boolean) {
+		isRecording = rec;
+		isProcessing = proc;
+	}
+
+	function handleViewSelect({ detail: { view } }: CustomEvent) {
+		selectedView = view;
+		dynamicView.set(view);
+		dispatch('closeModal');
+	}
+
+	function handleEpisodesClick() {
+		dispatch('closeModal');
+	}
+
 	// Update onMount to better handle legal modal trigger
 	onMount(() => {
 		const handleViewUpdate = (event: CustomEvent) => {
@@ -209,28 +226,50 @@
 
 <svelte:window on:openModal={handleModalOpen} />
 
-{#if session && dev}
+{#if session}
 	<MyIntent
 		bind:this={myIntentRef}
-		isOpen={isIntentModalOpen}
 		{session}
+		isOpen={isIntentModalOpen}
+		onRecordingStateChange={(rec, proc) => {
+			isRecording = rec;
+			isProcessing = proc;
+		}}
 		on:close={handleIntentClose}
+		style="display: none;"
 	/>
-{/if}
 
-{#if session}
 	<button
-		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 border rounded-full shadow-lg bottom-4 left-1/2 w-14 h-14 bg-primary-500 border-tertiary-400 hover:shadow-xl hover:scale-105"
-		class:recording-border={isRecording}
+		class="flex fixed bottom-4 left-1/2 z-50 justify-center items-center w-14 h-14 rounded-full shadow-lg transition-all duration-300 -translate-x-1/2 hover:shadow-xl hover:scale-105"
+		class:bg-error-500={isRecording}
+		class:bg-surface-800={isProcessing}
+		class:bg-surface-600={!isRecording && !isProcessing}
 		on:mousedown={handleMouseDown}
 		on:mouseup={handleMouseUp}
 		on:mouseleave={handleMouseUp}
+		on:touchstart|preventDefault={handleMouseDown}
+		on:touchend|preventDefault={handleMouseUp}
+		on:touchcancel|preventDefault={handleMouseUp}
+		style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
 	>
-		<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		{#if isRecording}
+			<div class="w-4 h-4 bg-white rounded-full" />
+		{:else if isProcessing}
+			<svg class="w-6 h-6 text-tertiary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+				/>
+			</svg>
+		{:else}
+			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+		{/if}
 	</button>
 {:else if !isModalOpen}
 	<button
-		class="fixed z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary bottom-4 left-1/2"
+		class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary"
 		on:click={() => toggleModal('login')}
 	>
 		<span>Login</span>
@@ -239,7 +278,7 @@
 
 {#if isModalOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-end justify-center p-4 sm:p-6 bg-surface-900/50 backdrop-blur-sm"
+		class="flex fixed inset-0 z-50 justify-center items-end p-4 backdrop-blur-sm sm:p-6 bg-surface-900/40"
 		on:click={handleClose}
 		on:keydown={(e) => e.key === 'Escape' && handleClose()}
 		role="dialog"
@@ -247,18 +286,18 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-full bg-surface-600 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
 			class:max-w-6xl={currentModalType === 'menu'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
-				<div class="relative flex flex-col">
+				<div class="flex relative flex-col">
 					<Auth modalType={currentModalType} {supabase} />
 					<div class="flex justify-center mb-3">
 						<button
-							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+							class="flex justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 							on:click={() => toggleModal()}
 						>
 							<svg
@@ -295,8 +334,18 @@
 							{/if}
 						</svelte:fragment>
 					</TabMenu>
+					<div class="pt-2 mt-2 border-t border-surface-700/30">
+						<ViewMenu
+							{selectedView}
+							layout="horizontal"
+							showLabels={true}
+							on:viewSelect={handleViewSelect}
+							on:episodesClick={handleEpisodesClick}
+							on:close={() => toggleModal()}
+						/>
+					</div>
 					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full bottom-2 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						class="flex absolute bottom-2 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
 					>
 						<svg
@@ -315,7 +364,7 @@
 				<div class="relative">
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 					<button
-						class="absolute flex items-center justify-center w-8 h-8 transition-colors rounded-full top-4 right-4 bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
+						class="flex absolute top-4 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
 						on:click={() => toggleModal()}
 					>
 						<svg
@@ -334,20 +383,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	.recording-border {
-		@apply border-primary-500 scale-110;
-		box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
-		animation: pulse-red 0.3s infinite alternate;
-	}
-
-	@keyframes pulse-red {
-		0% {
-			box-shadow: 0 0 0 2px red, 0 0 0 4px rgba(255, 0, 0, 0.5);
-		}
-		100% {
-			box-shadow: 0 0 0 2px red, 0 0 0 8px rgba(255, 0, 0, 0);
-		}
-	}
-</style>

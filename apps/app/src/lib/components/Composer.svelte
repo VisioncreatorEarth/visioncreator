@@ -28,11 +28,9 @@
 		children?: IComposer[];
 		data?: Record<string, any>;
 		map?: any;
-		authID?: string;
 	}
 
 	export let composer: IComposer;
-	export let session: any | undefined = undefined; // Make session optional
 	export let showSpacer = true;
 
 	let queryClient;
@@ -82,8 +80,6 @@
 		getComposerStore(component.id).update((storeValue) => ({
 			...storeValue,
 			id: component.id,
-			authID: currentUserId,
-			session, // Add session, which may be undefined
 			do: {
 				core: coreServices,
 				emit: (event: string, ...args: any[]) => eventBus.emit(event, component.id, ...args)
@@ -101,6 +97,7 @@
 
 	function computeLayoutStyle(layout?: IComposerLayout): string {
 		if (!layout) return '';
+
 		return `
             grid-template-areas: ${layout.areas};
             ${layout.gap ? `gap: ${layout.gap};` : ''}
@@ -146,7 +143,7 @@
 								ChildComponent={child.component}
 							/>
 							{#if child.children && child.children.length}
-								<Composer composer={child} {session} />
+								<Composer composer={child} />
 							{/if}
 						{/if}
 					{/await}

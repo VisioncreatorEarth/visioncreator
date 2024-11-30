@@ -58,8 +58,8 @@
 
 <div class="@container">
 	{#if loading}
-		<div class="flex flex-col items-center justify-center p-6 text-center">
-			<div class="flex items-center justify-center gap-2 mb-4">
+		<div class="flex flex-col justify-center items-center p-6 text-center">
+			<div class="flex gap-2 justify-center items-center mb-4">
 				<svg
 					class="w-8 h-8 animate-spin"
 					xmlns="http://www.w3.org/2000/svg"
@@ -104,30 +104,29 @@
 			/>
 		</div>
 	{:else}
-		<div class="grid grid-cols-1 @sm:grid-cols-2 @md:grid-cols-3 gap-2 mb-2">
+		<div class="flex flex-row gap-2 items-center pb-2">
 			<button
 				on:click={handleSignOut}
-				class="btn @sm:btn-sm @lg:btn-md variant-ghost-error w-full"
+				class="btn btn-sm sm:btn-md variant-ghost-surface !p-2 md:!p-3"
 				disabled={loading}
 			>
-				<Icon icon="mdi:logout" class="mr-2" />
-				Sign Out
+				<Icon icon="mdi:logout" class="w-4 h-4 sm:w-5 sm:h-5" />
 			</button>
 			<button
-				class="btn @sm:btn-sm @lg:btn-md variant-ghost-secondary w-full"
+				class="flex-grow btn btn-sm sm:btn-md variant-ghost-surface"
 				on:click={() => toggleComposeView(updateNameView)}
 				disabled={loading}
 			>
-				<Icon icon="mdi:account-edit" class="mr-2" />
-				Update Name
+				<Icon icon="mdi:account-edit" class="w-4 h-4 sm:w-5 sm:h-5" />
+				<span class="ml-2 text-sm sm:text-base">Update Name</span>
 			</button>
 			<button
-				class="btn @sm:btn-sm @lg:btn-md variant-ghost-secondary w-full"
+				class="flex-grow btn btn-sm sm:btn-md variant-ghost-surface"
 				on:click={() => toggleComposeView(sendMailView)}
 				disabled={loading}
 			>
-				<Icon icon="mdi:message" class="mr-2" />
-				Message Us
+				<Icon icon="mdi:message" class="w-4 h-4 sm:w-5 sm:h-5" />
+				<span class="ml-2 text-sm sm:text-base">Message Us</span>
 			</button>
 		</div>
 	{/if}

@@ -72,7 +72,7 @@ Link remote project
 
 ````
 npx supabase link --project-ref "project_id"
-`````
+````
 
 Pull schema from remote
 
@@ -97,6 +97,31 @@ Reset Database (be carful with --linked as this resets the remote production db)
 ```
 npx supabase db reset (without argument local db, with --linked remote production db)
 ```
+
+### Enable Localhost https support
+
+To enable HTTPS for local development (required for features like microphone access): 
+install 
+
+1. Install mkcert if you haven't already:
+```bash
+brew install mkcert
+```
+
+2. Generate local SSL certificates:
+```bash
+mkcert localhost 127.0.0.1 192.168.178.26 (or your local network IP)
+```
+
+This will create two files:
+- `localhost+1.pem` (certificate)
+- `localhost+1-key.pem` (private key)
+
+The development server will automatically use these certificates for HTTPS support.
+
+You can now access your development server via:
+- `https://127.0.0.1:3000` (local machine)
+- `https://192.168.178.26:3000` (local network/mobile devices)
 
 ## Deployment to production
 

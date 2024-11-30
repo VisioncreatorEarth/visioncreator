@@ -31,18 +31,21 @@
 	};
 </script>
 
-<div class="flex items-center p-4 space-x-4">
+<div class="flex items-center px-2 py-2 space-x-3">
 	{#if $newsletterStatus.isLoading}
-		<span class="text-tertiary-500">Loading...</span>
+		<span class="text-sm sm:text-base text-surface-400">Loading...</span>
 	{:else if $newsletterStatus.isError}
-		<span class="text-error-500">Error loading status</span>
+		<span class="text-sm sm:text-base text-error-400">Error loading status</span>
 	{:else}
 		<SlideToggle
 			name="newsletter-toggle"
 			checked={$newsletterStatus.data}
 			on:change={handleToggleNewsletter}
-			active="bg-primary-500"
+			active="bg-tertiary-500"
+			background="bg-surface-700/50"
+			size="sm"
+			class="scale-90 sm:scale-100 md:scale-110"
 		/>
-		<span class="text-tertiary-300">Newsletter</span>
+		<span class="text-sm sm:text-base text-surface-200">Newsletter</span>
 	{/if}
 </div>
