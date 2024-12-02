@@ -9,12 +9,8 @@
 
 	let initialSetupComplete = false;
 
-	const updateNameMutation = createMutation({
-		operationName: 'updateMe'
-	});
-
-	const createInviteMutation = createMutation({
-		operationName: 'createInvite'
+	const onboardMeMutation = createMutation({
+		operationName: 'onboardMe'
 	});
 
 	const toggleOnboardedMutation = createMutation({
@@ -35,59 +31,22 @@
 	$: meData = $meQuery.data as MeQueryResult | null;
 
 	async function handleInitialSetup() {
-		if (!initialSetupComplete && session?.user) {
+		if (!initialSetupComplete && session?.user && (!meData?.name || $futureMe.visionid)) {
 			const {
 				data: { user }
 			} = await supabase.auth.getUser();
 
-			// Check if we need to handle inviter and vision ID
-			if (!user?.user_metadata.inviter && $futureMe.visionid) {
-				try {
-					await supabase.auth.updateUser({
-						data: {
-							inviter: $futureMe.visionid,
-							name: $futureMe.name || ''
-						}
-					});
-
-					if ($futureMe.visionid) {
-						await $createInviteMutation.mutateAsync({
-							invitee: session.user.id,
-							inviter: $futureMe.visionid
-						});
-
-						if ($futureMe.name) {
-							await $updateNameMutation.mutateAsync({
-								name: $futureMe.name
-							});
-						} else {
-							await $updateNameMutation.mutateAsync({
-								name: ''
-							});
-						}
-					}
-				} catch (error) {
-					console.error('Error during initial setup:', error);
-				}
-			} else {
-				console.log('Skipping initial setup:', {
-					hasInviter: !!user?.user_metadata.inviter,
-					hasVisionId: !!$futureMe.visionid
-				});
-			}
-
 			try {
-				if (meData && meData.name === '') {
-					await $updateNameMutation.mutateAsync({
-						name: ''
-					});
-					await $meQuery.refetch();
-				}
-			} catch (error) {
-				console.error('Error generating random name:', error);
-			}
+				await $onboardMeMutation.mutateAsync({
+					name: $futureMe.name || '',
+					inviter: $futureMe.visionid
+				});
 
-			initialSetupComplete = true;
+				await $meQuery.refetch();
+				initialSetupComplete = true;
+			} catch (error) {
+				console.error('Error during initial setup:', error);
+			}
 		}
 	}
 
@@ -98,9 +57,7 @@
 
 	async function handleNewsletterCompleted() {
 		try {
-			await $toggleOnboardedMutation.mutateAsync({
-				id: session.user.id
-			});
+			await $toggleOnboardedMutation.mutateAsync();
 			await $meQuery.refetch();
 		} catch (error) {
 			console.error('Error updating onboarded status:', error);
@@ -114,7 +71,6 @@
 	<div class="flex justify-center items-center px-4 w-full min-h-screen sm:px-6 md:px-8">
 		<div class="w-full max-w-3xl">
 			<SubscribeToNewsletter
-				userId={session.user.id}
 				userEmail={session.user.email || ''}
 				on:next={handleNewsletterCompleted}
 			/>

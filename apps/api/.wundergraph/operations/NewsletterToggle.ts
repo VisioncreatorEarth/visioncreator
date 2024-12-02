@@ -6,24 +6,23 @@ import {
 
 export default createOperation.mutation({
   input: z.object({
-    id: z.string().uuid(),
     email: z.string().email(),
   }),
   requireAuthentication: true,
   rbac: {
     requireMatchAll: ["authenticated"],
   },
-  handler: async ({ context, input, user }) => {
-    // if (input.id !== user?.customClaims?.id) {
-    //   console.error("Authorization Error: User ID does not match.");
-    //   throw new AuthorizationError({ message: "User ID does not match." });
-    // }
+  handler: async ({ user, context, input }) => {
+    if (!user?.customClaims?.id) {
+      console.error("Authorization Error: User ID does not match.");
+      throw new AuthorizationError({ message: "User ID does not match." });
+    }
     //
     // Fetch user's name from Supabase
     const { data: profile, error: profileError } = await context.supabase
       .from("profiles")
       .select("name")
-      .eq("id", input.id)
+      .eq("id", user?.customClaims?.id)
       .single();
 
     if (profileError) {

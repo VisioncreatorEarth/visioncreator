@@ -6,7 +6,6 @@ import {
 
 export default createOperation.query({
   input: z.object({
-    id: z.string().uuid(),
     email: z.string().email(),
   }),
   requireAuthentication: true,
@@ -14,7 +13,7 @@ export default createOperation.query({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, input, user }) => {
-    if (input.id !== user?.customClaims?.id) {
+    if (!user?.customClaims?.id) {
       console.error("Authorization Error: User ID does not match.");
       throw new AuthorizationError({ message: "User ID does not match." });
     }
