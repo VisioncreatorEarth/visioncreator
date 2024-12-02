@@ -17,9 +17,16 @@ export default createOperation.mutation({
       throw new AuthorizationError({ message: "User ID does not match." });
     }
 
+    // Check if user is admin
+    const isAdmin = input.id === "00000000-0000-0000-0000-000000000001";
+
     const { data, error } = await context.supabase
       .from("profiles")
-      .update({ onboarded: true, active: true })
+      .update({ 
+        onboarded: true, 
+        // Only set active to true if not admin
+        ...(isAdmin ? {} : { active: true })
+      })
       .eq("id", input.id)
       .select();
 

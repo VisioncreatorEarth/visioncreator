@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { futureMe, Me } from '$lib/stores';
+	import { futureMe } from '$lib/stores';
 	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
 
 	export let data;
@@ -29,9 +29,7 @@
 	}
 
 	$: meQuery = createQuery<MeQueryResult>({
-		operationName: 'queryMe',
-		input: { id: session?.user?.id || '' },
-		enabled: !!session?.user?.id
+		operationName: 'queryMe'
 	});
 
 	$: meData = $meQuery.data as MeQueryResult | null;
@@ -42,12 +40,13 @@
 				data: { user }
 			} = await supabase.auth.getUser();
 
+			// Check if we need to handle inviter and vision ID
 			if (!user?.user_metadata.inviter && $futureMe.visionid) {
 				try {
 					await supabase.auth.updateUser({
 						data: {
 							inviter: $futureMe.visionid,
-							name: user.user_metadata.name || $futureMe.name || 'UpdateMyName'
+							name: $futureMe.name || ''
 						}
 					});
 
@@ -59,22 +58,33 @@
 
 						if ($futureMe.name) {
 							await $updateNameMutation.mutateAsync({
-								id: session.user.id,
 								name: $futureMe.name
+							});
+						} else {
+							await $updateNameMutation.mutateAsync({
+								name: ''
 							});
 						}
 					}
-
-					Me.update((store) => ({
-						...store,
-						id: session.user.id,
-						name: $futureMe.name || user.user_metadata.name || 'UpdateMyName'
-					}));
-
-					await $meQuery.refetch();
 				} catch (error) {
 					console.error('Error during initial setup:', error);
 				}
+			} else {
+				console.log('Skipping initial setup:', {
+					hasInviter: !!user?.user_metadata.inviter,
+					hasVisionId: !!$futureMe.visionid
+				});
+			}
+
+			try {
+				if (meData && meData.name === '') {
+					await $updateNameMutation.mutateAsync({
+						name: ''
+					});
+					await $meQuery.refetch();
+				}
+			} catch (error) {
+				console.error('Error generating random name:', error);
 			}
 
 			initialSetupComplete = true;
@@ -84,17 +94,6 @@
 	// Handle initial setup on mount and when session changes
 	$: if (session?.user && !initialSetupComplete) {
 		handleInitialSetup();
-	}
-
-	// Update Me store when meData changes
-	$: if (meData) {
-		Me.update((store) => ({
-			...store,
-			id: meData.id,
-			name: meData.name,
-			onboarded: meData.onboarded,
-			active: meData.active
-		}));
 	}
 
 	async function handleNewsletterCompleted() {

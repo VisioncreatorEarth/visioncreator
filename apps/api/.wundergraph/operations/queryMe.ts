@@ -10,6 +10,7 @@ export default createOperation.query({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, user }) => {
+
     if (!user?.customClaims?.id) {
       console.error("Authorization Error: No authenticated user found.");
       throw new AuthorizationError({ message: "No authenticated user found." });
@@ -22,7 +23,7 @@ export default createOperation.query({
       .single();
 
     if (error) {
-      console.error("Error fetching user details:", error);
+      console.error("Error fetching profile from profiles table:", { error, userId: user.customClaims.id });
       throw new Error("Failed to fetch user details");
     }
 
