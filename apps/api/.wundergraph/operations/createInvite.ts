@@ -2,7 +2,6 @@ import { createOperation, z, AuthorizationError } from '../generated/wundergraph
 
 export default createOperation.mutation({
     input: z.object({
-        invitee: z.string().uuid(),
         inviter: z.string().uuid().optional()
     }),
     requireAuthentication: true,
@@ -11,19 +10,19 @@ export default createOperation.mutation({
     },
     handler: async ({ user, input, context }) => {
 
-        const fallbackInviterId = "00000000-0000-0000-0000-000000000001"
-
-        const inviterId = input.inviter && input.inviter !== input.invitee ? input.inviter : fallbackInviterId;
-
-        if (input.invitee !== user?.customClaims?.id) {
+        if (!user?.customClaims?.id) {
             console.error('Authorization Error: User ID does not match.');
             throw new AuthorizationError({ message: 'User ID does not match.' });
         }
 
+        const fallbackInviterId = "00000000-0000-0000-0000-000000000001"
+        const invitee = user?.customClaims?.id
+        const inviterId = input.inviter && input.inviter !== invitee ? input.inviter : fallbackInviterId;
+
         const existingInvite = await context.supabase
             .from('invites')
             .select()
-            .match({ invitee: input.invitee })
+            .match({ invitee: invitee })
             .single();
 
         if (existingInvite.data) {
@@ -41,7 +40,7 @@ export default createOperation.mutation({
             const { data: insertData, error: insertError } = await context.supabase
                 .from('invites')
                 .insert([
-                    { inviter: inviterId, invitee: input.invitee }
+                    { inviter: inviterId, invitee: invitee }
                 ])
                 .select();
 

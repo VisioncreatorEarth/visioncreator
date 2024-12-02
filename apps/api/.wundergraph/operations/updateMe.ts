@@ -13,68 +13,47 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, input, user }) => {
+
     if (!user?.customClaims?.id) {
       throw new AuthorizationError({ message: "No authenticated user found." });
     }
 
     // Check if the user is the admin user
     if (user.customClaims.id === "00000000-0000-0000-0000-000000000001") {
+      console.log('Admin user detected, blocking profile update');
       return {
         success: false,
         message: "Admin user cannot be updated.",
       };
     }
 
-    // Generate a random name if no name was provided, if it's less than 4 characters, or if it's more than 20 characters
-    if (!input.name || input.name.length < 3 || input.name.length > 20) {
+    // First, check if profile exists
+    const { data: existingProfile } = await context.supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", user.customClaims.id)
+      .single();
+
+    // Generate a random name if empty string is passed
+    if (input.name === '') {
       const adjectives = [
-        "Sparkling",
-        "Lucky",
-        "Smooth",
-        "Dreamy",
-        "Bright",
-        "Shining",
-        "Joyful",
-        "Lively",
-        "Charming",
-        "Playful",
-        "Glowing",
-        "Happy",
-        "Brilliant",
-        "Energetic",
-        "Alluring",
-        "Cheerful",
-        "Elegant",
-        "Fancy",
-        "Peaceful",
-        "Fascinating",
+        "Sparkling", "Lucky", "Smooth", "Dreamy", "Bright",
+        "Shining", "Joyful", "Lively", "Charming", "Playful",
+        "Glowing", "Happy", "Brilliant", "Energetic", "Alluring",
+        "Cheerful", "Elegant", "Fancy", "Peaceful", "Fascinating",
+        "Swift", "Gentle", "Clever", "Mighty", "Brave"
       ];
       const animals = [
-        "Anteater",
-        "Whale",
-        "Salamander",
-        "Kangaroo",
-        "Duckbill",
-        "Giraffe",
-        "Monkey",
-        "Beaver",
-        "Wildcat",
-        "Elephant",
-        "Aardvark",
-        "Raccoon",
-        "Porcupine",
-        "Manatee",
-        "Parrot",
-        "Monkey",
-        "Koala",
-        "Toucan",
-        "Koala",
-        "Fox",
+        "Anteater", "Whale", "Salamander", "Kangaroo", "Duckbill",
+        "Giraffe", "Monkey", "Beaver", "Wildcat", "Elephant",
+        "Aardvark", "Raccoon", "Porcupine", "Manatee", "Parrot",
+        "Tiger", "Koala", "Toucan", "Dolphin", "Fox",
+        "Lion", "Panda", "Eagle", "Wolf", "Bear"
       ];
-      const randomAdjective =
-        adjectives[Math.floor(Math.random() * adjectives.length)];
+      const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
       const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
       input.name = `${randomAdjective}${randomAnimal}`;
+      console.log('Generated random name:', { newName: input.name });
     }
 
     const retryCount = 3;
@@ -82,8 +61,10 @@ export default createOperation.mutation({
     let success = false;
     let data, error;
 
+
     while (attempt < retryCount && !success) {
       attempt++;
+
       try {
         const { data: updateData, error: updateError } = await context.supabase
           .from("profiles")
@@ -93,14 +74,14 @@ export default createOperation.mutation({
           .single();
 
         if (updateError) {
-          console.error(`Attempt ${attempt} - Error: ${updateError.message}`);
+          console.error(`Profile update error on attempt ${attempt}:`, updateError);
           error = updateError;
         } else {
           data = updateData;
           success = true;
         }
       } catch (err) {
-        console.error(`Attempt ${attempt} - Unexpected error: ${err.message}`);
+        console.error(`Unexpected error on attempt ${attempt}:`, err);
         error = err;
       }
 
@@ -110,24 +91,27 @@ export default createOperation.mutation({
     }
 
     if (!success) {
+      console.error('All profile update attempts failed:', {
+        userId: user.customClaims.id,
+        error
+      });
       return {
         success: false,
-        message:
-          error.message || "Failed to update user after multiple attempts.",
+        message: error.message || "Failed to update profile after multiple attempts.",
       };
     }
 
     if (!data) {
+      console.error('No profile data returned after successful update');
       return {
         success: false,
-        message: "No user found or no changes made.",
+        message: "No profile found or no changes made.",
       };
     }
 
-    console.log("Name and active status updated successfully!");
     return {
       success: true,
-      message: `Your profile has been successfully updated to ${input.name}!`,
+      message: `Profile updated to ${input.name}!`,
       data,
     };
   },

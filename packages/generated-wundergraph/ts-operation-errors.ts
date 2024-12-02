@@ -19,6 +19,7 @@ export type OperationErrors = {
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
 	manageCapabilities: ManageCapabilitiesErrors;
+	onboardMe: OnboardMeErrors;
 	polarListProducts: PolarListProductsErrors;
 	queryCallsAndTimeStats: QueryCallsAndTimeStatsErrors;
 	queryComposer: QueryComposerErrors;
@@ -66,6 +67,7 @@ export type GetVoicesErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;
 export type ManageCapabilitiesErrors = ClientOperationErrors;
+export type OnboardMeErrors = ClientOperationErrors;
 export type PolarListProductsErrors = ClientOperationErrors;
 export type QueryCallsAndTimeStatsErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;

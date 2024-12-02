@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
-	import { futureMe, Me } from '$lib/stores';
+	import { futureMe } from '$lib/stores';
 	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
 
 	export let data;
@@ -9,12 +9,8 @@
 
 	let initialSetupComplete = false;
 
-	const updateNameMutation = createMutation({
-		operationName: 'updateMe'
-	});
-
-	const createInviteMutation = createMutation({
-		operationName: 'createInvite'
+	const onboardMeMutation = createMutation({
+		operationName: 'onboardMe'
 	});
 
 	const toggleOnboardedMutation = createMutation({
@@ -29,55 +25,28 @@
 	}
 
 	$: meQuery = createQuery<MeQueryResult>({
-		operationName: 'queryMe',
-		input: { id: session?.user?.id || '' },
-		enabled: !!session?.user?.id
+		operationName: 'queryMe'
 	});
 
 	$: meData = $meQuery.data as MeQueryResult | null;
 
 	async function handleInitialSetup() {
-		if (!initialSetupComplete && session?.user) {
+		if (!initialSetupComplete && session?.user && (!meData?.name || $futureMe.visionid)) {
 			const {
 				data: { user }
 			} = await supabase.auth.getUser();
 
-			if (!user?.user_metadata.inviter && $futureMe.visionid) {
-				try {
-					await supabase.auth.updateUser({
-						data: {
-							inviter: $futureMe.visionid,
-							name: user.user_metadata.name || $futureMe.name || 'UpdateMyName'
-						}
-					});
+			try {
+				await $onboardMeMutation.mutateAsync({
+					name: $futureMe.name || '',
+					inviter: $futureMe.visionid
+				});
 
-					if ($futureMe.visionid) {
-						await $createInviteMutation.mutateAsync({
-							invitee: session.user.id,
-							inviter: $futureMe.visionid
-						});
-
-						if ($futureMe.name) {
-							await $updateNameMutation.mutateAsync({
-								id: session.user.id,
-								name: $futureMe.name
-							});
-						}
-					}
-
-					Me.update((store) => ({
-						...store,
-						id: session.user.id,
-						name: $futureMe.name || user.user_metadata.name || 'UpdateMyName'
-					}));
-
-					await $meQuery.refetch();
-				} catch (error) {
-					console.error('Error during initial setup:', error);
-				}
+				await $meQuery.refetch();
+				initialSetupComplete = true;
+			} catch (error) {
+				console.error('Error during initial setup:', error);
 			}
-
-			initialSetupComplete = true;
 		}
 	}
 
@@ -86,22 +55,9 @@
 		handleInitialSetup();
 	}
 
-	// Update Me store when meData changes
-	$: if (meData) {
-		Me.update((store) => ({
-			...store,
-			id: meData.id,
-			name: meData.name,
-			onboarded: meData.onboarded,
-			active: meData.active
-		}));
-	}
-
 	async function handleNewsletterCompleted() {
 		try {
-			await $toggleOnboardedMutation.mutateAsync({
-				id: session.user.id
-			});
+			await $toggleOnboardedMutation.mutateAsync();
 			await $meQuery.refetch();
 		} catch (error) {
 			console.error('Error updating onboarded status:', error);
@@ -115,7 +71,6 @@
 	<div class="flex justify-center items-center px-4 w-full min-h-screen sm:px-6 md:px-8">
 		<div class="w-full max-w-3xl">
 			<SubscribeToNewsletter
-				userId={session.user.id}
 				userEmail={session.user.email || ''}
 				on:next={handleNewsletterCompleted}
 			/>

@@ -9,6 +9,7 @@ Before getting started, ensure you have the following installed and set up:
 - Nango (hosted)
 - Postmark (hosted)
 - Supabase (hosted)
+- Ultravox (hosted)
 - Listmonk (self-hosted)
 
 ## Launch Development Environment
@@ -27,7 +28,7 @@ Now the following services are running:
 - Supabase API Url: http://127.0.0.1:54321
 - Supabase Studio: http://127.0.0.1:54323
 - Inbucket (Email Inbox Simulation): http://127.0.0.1:54324
-- Nango: https://127.0.0.1:3003
+- Nango: https://127.0.0.1:3003 (debrecated temporarily, using only hosteed version directly for now)
 
 ## After inital launch set env vars
 
@@ -56,6 +57,7 @@ POSTMARK_WEBHOOK_USERNAME="set-inbound-webhook-in-postmark-dashboard"
 POSTMARK_WEBHOOK_PASSWORD="set-inbound-webhook-in-postmark-dashboard"
 POSTMARK_INBOUND_MAIL="copy-from-postmark-dashboard"
 POLAR_ACCESS_TOKEN="copy-from-polar.sh-sandbox-dashboard"
+ULTRAVOX_API_KEY="${{ secrets.ULTRAVOX_API_KEY }}" 
 ```
 
 Also go to the nango dashboard 127.0.0.1:3003 and setup your listmonk (listmonk-vc) and coda (codavc) credentials.
@@ -98,10 +100,9 @@ Reset Database (be carful with --linked as this resets the remote production db)
 npx supabase db reset (without argument local db, with --linked remote production db)
 ```
 
-### Enable Localhost https support
+### Enable Localhost https support (CURRENTLY DISABLED - not working reliably)
 
-To enable HTTPS for local development (required for features like microphone access): 
-install 
+To enable HTTPS for local development (required for features like testing microphone access): 
 
 1. Install mkcert if you haven't already:
 ```bash
@@ -193,16 +194,15 @@ for db backup dumps to digital ocean
 - `SUPABASE_SERVICE_ROLE`,
 - `NANGO_SECRET_KEY`,
 - `NANGO_HOST`
+- `NEXT_PUBLIC_WG_API`="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
+- `NEXT_PUBLIC_WG_ALLOW_CORS`="frontend app domain f.e. https://xyz.com (vercel hosted)"
+- `NEXT_PUBLIC_WG_AUTH_INFO`="frontend app domain https://xyz.com/auth/userinfo"
+- `ULTRAVOX_API_KEY`="copy-from-ultravox-dashboard" 
+- `POLAR_ACCESS_TOKEN`="copy-from-polar.sh-dashboard"
 - `POSTMARK_SERVER_TOKEN`="copy-from-postmark-dashboard"
 - `POSTMARK_WEBHOOK_USERNAME`="set-inbound-webhook-in-postmark-dashboard"
 - `POSTMARK_WEBHOOK_PASSWORD`="set-inbound-webhook-in-postmark-dashboard"
 - `POSTMARK_INBOUND_MAIL`="copy-from-postmark-dashboard"
-- `POLAR_ACCESS_TOKEN`="copy-from-polar.sh-dashboard"
-- `NEXT_PUBLIC_WG_API`="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
-- `NEXT_PUBLIC_WG_ALLOW_CORS`="frontend app domain f.e. https://xyz.com (vercel hosted)"
-- `NEXT_PUBLIC_WG_AUTH_INFO`="frontend app domain https://xyz.com/auth/userinfo"
-- `ANTHROPIC_API_KEY`="copy-from-anthropic-console-dashboard"
-
 
 ### Frontend
 1. Go to vercel, connect your repo and deploy the svelte frontend apps/app.
@@ -214,6 +214,5 @@ for db backup dumps to digital ocean
 - SECRET_LISTMONK_PASSWORD
 - SECRET_LISTMONK_USER
 - NEXT_PUBLIC_WG_API="fly.io wundergraph api domain f.e. https://app-name-xyz.fly.dev"
-- SECRET_OPENAI_API_KEY
 
 3. Connect your domain.
