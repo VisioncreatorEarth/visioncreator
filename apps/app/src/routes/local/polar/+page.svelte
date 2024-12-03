@@ -5,9 +5,8 @@
 
 	interface Price {
 		id: string;
-		priceAmount: number;
-		priceCurrency: string;
-		recurringInterval?: string;
+		amount: number;
+		interval: string;
 	}
 
 	interface Product {
@@ -27,14 +26,17 @@
 		operationName: 'polarListProducts'
 	});
 
+	const queryMe = createQuery({
+		operationName: 'queryMe'
+	});
+
 	const checkoutMutation = createMutation({
 		operationName: 'polarCreateCheckout'
 	});
 
 	function formatPrice(price: Price): string {
-		const amount = (price.priceAmount / 100).toFixed(2);
-		const currency = price.priceCurrency.toUpperCase();
-		return `${amount} ${currency}`;
+		const amount = (price.amount / 100).toFixed(2);
+		return `${amount} ${price.interval}`;
 	}
 
 	function getIntervalLabel(interval: string): string {
@@ -87,7 +89,7 @@
 				productPriceId: priceId,
 				successUrl,
 				customerEmail: $page.data.session?.user?.email,
-				customerName: $page.data.session?.user?.name
+				customerName: $queryMe.data?.name
 			});
 
 			if (result.success && result.checkoutUrl) {
@@ -113,30 +115,22 @@
 			{#each $productsQuery.data.products as product (product.id)}
 				<div class="flex flex-col p-6 h-full card variant-filled-surface-900">
 					<header class="mb-4 card-header">
-						<h2 class="text-7xl h1">{product.name}</h2>
+						<h2 class="text-4xl h2">{product.name}</h2>
 					</header>
 					<section class="flex-grow">
 						{#if product.prices && product.prices.length > 0}
-							<div class="flex items-baseline mb-4">
-								<span class="text-4xl font-bold">{formatPrice(product.prices[0])}</span>
-								{#if product.prices[0].recurringInterval}
-									<span class="ml-1 text-lg opacity-75">
-										{getIntervalLabel(product.prices[0].recurringInterval)}
-									</span>
-								{/if}
+							<div class="flex flex-col gap-4">
+								<div class="text-5xl font-bold">
+									{#if product.prices[0].amount === 0}
+										Free
+									{:else}
+										${(product.prices[0].amount / 100).toFixed(2)}
+									{/if}
+									<span class="text-2xl font-normal">/ {product.prices[0].interval}</span>
+								</div>
+								<p class="text-lg">{product.description}</p>
 							</div>
-						{:else}
-							<p class="mb-4 text-lg italic">Price not available</p>
 						{/if}
-						<p class="mb-6 text-sm opacity-75">{product.description}</p>
-						<ul class="mb-6 space-y-2">
-							{#each getBenefits(product.id) as benefit}
-								<li class="flex items-center">
-									<Icon icon={benefit.icon} class="mr-2 text-primary-500" />
-									<span>{benefit.text}</span>
-								</li>
-							{/each}
-						</ul>
 					</section>
 					<footer class="mt-auto card-footer">
 						<button
