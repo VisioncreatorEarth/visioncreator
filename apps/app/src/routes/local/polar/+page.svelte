@@ -1,7 +1,10 @@
 <script lang="ts">
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
+	import { page } from '$app/stores';
+	import Icon from '@iconify/svelte';
 
 	interface Price {
+		id: string;
 		priceAmount: number;
 		priceCurrency: string;
 		recurringInterval?: string;
@@ -22,6 +25,10 @@
 
 	const productsQuery = createQuery<ProductsQueryResult>({
 		operationName: 'polarListProducts'
+	});
+
+	const checkoutMutation = createMutation({
+		operationName: 'polarCreateCheckout'
 	});
 
 	function formatPrice(price: Price): string {
@@ -59,6 +66,39 @@
 	function getBenefits(productId: string) {
 		return benefits[productId] || benefits.default;
 	}
+
+	async function handleCheckout(product: Product) {
+		if (!product.prices || product.prices.length === 0) {
+			console.error('No prices available for product');
+			return;
+		}
+
+		const priceId = product.prices[0].id;
+		if (!priceId) {
+			console.error('No price ID available');
+			return;
+		}
+
+		const origin = $page.url.origin;
+		const successUrl = `${origin}/local/polar/success?checkout_id={CHECKOUT_ID}`;
+
+		try {
+			const result = await $checkoutMutation.mutateAsync({
+				productPriceId: priceId,
+				successUrl,
+				customerEmail: $page.data.session?.user?.email,
+				customerName: $page.data.session?.user?.name
+			});
+
+			if (result.success && result.checkoutUrl) {
+				window.location.href = result.checkoutUrl;
+			} else {
+				console.error('Failed to create checkout:', result.error);
+			}
+		} catch (error) {
+			console.error('Error during checkout:', error);
+		}
+	}
 </script>
 
 <div class="container px-4 py-8 mx-auto">
@@ -71,9 +111,9 @@
 	{:else if $productsQuery.data?.products && $productsQuery.data.products.length > 0}
 		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
 			{#each $productsQuery.data.products as product (product.id)}
-				<div class="flex flex-col h-full p-6 card variant-filled-surface-900">
+				<div class="flex flex-col p-6 h-full card variant-filled-surface-900">
 					<header class="mb-4 card-header">
-						<h2 class="h1 text-7xl">{product.name}</h2>
+						<h2 class="text-7xl h1">{product.name}</h2>
 					</header>
 					<section class="flex-grow">
 						{#if product.prices && product.prices.length > 0}
@@ -99,7 +139,17 @@
 						</ul>
 					</section>
 					<footer class="mt-auto card-footer">
-						<button class="w-full btn variant-filled-primary">Select Plan</button>
+						<button
+							class="w-full btn variant-filled-primary"
+							on:click={() => handleCheckout(product)}
+							disabled={product.id === 'free-product' || $checkoutMutation.isLoading}
+						>
+							{#if $checkoutMutation.isLoading}
+								Processing...
+							{:else}
+								{product.id === 'free-product' ? 'Current Plan' : 'Select Plan'}
+							{/if}
+						</button>
 					</footer>
 				</div>
 			{/each}

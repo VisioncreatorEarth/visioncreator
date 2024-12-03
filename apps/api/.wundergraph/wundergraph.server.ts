@@ -87,6 +87,9 @@ export default configureWunderGraphServer(() => ({
 
   },
   webhooks: {
+    // polar: {
+    //   // No auth required for Polar webhooks
+    // },
     // mailNotification: {
     //   // You can add a verifier here if needed
     // },
