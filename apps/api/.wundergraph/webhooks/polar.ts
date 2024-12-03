@@ -8,18 +8,19 @@ export default createWebhook({
                 body: event.body
             });
 
-            // Store webhook using internal operation
             const result = await context.operations.mutate({
                 operationName: "storePolarWebhook",
                 input: {
-                    event: event.body.type,
-                    payload: event.body
+                    headers: event.headers,
+                    body: event.body
                 }
             });
 
             if (!result.data?.success) {
                 throw new Error(result.data?.error || 'Failed to store webhook');
             }
+
+            console.log('Successfully processed webhook');
 
             return {
                 statusCode: 200,
@@ -30,9 +31,9 @@ export default createWebhook({
         } catch (error) {
             console.error('Error processing webhook:', error);
             return {
-                statusCode: 500,
+                statusCode: error.message?.includes('Invalid webhook') ? 403 : 500,
                 body: {
-                    error: 'Internal server error'
+                    error: error.message || 'Internal server error'
                 }
             };
         }
