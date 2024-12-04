@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { page } from '$app/stores';
+	import { dev } from '$app/environment';
 
 	interface Price {
 		id: string;
@@ -64,14 +65,18 @@
 		operationName: 'myPolarSubscriptions',
 		input: {
 			active: undefined
-		}
+		},
+		liveQuery: true
 	});
 
+	$: isLoading = $subscriptionsQuery.isLoading || $productsQuery.isLoading;
+
+	$: if ($subscriptionsQuery.isLoading) {
+		console.log('Loading subscriptions...');
+	}
+
 	$: if ($subscriptionsQuery.data) {
-		console.log('Subscriptions Query Data:', {
-			subscriptions: $subscriptionsQuery.data.subscriptions,
-			count: $subscriptionsQuery.data.subscriptions?.length
-		});
+		console.log('Subscriptions loaded:', $subscriptionsQuery.data);
 	}
 
 	$: if ($subscriptionsQuery.error) {
@@ -87,7 +92,11 @@
 			icon: string;
 			text: string;
 		}[];
-		default: {
+		hominio: {
+			icon: string;
+			text: string;
+		}[];
+		visioncreator: {
 			icon: string;
 			text: string;
 		}[];
@@ -95,16 +104,19 @@
 
 	const benefits: Benefits = {
 		'free-product': [
-			{ icon: 'mdi:open-source-initiative', text: 'Open Source' },
-			{ icon: 'mdi:server', text: 'Self-hosted' },
-			{ icon: 'mdi:key-variant', text: 'Bring Your Own API Key' },
-			{ icon: 'mdi:infinity', text: 'Unlimited Projects' }
+			{ icon: 'mdi:clock-time-five-outline', text: '5 min Hominio talk time free' },
+			{ icon: 'mdi:open-source-initiative', text: 'Self-host (Open Source)' },
+			{ icon: 'mdi:tools', text: 'Use all skills (manually)' }
 		],
-		default: [
-			{ icon: 'mdi:check-circle', text: 'Premium Support' },
-			{ icon: 'mdi:rocket-launch', text: 'Advanced Features' },
-			{ icon: 'mdi:chart-line', text: 'Analytics Dashboard' },
-			{ icon: 'mdi:account-group', text: 'Team Collaboration' }
+		hominio: [
+			{ icon: 'mdi:clock-outline', text: '60 min Hominio talk time per month' },
+			{ icon: 'mdi:cart-outline', text: 'Smart Hominio shopping skill' },
+			{ icon: 'mdi:checkbox-marked-circle-outline', text: 'Smart Hominio todo skill' }
+		],
+		visioncreator: [
+			{ icon: 'mdi:clock', text: '240 min Hominio talk time per month' },
+			{ icon: 'mdi:vote', text: 'Vote for new skills' },
+			{ icon: 'mdi:cash-multiple', text: 'Earn new income streams' }
 		]
 	};
 
@@ -145,7 +157,21 @@
 	}
 
 	function isCurrentPlan(product: Product): boolean {
-		if (!$subscriptionsQuery.data?.subscriptions?.length) return product.id === 'free-product';
+		if (isLoading) {
+			return false;
+		}
+
+		if (!$subscriptionsQuery.data?.subscriptions?.length) {
+			return product.id === 'free-product';
+		}
+
+		const activeSubscription = $subscriptionsQuery.data.subscriptions.find(
+			(sub) => sub.status === 'active'
+		);
+
+		if (product.id === 'free-product') {
+			return activeSubscription && activeSubscription.cancel_at_period_end;
+		}
 
 		return $subscriptionsQuery.data.subscriptions.some(
 			(sub) => sub.product.id === product.id && sub.status === 'active'
@@ -153,61 +179,35 @@
 	}
 
 	function getButtonText(product: Product): string {
-		console.log('getButtonText called with product:', {
-			id: product.id,
-			name: product.name,
-			subscriptionsLoading: $subscriptionsQuery.isLoading,
-			subscriptionsData: $subscriptionsQuery.data
-		});
-
-		// Return loading state if subscriptions are still loading
-		if ($subscriptionsQuery.isLoading) {
-			console.log('Subscriptions still loading...');
+		if (isLoading) {
 			return 'Loading...';
 		}
 
-		// Ensure we have subscription data
-		if (!$subscriptionsQuery.data) {
-			console.log('No subscription data available yet');
-			return 'Loading...';
-		}
-
-		if (!$subscriptionsQuery.data.subscriptions?.length) {
-			const buttonText = product.id === 'free-product' ? 'Current Plan' : 'Select Plan';
-			console.log('No active subscriptions, returning:', buttonText);
-			return buttonText;
-		}
-
-		const activeSub = $subscriptionsQuery.data.subscriptions.find(
-			(sub) => sub.product.id === product.id && sub.status === 'active'
-		);
-
-		console.log(
-			'Active subscription found:',
-			activeSub
-				? {
-						id: activeSub.id,
-						status: activeSub.status,
-						productId: activeSub.product.id,
-						cancelAtPeriodEnd: activeSub.cancel_at_period_end
-				  }
-				: 'none'
-		);
-
-		if (activeSub) {
-			const buttonText = activeSub.cancel_at_period_end
-				? `Active until ${formatDate(activeSub.current_period_end)}`
-				: 'Current Plan';
-			console.log('Returning button text for active sub:', buttonText);
-			return buttonText;
-		}
-
-		if ($checkoutMutation.isLoading) {
-			console.log('Checkout in progress');
+		if ($checkoutMutation.isLoading || $updateSubscriptionMutation.isLoading) {
 			return 'Processing...';
 		}
 
-		console.log('Default case - Select Plan');
+		if (!$subscriptionsQuery.data?.subscriptions?.length) {
+			return product.id === 'free-product' ? 'Current Plan' : 'Select Plan';
+		}
+
+		const activeSubscription = $subscriptionsQuery.data.subscriptions.find(
+			(sub) => sub.status === 'active'
+		);
+
+		if (product.id === 'free-product') {
+			if (!activeSubscription) {
+				return 'Current Plan';
+			}
+			return activeSubscription.cancel_at_period_end ? 'Select Plan' : 'Downgrade';
+		}
+
+		if (activeSubscription?.product.id === product.id) {
+			return activeSubscription.cancel_at_period_end
+				? `Active until ${formatDate(activeSubscription.current_period_end)}`
+				: 'Current Plan';
+		}
+
 		return 'Select Plan';
 	}
 
@@ -257,25 +257,15 @@
 
 		if (hasExistingSubscription && activeSubscription) {
 			try {
-				console.log('Updating subscription:', {
+				console.log('Redirecting to Polar dashboard:', {
 					subscriptionId: activeSubscription.id,
-					productPriceId: product.prices[0].id,
-					subscription: activeSubscription,
-					product: product
+					isDev: dev
 				});
 
-				const result = await $updateSubscriptionMutation.mutateAsync({
-					subscriptionId: activeSubscription.id,
-					productPriceId: product.prices[0].id
-				});
-
-				if (result.success && result.checkoutUrl) {
-					window.location.href = result.checkoutUrl;
-				} else {
-					console.error('Failed to initiate subscription update:', result);
-				}
+				const baseUrl = dev ? 'https://sandbox.polar.sh' : 'https://polar.sh';
+				window.location.href = `${baseUrl}/purchases/subscriptions/${activeSubscription.id}`;
 			} catch (error) {
-				console.error('Error updating subscription:', error);
+				console.error('Error redirecting to Polar dashboard:', error);
 			}
 		} else {
 			await handleCheckout(product);
@@ -286,14 +276,18 @@
 <div class="container mx-auto mt-8 max-w-6xl">
 	<h1 class="mb-8 text-3xl font-bold text-center">Choose Your Plan</h1>
 
-	{#if $productsQuery.isLoading}
-		<p class="text-center">Loading products...</p>
+	{#if isLoading}
+		<p class="text-center">Loading...</p>
 	{:else if $productsQuery.error}
 		<p class="text-center text-error-500">Error: {$productsQuery.error}</p>
 	{:else if $productsQuery.data?.products && $productsQuery.data.products.length > 0}
 		<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
 			{#each $productsQuery.data.products as product (product.id)}
-				<div class="flex flex-col p-6 h-full card variant-filled-surface-900">
+				<div
+					class="flex flex-col p-6 h-full card variant-filled-surface-900 {isCurrentPlan(product)
+						? 'variant-filled-surface-700'
+						: ''}"
+				>
 					<header class="mb-4 card-header">
 						<h2 class="text-4xl h2">{product.name}</h2>
 					</header>
@@ -309,12 +303,22 @@
 									<span class="text-2xl font-normal">/ {product.prices[0].interval}</span>
 								</div>
 								<p class="text-lg">{product.description}</p>
+								<ul class="mt-4 space-y-3">
+									{#each benefits[product.id === 'free-product' ? 'free-product' : product.name.toLowerCase()] as benefit}
+										<li class="flex gap-2 items-center">
+											<span class="text-xl text-primary-500">
+												<iconify-icon icon={benefit.icon} />
+											</span>
+											<span>{benefit.text}</span>
+										</li>
+									{/each}
+								</ul>
 							</div>
 						{/if}
 					</section>
-					<footer class="mt-auto card-footer">
+					<footer class="mt-6 card-footer">
 						<button
-							class="w-full btn variant-filled-primary"
+							class="w-full btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg"
 							on:click={() => handlePlanChange(product)}
 							disabled={isCurrentPlan(product) ||
 								$checkoutMutation.isLoading ||
@@ -322,9 +326,53 @@
 								$subscriptionsQuery.isLoading}
 						>
 							{#if $updateSubscriptionMutation.isLoading}
-								Updating...
-							{:else if $subscriptionsQuery.isLoading}
-								Loading...
+								<div class="flex gap-2 justify-center items-center">
+									<svg
+										class="w-4 h-4 animate-spin"
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+									>
+										<circle
+											class="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											stroke-width="4"
+										/>
+										<path
+											class="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										/>
+									</svg>
+									<span>Updating...</span>
+								</div>
+							{:else if $checkoutMutation.isLoading}
+								<div class="flex gap-2 justify-center items-center">
+									<svg
+										class="w-4 h-4 animate-spin"
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+									>
+										<circle
+											class="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											stroke-width="4"
+										/>
+										<path
+											class="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										/>
+									</svg>
+									<span>Processing...</span>
+								</div>
 							{:else}
 								{getButtonText(product)}
 							{/if}
@@ -352,7 +400,6 @@
 						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Started </th>
 						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Next Payment </th>
 						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Amount </th>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Subscription ID </th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-surface-200-700-token">
@@ -387,10 +434,10 @@
 								{formatDate(subscription.current_period_end)}
 							</td>
 							<td class="px-6 py-4 text-surface-600-300-token">
-								{formatAmount(subscription.amount, subscription.currency)}
-							</td>
-							<td class="px-6 py-4 text-surface-600-300-token">
-								{subscription.id}
+								{formatAmount(
+									subscription.amount,
+									subscription.currency
+								)}/{subscription.recurring_interval}
 							</td>
 						</tr>
 					{/each}
