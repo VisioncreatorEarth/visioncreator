@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { page } from '$app/stores';
-	import Icon from '@iconify/svelte';
 
 	interface Price {
 		id: string;
@@ -68,7 +67,33 @@
 		}
 	});
 
-	const benefits = {
+	$: if ($subscriptionsQuery.data) {
+		console.log('Subscriptions Query Data:', {
+			subscriptions: $subscriptionsQuery.data.subscriptions,
+			count: $subscriptionsQuery.data.subscriptions?.length
+		});
+	}
+
+	$: if ($subscriptionsQuery.error) {
+		console.error('Subscriptions Query Error:', $subscriptionsQuery.error);
+	}
+
+	const updateSubscriptionMutation = createMutation({
+		operationName: 'updatePolarSubscription'
+	});
+
+	interface Benefits {
+		'free-product': {
+			icon: string;
+			text: string;
+		}[];
+		default: {
+			icon: string;
+			text: string;
+		}[];
+	}
+
+	const benefits: Benefits = {
 		'free-product': [
 			{ icon: 'mdi:open-source-initiative', text: 'Open Source' },
 			{ icon: 'mdi:server', text: 'Self-hosted' },
@@ -82,11 +107,6 @@
 			{ icon: 'mdi:account-group', text: 'Team Collaboration' }
 		]
 	};
-
-	function formatPrice(price: Price): string {
-		const amount = (price.amount / 100).toFixed(2);
-		return `${amount} ${price.interval}`;
-	}
 
 	function formatAmount(amount: number, currency: string): string {
 		return new Intl.NumberFormat('en-US', {
@@ -104,49 +124,91 @@
 		}).format(date);
 	}
 
-	function getStatusColor(status: string): string {
-		switch (status.toLowerCase()) {
-			case 'active':
-				return 'text-green-600 dark:text-green-400';
-			case 'canceled':
-				return 'text-red-600 dark:text-red-400';
-			case 'past_due':
-				return 'text-yellow-600 dark:text-yellow-400';
-			default:
-				return 'text-gray-600 dark:text-gray-400';
+	function getStatusColor(subscription: Subscription): string {
+		if (subscription.status === 'active') {
+			return subscription.cancel_at_period_end ? 'text-warning-500' : 'text-success-500';
 		}
+		return 'text-error-500';
 	}
 
-	function getIntervalLabel(interval: string): string {
-		switch (interval) {
-			case 'month':
-				return '/mo';
-			case 'year':
-				return '/yr';
-			default:
-				return `/${interval}`;
-		}
-	}
-
-	function getBenefits(productId: string) {
-		return benefits[productId] || benefits.default;
-	}
-
-	function getDetailedStatus(subscription: Subscription): string {
-		const status = subscription.status.toLowerCase();
-		const endDate = formatDate(subscription.current_period_end);
-
-		if (status === 'active') {
+	function getDetailedStatus(subscription: Subscription): { status: string; detail?: string } {
+		if (subscription.status === 'active') {
 			if (subscription.cancel_at_period_end) {
-				return `Active until ${endDate}`;
+				return {
+					status: 'Canceled',
+					detail: `Active until ${formatDate(subscription.current_period_end)}`
+				};
 			}
-			return `Active, renews on ${endDate}`;
-		} else if (status === 'canceled') {
-			return `Canceled, ends on ${endDate}`;
-		} else if (status === 'past_due') {
-			return `Payment overdue since ${endDate}`;
+			return { status: 'Active' };
 		}
-		return subscription.status;
+		return { status: subscription.status };
+	}
+
+	function isCurrentPlan(product: Product): boolean {
+		if (!$subscriptionsQuery.data?.subscriptions?.length) return product.id === 'free-product';
+
+		return $subscriptionsQuery.data.subscriptions.some(
+			(sub) => sub.product.id === product.id && sub.status === 'active'
+		);
+	}
+
+	function getButtonText(product: Product): string {
+		console.log('getButtonText called with product:', {
+			id: product.id,
+			name: product.name,
+			subscriptionsLoading: $subscriptionsQuery.isLoading,
+			subscriptionsData: $subscriptionsQuery.data
+		});
+
+		// Return loading state if subscriptions are still loading
+		if ($subscriptionsQuery.isLoading) {
+			console.log('Subscriptions still loading...');
+			return 'Loading...';
+		}
+
+		// Ensure we have subscription data
+		if (!$subscriptionsQuery.data) {
+			console.log('No subscription data available yet');
+			return 'Loading...';
+		}
+
+		if (!$subscriptionsQuery.data.subscriptions?.length) {
+			const buttonText = product.id === 'free-product' ? 'Current Plan' : 'Select Plan';
+			console.log('No active subscriptions, returning:', buttonText);
+			return buttonText;
+		}
+
+		const activeSub = $subscriptionsQuery.data.subscriptions.find(
+			(sub) => sub.product.id === product.id && sub.status === 'active'
+		);
+
+		console.log(
+			'Active subscription found:',
+			activeSub
+				? {
+						id: activeSub.id,
+						status: activeSub.status,
+						productId: activeSub.product.id,
+						cancelAtPeriodEnd: activeSub.cancel_at_period_end
+				  }
+				: 'none'
+		);
+
+		if (activeSub) {
+			const buttonText = activeSub.cancel_at_period_end
+				? `Active until ${formatDate(activeSub.current_period_end)}`
+				: 'Current Plan';
+			console.log('Returning button text for active sub:', buttonText);
+			return buttonText;
+		}
+
+		if ($checkoutMutation.isLoading) {
+			console.log('Checkout in progress');
+			return 'Processing...';
+		}
+
+		console.log('Default case - Select Plan');
+		return 'Select Plan';
 	}
 
 	async function handleCheckout(product: Product) {
@@ -162,7 +224,7 @@
 		}
 
 		const origin = $page.url.origin;
-		const successUrl = `${origin}/local/polar/success?checkout_id={CHECKOUT_ID}`;
+		const successUrl = `${origin}/me/subscriptions/success?checkout_id={CHECKOUT_ID}`;
 
 		try {
 			const result = await $checkoutMutation.mutateAsync({
@@ -179,6 +241,44 @@
 			}
 		} catch (error) {
 			console.error('Error during checkout:', error);
+		}
+	}
+
+	async function handlePlanChange(product: Product) {
+		if (!product.prices || product.prices.length === 0) {
+			console.error('No prices available for product');
+			return;
+		}
+
+		const hasExistingSubscription = $subscriptionsQuery.data?.subscriptions?.length > 0;
+		const activeSubscription = $subscriptionsQuery.data?.subscriptions?.find(
+			(sub) => sub.status === 'active'
+		);
+
+		if (hasExistingSubscription && activeSubscription) {
+			try {
+				console.log('Updating subscription:', {
+					subscriptionId: activeSubscription.id,
+					productPriceId: product.prices[0].id,
+					subscription: activeSubscription,
+					product: product
+				});
+
+				const result = await $updateSubscriptionMutation.mutateAsync({
+					subscriptionId: activeSubscription.id,
+					productPriceId: product.prices[0].id
+				});
+
+				if (result.success && result.checkoutUrl) {
+					window.location.href = result.checkoutUrl;
+				} else {
+					console.error('Failed to initiate subscription update:', result);
+				}
+			} catch (error) {
+				console.error('Error updating subscription:', error);
+			}
+		} else {
+			await handleCheckout(product);
 		}
 	}
 </script>
@@ -215,13 +315,18 @@
 					<footer class="mt-auto card-footer">
 						<button
 							class="w-full btn variant-filled-primary"
-							on:click={() => handleCheckout(product)}
-							disabled={product.id === 'free-product' || $checkoutMutation.isLoading}
+							on:click={() => handlePlanChange(product)}
+							disabled={isCurrentPlan(product) ||
+								$checkoutMutation.isLoading ||
+								$updateSubscriptionMutation.isLoading ||
+								$subscriptionsQuery.isLoading}
 						>
-							{#if $checkoutMutation.isLoading}
-								Processing...
+							{#if $updateSubscriptionMutation.isLoading}
+								Updating...
+							{:else if $subscriptionsQuery.isLoading}
+								Loading...
 							{:else}
-								{product.id === 'free-product' ? 'Current Plan' : 'Select Plan'}
+								{getButtonText(product)}
 							{/if}
 						</button>
 					</footer>
@@ -247,6 +352,7 @@
 						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Started </th>
 						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Next Payment </th>
 						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Amount </th>
+						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Subscription ID </th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-surface-200-700-token">
@@ -258,10 +364,21 @@
 									{subscription.recurring_interval}ly
 								</div>
 							</td>
-							<td class="px-6 py-4">
-								<span class={`${getStatusColor(subscription.status)} font-medium`}>
-									{getDetailedStatus(subscription)}
-								</span>
+							<td class="px-4 py-2">
+								{#if subscription.status === 'active' && subscription.cancel_at_period_end}
+									<div class="flex flex-col">
+										<span class="font-medium text-warning-500">
+											{getDetailedStatus(subscription).status}
+										</span>
+										<span class="text-sm text-warning-500/75">
+											{getDetailedStatus(subscription).detail}
+										</span>
+									</div>
+								{:else}
+									<span class={getStatusColor(subscription)}>
+										{getDetailedStatus(subscription).status}
+									</span>
+								{/if}
 							</td>
 							<td class="px-6 py-4 text-surface-600-300-token">
 								{formatDate(subscription.started_at)}
@@ -271,6 +388,9 @@
 							</td>
 							<td class="px-6 py-4 text-surface-600-300-token">
 								{formatAmount(subscription.amount, subscription.currency)}
+							</td>
+							<td class="px-6 py-4 text-surface-600-300-token">
+								{subscription.id}
 							</td>
 						</tr>
 					{/each}

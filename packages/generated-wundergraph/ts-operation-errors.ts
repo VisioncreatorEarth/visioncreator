@@ -39,6 +39,7 @@ export type OperationErrors = {
 	storePolarWebhook: StorePolarWebhookErrors;
 	toggleOnboarded: ToggleOnboardedErrors;
 	updateMe: UpdateMeErrors;
+	updatePolarSubscription: UpdatePolarSubscriptionErrors;
 };
 
 export type OperationUltravoxInitializationError = {
@@ -91,3 +92,4 @@ export type SendMailWIPErrors = ClientOperationErrors;
 export type StorePolarWebhookErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
+export type UpdatePolarSubscriptionErrors = ClientOperationErrors;

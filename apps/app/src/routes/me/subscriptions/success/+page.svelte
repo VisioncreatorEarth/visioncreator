@@ -16,7 +16,7 @@
 
 	onMount(() => {
 		if (!checkoutId) {
-			goto('/local/polar');
+			goto('/me/subscriptions');
 			return;
 		}
 
@@ -27,7 +27,7 @@
 			if ($checkoutQuery.data?.status === 'succeeded') {
 				clearInterval(pollInterval);
 				// Wait 2 seconds before redirecting to show success message
-				setTimeout(() => goto('/local/polar'), 2000);
+				setTimeout(() => goto('/me'), 2000);
 			}
 		}, 2000);
 

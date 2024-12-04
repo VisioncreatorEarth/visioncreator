@@ -25,8 +25,8 @@
 		Me: meView
 	};
 
-	// Watch for URL parameter changes and update view accordingly
-	$: if (browser) {
+	// Check if the current route is exactly /me
+	$: if (browser && $page.url.pathname === '/me') {
 		const viewParam = $page.url.searchParams.get('view');
 		if (viewParam && !viewMap[viewParam]) {
 			// If view doesn't exist, redirect to /me
