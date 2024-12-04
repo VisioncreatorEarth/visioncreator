@@ -212,7 +212,7 @@
 			context.isOpen = true;
 		},
 		navigateToUpgrade: () => {
-			window.location.href = '/upgrade';
+			window.location.href = '/me/subscriptions';
 		}
 	};
 
@@ -353,25 +353,27 @@
 								</div>
 							{:else if $currentState === 'paywall'}
 								<div class="p-6 text-center">
-									<div class="mb-4 text-4xl">🔒</div>
+									<div class="mb-4 flex justify-center">
+										<Icon icon="solar:lock-password-bold-duotone" width="64" height="64" class="text-tertiary-200 [--icon-secondary:theme(colors.surface.200)]" />
+									</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Your Hominio Minutes are Up</h2>
 									<p class="mt-2 text-tertiary-200/80">
 										Upgrade your plan to continue using this feature, or for now just drop us a
 										quick message to get a few more free Minutes. Just click on the Hominio Logo
 										Button at the bottom and select the "Message us" action.
 									</p>
-									<div class="mt-4 space-x-4">
+									<div class="flex gap-4 justify-center mt-4">
 										<button
-											class="px-4 py-2 text-white rounded-lg bg-tertiary-500"
-											on:click={() => machine.send('UPGRADE')}
-										>
-											Upgrade Now
-										</button>
-										<button
-											class="px-4 py-2 rounded-lg border border-tertiary-500 text-tertiary-200"
+											class="btn variant-soft btn-md @3xl:btn-lg rounded-full"
 											on:click={() => machine.send('CLOSE')}
 										>
 											Maybe Later
+										</button>
+										<button
+											class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg rounded-full"
+											on:click={() => machine.send('UPGRADE')}
+										>
+											Upgrade Now
 										</button>
 									</div>
 								</div>
