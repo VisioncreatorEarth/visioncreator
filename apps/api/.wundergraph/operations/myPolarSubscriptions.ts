@@ -2,59 +2,64 @@ import { createOperation, z } from '../generated/wundergraph.factory';
 
 export default createOperation.query({
     input: z.object({
-        page: z.number().optional().default(1),
-        limit: z.number().optional().default(10),
         active: z.boolean().optional(),
     }),
     requireAuthentication: true,
     rbac: {
         requireMatchAll: ['authenticated'],
     },
-    handler: async ({ input, context }) => {
+    handler: async ({ user, input, context }) => {
         try {
-            const response = await context.polar.subscriptions.list({
-                page: input.page,
-                limit: input.limit,
-                active: input.active,
-                sorting: ['-started_at']
-            });
+            // Build query
+            let query = context.supabase
+                .from('polar_subscriptions')
+                .select('*')
+                .eq('user_id', user?.customClaims?.id)
+                .order('started_at', { ascending: false });
 
-            // If no response or no items
-            if (!response?.result?.items) {
+            // Add active filter if specified
+            if (input.active !== undefined) {
+                query = query.eq('status', input.active ? 'active' : 'inactive');
+            }
+
+            // Execute query
+            const { data: subscriptions, error } = await query;
+
+            if (error) {
+                console.error('Error fetching Polar subscriptions:', error);
+                throw new Error('Failed to fetch subscriptions');
+            }
+
+            // If no subscriptions found
+            if (!subscriptions?.length) {
                 return {
                     subscriptions: [],
-                    total: 0,
-                    page: input.page,
-                    limit: input.limit
                 };
             }
 
-            const mappedSubscriptions = response.result.items.map(item => ({
-                id: item.id,
-                status: item.status,
-                started_at: item.startedAt,
-                ended_at: item.endedAt,
-                current_period_end: item.currentPeriodEnd,
-                cancel_at_period_end: item.cancelAtPeriodEnd,
+            const mappedSubscriptions = subscriptions.map(sub => ({
+                id: sub.id,
+                status: sub.status,
+                started_at: sub.started_at,
+                ended_at: sub.ended_at,
+                current_period_end: sub.current_period_end,
+                cancel_at_period_end: sub.cancel_at_period_end,
                 product: {
-                    id: item.product.id,
-                    name: item.product.name
+                    id: sub.product_id,
+                    name: sub.product_name
                 },
-                amount: item.amount,
-                currency: item.currency,
-                recurring_interval: item.recurringInterval,
-                metadata: item.metadata,
+                amount: sub.amount,
+                currency: sub.currency,
+                recurring_interval: sub.recurring_interval,
+                metadata: sub.metadata,
                 user: {
-                    email: item.user.email,
-                    name: item.user.publicName
+                    email: user?.email || '',
+                    name: user?.name || ''
                 }
             }));
 
             return {
                 subscriptions: mappedSubscriptions,
-                total: response.result.pagination.totalCount || 0,
-                page: input.page,
-                limit: input.limit
             };
         } catch (error) {
             console.error('Error fetching Polar subscriptions:', error);

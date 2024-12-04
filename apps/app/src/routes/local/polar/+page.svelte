@@ -59,16 +59,12 @@
 
 	interface SubscriptionsQueryResult {
 		subscriptions: Subscription[];
-		total: number;
-		page: number;
-		limit: number;
 	}
 
 	const subscriptionsQuery = createQuery<SubscriptionsQueryResult>({
 		operationName: 'myPolarSubscriptions',
 		input: {
-			page: 1,
-			limit: 10
+			active: undefined
 		}
 	});
 
@@ -139,7 +135,7 @@
 	function getDetailedStatus(subscription: Subscription): string {
 		const status = subscription.status.toLowerCase();
 		const endDate = formatDate(subscription.current_period_end);
-		
+
 		if (status === 'active') {
 			if (subscription.cancel_at_period_end) {
 				return `Active until ${endDate}`;
@@ -187,7 +183,7 @@
 	}
 </script>
 
-<div class="container px-4 py-8 mx-auto">
+<div class="container mx-auto mt-8 max-w-6xl">
 	<h1 class="mb-8 text-3xl font-bold text-center">Choose Your Plan</h1>
 
 	{#if $productsQuery.isLoading}
@@ -238,30 +234,19 @@
 </div>
 
 {#if $subscriptionsQuery.data?.subscriptions?.length > 0}
-	<div class="mt-8">
-		<h2 class="text-2xl font-semibold mb-4 dark:text-gray-200">Your Subscriptions</h2>
-		<div class="relative overflow-x-auto shadow-md sm:rounded-lg max-h-[500px] bg-surface-50-900-token">
+	<div class="mx-auto mt-8 max-w-6xl">
+		<h2 class="mb-4 text-2xl font-semibold dark:text-gray-200">Your Subscriptions</h2>
+		<div
+			class="relative overflow-x-auto shadow-md sm:rounded-lg max-h-[500px] bg-surface-50-900-token"
+		>
 			<table class="w-full text-sm text-left">
 				<thead class="text-xs uppercase bg-surface-100-800-token">
 					<tr>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token">
-							Product
-						</th>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token">
-							Status
-						</th>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token">
-							Started
-						</th>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token">
-							Next Payment
-						</th>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token">
-							Amount
-						</th>
-						<th scope="col" class="px-6 py-3 text-surface-900-50-token">
-							User ID
-						</th>
+						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Product </th>
+						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Status </th>
+						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Started </th>
+						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Next Payment </th>
+						<th scope="col" class="px-6 py-3 text-surface-900-50-token"> Amount </th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-surface-200-700-token">
@@ -286,9 +271,6 @@
 							</td>
 							<td class="px-6 py-4 text-surface-600-300-token">
 								{formatAmount(subscription.amount, subscription.currency)}
-							</td>
-							<td class="px-6 py-4 text-surface-600-300-token">
-								{subscription.metadata.userId}
 							</td>
 						</tr>
 					{/each}

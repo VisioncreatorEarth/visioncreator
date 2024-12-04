@@ -42,26 +42,31 @@ export default createOperation.mutation({
             // Parse body if it's a string
             const body = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;
 
-            const { error } = await context.supabase
+            // Store webhook in polar_webhooks table
+            const { error: webhookError } = await context.supabase
                 .from('polar_webhooks')
                 .insert({
                     event: body.type,
                     payload: body
                 });
 
-            if (error) {
-                throw error;
+            if (webhookError) {
+                console.error('Error storing webhook:', webhookError);
+                throw new Error('Failed to store webhook');
             }
+
+            // The trigger functions will automatically update the subscription and order tables
+            // based on the webhook event type, so we don't need to handle that here
 
             return {
                 success: true
             };
         } catch (error) {
-            console.error('Error storing Polar webhook:', error);
+            console.error('Error processing webhook:', error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : String(error)
+                error: error.message
             };
         }
-    },
+    }
 });

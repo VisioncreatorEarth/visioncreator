@@ -222,7 +222,109 @@ All the methods listed above are available as standalone functions. These functi
 To read more about standalone functions, check FUNCTIONS.md.
 
 Available standalone functions
-Pagination
+advertisementsGet - Get Campaign
+advertisementsList - List Campaigns
+articlesCreate - Create Article
+articlesDelete - Delete Article
+articlesExport - Export Articles
+articlesGet - Get Article
+articlesList - List Articles
+articlesPreview - Send Article Preview
+articlesReceivers - Get Article Receivers Count
+articlesSend - Send Article
+articlesUpdate - Update Article
+benefitsCreate - Create Benefit
+benefitsDelete - Delete Benefit
+benefitsGet - Get Benefit
+benefitsGrants - List Benefit Grants
+benefitsList - List Benefits
+benefitsUpdate - Update Benefit
+checkoutLinksCreate - Create Checkout Link
+checkoutLinksDelete - Delete Checkout Link
+checkoutLinksGet - Get Checkout Link
+checkoutLinksList - List Checkout Links
+checkoutLinksUpdate - Update Checkout Link
+checkoutsCustomClientConfirm - Confirm Checkout Session from Client
+checkoutsCustomClientGet - Get Checkout Session from Client
+checkoutsCustomClientUpdate - Update Checkout Session from Client
+checkoutsCustomCreate - Create Checkout Session
+checkoutsCustomGet - Get Checkout Session
+checkoutsCustomList - List Checkout Sessions
+checkoutsCustomUpdate - Update Checkout Session
+customFieldsCreate - Create Custom Field
+customFieldsDelete - Delete Custom Field
+customFieldsGet - Get Custom Field
+customFieldsList - List Custom Fields
+customFieldsUpdate - Update Custom Field
+discountsCreate - Create Discount
+discountsDelete - Delete Discount
+discountsGet - Get Discount
+discountsList - List Discounts
+discountsUpdate - Update Discount
+externalOrganizationsList - List External Organizations
+filesCreate - Create File
+filesDelete - Delete File
+filesList - List Files
+filesUpdate - Update File
+filesUploaded - Complete File Upload
+licenseKeysGet - Get License Key
+licenseKeysGetActivation - Get Activation
+licenseKeysList - List License Keys
+licenseKeysUpdate - Update License Key
+metricsGet - Get Metrics
+metricsLimits - Get Metrics Limits
+oauth2Authorize - Authorize
+oauth2ClientsCreate - Create Client
+oauth2ClientsDelete - Delete Client
+oauth2ClientsGet - Get Client
+oauth2ClientsList - List Clients
+oauth2ClientsUpdate - Update Client
+oauth2Introspect - Introspect Token
+oauth2Revoke - Revoke Token
+oauth2Token - Request Token
+oauth2Userinfo - Get User Info
+ordersGet - Get Order
+ordersInvoice - Get Order Invoice
+ordersList - List Orders
+organizationsCreate - Create Organization
+organizationsGet - Get Organization
+organizationsList - List Organizations
+organizationsUpdate - Update Organization
+productsCreate - Create Product
+productsGet - Get Product
+productsList - List Products
+productsUpdate - Update Product
+productsUpdateBenefits - Update Product Benefits
+repositoriesGet - Get Repository
+repositoriesList - List Repositories
+repositoriesUpdate - Update Repository
+subscriptionsExport - Export Subscriptions
+subscriptionsList - List Subscriptions
+usersAdvertisementsCreate - Create Advertisement
+usersAdvertisementsDelete - Delete Advertisement
+usersAdvertisementsEnable - Enable Advertisement
+usersAdvertisementsGet - Get Advertisement
+usersAdvertisementsList - List Advertisements
+usersAdvertisementsUpdate - Update Advertisement
+usersBenefitsGet - Get Benefit
+usersBenefitsList - List Benefits
+usersDownloadablesGet - Get Downloadable
+usersDownloadablesList - List Downloadables
+usersLicenseKeysActivate - Activate License Key
+usersLicenseKeysDeactivate - Deactivate License Key
+usersLicenseKeysGet - Get License Key
+usersLicenseKeysList - List License Keys
+usersLicenseKeysValidate - Validate License Key
+usersOrdersGet - Get Order
+usersOrdersInvoice - Get Order Invoice
+usersOrdersList - List Orders
+usersSubscriptionsCancel - Cancel Subscription
+usersSubscriptionsGet - Get Subscription
+usersSubscriptionsList - List Subscriptions
+usersSubscriptionsUpdate - Update Subscription
+checkoutsCreate - Create Checkout ⚠️ Deprecated Use checkoutsCustomCreate instead.
+checkoutsGet - Get Checkout ⚠️ Deprecated
+
 Some of the endpoints in this SDK support pagination. To use pagination, you make your SDK calls as usual, but the returned response object will also be an async iterable that can be consumed using the for await...of syntax.
 
 Here's an example of one such pagination call:
