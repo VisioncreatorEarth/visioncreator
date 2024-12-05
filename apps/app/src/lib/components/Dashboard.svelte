@@ -1,36 +1,23 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { env } from '$env/dynamic/public';
 	import QRCode from '@castlenine/svelte-qrcode';
+	import { eventBus } from '$lib/composables/eventBus';
+	import { onMount, onDestroy } from 'svelte';
 
-	let time = new Date();
-	let temperature = '2°'; // This would normally come from a weather API
-	let streamPotential = '$85/m';
-	let inspirations = '12';
-	let inviteCount = 0;
-	let fullyUnlocked = false;
+	export let me;
+	const query = $me.query;
+
 	let showQRCode = writable(false);
 	let linkCopied = writable(false);
-	let invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=123`; // Replace with actual ID
 
-	function incrementInvites() {
-		if (inviteCount < 4) inviteCount++;
-	}
+	let localInspirationsCount = 0;
 
-	function decrementInvites() {
-		if (inviteCount > 0) inviteCount--;
-	}
-
-	function skipToUnlocked() {
-		inviteCount = 4;
-		fullyUnlocked = true;
-	}
-
-	function restart() {
-		inviteCount = 0;
-		fullyUnlocked = false;
-	}
+	$: inspirations = localInspirationsCount || Number($query.data.inspirations) || 0;
+	$: fullyUnlocked = inspirations >= 3;
+	$: invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$query.data.qrCodeId}`;
+	$: temperature = $query.data.temperature;
+	$: streamPotential = $query.data.streamPotential;
 
 	function toggleQRCode() {
 		showQRCode.update((n) => !n);
@@ -49,29 +36,34 @@
 		}
 	}
 
-	$: lockStatus = Array(3)
-		.fill(false)
-		.map((_, i) => i < inviteCount);
+	async function handleUpdateStats() {
+		await $query.refetch();
+	}
 
-	// Update time every second
+	function decrementLocal() {
+		if (localInspirationsCount > 0) localInspirationsCount--;
+	}
+
+	function incrementLocal() {
+		if (localInspirationsCount < 3) localInspirationsCount++;
+	}
+
+	function unlockAll() {
+		localInspirationsCount = 3;
+	}
+
+	function restart() {
+		localInspirationsCount = 0;
+	}
+
 	onMount(() => {
-		const interval = setInterval(() => {
-			time = new Date();
-		}, 1000);
-
-		return () => {
-			clearInterval(interval);
-		};
+		eventBus.on('updateStats', handleUpdateStats);
+		console.log($query.data);
 	});
 
-	$: formattedTime = time.toLocaleTimeString('en-US', {
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: false
+	onDestroy(() => {
+		eventBus.off('updateStats', handleUpdateStats);
 	});
-
-	const welcomeMessage = 'Be a magnet for joy, love and abundance.';
-	const how = 'To start talking to Hominio \nlong press the logo button.';
 </script>
 
 <div class="overflow-hidden relative w-full h-screen">
@@ -87,15 +79,19 @@
 	<!-- Stats Display -->
 	<div class="flex absolute top-4 right-4 gap-6 items-start text-white">
 		<div class="text-center">
-			<div class="text-3xl font-medium text-white">{inspirations}</div>
+			<div class="text-3xl font-medium text-white">{$query.data.visionRank}</div>
+			<div class="text-xs text-tertiary-300">vision rank</div>
+		</div>
+		<div class="text-center">
+			<div class="text-3xl font-medium text-white">{$query.data.inspirations}</div>
 			<div class="text-xs text-tertiary-300">inspirations</div>
 		</div>
 		<div class="text-center">
-			<div class="text-3xl font-medium text-white">{streamPotential}</div>
+			<div class="text-3xl font-medium text-white">${$query.data.inspirations * 5}/m</div>
 			<div class="text-xs text-tertiary-300">stream potential</div>
 		</div>
 		<div class="text-center">
-			<div class="text-3xl font-medium text-white">{temperature}</div>
+			<div class="text-3xl font-medium text-white">{temperature}°</div>
 			<div class="text-xs text-tertiary-300">temp</div>
 		</div>
 	</div>
@@ -106,183 +102,134 @@
 			<!-- Time -->
 			<div class="text-center">
 				<h1 class="mb-4 text-9xl font-black tracking-wider h1">
-					{formattedTime}
+					{new Date().toLocaleTimeString('en-US', {
+						hour: '2-digit',
+						minute: '2-digit',
+						hour12: false
+					})}
 				</h1>
 
 				<!-- Welcome Message -->
-				<h2 class="mb-10 text-4xl text-tertiary-300">
-					{welcomeMessage}
-				</h2>
+				<h2 class="mb-10 text-4xl text-tertiary-300">Be a magnet for joy, love and abundance.</h2>
 
 				<!-- Early Access Section -->
 				<div class="px-8 py-8 mx-auto max-w-4xl text-center rounded-xl bg-surface-900/50">
-					{#if fullyUnlocked}
+					{#if inspirations < 3}
 						<p class="mb-8 text-2xl text-tertiary-300">
-							Welcome to a new world, enjoy playing with Hominio
+							To unlock early access to Hominio, inspire 3 new Visioncreators.
 						</p>
+					{:else if inspirations === 3}
+						<p class="mb-8 text-2xl text-tertiary-300">
+							<span class="font-bold uppercase">Almost there! </span><br /> In January you receive your
+							early BETA invite.
+						</p>
+						<div class="flex gap-12 justify-center items-center mb-6">
+							{#each Array(3).fill(false) as _, i}
+								<div
+									class="p-6 rounded-xl {i < inspirations
+										? 'bg-secondary-500/40'
+										: 'bg-surface-900/60'}"
+								>
+									<Icon
+										icon={i < inspirations
+											? 'solar:user-bold-duotone'
+											: 'solar:lock-password-bold-duotone'}
+										class={i < inspirations ? 'text-secondary-300' : 'text-tertiary-300'}
+										width={48}
+									/>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<p class="mb-8 text-2xl text-tertiary-300">
+							Welcome to a new way of living and working<br />
+							enjoy playing with Hominio
+						</p>
+						<div class="absolute bottom-20 left-1/2 justify-center -translate-x-1/2">
+							<p
+								class="px-6 py-4 text-lg font-light whitespace-pre-line rounded-xl opacity-90 text-tertiary-400 bg-surface-900/60"
+							>
+								To start talking to Hominio <br />long press the logo button.
+							</p>
+						</div>
 						<button
 							on:click={restart}
 							class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
 						>
 							Restart
 						</button>
-					{:else if inviteCount === 3}
-						<p class="mb-8 text-2xl text-tertiary-300">
-							Almost there!<br />
-							<span class="text-lg"
-								>Only 34 VCs ahead of you on the waitinglist → Just 18 VCs ahead with 1 more
-								inspiration.</span
-							>
-						</p>
-						{#if $showQRCode}
-							<div class="flex justify-center mb-6">
-								<QRCode
-									data={invitationLink}
-									backgroundColor="#141a4d"
-									color="#f0ede5"
-									shape="circle"
-									haveBackgroundRoundedEdges
-									logoPath="/logo.png"
-									logoSize="25"
-									logoPadding="4"
-								/>
-							</div>
-						{:else}
-							<div class="flex gap-12 justify-center items-center mb-6">
-								{#each lockStatus as isUnlocked, i}
-									<div class="p-6 rounded-xl bg-surface-900/60">
-										<Icon
-											icon={isUnlocked
-												? 'solar:user-bold-duotone'
-												: 'solar:lock-password-bold-duotone'}
-											class="text-tertiary-300"
-											width="64"
-											height="64"
-										/>
-									</div>
-								{/each}
-							</div>
-						{/if}
-						<div class="flex gap-6 justify-center items-center">
-							<button
-								on:click={decrementInvites}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-								disabled={inviteCount === 0}
-							>
-								-1
-							</button>
-							<button
-								on:click={incrementInvites}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-								disabled={inviteCount === 4}
-							>
-								+1
-							</button>
-							<button
-								on:click={skipToUnlocked}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-							>
-								Unlock All
-							</button>
-							<button
-								on:click={toggleQRCode}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-							>
-								{$showQRCode ? 'Hide QR' : 'Show QR'}
-							</button>
-							<button
-								on:click={copyInvitationLink}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-								disabled={$linkCopied}
-							>
-								{$linkCopied ? 'Copied!' : 'Copy Link'}
-							</button>
+					{/if}
+					{#if $showQRCode}
+						<div class="flex justify-center mb-6">
+							<QRCode
+								data={invitationLink}
+								backgroundColor="#141a4d"
+								color="#f0ede5"
+								shape="circle"
+								haveBackgroundRoundedEdges
+								logoPath="/logo.png"
+								logoSize="25"
+								logoPadding="4"
+							/>
 						</div>
-					{:else}
-						<p class="mb-8 text-2xl text-tertiary-300">
-							To enter the Hominio early access invite pool, <br /> inspire 3 new Visioncreators.
-						</p>
-						{#if $showQRCode}
-							<div class="flex justify-center mb-6">
-								<QRCode
-									data={invitationLink}
-									backgroundColor="#141a4d"
-									color="#f0ede5"
-									shape="circle"
-									haveBackgroundRoundedEdges
-									logoPath="/logo.png"
-									logoSize="25"
-									logoPadding="4"
-								/>
-							</div>
-						{:else}
-							<div class="flex gap-12 justify-center items-center mb-6">
-								{#each lockStatus as isUnlocked, i}
-									<div class="p-6 rounded-xl bg-surface-900/60">
-										<Icon
-											icon={isUnlocked
-												? 'solar:user-bold-duotone'
-												: 'solar:lock-password-bold-duotone'}
-											class="text-tertiary-300"
-											width="64"
-											height="64"
-										/>
-									</div>
-								{/each}
-							</div>
-						{/if}
-						<div class="flex gap-6 justify-center items-center">
-							<button
-								on:click={decrementInvites}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-								disabled={inviteCount === 0}
-							>
-								-1
-							</button>
-							<button
-								on:click={incrementInvites}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-								disabled={inviteCount === 3}
-							>
-								+1
-							</button>
-							<button
-								on:click={skipToUnlocked}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-							>
-								Unlock All
-							</button>
-							<button
-								on:click={toggleQRCode}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-							>
-								{$showQRCode ? 'Hide QR' : 'Show QR'}
-							</button>
-							<button
-								on:click={copyInvitationLink}
-								class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
-								disabled={$linkCopied}
-							>
-								{$linkCopied ? 'Copied!' : 'Copy Link'}
-							</button>
+					{:else if inspirations < 3}
+						<div class="flex gap-12 justify-center items-center mb-6">
+							{#each Array(3).fill(false) as _, i}
+								<div
+									class="p-6 rounded-xl {i < inspirations
+										? 'bg-secondary-500/40'
+										: 'bg-surface-900/60'}"
+								>
+									<Icon
+										icon={i < inspirations
+											? 'solar:user-bold-duotone'
+											: 'solar:lock-password-bold-duotone'}
+										class={i < inspirations ? 'text-secondary-300' : 'text-tertiary-300'}
+										width={48}
+									/>
+								</div>
+							{/each}
 						</div>
 					{/if}
-				</div>
-
-				{#if fullyUnlocked}
-					<div class="absolute bottom-20 left-1/2 justify-center -translate-x-1/2">
-						<p
-							class="px-6 py-4 text-lg font-light whitespace-pre-line rounded-xl opacity-90 text-tertiary-400 bg-surface-900/60"
+					<div class="flex gap-6 justify-center items-center">
+						<button
+							on:click={decrementLocal}
+							class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
+							disabled={inspirations === 0}
 						>
-							To start talking to Hominio long press the logo button.
-						</p>
+							-1
+						</button>
+						<button
+							on:click={incrementLocal}
+							class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
+							disabled={inspirations === 3}
+						>
+							+1
+						</button>
+						<button
+							on:click={() => {
+								localInspirationsCount = 4; // Switch to the last welcome view
+							}}
+							class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
+						>
+							Unlock All
+						</button>
+						<button
+							on:click={copyInvitationLink}
+							class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
+							disabled={$linkCopied}
+						>
+							{$linkCopied ? 'Copied!' : 'Copy Inspire Link'}
+						</button>
+						<button
+							on:click={toggleQRCode}
+							class="px-4 py-2 text-lg rounded-full bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
+						>
+							{$showQRCode ? 'Hide QR Code' : 'Show QR Code'}
+						</button>
 					</div>
-				{/if}
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
-
-<style>
-	/* Add any custom styles here if needed */
-</style>
