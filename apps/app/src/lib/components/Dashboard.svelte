@@ -68,6 +68,12 @@
 			<div class="text-2xl font-medium text-white md:text-4xl">{$query.data.inspirations}</div>
 			<div class="text-sm text-tertiary-300 md:text-base">inspirations</div>
 		</div>
+		<!-- <div class="text-center">
+			<div class="text-2xl font-medium text-white md:text-4xl">
+				${$query.data.inspirations * 5}/m
+			</div>
+			<div class="text-sm text-tertiary-300 md:text-base">income potential</div>
+		</div> -->
 	</div>
 
 	<!-- Main Content -->
