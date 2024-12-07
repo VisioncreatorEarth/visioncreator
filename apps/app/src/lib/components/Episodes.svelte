@@ -43,6 +43,14 @@
 				"Ever wondered what it's like to build a startup from scratch? Join Chielo, Samuel and Yvonne as they navigate the chaotic world of MVPs (Minimum Viable Products) building the first working prototype! Watch as they code through the night, fuel up on bavarian beer, and receive an unexpected visitor that changes everything.",
 			videoId: 'e124e51c-9db3-4f1c-a7ec-8894c9f793df',
 			poster: 'images/003_poster.png'
+		},
+		{
+			id: '004',
+			title: '004 - Visioncreators who co-create Hominio today will co-own tomorrow',
+			description:
+				"We're thrilled to share the next chapter in our story - a video that reveals how Visioncreators like you aren't just users, but true co-creators and co-owners of what we're building. Get ready to see how every contribution, from testing Hominio's features to shaping our community, is part of a bigger vision where success is shared by all.",
+			videoId: '8fee2d57-e3c3-4580-bd11-ae828d86978d',
+			poster: 'images/004_poster.png'
 		}
 	];
 	const reversedVideos: Video[] = [...allVideos].reverse();
