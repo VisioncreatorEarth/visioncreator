@@ -36,9 +36,10 @@ export default createOperation.query({
         }, 0);
 
         // Get actual minutes used from completed calls
+        const now = new Date();
         const { data: calls, error: callsError } = await context.supabase
             .from('hominio_calls')
-            .select('duration_minutes')
+            .select('duration_minutes, created_at')
             .eq('user_id', user.customClaims.id)
             .eq('status', 'completed');
 
@@ -47,7 +48,30 @@ export default createOperation.query({
             throw new Error('Failed to fetch call history');
         }
 
-        const actualMinutesUsed = Number(calls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
+        // Calculate minutes used based on tier type
+        let actualMinutesUsed = 0;
+        for (const capability of capabilities) {
+            const isSubscriptionTier = capability.config?.tier === 'HOMINIO' || capability.config?.tier === 'VISIONCREATOR';
+            const subscriptionStart = isSubscriptionTier ? new Date(capability.granted_at) : null;
+            const subscriptionEnd = isSubscriptionTier ? new Date(capability.config?.subscriptionEnd) : null;
+
+            // Filter calls based on tier type
+            const relevantCalls = calls.filter(call => {
+                const callDate = new Date(call.created_at);
+                if (isSubscriptionTier) {
+                    // For subscription tiers, only count calls within the current subscription period
+                    return callDate >= subscriptionStart && callDate <= subscriptionEnd;
+                } else {
+                    // For manual/prepaid tiers, count all calls since the tier was granted
+                    return callDate >= new Date(capability.granted_at);
+                }
+            });
+
+            // Sum up minutes for this capability
+            const tierMinutesUsed = Number(relevantCalls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
+            actualMinutesUsed += tierMinutesUsed;
+        }
+
         const remainingMinutes = Number((totalMinutesLimit - actualMinutesUsed).toFixed(4));
 
         console.log('Backend - Actual minutes used:', actualMinutesUsed.toFixed(4));
