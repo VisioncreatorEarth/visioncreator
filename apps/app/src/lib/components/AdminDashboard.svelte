@@ -9,7 +9,7 @@
 		name: string;
 		description: string;
 		config: {
-			tier: 'FREE' | 'HOMINIO' | 'VISIONCREATOR';
+			tier: '5M' | '30M' | '1H' | '4H' | '10H';
 			minutesLimit?: number;
 			[key: string]: any;
 		};
@@ -49,31 +49,55 @@
 
 	const tiers = [
 		{
-			id: 'FREE',
-			name: 'Free Tier',
+			id: '5M',
+			name: '5 Minutes Trial',
 			minutesLimit: 5,
-			features: ['5 minutes one-time usage', 'Shopping List Management', 'Basic Shopping Assistant']
+			features: ['5 minutes one-time usage', 'All Features Included', 'Trial Access']
 		},
 		{
-			id: 'HOMINIO',
-			name: 'Hominio',
-			minutesLimit: 60,
+			id: '30M',
+			name: '30 Minutes Monthly',
+			minutesLimit: 30,
 			features: [
-				'60 minutes per month',
-				'Everything in Free',
-				'Advanced Shopping Assistant',
-				'Todo Management'
+				'30 minutes per month',
+				'All Features Included',
+				'Monthly Renewal'
 			]
 		},
 		{
-			id: 'VISIONCREATOR',
-			name: 'Visioncreator',
+			id: '1H',
+			name: '1 Hour Monthly',
+			minutesLimit: 60,
+			features: [
+				'60 minutes per month',
+				'All Features Included',
+				'Monthly Renewal',
+				'Priority Support'
+			]
+		},
+		{
+			id: '4H',
+			name: '4 Hours Monthly',
 			minutesLimit: 240,
 			features: [
 				'240 minutes per month',
-				'Everything in Hominio',
+				'All Features Included',
+				'Monthly Renewal',
 				'Priority Support',
-				'Beta Access to New Features'
+				'Beta Access'
+			]
+		},
+		{
+			id: '10H',
+			name: '10 Hours Monthly',
+			minutesLimit: 600,
+			features: [
+				'600 minutes per month',
+				'All Features Included',
+				'Monthly Renewal',
+				'Priority Support',
+				'Beta Access',
+				'Custom Support'
 			]
 		}
 	];
@@ -255,21 +279,33 @@
 									<div class="flex gap-3 mb-6">
 										<button
 											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-											on:click={() => selectedUserId && handleTierChange(selectedUserId, 'FREE')}
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, '5M')}
 										>
-											+5m FREE
+											+5m 5M
 										</button>
 										<button
 											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-											on:click={() => selectedUserId && handleTierChange(selectedUserId, 'HOMINIO')}
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, '30M')}
 										>
-											+60m HOMINIO
+											+30m 30M
 										</button>
 										<button
 											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-											on:click={() => selectedUserId && handleTierChange(selectedUserId, 'VISIONCREATOR')}
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, '1H')}
 										>
-											+240m VISIONCREATOR
+											+1h 1H
+										</button>
+										<button
+											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, '4H')}
+										>
+											+4h 4H
+										</button>
+										<button
+											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, '10H')}
+										>
+											+10h 10H
 										</button>
 									</div>
 
@@ -277,25 +313,34 @@
 									<div class="space-y-2">
 										<h4 class="text-sm font-medium text-surface-200">Active Capabilities</h4>
 										<div class="space-y-4">
-											{#each $getUserCapabilitiesQuery.data.capabilities as capability}
-												<div class="p-4 rounded-lg bg-surface-700/50">
-													<div class="flex justify-between items-start">
-														<div>
-															<div class="flex items-center gap-2">
-																<p class="text-sm font-medium text-surface-200">{capability.config.tier}</p>
-																<p class="text-xs text-surface-300">{capability.config.minutesLimit}m</p>
-															</div>
-															<p class="mt-1 text-xs text-surface-300">
-																Granted: {new Date(capability.granted_at).toLocaleDateString()} by {capability.profiles?.name || 'Unknown'}
-															</p>
-														</div>
-														<button
-															class="text-xs text-red-400 hover:text-red-300"
-															on:click={() => handleRemoveCapability(capability)}
-														>
-															Remove
-														</button>
+											{#each $getUserCapabilitiesQuery.data.capabilities.filter((cap) => cap.active) as capability}
+												<div
+													class="p-4 flex items-center justify-between rounded-lg bg-surface-700/50"
+												>
+													<div>
+														<h3 class="font-medium text-tertiary-200">
+															{capability.name}
+														</h3>
+														<p class="text-sm text-surface-300">
+															{capability.description}
+														</p>
 													</div>
+													{#if capability.type === 'TIER' && !['HOMINIO', 'VISIONCREATOR'].includes(capability.config?.tier)}
+														<button
+															class="px-3 py-1 text-sm font-medium rounded-lg text-error-400 hover:bg-error-400/10"
+															on:click={() =>
+																handleRemoveCapability(capability)}
+															disabled={changingTierId === capability.id}
+														>
+															{#if changingTierId === capability.id}
+																<div
+																	class="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+																/>
+															{:else}
+																Remove
+															{/if}
+														</button>
+													{/if}
 												</div>
 											{/each}
 										</div>

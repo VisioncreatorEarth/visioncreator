@@ -5,7 +5,7 @@ export default createOperation.mutation({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
         type: z.enum(['TIER', 'OTHER']).optional(),
-        tier: z.enum(['FREE', 'HOMINIO', 'VISIONCREATOR']).nullable(),
+        tier: z.enum(['5M', '30M', '1H', '4H', '10H']).nullable(),
         capabilityId: z.string().optional()
     }),
     requireAuthentication: true,
@@ -29,16 +29,24 @@ export default createOperation.mutation({
 
         const now = new Date().toISOString();
         const tierConfig = {
-            FREE: {
+            '5M': {
                 minutesLimit: 5,
                 isOneTime: true
             },
-            HOMINIO: {
+            '30M': {
+                minutesLimit: 30,
+                isOneTime: false
+            },
+            '1H': {
                 minutesLimit: 60,
                 isOneTime: false
             },
-            VISIONCREATOR: {
+            '4H': {
                 minutesLimit: 240,
+                isOneTime: false
+            },
+            '10H': {
+                minutesLimit: 600,
                 isOneTime: false
             }
         };
@@ -140,14 +148,18 @@ export default createOperation.mutation({
     }
 });
 
-function getTierDescription(tier: 'FREE' | 'HOMINIO' | 'VISIONCREATOR'): string {
+function getTierDescription(tier: '5M' | '30M' | '1H' | '4H' | '10H'): string {
     switch (tier) {
-        case 'FREE':
-            return 'Free Tier - 5 minutes per month';
-        case 'HOMINIO':
-            return 'Hominio Tier - 60 minutes per month';
-        case 'VISIONCREATOR':
-            return 'Visioncreator Tier - 240 minutes per month';
+        case '5M':
+            return '5 Minutes Trial';
+        case '30M':
+            return '30 Minutes Monthly';
+        case '1H':
+            return '1 Hour Monthly';
+        case '4H':
+            return '4 Hours Monthly';
+        case '10H':
+            return '10 Hours Monthly';
         default:
             return 'Unknown Tier';
     }
