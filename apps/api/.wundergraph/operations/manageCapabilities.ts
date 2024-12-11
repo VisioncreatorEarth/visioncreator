@@ -4,7 +4,9 @@ export default createOperation.mutation({
     input: z.object({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
-        tier: z.enum(['FREE', 'HOMINIO', 'VISIONCREATOR']).nullable()
+        type: z.enum(['TIER', 'OTHER']).optional(),
+        tier: z.enum(['FREE', 'HOMINIO', 'VISIONCREATOR']).nullable(),
+        capabilityId: z.string().optional()
     }),
     requireAuthentication: true,
     rbac: {
@@ -46,7 +48,7 @@ export default createOperation.mutation({
             .from('capabilities')
             .select('*')
             .eq('user_id', input.userId)
-            .eq('type', 'TIER')
+            .eq('type', input.action === 'grant' ? 'TIER' : input.type)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') { // Ignore "no rows returned" error
@@ -112,20 +114,24 @@ export default createOperation.mutation({
             };
         } else {
             // Revoke action
-            if (!existingCapability) {
-                throw new Error('No tier capability found to revoke');
-            }
+            console.log('Attempting to revoke capability:', {
+                userId: input.userId,
+                type: input.type,
+                tier: input.tier
+            });
 
-            // Deactivate the capability
+            // Deactivate the capability directly using the input
             const { error: updateError } = await context.supabase
                 .from('capabilities')
                 .update({
                     active: false,
-                    config: { ...existingCapability.config, deactivatedAt: now }
+                    config: { deactivatedAt: now }
                 })
-                .eq('id', existingCapability.id);
+                .eq('user_id', input.userId)
+                .eq('id', input.capabilityId);
 
             if (updateError) {
+                console.error('Failed to revoke capability:', updateError);
                 throw new Error(`Failed to revoke capability: ${updateError.message}`);
             }
 

@@ -16,6 +16,9 @@
 		granted_at: string;
 		granted_by: string;
 		active: boolean;
+		profiles?: {
+			name: string;
+		};
 	}
 
 	let showUltravoxDashboard = true;
@@ -43,6 +46,7 @@
 	});
 
 	let changingTierId: string | null = null;
+	let activeTab = 'calls';
 
 	const tiers = [
 		{
@@ -114,6 +118,26 @@
 
 	function getCurrentTier(capabilities: Capability[]) {
 		return capabilities.find((c) => c.type === 'TIER' && c.active);
+	}
+
+	async function handleRemoveCapability(capability: Capability) {
+		try {
+			console.log('Revoking capability:', capability);
+			const result = await $manageCapabilitiesMutation.mutateAsync({
+				userId: selectedUserId,
+				action: 'revoke',
+				type: capability.type,
+				tier: capability.config.tier,
+				capabilityId: capability.id
+			});
+
+			if (result.success) {
+				// Refresh the capabilities data
+				await $getUserCapabilitiesQuery.refetch();
+			}
+		} catch (error) {
+			console.error('Failed to remove capability:', error);
+		}
 	}
 </script>
 
@@ -206,23 +230,7 @@
 							<!-- Tier Management -->
 							{#if $getUserCapabilitiesQuery.data?.capabilities}
 								<div class="p-6 rounded-lg bg-surface-800">
-									<div class="flex justify-between items-center mb-4">
-										<h3 class="text-lg font-semibold text-white">Tier Management</h3>
-										{#if getCurrentTier($getUserCapabilitiesQuery.data.capabilities)}
-											<button
-												class="px-4 py-2 rounded-lg border transition-colors border-error-500 text-error-500 hover:bg-error-500/10"
-												on:click={() =>
-													selectedUserId && handleTierChange(selectedUserId, 'revoke')}
-												disabled={changingTierId === 'revoke'}
-											>
-												{#if changingTierId === 'revoke'}
-													<span class="inline-block w-4 h-4 rounded-full border-2 animate-spin" />
-												{:else}
-													Remove Tier
-												{/if}
-											</button>
-										{/if}
-									</div>
+									<h3 class="text-lg font-semibold text-white mb-4">Tier Management</h3>
 									<div class="space-y-4">
 										{#each tiers as tier}
 											{@const currentTier = getCurrentTier(
@@ -266,41 +274,101 @@
 							{/if}
 						</div>
 
-						<!-- Right Column: Call History -->
+						<!-- Right Column: Call History and Capabilities -->
 						<div class="space-y-6">
-							{#if $userStatsQuery.data.recent_calls?.length}
+							<!-- Tab Navigation -->
+							<div class="flex mb-4 space-x-4">
+								<button
+									class="px-4 py-2 rounded-lg {activeTab === 'calls'
+										? 'bg-primary-500'
+										: 'bg-surface-700'}"
+									on:click={() => (activeTab = 'calls')}
+								>
+									Call History
+								</button>
+								<button
+									class="px-4 py-2 rounded-lg {activeTab === 'capabilities'
+										? 'bg-primary-500'
+										: 'bg-surface-700'}"
+									on:click={() => (activeTab = 'capabilities')}
+								>
+									Active Capabilities
+								</button>
+							</div>
+
+							{#if activeTab === 'calls'}
+								{#if $userStatsQuery.data.recent_calls?.length}
+									<div class="p-6 rounded-lg bg-surface-800">
+										<h3 class="mb-4 text-lg font-semibold text-white">
+											Call History ({$userStatsQuery.data.recent_calls.length} calls)
+										</h3>
+										<div class="space-y-4 max-h-[800px] overflow-y-auto pr-2">
+											{#each $userStatsQuery.data.recent_calls as call}
+												<div class="p-4 rounded-lg bg-surface-700/50">
+													<div class="flex justify-between items-start">
+														<div>
+															<p class="text-sm font-medium text-surface-200">
+																{new Date(call.start_time).toLocaleString()}
+															</p>
+															<p class="mt-1 text-xs text-surface-300">
+																Duration: {formatDuration(call.duration)}
+															</p>
+														</div>
+														<span
+															class={`px-2 py-1 text-xs font-medium rounded-full
+																${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
+																${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
+																${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
+															`}
+														>
+															{call.status}
+														</span>
+													</div>
+													{#if call.error}
+														<p class="mt-2 text-xs text-error-400">{call.error}</p>
+													{/if}
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							{:else if $getUserCapabilitiesQuery.data?.capabilities?.length}
 								<div class="p-6 rounded-lg bg-surface-800">
 									<h3 class="mb-4 text-lg font-semibold text-white">
-										Call History ({$userStatsQuery.data.recent_calls.length} calls)
+										Active Capabilities ({$getUserCapabilitiesQuery.data.capabilities.length})
 									</h3>
-									<div class="space-y-4 max-h-[800px] overflow-y-auto pr-2">
-										{#each $userStatsQuery.data.recent_calls as call}
-											<div class="p-4 rounded-lg bg-surface-700/50">
+									<div class="space-y-4">
+										{#each $getUserCapabilitiesQuery.data.capabilities as capability}
+											<div class="p-4 rounded bg-surface-700">
 												<div class="flex justify-between items-start">
 													<div>
-														<p class="text-sm font-medium text-surface-200">
-															{new Date(call.start_time).toLocaleString()}
-														</p>
-														<p class="mt-1 text-xs text-surface-300">
-															Duration: {formatDuration(call.duration)}
-														</p>
+														<h4 class="font-medium text-white">{capability.name}</h4>
+														<p class="text-sm text-surface-200">{capability.description}</p>
+														<div class="mt-2 text-xs text-surface-300">
+															<p>Type: {capability.type}</p>
+															<p>Tier: {capability.config.tier}</p>
+															{#if capability.config.minutesLimit}
+																<p>Minutes Limit: {capability.config.minutesLimit}</p>
+															{/if}
+															<p>Granted: {new Date(capability.granted_at).toLocaleDateString()}</p>
+															<p>Granted by: {capability.profiles?.name || 'Unknown'}</p>
+														</div>
 													</div>
-													<span
-														class={`px-2 py-1 text-xs font-medium rounded-full
-															${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
-															${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
-															${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
-														`}
+													<button
+														class="px-3 py-1 text-sm font-medium text-white rounded-lg transition-colors bg-error-500 hover:bg-error-600"
+														on:click={() => handleRemoveCapability(capability)}
+														disabled={$manageCapabilitiesMutation.isLoading}
 													>
-														{call.status}
-													</span>
+														{$manageCapabilitiesMutation.isLoading ? 'Removing...' : 'Remove'}
+													</button>
 												</div>
-												{#if call.error}
-													<p class="mt-2 text-xs text-error-400">{call.error}</p>
-												{/if}
 											</div>
 										{/each}
 									</div>
+								</div>
+							{:else}
+								<div class="p-6 rounded-lg bg-surface-800">
+									<p class="text-surface-200">No active capabilities found.</p>
 								</div>
 							{/if}
 						</div>
