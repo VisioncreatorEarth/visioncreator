@@ -188,41 +188,40 @@
 			<UltravoxDashboard />
 		{:else if selectedUserId}
 			<div class="p-6 space-y-6">
-				<!-- Usage Overview -->
-
-				<div class="p-6 w-full rounded-lg bg-surface-800">
-					<div class="grid grid-cols-4 gap-4">
-						<div class="p-4 rounded-lg bg-surface-700/50">
-							<p class="text-sm text-surface-200">Total Calls</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{$userStatsQuery.data.total_calls}
-							</p>
-						</div>
-						<div class="p-4 rounded-lg bg-surface-700/50">
-							<p class="text-sm text-surface-200">Success Rate</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{$userStatsQuery.data.success_rate.toFixed(1)}%
-							</p>
-						</div>
-						<div class="p-4 rounded-lg bg-surface-700/50">
-							<p class="text-sm text-surface-200">Minutes Used</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{formatDuration($userStatsQuery.data.minutes_used)}
-							</p>
-							<p class="mt-1 text-xs text-surface-300">
-								of {$userStatsQuery.data.minutes_limit}m limit
-							</p>
-						</div>
-						<div class="p-4 rounded-lg bg-surface-700/50">
-							<p class="text-sm text-surface-200">Minutes Remaining</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{formatDuration($userStatsQuery.data.minutes_remaining)}
-							</p>
-							<p class="mt-1 text-xs text-surface-300">this month</p>
+				{#if $userStatsQuery.data}
+					<!-- Usage Overview -->
+					<div class="p-6 w-full rounded-lg bg-surface-800">
+						<div class="grid grid-cols-4 gap-4">
+							<div class="p-4 rounded-lg bg-surface-700/50">
+								<p class="text-sm text-surface-200">Total Calls</p>
+								<p class="mt-1 text-2xl font-semibold text-white">
+									{$userStatsQuery.data.total_calls}
+								</p>
+							</div>
+							<div class="p-4 rounded-lg bg-surface-700/50">
+								<p class="text-sm text-surface-200">Success Rate</p>
+								<p class="mt-1 text-2xl font-semibold text-white">
+									{$userStatsQuery.data.success_rate.toFixed(1)}%
+								</p>
+							</div>
+							<div class="p-4 rounded-lg bg-surface-700/50">
+								<p class="text-sm text-surface-200">Minutes Used</p>
+								<p class="mt-1 text-2xl font-semibold text-white">
+									{formatDuration($userStatsQuery.data.minutes_used)}
+								</p>
+								<p class="mt-1 text-xs text-surface-300">
+									of {$userStatsQuery.data.minutes_limit}m limit
+								</p>
+							</div>
+							<div class="p-4 rounded-lg bg-surface-700/50">
+								<p class="text-sm text-surface-200">Minutes Remaining</p>
+								<p class="mt-1 text-2xl font-semibold text-white">
+									{formatDuration($userStatsQuery.data.minutes_remaining)}
+								</p>
+								<p class="mt-1 text-xs text-surface-300">this month</p>
+							</div>
 						</div>
 					</div>
-				</div>
-				{#if $userStatsQuery.data}
 					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<!-- Left Column: Usage Overview and Tier Management -->
 						<div class="space-y-6">
