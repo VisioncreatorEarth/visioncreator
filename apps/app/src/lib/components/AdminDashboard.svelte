@@ -188,49 +188,48 @@
 			<UltravoxDashboard />
 		{:else if selectedUserId}
 			<div class="p-6 space-y-6">
+				<!-- Usage Overview -->
+
+				<div class="p-6 w-full rounded-lg bg-surface-800">
+					<div class="grid grid-cols-4 gap-4">
+						<div class="p-4 rounded-lg bg-surface-700/50">
+							<p class="text-sm text-surface-200">Total Calls</p>
+							<p class="mt-1 text-2xl font-semibold text-white">
+								{$userStatsQuery.data.total_calls}
+							</p>
+						</div>
+						<div class="p-4 rounded-lg bg-surface-700/50">
+							<p class="text-sm text-surface-200">Success Rate</p>
+							<p class="mt-1 text-2xl font-semibold text-white">
+								{$userStatsQuery.data.success_rate.toFixed(1)}%
+							</p>
+						</div>
+						<div class="p-4 rounded-lg bg-surface-700/50">
+							<p class="text-sm text-surface-200">Minutes Used</p>
+							<p class="mt-1 text-2xl font-semibold text-white">
+								{formatDuration($userStatsQuery.data.minutes_used)}
+							</p>
+							<p class="mt-1 text-xs text-surface-300">
+								of {$userStatsQuery.data.minutes_limit}m limit
+							</p>
+						</div>
+						<div class="p-4 rounded-lg bg-surface-700/50">
+							<p class="text-sm text-surface-200">Minutes Remaining</p>
+							<p class="mt-1 text-2xl font-semibold text-white">
+								{formatDuration($userStatsQuery.data.minutes_remaining)}
+							</p>
+							<p class="mt-1 text-xs text-surface-300">this month</p>
+						</div>
+					</div>
+				</div>
 				{#if $userStatsQuery.data}
 					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<!-- Left Column: Usage Overview and Tier Management -->
 						<div class="space-y-6">
-							<!-- Usage Overview -->
-							<div class="p-6 rounded-lg bg-surface-800">
-								<h3 class="mb-4 text-lg font-semibold text-white">Usage Overview</h3>
-								<div class="grid grid-cols-2 gap-4">
-									<div class="p-4 rounded-lg bg-surface-700/50">
-										<p class="text-sm text-surface-200">Total Calls</p>
-										<p class="mt-1 text-2xl font-semibold text-white">
-											{$userStatsQuery.data.total_calls}
-										</p>
-									</div>
-									<div class="p-4 rounded-lg bg-surface-700/50">
-										<p class="text-sm text-surface-200">Success Rate</p>
-										<p class="mt-1 text-2xl font-semibold text-white">
-											{$userStatsQuery.data.success_rate.toFixed(1)}%
-										</p>
-									</div>
-									<div class="p-4 rounded-lg bg-surface-700/50">
-										<p class="text-sm text-surface-200">Minutes Used</p>
-										<p class="mt-1 text-2xl font-semibold text-white">
-											{formatDuration($userStatsQuery.data.minutes_used)}
-										</p>
-										<p class="mt-1 text-xs text-surface-300">
-											of {$userStatsQuery.data.minutes_limit}m limit
-										</p>
-									</div>
-									<div class="p-4 rounded-lg bg-surface-700/50">
-										<p class="text-sm text-surface-200">Minutes Remaining</p>
-										<p class="mt-1 text-2xl font-semibold text-white">
-											{formatDuration($userStatsQuery.data.minutes_remaining)}
-										</p>
-										<p class="mt-1 text-xs text-surface-300">this month</p>
-									</div>
-								</div>
-							</div>
-
 							<!-- Tier Management -->
 							{#if $getUserCapabilitiesQuery.data?.capabilities}
 								<div class="p-6 rounded-lg bg-surface-800">
-									<h3 class="text-lg font-semibold text-white mb-4">Tier Management</h3>
+									<h3 class="mb-4 text-lg font-semibold text-white">Tier Management</h3>
 									<div class="space-y-4">
 										{#each tiers as tier}
 											{@const currentTier = getCurrentTier(
@@ -272,67 +271,7 @@
 									</div>
 								</div>
 							{/if}
-						</div>
-
-						<!-- Right Column: Call History and Capabilities -->
-						<div class="space-y-6">
-							<!-- Tab Navigation -->
-							<div class="flex mb-4 space-x-4">
-								<button
-									class="px-4 py-2 rounded-lg {activeTab === 'calls'
-										? 'bg-primary-500'
-										: 'bg-surface-700'}"
-									on:click={() => (activeTab = 'calls')}
-								>
-									Call History
-								</button>
-								<button
-									class="px-4 py-2 rounded-lg {activeTab === 'capabilities'
-										? 'bg-primary-500'
-										: 'bg-surface-700'}"
-									on:click={() => (activeTab = 'capabilities')}
-								>
-									Active Capabilities
-								</button>
-							</div>
-
-							{#if activeTab === 'calls'}
-								{#if $userStatsQuery.data.recent_calls?.length}
-									<div class="p-6 rounded-lg bg-surface-800">
-										<h3 class="mb-4 text-lg font-semibold text-white">
-											Call History ({$userStatsQuery.data.recent_calls.length} calls)
-										</h3>
-										<div class="space-y-4 max-h-[800px] overflow-y-auto pr-2">
-											{#each $userStatsQuery.data.recent_calls as call}
-												<div class="p-4 rounded-lg bg-surface-700/50">
-													<div class="flex justify-between items-start">
-														<div>
-															<p class="text-sm font-medium text-surface-200">
-																{new Date(call.start_time).toLocaleString()}
-															</p>
-															<p class="mt-1 text-xs text-surface-300">
-																Duration: {formatDuration(call.duration)}
-															</p>
-														</div>
-														<span
-															class={`px-2 py-1 text-xs font-medium rounded-full
-																${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
-																${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
-																${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
-															`}
-														>
-															{call.status}
-														</span>
-													</div>
-													{#if call.error}
-														<p class="mt-2 text-xs text-error-400">{call.error}</p>
-													{/if}
-												</div>
-											{/each}
-										</div>
-									</div>
-								{/if}
-							{:else if $getUserCapabilitiesQuery.data?.capabilities?.length}
+							{#if $getUserCapabilitiesQuery.data?.capabilities?.length}
 								<div class="p-6 rounded-lg bg-surface-800">
 									<h3 class="mb-4 text-lg font-semibold text-white">
 										Active Capabilities ({$getUserCapabilitiesQuery.data.capabilities.length})
@@ -369,6 +308,45 @@
 							{:else}
 								<div class="p-6 rounded-lg bg-surface-800">
 									<p class="text-surface-200">No active capabilities found.</p>
+								</div>
+							{/if}
+						</div>
+
+						<!-- Right Column: Call History and Capabilities -->
+						<div class="space-y-6">
+							{#if $userStatsQuery.data.recent_calls?.length}
+								<div class="p-6 rounded-lg bg-surface-800">
+									<h3 class="mb-4 text-lg font-semibold text-white">
+										Call History ({$userStatsQuery.data.recent_calls.length} calls)
+									</h3>
+									<div class="space-y-4 max-h-[800px] overflow-y-auto pr-2">
+										{#each $userStatsQuery.data.recent_calls as call}
+											<div class="p-4 rounded-lg bg-surface-700/50">
+												<div class="flex justify-between items-start">
+													<div>
+														<p class="text-sm font-medium text-surface-200">
+															{new Date(call.start_time).toLocaleString()}
+														</p>
+														<p class="mt-1 text-xs text-surface-300">
+															Duration: {formatDuration(call.duration)}
+														</p>
+													</div>
+													<span
+														class={`px-2 py-1 text-xs font-medium rounded-full
+																${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
+																${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
+																${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
+															`}
+													>
+														{call.status}
+													</span>
+												</div>
+												{#if call.error}
+													<p class="mt-2 text-xs text-error-400">{call.error}</p>
+												{/if}
+											</div>
+										{/each}
+									</div>
 								</div>
 							{/if}
 						</div>
