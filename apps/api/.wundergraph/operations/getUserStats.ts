@@ -52,11 +52,15 @@ export default createOperation.query({
             .select('*')
             .eq('user_id', input.userId)
             .eq('type', 'TIER')
-            .eq('active', true)
-            .single();
+            .eq('active', true);
+
+        if (capError) {
+            console.error('Error fetching capabilities:', capError);
+            throw new Error('Failed to fetch user capabilities');
+        }
 
         // Handle case where user has no capabilities
-        if (capError && capError.code === 'PGRST116') { // No rows returned
+        if (!capabilities || capabilities.length === 0) {
             console.log('No capabilities found for user:', input.userId);
             return {
                 total_calls: calls.length,
@@ -69,20 +73,21 @@ export default createOperation.query({
             };
         }
 
-        if (capError) {
-            console.error('Error fetching capabilities:', capError);
-            throw new Error('Failed to fetch user capabilities');
-        }
+        // Calculate total minutes limit from all active tiers
+        const totalMinutesLimit = capabilities.reduce((total, cap) => {
+            return total + (cap.config?.minutesLimit || 0);
+        }, 0);
 
         // Calculate totals
-        const totalMinutes = calls.reduce((sum, call) => sum + (call.duration_minutes || 0), 0);
+        const totalMinutesUsed = calls.reduce((sum, call) => sum + (call.duration_minutes || 0), 0);
+        const remainingMinutes = Math.max(0, totalMinutesLimit - totalMinutesUsed);
         
         return {
             total_calls: calls.length,
-            total_minutes: totalMinutes,
-            minutes_limit: capabilities?.config?.minutesLimit || 0,
-            minutes_used: totalMinutes,
-            minutes_remaining: Math.max(0, (capabilities?.config?.minutesLimit || 0) - totalMinutes),
+            total_minutes: totalMinutesUsed,
+            minutes_limit: totalMinutesLimit,
+            minutes_used: totalMinutesUsed,
+            minutes_remaining: remainingMinutes,
             success_rate: calculateSuccessRate(calls),
             recent_calls: formatRecentCalls(calls)
         };

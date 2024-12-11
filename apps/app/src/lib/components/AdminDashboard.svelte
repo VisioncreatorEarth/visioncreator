@@ -46,7 +46,6 @@
 	});
 
 	let changingTierId: string | null = null;
-	let activeTab = 'calls';
 
 	const tiers = [
 		{
@@ -98,26 +97,27 @@
 		console.log('Recent calls:', $userStatsQuery.data.recent_calls);
 	}
 
-	function handleTierChange(userId: string, tierId: string) {
+	async function handleTierChange(userId: string, tierId: string) {
 		if (!userId || changingTierId) return;
 		changingTierId = tierId;
 
 		try {
-			$manageCapabilitiesMutation.mutateAsync({
+			await $manageCapabilitiesMutation.mutateAsync({
 				userId,
 				action: tierId === 'revoke' ? 'revoke' : 'grant',
 				tier: tierId === 'revoke' ? null : tierId
 			});
-			$getUserCapabilitiesQuery.refetch();
+			
+			// Refresh both queries to update the UI
+			await Promise.all([
+				$getUserCapabilitiesQuery.refetch(),
+				$userStatsQuery.refetch()
+			]);
 		} catch (error) {
 			console.error('Failed to manage tier:', error);
 		} finally {
 			changingTierId = null;
 		}
-	}
-
-	function getCurrentTier(capabilities: Capability[]) {
-		return capabilities.find((c) => c.type === 'TIER' && c.active);
 	}
 
 	async function handleRemoveCapability(capability: Capability) {
@@ -132,8 +132,11 @@
 			});
 
 			if (result.success) {
-				// Refresh the capabilities data
-				await $getUserCapabilitiesQuery.refetch();
+				// Refresh both queries
+				await Promise.all([
+					$getUserCapabilitiesQuery.refetch(),
+					$userStatsQuery.refetch()
+				]);
 			}
 		} catch (error) {
 			console.error('Failed to remove capability:', error);
@@ -210,7 +213,7 @@
 									{formatDuration($userStatsQuery.data.minutes_used)}
 								</p>
 								<p class="mt-1 text-xs text-surface-300">
-									of {$userStatsQuery.data.minutes_limit}m limit
+									of {formatDuration($userStatsQuery.data.minutes_limit)}
 								</p>
 							</div>
 							<div class="p-4 rounded-lg bg-surface-700/50">
@@ -229,84 +232,74 @@
 							{#if $getUserCapabilitiesQuery.data?.capabilities}
 								<div class="p-6 rounded-lg bg-surface-800">
 									<h3 class="mb-4 text-lg font-semibold text-white">Tier Management</h3>
-									<div class="space-y-4">
-										{#each tiers as tier}
-											{@const currentTier = getCurrentTier(
-												$getUserCapabilitiesQuery.data.capabilities
-											)}
-											<div class="p-4 rounded-lg bg-surface-700/50">
-												<div class="flex justify-between items-center">
-													<div>
-														<h4 class="font-medium text-white">{tier.name}</h4>
-														<p class="mt-1 text-sm text-surface-200">
-															{tier.minutesLimit} minutes {tier.id === 'FREE'
-																? '(one-time)'
-																: 'per month'}
-														</p>
-													</div>
-													<button
-														class={`px-4 py-2 rounded-lg transition-colors ${
-															currentTier?.config.tier === tier.id
-																? 'bg-tertiary-500/20 text-tertiary-400'
-																: 'border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10'
-														}`}
-														on:click={() =>
-															selectedUserId && handleTierChange(selectedUserId, tier.id)}
-														disabled={changingTierId === tier.id}
-													>
-														{#if changingTierId === tier.id}
-															<span
-																class="inline-block w-4 h-4 rounded-full border-2 animate-spin"
-															/>
-														{:else if currentTier?.config.tier === tier.id}
-															Active
-														{:else}
-															Activate
-														{/if}
-													</button>
-												</div>
+									
+									<!-- Tier Information -->
+									<div class="mb-4 p-4 rounded-lg bg-surface-700/50">
+										<div class="flex items-center justify-between">
+											<div>
+												<p class="text-sm text-surface-200">Total Minutes Limit</p>
+												<p class="mt-1 text-2xl font-semibold text-white">
+													{formatDuration($userStatsQuery.data.minutes_limit)}
+												</p>
 											</div>
-										{/each}
+											<div class="text-right">
+												<p class="text-sm text-surface-200">Active Tiers</p>
+												<p class="mt-1 text-2xl font-semibold text-white">
+													{$getUserCapabilitiesQuery.data.capabilities.length}
+												</p>
+											</div>
+										</div>
 									</div>
-								</div>
-							{/if}
-							{#if $getUserCapabilitiesQuery.data?.capabilities?.length}
-								<div class="p-6 rounded-lg bg-surface-800">
-									<h3 class="mb-4 text-lg font-semibold text-white">
-										Active Capabilities ({$getUserCapabilitiesQuery.data.capabilities.length})
-									</h3>
-									<div class="space-y-4">
-										{#each $getUserCapabilitiesQuery.data.capabilities as capability}
-											<div class="p-4 rounded bg-surface-700">
-												<div class="flex justify-between items-start">
-													<div>
-														<h4 class="font-medium text-white">{capability.name}</h4>
-														<p class="text-sm text-surface-200">{capability.description}</p>
-														<div class="mt-2 text-xs text-surface-300">
-															<p>Type: {capability.type}</p>
-															<p>Tier: {capability.config.tier}</p>
-															{#if capability.config.minutesLimit}
-																<p>Minutes Limit: {capability.config.minutesLimit}</p>
-															{/if}
-															<p>Granted: {new Date(capability.granted_at).toLocaleDateString()}</p>
-															<p>Granted by: {capability.profiles?.name || 'Unknown'}</p>
+									
+									<!-- Simplified Tier Buttons -->
+									<div class="flex gap-3 mb-6">
+										<button
+											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, 'FREE')}
+										>
+											+5m FREE
+										</button>
+										<button
+											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, 'HOMINIO')}
+										>
+											+60m HOMINIO
+										</button>
+										<button
+											class="px-4 py-2 text-sm font-medium rounded-lg border border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+											on:click={() => selectedUserId && handleTierChange(selectedUserId, 'VISIONCREATOR')}
+										>
+											+240m VISIONCREATOR
+										</button>
+									</div>
+
+									<!-- Active Capabilities List -->
+									<div class="space-y-2">
+										<h4 class="text-sm font-medium text-surface-200">Active Capabilities</h4>
+										<div class="space-y-4">
+											{#each $getUserCapabilitiesQuery.data.capabilities as capability}
+												<div class="p-4 rounded-lg bg-surface-700/50">
+													<div class="flex justify-between items-start">
+														<div>
+															<div class="flex items-center gap-2">
+																<p class="text-sm font-medium text-surface-200">{capability.config.tier}</p>
+																<p class="text-xs text-surface-300">{capability.config.minutesLimit}m</p>
+															</div>
+															<p class="mt-1 text-xs text-surface-300">
+																Granted: {new Date(capability.granted_at).toLocaleDateString()} by {capability.profiles?.name || 'Unknown'}
+															</p>
 														</div>
+														<button
+															class="text-xs text-red-400 hover:text-red-300"
+															on:click={() => handleRemoveCapability(capability)}
+														>
+															Remove
+														</button>
 													</div>
-													<button
-														class="px-3 py-1 text-sm font-medium text-white rounded-lg transition-colors bg-error-500 hover:bg-error-600"
-														on:click={() => handleRemoveCapability(capability)}
-														disabled={$manageCapabilitiesMutation.isLoading}
-													>
-														{$manageCapabilitiesMutation.isLoading ? 'Removing...' : 'Remove'}
-													</button>
 												</div>
-											</div>
-										{/each}
+											{/each}
+										</div>
 									</div>
-								</div>
-							{:else}
-								<div class="p-6 rounded-lg bg-surface-800">
-									<p class="text-surface-200">No active capabilities found.</p>
 								</div>
 							{/if}
 						</div>
@@ -355,44 +348,23 @@
 						<!-- Loading State: Left Column -->
 						<div class="space-y-6">
 							<div class="p-6 rounded-lg animate-pulse bg-surface-800">
-								<div class="mb-6 w-48 h-6 rounded bg-surface-700" />
-								<div class="grid grid-cols-2 gap-4">
-									{#each Array(4) as _}
-										<div class="p-4 rounded-lg bg-surface-700/50">
-											<div class="mb-2 w-24 h-4 rounded bg-surface-600" />
-											<div class="w-16 h-8 rounded bg-surface-600" />
-										</div>
-									{/each}
-								</div>
-							</div>
-							<div class="p-6 rounded-lg animate-pulse bg-surface-800">
-								<div class="mb-6 w-48 h-6 rounded bg-surface-700" />
-								<div class="space-y-4">
-									{#each Array(3) as _}
-										<div class="p-4 rounded-lg bg-surface-700/50">
-											<div class="h-24 rounded bg-surface-600" />
-										</div>
-									{/each}
+								<div class="h-6 w-32 rounded bg-surface-700" />
+								<div class="mt-4 space-y-3">
+									<div class="h-12 rounded bg-surface-700" />
+									<div class="h-12 rounded bg-surface-700" />
+									<div class="h-12 rounded bg-surface-700" />
 								</div>
 							</div>
 						</div>
-
 						<!-- Loading State: Right Column -->
-						<div class="p-6 rounded-lg animate-pulse bg-surface-800">
-							<div class="mb-6 w-48 h-6 rounded bg-surface-700" />
-							<div class="space-y-4">
-								{#each Array(5) as _}
-									<div class="p-4 rounded-lg bg-surface-700/50">
-										<div class="flex justify-between items-center mb-4">
-											<div class="w-32 h-4 rounded bg-surface-600" />
-											<div class="w-16 h-6 rounded bg-surface-600" />
-										</div>
-										<div class="grid grid-cols-2 gap-4">
-											<div class="h-12 rounded bg-surface-600" />
-											<div class="h-12 rounded bg-surface-600" />
-										</div>
-									</div>
-								{/each}
+						<div class="space-y-6">
+							<div class="p-6 rounded-lg animate-pulse bg-surface-800">
+								<div class="h-6 w-32 rounded bg-surface-700" />
+								<div class="mt-4 space-y-3">
+									<div class="h-12 rounded bg-surface-700" />
+									<div class="h-12 rounded bg-surface-700" />
+									<div class="h-12 rounded bg-surface-700" />
+								</div>
 							</div>
 						</div>
 					</div>
