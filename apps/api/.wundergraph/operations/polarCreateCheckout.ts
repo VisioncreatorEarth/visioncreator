@@ -16,7 +16,7 @@ export default createOperation.mutation({
             const checkout = await context.polar.checkouts.custom.create({
                 productPriceId: input.productPriceId,
                 successUrl: input.successUrl,
-                // customerEmail: input.customerEmail, temporary disabled, because email validation from polar too strict
+                customerEmail: input.customerEmail,
                 customerName: input.customerName,
                 metadata: {
                     userId: user.customClaims?.id
