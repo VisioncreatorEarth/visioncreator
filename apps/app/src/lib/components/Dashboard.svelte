@@ -101,7 +101,7 @@
 	</div>
 
 	<!-- Main Content -->
-	<div class="flex relative flex-col justify-center items-center p-4 w-full min-h-screen">
+	<div class="flex relative flex-col justify-center items-center p-4 w-full min-h-[100dvh] overflow-x-hidden">
 		<!-- Countdown -->
 		<div class="mb-8 text-center">
 			<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">Launching BETA in</h2>
