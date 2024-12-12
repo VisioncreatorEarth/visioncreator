@@ -28,7 +28,7 @@
 
 	async function handleRequestMinutes() {
 		if (!session?.user?.id) return;
-		
+
 		requestStatus = 'loading';
 		try {
 			await $sendMailMutation.mutateAsync({
@@ -36,10 +36,11 @@
 				subject: 'Requesting Minutes',
 				body: 'Would love to have some more minutes'
 			});
-			
+
 			requestStatus = 'success';
-			requestMessage = "We'll respond back to you by mail during the next 48 working hours, giving you more minutes to play with Hominio (might be slower during christmas and new year)";
-			
+			requestMessage =
+				"We'll respond back to you by mail during the next 48 working hours, giving you more minutes to play with Hominio (might be slower during christmas and new year)";
+
 			setTimeout(() => {
 				machine.send('CLOSE');
 				requestStatus = 'idle';
@@ -342,9 +343,7 @@
 		on:click|self={handleModalClose}
 	>
 		<!-- Separate backdrop div with iOS-compatible blur -->
-		<div
-			class="absolute inset-0 -z-10 bg-surface-900/30 supports-[backdrop-filter]:bg-surface-900/10 backdrop-blur-[6px] supports-[backdrop-filter]:backdrop-blur-sm"
-		/>
+		<div class="absolute inset-0 -z-10 bg-surface-900/10" />
 		{#if $currentState === 'calling'}
 			<AskHominio
 				bind:this={askHominioComponent}
@@ -376,7 +375,7 @@
 										Please enable microphone access in your browser settings and try again
 									</p>
 									<button
-										class="px-4 py-2 mt-4 text-white rounded-lg bg-tertiary-500"
+										class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
 										on:click={() => machine.send('TRY_AGAIN')}
 									>
 										Try Again
@@ -392,23 +391,33 @@
 								</div>
 							{:else if $currentState === 'paywall'}
 								<div class="p-6 text-center">
-									<div class="mb-4 flex justify-center">
-										<Icon icon="solar:lock-password-bold-duotone" width="64" height="64" class="text-tertiary-200 [--icon-secondary:theme(colors.surface.200)]" />
+									<div class="flex justify-center mb-4">
+										<Icon
+											icon="solar:lock-password-bold-duotone"
+											width="64"
+											height="64"
+											class="text-tertiary-200 [--icon-secondary:theme(colors.surface.200)]"
+										/>
 									</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Your Hominio Minutes are Up</h2>
 									<p class="mt-2 text-tertiary-200/80">
-										Request more minutes to continue using Hominio. We'll get back to you shortly with additional free minutes!
+										Request more minutes to continue using Hominio. We'll get back to you shortly
+										with additional free minutes!
 									</p>
-									
+
 									{#if requestMessage}
-										<div class="mt-4 p-3 rounded-lg {requestStatus === 'success' ? 'bg-success-500/20 text-success-400' : 'bg-error-500/20 text-error-400'}">
+										<div
+											class="mt-4 p-3 rounded-lg {requestStatus === 'success'
+												? 'bg-success-500/20 text-success-400'
+												: 'bg-error-500/20 text-error-400'}"
+										>
 											{requestMessage}
 										</div>
 									{/if}
 
 									<div class="flex gap-4 justify-center mt-4">
 										<button
-											class="btn variant-soft btn-md @3xl:btn-lg rounded-full"
+											class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
 											on:click={() => machine.send('CLOSE')}
 											disabled={requestStatus === 'loading'}
 										>
@@ -420,7 +429,9 @@
 											disabled={requestStatus === 'loading'}
 										>
 											{#if requestStatus === 'loading'}
-												<div class="w-5 h-5 rounded-full border-2 border-tertiary-200 border-t-transparent animate-spin" />
+												<div
+													class="w-5 h-5 rounded-full border-2 animate-spin border-tertiary-200 border-t-transparent"
+												/>
 											{:else}
 												Request Minutes
 											{/if}
@@ -435,7 +446,7 @@
 									</p>
 									<div class="flex justify-center mt-4">
 										<button
-											class="btn variant-soft btn-md @3xl:btn-lg rounded-full"
+											class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
 											on:click={() => machine.send('CLOSE')}
 										>
 											Maybe Later

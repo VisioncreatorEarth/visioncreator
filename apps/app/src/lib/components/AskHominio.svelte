@@ -112,10 +112,9 @@
 			});
 
 			console.log('Name update result:', result);
-			
+
 			// Return a simple success message
-			return "Your name has been updated successfully!";
-			
+			return 'Your name has been updated successfully!';
 		} catch (error) {
 			console.error('Error in updateNameTool:', error);
 			throw new Error('Failed to update name');
@@ -518,7 +517,6 @@
 </script>
 
 <div class="flex fixed inset-0 z-50 flex-col justify-end">
-	<!-- Separate backdrop div with iOS-compatible blur -->
 	<div class="absolute inset-0 -z-10 bg-surface-900/30 supports-[backdrop-filter]:bg-surface-900/10 backdrop-blur-[6px] supports-[backdrop-filter]:backdrop-blur-sm" />
 	<div class="fixed right-0 bottom-0 left-0 z-30 pointer-events-none gradient-overlay">
 		<div
@@ -531,33 +529,8 @@
 			style="max-height: calc(100vh - 120px);"
 		>
 			<div class="space-y-3">
-				<!-- Commenting out transcriptions UI for now
-				{#if transcripts.length > 0}
-					<div class="p-4 rounded-xl backdrop-blur-xl bg-tertiary-200/10">
-						{#each transcripts as transcript}
-							<div class="flex flex-col mb-3 last:mb-0">
-								<div
-									class="flex {transcript.speaker === 'agent' ? 'justify-start' : 'justify-end'}"
-								>
-									<div
-										class="rounded-lg p-3 max-w-[85%] {transcript.speaker === 'agent'
-											? 'bg-tertiary-500/20'
-											: 'bg-primary-500/20'}"
-									>
-										<p class="text-sm font-medium text-tertiary-200">
-											{transcript.speaker === 'agent' ? 'Assistant' : 'You'}
-										</p>
-										<p class="text-sm text-tertiary-200/80">{transcript.text}</p>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-				-->
-
 				{#if currentItems.length > 0}
-					<div class="z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-800">
+					<div class="z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
 						{#if addedItems.length > 0}
 							<div class="mb-4">
 								<h3 class="mb-2 text-sm font-medium text-tertiary-300">Added</h3>
@@ -577,7 +550,7 @@
 				{/if}
 
 				{#if error}
-					<div class="p-4 rounded-xl backdrop-blur-xl bg-error-500/10">
+					<div class="p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
 						<p class="text-sm text-error-400">{error}</p>
 					</div>
 				{/if}
