@@ -149,7 +149,12 @@
 		.sort((a, b) => b.last_modified - a.last_modified);
 </script>
 
-<div class="relative h-screen bg-surface-900">
+<div
+	class="fixed inset-0 w-full h-full bg-center bg-cover -z-10"
+	style="background-image: url('/dashboard.jpg');"
+/>
+
+<div class="relative h-screen">
 	<!-- Scrollable Content - Full height and starts from top -->
 	<div class="overflow-y-auto absolute inset-0">
 		<div class="mx-auto space-y-8 max-w-6xl">
@@ -168,7 +173,7 @@
 				</div>
 			{:else if $shoppingListQuery.data}
 				<!-- Active Items Section -->
-				<div class="p-4 pt-20 rounded-2xl bg-surface-800">
+				<div class="p-4 pt-20 rounded-2xl bg-surface-800/90">
 					{#if !activeItems.length}
 						<div class="p-8 text-center text-surface-200">
 							<Icon icon="mdi:basket" class="mx-auto mb-4 w-16 h-16 opacity-50" />
@@ -186,7 +191,7 @@
 
 				<!-- Purchased Items Section -->
 				{#if purchasedItems.length}
-					<div class="p-4 rounded-2xl bg-surface-800">
+					<div class="p-4 rounded-2xl bg-surface-800/90">
 						<ShoppingItems items={purchasedItems} onToggle={handleToggleItem} />
 					</div>
 				{/if}
@@ -198,7 +203,7 @@
 	<!-- Fixed Header with Fade - Overlays the content -->
 	<div class="absolute top-0 right-0 left-0 z-10">
 		<div
-			class="absolute inset-0 h-20 bg-gradient-to-b to-transparent pointer-events-none from-surface-900 via-surface-900/95"
+			class="absolute inset-0 h-20 bg-gradient-to-b to-transparent pointer-events-none from-surface-900/90 via-surface-900/90"
 		/>
 		<div class="px-4 mx-auto max-w-6xl">
 			<div class="flex relative justify-center p-4">
