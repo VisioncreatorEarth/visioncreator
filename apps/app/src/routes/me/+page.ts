@@ -1,6 +1,6 @@
 import type { PageLoad } from './$types';
 import { browser } from '$app/environment';
-import { dynamicView, futureMe } from '$lib/stores';
+import { futureMe } from '$lib/stores';
 
 export const ssr = false; // Disable SSR for this route to prevent redirect issues
 

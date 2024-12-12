@@ -77,20 +77,26 @@
 	</div>
 
 	<!-- Stats Display -->
-	<div class="flex absolute top-4 right-4 gap-6">
+	<div
+		class="flex absolute right-0 left-0 top-4 gap-6 justify-center md:justify-end md:right-4 md:left-auto"
+	>
 		<div class="text-center">
-			<div class="text-2xl font-medium text-white md:text-4xl">1</div>
-			<div class="text-sm text-tertiary-300 md:text-base">vision rank</div>
+			<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
+				{$query.data.visionRank}
+			</div>
+			<div class="text-xs text-tertiary-300 md:text-sm">vision rank</div>
 		</div>
 		<div class="text-center">
-			<div class="text-2xl font-medium text-white md:text-4xl">{$query.data.inspirations}</div>
-			<div class="text-sm text-tertiary-300 md:text-base">inspirations</div>
+			<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
+				{$query.data.inspirations}
+			</div>
+			<div class="text-xs text-tertiary-300 md:text-sm">inspirations</div>
 		</div>
 		<div class="text-center">
-			<div class="text-2xl font-medium text-white md:text-4xl">
+			<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
 				${$query.data.inspirations * 5}/m
 			</div>
-			<div class="text-sm text-tertiary-300 md:text-base">income potential</div>
+			<div class="text-xs text-tertiary-300 md:text-sm">income potential</div>
 		</div>
 	</div>
 
@@ -98,12 +104,12 @@
 	<div class="flex relative flex-col justify-center items-center p-4 w-full min-h-screen">
 		<!-- Countdown -->
 		<div class="mb-8 text-center">
-			<h1 class="text-6xl font-bold text-white md:text-8xl">
-				{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
+			<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">Launching BETA in</h2>
+			<h1 class="text-3xl font-bold text-white sm:text-5xl">
+				{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
+					.toString()
+					.padStart(2, '0')}s
 			</h1>
-			<h2 class="mt-4 text-xl text-tertiary-300 md:text-4xl">
-				Be a magnet for joy, love and abundance.
-			</h2>
 		</div>
 
 		<!-- Early Access Section -->
@@ -125,14 +131,14 @@
 				{:else}
 					{#if inspirations < 3}
 						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-							To unlock early access to Hominio,<br />
+							To unlock early BETA access to Hominio,<br />
 							inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to join
 							the waitlist.
 						</p>
 					{:else if inspirations === 3}
 						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-							<span class="font-bold uppercase">Almost there!</span><br />
-							In January you receive your early BETA invite.
+							<span class="text-2xl font-bold uppercase">Almost there!</span><br />
+							When we launch the BETA you receive an early access invite.
 						</p>
 					{:else}
 						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
@@ -164,14 +170,14 @@
 				<div class="flex gap-3 justify-center items-center md:gap-6">
 					<button
 						on:click={copyInvitationLink}
-						class="px-4 py-2 text-sm rounded-full md:px-6 md:py-3 md:text-xl bg-surface-900/60 text-tertiary-300 hover:bg-surface-900/80"
+						class="btn variant-ghost-tertiary btn-sm md:btn-md"
 						disabled={$linkCopied}
 					>
 						{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
 					</button>
 					<button
 						on:click={toggleQRCode}
-						class="px-4 py-2 text-sm rounded-full md:px-6 md:py-3 md:text-xl bg-secondary-500/40 text-secondary-300 hover:bg-secondary-500/60"
+						class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
 					>
 						{$showQRCode ? 'Hide QR Code' : 'Show Invite Code'}
 					</button>
