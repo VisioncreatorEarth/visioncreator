@@ -149,10 +149,10 @@
 		.sort((a, b) => b.last_modified - a.last_modified);
 </script>
 
-<div
+<!-- <div
 	class="fixed inset-0 w-full h-full bg-center bg-cover -z-10"
 	style="background-image: url('/dashboard.jpg');"
-/>
+/> -->
 
 <div class="relative h-screen">
 	<!-- Scrollable Content - Full height and starts from top -->
