@@ -269,7 +269,7 @@
 	</button>
 {:else if !isModalOpen}
 	<button
-		class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 btn btn-sm variant-ghost-tertiary hover:variant-ghost-primary"
+		class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 btn btn-sm variant-ghost-secondary"
 		on:click={() => toggleModal('login')}
 	>
 		<span>Login</span>

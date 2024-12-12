@@ -101,10 +101,14 @@
 	</div>
 
 	<!-- Main Content -->
-	<div class="flex relative flex-col justify-center items-center p-4 w-full min-h-[100dvh] overflow-x-hidden">
+	<div
+		class="flex relative flex-col justify-center items-center p-4 w-full min-h-[100dvh] overflow-x-hidden"
+	>
 		<!-- Countdown -->
 		<div class="mb-8 text-center">
-			<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">Launching BETA in</h2>
+			<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
+				Launching BETA programs in
+			</h2>
 			<h1 class="text-3xl font-bold text-white sm:text-5xl">
 				{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
 					.toString()
@@ -131,14 +135,35 @@
 				{:else}
 					{#if inspirations < 3}
 						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-							To unlock early BETA access to Hominio,<br />
+							To get into one of our soon launching Hominio BETA programs,<br />
 							inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to join
 							the waitlist.
 						</p>
+
+						<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
+							{#each Array(3).fill(false) as _, i}
+								<div
+									class="p-3 rounded-xl md:p-12 {i < inspirations
+										? 'bg-secondary-500/40'
+										: 'bg-surface-900/60'}"
+								>
+									<Icon
+										icon={i < inspirations
+											? 'solar:user-bold-duotone'
+											: 'solar:lock-password-bold-duotone'}
+										class={`w-12 h-12 md:w-16 md:h-16 ${
+											i < inspirations ? 'text-secondary-300' : 'text-surface-300'
+										}`}
+									/>
+								</div>
+							{/each}
+						</div>
 					{:else if inspirations === 3}
 						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
 							<span class="text-2xl font-bold uppercase">Almost there!</span><br />
-							When we launch the BETA you receive an early access invite.
+							You are currently in the (X) early Hominio BETA program. There is (Y) groups ahead of you.
+							To get in even faster, continue to spread the word about Hominio and inspire more Visioncreators
+							to join.<br />
 						</p>
 					{:else}
 						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
@@ -147,41 +172,22 @@
 						</p>
 					{/if}
 
-					<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
-						{#each Array(3).fill(false) as _, i}
-							<div
-								class="p-3 rounded-xl md:p-12 {i < inspirations
-									? 'bg-secondary-500/40'
-									: 'bg-surface-900/60'}"
-							>
-								<Icon
-									icon={i < inspirations
-										? 'solar:user-bold-duotone'
-										: 'solar:lock-password-bold-duotone'}
-									class={`w-12 h-12 md:w-16 md:h-16 ${
-										i < inspirations ? 'text-secondary-300' : 'text-surface-300'
-									}`}
-								/>
-							</div>
-						{/each}
+					<div class="flex gap-3 justify-center items-center md:gap-6">
+						<button
+							on:click={copyInvitationLink}
+							class="btn variant-ghost-tertiary btn-sm md:btn-md"
+							disabled={$linkCopied}
+						>
+							{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
+						</button>
+						<button
+							on:click={toggleQRCode}
+							class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
+						>
+							{$showQRCode ? 'Hide QR Code' : 'Show Invite Code'}
+						</button>
 					</div>
 				{/if}
-
-				<div class="flex gap-3 justify-center items-center md:gap-6">
-					<button
-						on:click={copyInvitationLink}
-						class="btn variant-ghost-tertiary btn-sm md:btn-md"
-						disabled={$linkCopied}
-					>
-						{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
-					</button>
-					<button
-						on:click={toggleQRCode}
-						class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
-					>
-						{$showQRCode ? 'Hide QR Code' : 'Show Invite Code'}
-					</button>
-				</div>
 			</div>
 		</div>
 	</div>

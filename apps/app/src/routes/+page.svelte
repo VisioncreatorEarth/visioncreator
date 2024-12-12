@@ -1,15 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { futureMe } from '$lib/stores';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
-	import { createEventDispatcher } from 'svelte';
 	import { readable } from 'svelte/store';
 
-	const dispatch = createEventDispatcher();
-
-	let videoElement: HTMLVideoElement;
 	let contentWrapper: HTMLDivElement;
 
 	// Launch date: January 7th, 2025, 18:00 CET
@@ -84,45 +79,47 @@
 	}
 </script>
 
-<div bind:this={contentWrapper} class="relative w-full h-screen">
-	<!-- Background Image -->
-	<div
-		class="absolute inset-0 bg-center bg-no-repeat bg-cover"
-		style="background-image: url('/dashboard.jpg');"
-	>
-		<div class="absolute inset-0 bg-black/20" />
-	</div>
-
-	<!-- Grid Layout -->
-	<div class="relative grid h-screen grid-rows-[auto_1fr_auto]">
-		<div class="z-10 pt-6 pb-4 text-center">
-			<img src="/logo.png" alt="Visioncreator logo" class="mx-auto w-20 opacity-80" />
-			<!-- Countdown -->
-			<div class="mt-4 text-center">
-				<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">Launching BETA in</h2>
-				<h1 class="text-3xl font-bold text-white sm:text-5xl">
-					{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
-						.toString()
-						.padStart(2, '0')}s
-				</h1>
-			</div>
+<div bind:this={contentWrapper} class="@container fixed inset-0 overflow-hidden">
+	<div class="relative w-full h-full">
+		<!-- Background Image -->
+		<div
+			class="absolute inset-0 bg-center bg-no-repeat bg-cover"
+			style="background-image: url('/dashboard.jpg');"
+		>
+			<div class="absolute inset-0 bg-black/20" />
 		</div>
-		<div class="flex overflow-hidden z-10 items-center w-full h-full">
-			<div class="p-4 mx-auto w-full max-w-screen-md">
-				<div class="relative w-full h-full aspect-[16/9] max-h-full">
-					<div class="absolute inset-0">
-						<VideoPlayer videoId="8fee2d57-e3c3-4580-bd11-ae828d86978d" />
+
+		<!-- Grid Layout -->
+		<div class="relative grid h-full grid-rows-[auto_1fr_auto]">
+			<div class="z-10 pt-6 pb-4 text-center">
+				<img src="/logo.png" alt="Visioncreator logo" class="mx-auto w-20 opacity-80" />
+				<!-- Countdown -->
+				<div class="mt-4 text-center">
+					<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">Launching BETA in</h2>
+					<h1 class="text-3xl font-bold text-white sm:text-5xl">
+						{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
+							.toString()
+							.padStart(2, '0')}s
+					</h1>
+				</div>
+			</div>
+			<div class="flex overflow-hidden z-10 items-center w-full h-full">
+				<div class="p-4 mx-auto w-full max-w-screen-md">
+					<div class="relative w-full h-full aspect-[16/9] max-h-full">
+						<div class="absolute inset-0">
+							<VideoPlayer videoId="8fee2d57-e3c3-4580-bd11-ae828d86978d" />
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
-		<div class="flex z-10 justify-center items-center mt-4 mb-16">
-			<button
-				on:click={openSignUp}
-				class="bg-gradient-to-br signup-btn btn btn-lg variant-gradient-secondary-primary"
-			>
-				Sign Up To Waitlist
-			</button>
+			<div class="flex z-10 justify-center items-center mt-4 mb-16">
+				<button
+					on:click={openSignUp}
+					class="bg-gradient-to-br signup-btn btn btn-lg variant-gradient-secondary-primary"
+				>
+					Sign Up To Waitlist
+				</button>
+			</div>
 		</div>
 	</div>
 </div>
