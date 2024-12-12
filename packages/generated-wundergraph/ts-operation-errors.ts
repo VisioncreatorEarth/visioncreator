@@ -24,6 +24,8 @@ export type OperationErrors = {
 	polarCreateCheckout: PolarCreateCheckoutErrors;
 	polarGetCheckout: PolarGetCheckoutErrors;
 	polarListProducts: PolarListProductsErrors;
+	polarStoreWebhook: PolarStoreWebhookErrors;
+	polarUpdateSubscription: PolarUpdateSubscriptionErrors;
 	queryCallsAndTimeStats: QueryCallsAndTimeStatsErrors;
 	queryComposer: QueryComposerErrors;
 	queryDB: QueryDBErrors;
@@ -36,10 +38,8 @@ export type OperationErrors = {
 	saveMailWIP: SaveMailWIPErrors;
 	sendMail: SendMailErrors;
 	sendMailWIP: SendMailWIPErrors;
-	storePolarWebhook: StorePolarWebhookErrors;
 	toggleOnboarded: ToggleOnboardedErrors;
 	updateMe: UpdateMeErrors;
-	updatePolarSubscription: UpdatePolarSubscriptionErrors;
 };
 
 export type OperationUltravoxInitializationError = {
@@ -77,6 +77,8 @@ export type OnboardMeErrors = ClientOperationErrors;
 export type PolarCreateCheckoutErrors = ClientOperationErrors;
 export type PolarGetCheckoutErrors = ClientOperationErrors;
 export type PolarListProductsErrors = ClientOperationErrors;
+export type PolarStoreWebhookErrors = ClientOperationErrors;
+export type PolarUpdateSubscriptionErrors = ClientOperationErrors;
 export type QueryCallsAndTimeStatsErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;
 export type QueryDBErrors = ClientOperationErrors;
@@ -89,7 +91,5 @@ export type QueryUserStatsErrors = ClientOperationErrors;
 export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
-export type StorePolarWebhookErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
 export type UpdateMeErrors = ClientOperationErrors;
-export type UpdatePolarSubscriptionErrors = ClientOperationErrors;

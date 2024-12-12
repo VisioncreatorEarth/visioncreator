@@ -9,7 +9,7 @@ export default createWebhook({
             });
 
             const result = await context.operations.mutate({
-                operationName: "storePolarWebhook",
+                operationName: "polarStoreWebhook",
                 input: {
                     headers: event.headers,
                     body: event.body

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { writable } from 'svelte/store';
+	import { writable, readable } from 'svelte/store';
 	import { env } from '$env/dynamic/public';
 	import QRCode from '@castlenine/svelte-qrcode';
 	import { eventBus } from '$lib/composables/eventBus';
@@ -16,6 +16,24 @@
 	$: invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$query.data.qrCodeId}`;
 	$: temperature = $query.data.temperature;
 	$: streamPotential = $query.data.streamPotential;
+
+	// Launch date: January 7th, 2025, 18:00 CET
+	const launchDate = new Date('2025-01-07T18:00:00+01:00').getTime();
+
+	const countdown = readable(0, (set) => {
+		const interval = setInterval(() => {
+			const now = new Date().getTime();
+			const distance = launchDate - now;
+			set(Math.max(0, Math.floor(distance / 1000)));
+		}, 1000);
+
+		return () => clearInterval(interval);
+	});
+
+	$: days = Math.floor($countdown / 86400);
+	$: hours = Math.floor(($countdown % 86400) / 3600);
+	$: minutes = Math.floor(($countdown % 3600) / 60);
+	$: seconds = $countdown % 60;
 
 	function toggleQRCode() {
 		showQRCode.update((n) => !n);
@@ -68,24 +86,20 @@
 			<div class="text-2xl font-medium text-white md:text-4xl">{$query.data.inspirations}</div>
 			<div class="text-sm text-tertiary-300 md:text-base">inspirations</div>
 		</div>
-		<!-- <div class="text-center">
+		<div class="text-center">
 			<div class="text-2xl font-medium text-white md:text-4xl">
 				${$query.data.inspirations * 5}/m
 			</div>
 			<div class="text-sm text-tertiary-300 md:text-base">income potential</div>
-		</div> -->
+		</div>
 	</div>
 
 	<!-- Main Content -->
 	<div class="flex relative flex-col justify-center items-center p-4 w-full min-h-screen">
-		<!-- Time -->
+		<!-- Countdown -->
 		<div class="mb-8 text-center">
 			<h1 class="text-6xl font-bold text-white md:text-8xl">
-				{new Date().toLocaleTimeString('en-US', {
-					hour: '2-digit',
-					minute: '2-digit',
-					hour12: false
-				})}
+				{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds.toString().padStart(2, '0')}s
 			</h1>
 			<h2 class="mt-4 text-xl text-tertiary-300 md:text-4xl">
 				Be a magnet for joy, love and abundance.

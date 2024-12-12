@@ -2,7 +2,7 @@ import { configureWunderGraphServer } from "@wundergraph/sdk/server";
 import { createClient } from "@supabase/supabase-js";
 import { Nango } from "@nangohq/node";
 import * as postmark from "postmark";
-import { Polar } from "@polar-sh/sdk";
+// import { Polar } from "@polar-sh/sdk";
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from "openai";
 import { UltravoxClient } from './clients/ultravox';
@@ -22,7 +22,7 @@ class MyContext {
     const nangoHost = process.env.NANGO_HOST;
     const nangoSecretKey = process.env.NANGO_SECRET_KEY;
     const postmarkServerToken = process.env.POSTMARK_SERVER_TOKEN;
-    const polarAccessToken = process.env.POLAR_ACCESS_TOKEN;
+    // const polarAccessToken = process.env.POLAR_ACCESS_TOKEN;
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     const openAIApiKey = process.env.OPENAI_API_KEY;
     const ultravoxApiKey = process.env.ULTRAVOX_API_KEY;
@@ -33,7 +33,7 @@ class MyContext {
       !nangoHost ||
       !nangoSecretKey ||
       !postmarkServerToken ||
-      !polarAccessToken ||
+      // !polarAccessToken ||
       !anthropicApiKey ||
       !openAIApiKey ||
       !ultravoxApiKey
@@ -49,10 +49,10 @@ class MyContext {
       secretKey: nangoSecretKey,
     });
     this.postmark = new postmark.ServerClient(postmarkServerToken);
-    this.polar = new Polar({
-      accessToken: polarAccessToken,
-      server: "sandbox",
-    });
+    // this.polar = new Polar({
+    //   accessToken: polarAccessToken,
+    //   server: "sandbox",
+    // });
     this.anthropic = new Anthropic({
       apiKey: anthropicApiKey,
     });

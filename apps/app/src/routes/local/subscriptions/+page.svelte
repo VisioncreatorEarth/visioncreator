@@ -84,7 +84,7 @@
 	}
 
 	const updateSubscriptionMutation = createMutation({
-		operationName: 'updatePolarSubscription'
+		operationName: 'polarUpdateSubscription'
 	});
 
 	interface Benefits {
