@@ -124,6 +124,19 @@
 	</div>
 </div>
 
+<footer class="fixed bottom-0 right-0 py-2 @sm:py-2 text-white z-40">
+	<div class="px-4 @sm:px-4">
+		<a
+			href="https://www.spacex.com"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="transition-colors text-2xs text-tertiary-500/80 hover:text-tertiary-500"
+		>
+			Image by SpaceX
+		</a>
+	</div>
+</footer>
+
 <style>
 	:global(body) {
 		background-color: rgba(24, 25, 73, 1);

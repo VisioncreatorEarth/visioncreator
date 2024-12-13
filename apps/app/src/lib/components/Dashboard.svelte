@@ -93,9 +93,7 @@
 		<!-- Grid Layout -->
 		<div class="relative grid h-full grid-rows-[auto_1fr_auto]">
 			<!-- Stats Display -->
-			<div
-				class="flex z-10 gap-6 justify-center p-4 md:justify-end md:pr-8"
-			>
+			<div class="flex z-10 gap-6 justify-center p-4 md:justify-end md:pr-8">
 				<div class="text-center">
 					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
 						{$query.data.visionRank}
@@ -117,7 +115,7 @@
 			</div>
 
 			<!-- Main Content -->
-			<div class="flex z-10 flex-col justify-center items-center p-4 overflow-y-auto">
+			<div class="flex overflow-y-auto z-10 flex-col justify-center items-center p-4">
 				<!-- Countdown -->
 				{#if !$showQRCode}
 					<div class="mb-8 text-center">
@@ -149,10 +147,7 @@
 								/>
 							</div>
 							<div class="flex justify-center">
-								<button
-									on:click={toggleQRCode}
-									class="btn variant-ghost-tertiary btn-sm md:btn-md"
-								>
+								<button on:click={toggleQRCode} class="btn variant-ghost-tertiary btn-sm md:btn-md">
 									Hide QR Code
 								</button>
 							</div>
@@ -160,8 +155,8 @@
 							{#if inspirations < 3}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
 									To get into one of our soon launching Hominio BETA programs,<br />
-									inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to join
-									the waitlist.
+									inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to
+									join the waitlist.
 								</p>
 
 								<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
@@ -185,9 +180,9 @@
 							{:else if inspirations === 3}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
 									<span class="text-2xl font-bold uppercase">Almost there!</span><br />
-									You are currently in the (X) early Hominio BETA program. There is (Y) groups ahead of you.
-									To get in even faster, continue to spread the word about Hominio and inspire more Visioncreators
-									to join.<br />
+									You are currently in the (X) early Hominio BETA program. There is (Y) groups ahead
+									of you. To get in even faster, continue to spread the word about Hominio and inspire
+									more Visioncreators to join.<br />
 								</p>
 							{:else}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
@@ -221,6 +216,19 @@
 		</div>
 	</div>
 </div>
+
+<footer class="fixed bottom-0 right-0 py-2 @sm:py-2 text-white z-40">
+	<div class="px-4 @sm:px-4">
+		<a
+			href="https://unsplash.com/de/fotos/lichtstrahl-in-der-nahe-des-gewassers--p-KCm6xB9I"
+			target="_blank"
+			rel="noopener noreferrer"
+			class="text-2xs text-tertiary-500/80 hover:text-tertiary-500 transition-colors"
+		>
+			Image by SpaceX
+		</a>
+	</div>
+</footer>
 
 <style>
 	:global(body) {
