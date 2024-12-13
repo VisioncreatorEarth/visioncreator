@@ -7,7 +7,6 @@
 	const newsletterStatus = createQuery({
 		operationName: 'MyNewsletterStatus',
 		input: {
-			id: me.id,
 			email: me.email
 		}
 	});
@@ -19,7 +18,6 @@
 	const handleToggleNewsletter = async () => {
 		try {
 			const response = await $toggleNewsletterMutation.mutateAsync({
-				id: me.id,
 				email: me.email
 			});
 			console.log('Toggle newsletter response:', response);
