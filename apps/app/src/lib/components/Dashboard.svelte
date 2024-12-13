@@ -120,7 +120,7 @@
 				{#if !$showQRCode}
 					<div class="mb-8 text-center">
 						<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
-							Launching BETA programs in
+							Launching early BETA access in
 						</h2>
 						<h1 class="text-3xl font-bold text-white sm:text-5xl">
 							{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
@@ -154,7 +154,7 @@
 						{:else}
 							{#if inspirations < 3}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									To get into one of our soon launching Hominio BETA programs,<br />
+									To get early BETA access to Hominio,<br />
 									inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to
 									join the waitlist.
 								</p>
@@ -183,15 +183,14 @@
 										{$query.data.visionRank <= 89 ? 'Congratulations!' : 'Be Patient'}
 									</span><br />
 									{#if $query.data.visionRank <= 89}
-										You're position {$query.data.visionRank} in line for our exclusive first BETA access
-										- limited to only 89 pioneering visioncreators.<br /><br />
-										Keep spreading the word to secure your spot in our early access program and increase
-										your income potential!
+										You're position {$query.data.visionRank} in line for our exclusive early BETA access
+										- limited to only 89 pioneering Visioncreators.<br /><br />
+										Keep spreading the word to secure your BETA access spot.
 									{:else}
 										Only top 89 visioncreators will get early access. You're position {$query.data
 											.visionRank}.<br /><br />
 										Keep inspiring new Visioncreators to join the waitlist for a chance to reach the
-										first 89 and to increase your income potential!
+										first 89.
 									{/if}
 								</p>
 							{:else}

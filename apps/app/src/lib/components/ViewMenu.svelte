@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { dynamicView } from '$lib/stores';
 	import { page } from '$app/stores';
-	import { view as meView } from '$lib/views/Me';
+	import { view as meView } from '$lib/views/Leaderboard';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
 	import { createQuery } from '$lib/wundergraph';
 
@@ -104,7 +104,8 @@
 		<div
 			on:click={() => handleViewSelect(viewItem)}
 			on:keydown={(e) => e.key === 'Enter' && handleViewSelect(viewItem)}
-			class="flex relative flex-col items-center justify-center transition-colors duration-200 rounded-lg cursor-pointer {activeViewId === viewItem.metadata.id
+			class="flex relative flex-col items-center justify-center transition-colors duration-200 rounded-lg cursor-pointer {activeViewId ===
+			viewItem.metadata.id
 				? 'bg-surface-600/70 text-surface-100'
 				: 'bg-surface-600/50 text-surface-300 hover:bg-surface-600/60'}"
 			style="width: {effectiveItemSize}px; height: {effectiveItemSize}px;"

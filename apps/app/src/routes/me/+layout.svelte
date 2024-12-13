@@ -5,7 +5,6 @@
 	import { goto } from '$app/navigation';
 	import ComposeView from '$lib/components/ComposeView.svelte';
 	import { view as meView } from '$lib/views/Me';
-	import { view as dashboardView } from '$lib/views/Dashboard';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
 	import { view as hominioDoView } from '$lib/views/HominioDoMe';
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
@@ -29,7 +28,7 @@
 			// If view doesn't exist, redirect to /me
 			goto('/me', { replaceState: true });
 		} else {
-			const viewToSet = viewMap[viewParam] || dashboardView;
+			const viewToSet = viewMap[viewParam] || meView;
 			dynamicView.set({ view: viewToSet });
 		}
 	}

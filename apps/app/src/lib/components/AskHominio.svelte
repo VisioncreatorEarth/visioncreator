@@ -7,7 +7,7 @@
 	import OShoppingItems from './ShoppingItems.svelte';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { view as meView } from '$lib/views/Me';
+	import { view as meView } from '$lib/views/Leaderboard';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
 	import { view as hominioDoView } from '$lib/views/HominioDoMe';
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
