@@ -5,6 +5,8 @@
 	import { eventBus } from '$lib/composables/eventBus';
 	import { onMount, onDestroy } from 'svelte';
 
+	let contentWrapper: HTMLDivElement;
+
 	export let me;
 	const query = $me.query;
 
@@ -56,139 +58,170 @@
 		await $query.refetch();
 	}
 
+	function setViewportHeight() {
+		if (contentWrapper) {
+			contentWrapper.style.height = `${window.innerHeight}px`;
+		}
+	}
+
 	onMount(() => {
 		eventBus.on('updateStats', handleUpdateStats);
-		console.log($query.data);
+		if (typeof window !== 'undefined') {
+			window.addEventListener('resize', setViewportHeight);
+			setViewportHeight();
+		}
 	});
 
 	onDestroy(() => {
 		eventBus.off('updateStats', handleUpdateStats);
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('resize', setViewportHeight);
+		}
 	});
 </script>
 
-<div class="overflow-hidden relative w-full h-screen">
-	<!-- Background Image -->
-	<div
-		class="absolute inset-0 bg-center bg-no-repeat bg-cover"
-		style="background-image: url('/dashboard.jpg');"
-	>
-		<!-- Overlay for better text readability -->
-		<div class="absolute inset-0 bg-black/20" />
-	</div>
-
-	<!-- Stats Display -->
-	<div
-		class="flex absolute right-0 left-0 top-4 gap-6 justify-center md:justify-end md:right-4 md:left-auto"
-	>
-		<div class="text-center">
-			<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-				{$query.data.visionRank}
-			</div>
-			<div class="text-xs text-tertiary-300 md:text-sm">vision rank</div>
-		</div>
-		<div class="text-center">
-			<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-				{$query.data.inspirations}
-			</div>
-			<div class="text-xs text-tertiary-300 md:text-sm">inspirations</div>
-		</div>
-		<div class="text-center">
-			<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-				${$query.data.inspirations * 5}/m
-			</div>
-			<div class="text-xs text-tertiary-300 md:text-sm">income potential</div>
-		</div>
-	</div>
-
-	<!-- Main Content -->
-	<div
-		class="flex relative flex-col justify-center items-center p-4 w-full min-h-[100dvh] overflow-x-hidden"
-	>
-		<!-- Countdown -->
-		<div class="mb-8 text-center">
-			<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
-				Launching BETA programs in
-			</h2>
-			<h1 class="text-3xl font-bold text-white sm:text-5xl">
-				{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
-					.toString()
-					.padStart(2, '0')}s
-			</h1>
+<div bind:this={contentWrapper} class="@container fixed inset-0 overflow-hidden">
+	<div class="relative w-full h-full">
+		<!-- Background Image -->
+		<div
+			class="absolute inset-0 bg-center bg-no-repeat bg-cover"
+			style="background-image: url('/dashboard.jpg');"
+		>
+			<div class="absolute inset-0 bg-black/20" />
 		</div>
 
-		<!-- Early Access Section -->
-		<div class="mx-auto w-full max-w-sm md:max-w-2xl">
-			<div class="p-6 rounded-xl bg-surface-900/50 md:p-10">
-				{#if $showQRCode}
-					<div class="flex justify-center mb-6">
-						<QRCode
-							data={invitationLink}
-							backgroundColor="#141a4d"
-							color="#f0ede5"
-							shape="circle"
-							haveBackgroundRoundedEdges
-							logoPath="/logo.png"
-							logoSize="25"
-							logoPadding="4"
-						/>
+		<!-- Grid Layout -->
+		<div class="relative grid h-full grid-rows-[auto_1fr_auto]">
+			<!-- Stats Display -->
+			<div
+				class="flex z-10 gap-6 justify-center p-4 md:justify-end md:pr-8"
+			>
+				<div class="text-center">
+					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
+						{$query.data.visionRank}
 					</div>
-				{:else}
-					{#if inspirations < 3}
-						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-							To get into one of our soon launching Hominio BETA programs,<br />
-							inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to join
-							the waitlist.
-						</p>
+					<div class="text-xs text-tertiary-300 md:text-sm">vision rank</div>
+				</div>
+				<div class="text-center">
+					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
+						{$query.data.inspirations}
+					</div>
+					<div class="text-xs text-tertiary-300 md:text-sm">inspirations</div>
+				</div>
+				<div class="text-center">
+					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
+						${$query.data.inspirations * 5}/m
+					</div>
+					<div class="text-xs text-tertiary-300 md:text-sm">income potential</div>
+				</div>
+			</div>
 
-						<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
-							{#each Array(3).fill(false) as _, i}
-								<div
-									class="p-3 rounded-xl md:p-12 {i < inspirations
-										? 'bg-secondary-500/40'
-										: 'bg-surface-900/60'}"
+			<!-- Main Content -->
+			<div class="flex z-10 flex-col justify-center items-center p-4 overflow-y-auto">
+				<!-- Countdown -->
+				<div class="mb-8 text-center">
+					<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
+						Launching BETA programs in
+					</h2>
+					<h1 class="text-3xl font-bold text-white sm:text-5xl">
+						{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
+							.toString()
+							.padStart(2, '0')}s
+					</h1>
+				</div>
+
+				<!-- Early Access Section -->
+				<div class="mx-auto w-full max-w-sm md:max-w-2xl">
+					<div class="p-6 rounded-xl bg-surface-900/50 md:p-10">
+						{#if $showQRCode}
+							<div class="flex justify-center mb-6">
+								<QRCode
+									data={invitationLink}
+									backgroundColor="#141a4d"
+									color="#f0ede5"
+									shape="circle"
+									haveBackgroundRoundedEdges
+									logoPath="/logo.png"
+									logoSize="25"
+									logoPadding="4"
+								/>
+							</div>
+							<div class="flex justify-center">
+								<button
+									on:click={toggleQRCode}
+									class="btn variant-ghost-tertiary btn-sm md:btn-md"
 								>
-									<Icon
-										icon={i < inspirations
-											? 'solar:user-bold-duotone'
-											: 'solar:lock-password-bold-duotone'}
-										class={`w-12 h-12 md:w-16 md:h-16 ${
-											i < inspirations ? 'text-secondary-300' : 'text-surface-300'
-										}`}
-									/>
-								</div>
-							{/each}
-						</div>
-					{:else if inspirations === 3}
-						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-							<span class="text-2xl font-bold uppercase">Almost there!</span><br />
-							You are currently in the (X) early Hominio BETA program. There is (Y) groups ahead of you.
-							To get in even faster, continue to spread the word about Hominio and inspire more Visioncreators
-							to join.<br />
-						</p>
-					{:else}
-						<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-							Welcome to a new way of living and working<br />
-							enjoy playing with Hominio
-						</p>
-					{/if}
+									Hide QR Code
+								</button>
+							</div>
+						{:else}
+							{#if inspirations < 3}
+								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
+									To get into one of our soon launching Hominio BETA programs,<br />
+									inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to join
+									the waitlist.
+								</p>
 
-					<div class="flex gap-3 justify-center items-center md:gap-6">
-						<button
-							on:click={copyInvitationLink}
-							class="btn variant-ghost-tertiary btn-sm md:btn-md"
-							disabled={$linkCopied}
-						>
-							{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
-						</button>
-						<button
-							on:click={toggleQRCode}
-							class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
-						>
-							{$showQRCode ? 'Hide QR Code' : 'Show Invite Code'}
-						</button>
+								<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
+									{#each Array(3).fill(false) as _, i}
+										<div
+											class="p-3 rounded-xl md:p-12 {i < inspirations
+												? 'bg-secondary-500/40'
+												: 'bg-surface-900/60'}"
+										>
+											<Icon
+												icon={i < inspirations
+													? 'solar:user-bold-duotone'
+													: 'solar:lock-password-bold-duotone'}
+												class={`w-12 h-12 md:w-16 md:h-16 ${
+													i < inspirations ? 'text-secondary-300' : 'text-surface-300'
+												}`}
+											/>
+										</div>
+									{/each}
+								</div>
+							{:else if inspirations === 3}
+								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
+									<span class="text-2xl font-bold uppercase">Almost there!</span><br />
+									You are currently in the (X) early Hominio BETA program. There is (Y) groups ahead of you.
+									To get in even faster, continue to spread the word about Hominio and inspire more Visioncreators
+									to join.<br />
+								</p>
+							{:else}
+								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
+									Welcome to a new way of living and working<br />
+									enjoy playing with Hominio
+								</p>
+							{/if}
+
+							<div class="flex gap-3 justify-center items-center md:gap-6">
+								<button
+									on:click={copyInvitationLink}
+									class="btn variant-ghost-tertiary btn-sm md:btn-md"
+									disabled={$linkCopied}
+								>
+									{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
+								</button>
+								<button
+									on:click={toggleQRCode}
+									class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
+								>
+									Show Invite Code
+								</button>
+							</div>
+						{/if}
 					</div>
-				{/if}
+				</div>
 			</div>
+
+			<!-- Bottom Spacer -->
+			<div class="z-10 h-16" />
 		</div>
 	</div>
 </div>
+
+<style>
+	:global(body) {
+		background-color: rgba(24, 25, 73, 1);
+	}
+</style>
