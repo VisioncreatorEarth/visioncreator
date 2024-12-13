@@ -119,16 +119,18 @@
 			<!-- Main Content -->
 			<div class="flex z-10 flex-col justify-center items-center p-4 overflow-y-auto">
 				<!-- Countdown -->
-				<div class="mb-8 text-center">
-					<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
-						Launching BETA programs in
-					</h2>
-					<h1 class="text-3xl font-bold text-white sm:text-5xl">
-						{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
-							.toString()
-							.padStart(2, '0')}s
-					</h1>
-				</div>
+				{#if !$showQRCode}
+					<div class="mb-8 text-center">
+						<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
+							Launching BETA programs in
+						</h2>
+						<h1 class="text-3xl font-bold text-white sm:text-5xl">
+							{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
+								.toString()
+								.padStart(2, '0')}s
+						</h1>
+					</div>
+				{/if}
 
 				<!-- Early Access Section -->
 				<div class="mx-auto w-full max-w-sm md:max-w-2xl">
