@@ -155,7 +155,7 @@
 							{#if inspirations < 3}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
 									To get early BETA access to Hominio,<br />
-									inspire {3 - inspirations} more Visioncreator{3 - inspirations === 1 ? '' : 's'} to
+									inspire {3 - inspirations} more early pioneer{3 - inspirations === 1 ? '' : 's'} to
 									join the waitlist.
 								</p>
 
@@ -184,13 +184,12 @@
 									</span><br />
 									{#if $query.data.visionRank <= 89}
 										You're position {$query.data.visionRank} in line for our exclusive early BETA access
-										- limited to only 89 pioneering Visioncreators.<br /><br />
+										- limited to only 89 pioneers.<br /><br />
 										Keep spreading the word to secure your BETA access spot.
 									{:else}
-										Only top 89 visioncreators will get early access. You're position {$query.data
+										Only top 89 pioneers will get early access. You're position {$query.data
 											.visionRank}.<br /><br />
-										Keep inspiring new Visioncreators to join the waitlist for a chance to reach the
-										first 89.
+										Keep spreading the word for a chance to reach the first 89.
 									{/if}
 								</p>
 							{:else}
