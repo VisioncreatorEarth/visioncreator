@@ -6,7 +6,6 @@ import {
 
 export default createOperation.mutation({
   input: z.object({
-    id: z.string(),
     subject: z.string().min(3).max(75),
     body: z.string().min(10).max(2000),
   }),
@@ -15,7 +14,7 @@ export default createOperation.mutation({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context, input, user }) => {
-    if (input.id !== user?.customClaims?.id) {
+    if (!user?.customClaims?.id) {
       throw new AuthorizationError({ message: "User ID does not match." });
     }
     if (!user || !user.email) {

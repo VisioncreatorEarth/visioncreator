@@ -124,7 +124,7 @@
 	</div>
 </div>
 
-<footer class="fixed bottom-0 right-0 py-2 @sm:py-2 text-white z-40">
+<footer class="fixed bottom-0 right-0 py-2 @sm:py-2 text-white z-50">
 	<div class="px-4 @sm:px-4">
 		<a
 			href="https://www.spacex.com"
