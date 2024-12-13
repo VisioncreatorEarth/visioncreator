@@ -1,85 +1,82 @@
-// import { createOperation } from "../generated/wundergraph.factory";
+// import { createOperation, z } from "../generated/wundergraph.factory";
+
+// interface Price {
+//     id: string;
+//     amount: number;
+//     currency: string;
+//     interval: string;
+// }
 
 // interface Product {
-//   id: string;
-//   name: string;
-//   description: string;
-//   isRecurring: boolean;
-//   prices: {
-//     priceAmount: number;
-//     priceCurrency: string;
-//     recurringInterval?: string;
-//   }[];
+//     id: string;
+//     name: string;
+//     description: string;
+//     isRecurring: boolean;
+//     prices: Price[];
 // }
 
 // export default createOperation.query({
-//   requireAuthentication: true,
-//   rbac: {
-//     requireMatchAll: ["authenticated", "admin"],
-//   },
-//   handler: async ({ context }) => {
-//     try {
-//       const organizationSlug = "visioncreator";
-//       const organizationResult = await context.polar.organizations.list({
-//         slug: organizationSlug,
-//       });
+//     requireAuthentication: true,
+//     rbac: {
+//         requireMatchAll: ["authenticated"],
+//     },
+//     handler: async ({ input, context }) => {
+//         try {
+//             // Define our products
+//             const hominio: Product = {
+//                 id: "ef8f64f5-e644-4066-b339-a45e63a64f14",
+//                 name: "Hominio",
+//                 description: "Professional features and support",
+//                 isRecurring: true,
+//                 prices: [
+//                     {
+//                         id: "e4e4adc8-6698-4f08-87dd-5f91e521d0a2",
+//                         amount: 1111, // $11.11
+//                         currency: "USD",
+//                         interval: "month"
+//                     }
+//                 ]
+//             };
 
-//       let organization;
-//       for await (const page of organizationResult) {
-//         if (page && page.result && Array.isArray(page.result.items) && page.result.items.length > 0) {
-//           organization = page.result.items[0];
-//           break;
+//             const visionCreator: Product = {
+//                 id: "3ae7ed1f-4d0f-4f02-8712-4419514a6a82",
+//                 name: "Visioncreator",
+//                 description: "Advanced features for creators",
+//                 isRecurring: true,
+//                 prices: [
+//                     {
+//                         id: "e6671f81-5b80-47c6-9a35-49e7e8d81c27",
+//                         amount: 3333, // $33.33
+//                         currency: "USD",
+//                         interval: "month"
+//                     }
+//                 ]
+//             };
+
+//             // Add a fake free product
+//             const freeProduct: Product = {
+//                 id: "free-product",
+//                 name: "Invited",
+//                 description: "Get started with our free plan",
+//                 isRecurring: true,
+//                 prices: [
+//                     {
+//                         id: "price_free",
+//                         amount: 0,
+//                         currency: "USD",
+//                         interval: "month"
+//                     }
+//                 ]
+//             };
+
+//             return {
+//                 products: [freeProduct, hominio, visionCreator]
+//             };
+//         } catch (error) {
+//             console.error('Error fetching products:', error);
+//             return {
+//                 error: error instanceof Error ? error.message : String(error),
+//             };
 //         }
-//       }
-
-//       if (!organization) {
-//         throw new Error("Organization not found");
-//       }
-
-//       const productsResult = await context.polar.products.list({
-//         organizationId: organization.id,
-//       });
-
-//       let allProducts: Product[] = [];
-
-//       for await (const page of productsResult) {
-//         if (page && page.result && Array.isArray(page.result.items)) {
-//           allProducts = allProducts.concat(page.result.items);
-//         }
-
-//         if (page.result.pagination.maxPage === page.result.pagination.page) {
-//           break;
-//         }
-//       }
-
-//       // Deduplicate products based on their ID
-//       const uniqueProducts = Array.from(new Map(allProducts.map(product => [product.id, product])).values());
-
-//       // Add a fake free product
-//       const freeProduct: Product = {
-//         id: "free-product",
-//         name: "Free Plan",
-//         description: "Get started with our free plan",
-//         isRecurring: true,
-//         prices: [
-//           {
-//             priceAmount: 0,
-//             priceCurrency: "USD",
-//             recurringInterval: "month",
-//           },
-//         ],
-//       };
-
-//       uniqueProducts.unshift(freeProduct);
-
-//       return {
-//         products: uniqueProducts,
-//       };
-//     } catch (error) {
-//       console.error("Error fetching Polar products:", error);
-//       return {
-//         error: error instanceof Error ? error.message : String(error),
-//       };
-//     }
-//   },
+//     },
 // });

@@ -364,7 +364,7 @@ export default createOperation.mutation({
         let finalTranscript = null;
         try {
           const transcriptResponse = await context.ultravox.getTranscript(callData.ultravox_call_id);
-          console.log('📝 Got transcript response:', transcriptResponse);
+          console.log('📝 Got transcript response');
 
           if (transcriptResponse?.results?.length > 0) {
             const baseTime = Date.now();
@@ -380,7 +380,7 @@ export default createOperation.mutation({
                   sequence: index + 1
                 };
               });
-            console.log('📝 Prepared structured transcript for DB:', finalTranscript);
+            console.log('📝 Prepared structured transcript for DB');
           }
         } catch (transcriptError) {
           console.error('❌ Error handling transcript:', transcriptError);

@@ -3,7 +3,7 @@
 	import { derived } from 'svelte/store';
 	import { onDestroy } from 'svelte';
 	import { createMachine, type MachineConfig } from '$lib/composables/svelteMachine';
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { eventBus } from '$lib/composables/eventBus';
 	import { onMount } from 'svelte';
 	import AskHominio from './AskHominio.svelte';
@@ -18,6 +18,40 @@
 		operationName: 'checkCapabilities',
 		enabled: false
 	});
+
+	let requestStatus: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+	let requestMessage = '';
+
+	const sendMailMutation = createMutation({
+		operationName: 'sendMail'
+	});
+
+	async function handleRequestMinutes() {
+		if (!session?.user?.id) return;
+
+		requestStatus = 'loading';
+		try {
+			await $sendMailMutation.mutateAsync({
+				id: session.user.id,
+				subject: 'Requesting Minutes',
+				body: 'Would love to have some more minutes'
+			});
+
+			requestStatus = 'success';
+			requestMessage =
+				"We'll respond back to you by mail during the next 48 working hours, giving you more minutes to play with Hominio (might be slower during christmas and new year)";
+
+			setTimeout(() => {
+				machine.send('CLOSE');
+				requestStatus = 'idle';
+				requestMessage = '';
+			}, 5000);
+		} catch (error) {
+			requestStatus = 'error';
+			requestMessage = 'Failed to send request. Please try again later.';
+			console.error('Failed to send email:', error);
+		}
+	}
 
 	interface IntentContext {
 		permissionState: 'prompt' | 'granted' | 'denied';
@@ -212,7 +246,7 @@
 			context.isOpen = true;
 		},
 		navigateToUpgrade: () => {
-			window.location.href = '/upgrade';
+			window.location.href = '/me/subscriptions';
 		}
 	};
 
@@ -260,6 +294,12 @@
 		onRecordingStateChange(isRecording, isProcessing);
 	}
 
+	function handleModalClose() {
+		machine.send('CLOSE');
+		requestStatus = 'idle';
+		requestMessage = '';
+	}
+
 	export const handleLongPressStart = () => {
 		isLongPressActive = true;
 		machine.send('LONG_PRESS');
@@ -300,12 +340,10 @@
 	<div
 		class="flex fixed inset-0 z-50 flex-col justify-end"
 		transition:fade={{ duration: 200 }}
-		on:click|self={() => machine.send('CLOSE')}
+		on:click|self={handleModalClose}
 	>
 		<!-- Separate backdrop div with iOS-compatible blur -->
-		<div
-			class="absolute inset-0 -z-10 bg-surface-900/30 supports-[backdrop-filter]:bg-surface-900/10 backdrop-blur-[6px] supports-[backdrop-filter]:backdrop-blur-sm"
-		/>
+		<div class="absolute inset-0 -z-10 bg-surface-900/10" />
 		{#if $currentState === 'calling'}
 			<AskHominio
 				bind:this={askHominioComponent}
@@ -337,7 +375,7 @@
 										Please enable microphone access in your browser settings and try again
 									</p>
 									<button
-										class="px-4 py-2 mt-4 text-white rounded-lg bg-tertiary-500"
+										class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
 										on:click={() => machine.send('TRY_AGAIN')}
 									>
 										Try Again
@@ -353,43 +391,67 @@
 								</div>
 							{:else if $currentState === 'paywall'}
 								<div class="p-6 text-center">
-									<div class="mb-4 text-4xl">🔒</div>
+									<div class="flex justify-center mb-4">
+										<Icon
+											icon="solar:lock-password-bold-duotone"
+											width="64"
+											height="64"
+											class="text-tertiary-200 [--icon-secondary:theme(colors.surface.200)]"
+										/>
+									</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Your Hominio Minutes are Up</h2>
 									<p class="mt-2 text-tertiary-200/80">
-										Upgrade your plan to continue using this feature, or for now just drop us a
-										quick message to get a few more free Minutes. Just click on the Hominio Logo
-										Button at the bottom and select the "Message us" action.
+										Request more minutes to continue using Hominio. We'll get back to you shortly
+										with additional free minutes!
 									</p>
-									<div class="mt-4 space-x-4">
-										<button
-											class="px-4 py-2 text-white rounded-lg bg-tertiary-500"
-											on:click={() => machine.send('UPGRADE')}
+
+									{#if requestMessage}
+										<div
+											class="mt-4 p-3 rounded-lg {requestStatus === 'success'
+												? 'bg-success-500/20 text-success-400'
+												: 'bg-error-500/20 text-error-400'}"
 										>
-											Upgrade Now
-										</button>
+											{requestMessage}
+										</div>
+									{/if}
+
+									<div class="flex gap-4 justify-center mt-4">
 										<button
-											class="px-4 py-2 rounded-lg border border-tertiary-500 text-tertiary-200"
+											class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
 											on:click={() => machine.send('CLOSE')}
+											disabled={requestStatus === 'loading'}
 										>
 											Maybe Later
+										</button>
+										<button
+											class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md @3xl:btn-lg rounded-full"
+											on:click={handleRequestMinutes}
+											disabled={requestStatus === 'loading'}
+										>
+											{#if requestStatus === 'loading'}
+												<div
+													class="w-5 h-5 rounded-full border-2 animate-spin border-tertiary-200 border-t-transparent"
+												/>
+											{:else}
+												Request Minutes
+											{/if}
 										</button>
 									</div>
 								</div>
 							{:else if $currentState === 'waitinglist'}
 								<div class="p-6 text-center">
-									<div class="mb-4 text-4xl">📝</div>
-									<h2 class="text-2xl font-bold text-tertiary-200">Coming Soon</h2>
+									<h2 class="text-2xl font-bold text-tertiary-200">Early BETA Access</h2>
 									<p class="mt-2 text-tertiary-200/80">
-										Rise on the leaderboard to get early access. The more new Visioncreators you
-										inspire to sign up via your link, the earlier you get invited to play with
-										Hominio.
+										Invite 3 visioncreators to get early BETA access!
 									</p>
-									<button
-										class="px-4 py-2 mt-4 text-white rounded-lg bg-tertiary-500"
-										on:click={() => machine.send('CLOSE')}
-									>
-										Close
-									</button>
+									<div class="flex justify-center mt-4">
+										<button
+											class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
+											on:click={() => machine.send('CLOSE')}
+										>
+											Maybe Later
+										</button>
+									</div>
 								</div>
 							{/if}
 						</div>

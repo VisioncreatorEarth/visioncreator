@@ -10,31 +10,36 @@ export default createOperation.query({
             throw new Error('User ID not found');
         }
 
-        // Get user's active tier capability
-        const { data: capability, error: capError } = await context.supabase
+        // Get all active tier capabilities for the user
+        const { data: capabilities, error: capError } = await context.supabase
             .from('capabilities')
             .select('*')
             .eq('user_id', user.customClaims.id)
             .eq('type', 'TIER')
-            .eq('active', true)
-            .single();
+            .eq('active', true);
 
-        if (capError && capError.code !== 'PGRST116') { // Ignore "no rows returned" error
-            throw new Error(`Failed to fetch capability: ${capError.message}`);
+        if (capError) {
+            throw new Error(`Failed to fetch capabilities: ${capError.message}`);
         }
 
-        // If no capability found, user needs to join waitlist
-        if (!capability) {
+        // If no capabilities found, user needs to join waitlist
+        if (!capabilities || capabilities.length === 0) {
             return {
                 status: 'NO_CAPABILITY',
                 message: 'No active capability found'
             };
         }
 
+        // Calculate total minutes limit from all active tiers
+        const totalMinutesLimit = capabilities.reduce((total, cap) => {
+            return total + (cap.config?.minutesLimit || 0);
+        }, 0);
+
         // Get actual minutes used from completed calls
+        const now = new Date();
         const { data: calls, error: callsError } = await context.supabase
             .from('hominio_calls')
-            .select('duration_minutes')
+            .select('duration_minutes, created_at')
             .eq('user_id', user.customClaims.id)
             .eq('status', 'completed');
 
@@ -43,32 +48,56 @@ export default createOperation.query({
             throw new Error('Failed to fetch call history');
         }
 
-        const actualMinutesUsed = Number(calls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
-        const minutesLimit = capability.config?.minutesLimit || 0;
-        const remainingMinutes = Number((minutesLimit - actualMinutesUsed).toFixed(4));
+        // Calculate minutes used based on tier type
+        let actualMinutesUsed = 0;
+        for (const capability of capabilities) {
+            const isSubscriptionTier = capability.config?.tier === 'HOMINIO' || capability.config?.tier === 'VISIONCREATOR';
+            const subscriptionStart = isSubscriptionTier ? new Date(capability.granted_at) : null;
+            const subscriptionEnd = isSubscriptionTier ? new Date(capability.config?.subscriptionEnd) : null;
 
-        console.log('Minutes used:', actualMinutesUsed);
-        console.log('Minutes limit:', minutesLimit);
-        console.log('Remaining minutes:', remainingMinutes);
+            // Filter calls based on tier type
+            const relevantCalls = calls.filter(call => {
+                const callDate = new Date(call.created_at);
+                if (isSubscriptionTier) {
+                    // For subscription tiers, only count calls within the current subscription period
+                    return callDate >= subscriptionStart && callDate <= subscriptionEnd;
+                } else {
+                    // For manual/prepaid tiers, count all calls since the tier was granted
+                    return callDate >= new Date(capability.granted_at);
+                }
+            });
 
-        if (remainingMinutes <= 0) {
+            // Sum up minutes for this capability
+            const tierMinutesUsed = Number(relevantCalls.reduce((total, call) => total + (call.duration_minutes || 0), 0).toFixed(4));
+            actualMinutesUsed += tierMinutesUsed;
+        }
+
+        const remainingMinutes = Number((totalMinutesLimit - actualMinutesUsed).toFixed(4));
+
+        console.log('Backend - Actual minutes used:', actualMinutesUsed.toFixed(4));
+        console.log('Backend - Minutes limit:', totalMinutesLimit);
+        console.log('Backend - Remaining minutes:', remainingMinutes.toFixed(4));
+
+        // Check if enough minutes are available for the minimum required duration
+        const minimumRequiredMinutes = 0.1667; // 10 seconds
+        if (remainingMinutes < minimumRequiredMinutes) {
+            console.log(`Backend - Not enough minutes left, minimum required: ${minimumRequiredMinutes}, remaining: ${remainingMinutes}`);
             return {
                 status: 'NO_MINUTES',
-                message: 'No available minutes in current plan',
-                tier: capability.config.tier,
-                minutesLimit,
+                message: 'No available minutes in your current plan',
                 minutesUsed: actualMinutesUsed,
-                remainingMinutes: 0
+                minutesLimit: totalMinutesLimit,
+                remainingMinutes: remainingMinutes,
+                capabilities
             };
         }
 
-        // All good - user can proceed
         return {
             status: 'OK',
-            tier: capability.config.tier,
-            minutesLimit,
             minutesUsed: actualMinutesUsed,
-            remainingMinutes
+            minutesLimit: totalMinutesLimit,
+            remainingMinutes: remainingMinutes,
+            capabilities
         };
     }
 });

@@ -4,7 +4,9 @@ export default createOperation.mutation({
     input: z.object({
         userId: z.string(),
         action: z.enum(['grant', 'revoke']),
-        tier: z.enum(['FREE', 'HOMINIO', 'VISIONCREATOR']).nullable()
+        type: z.enum(['TIER', 'OTHER']).optional(),
+        tier: z.enum(['5M', '30M', '1H', '4H', '10H']).nullable(),
+        capabilityId: z.string().optional()
     }),
     requireAuthentication: true,
     rbac: {
@@ -27,16 +29,24 @@ export default createOperation.mutation({
 
         const now = new Date().toISOString();
         const tierConfig = {
-            FREE: {
+            '5M': {
                 minutesLimit: 5,
                 isOneTime: true
             },
-            HOMINIO: {
+            '30M': {
+                minutesLimit: 30,
+                isOneTime: false
+            },
+            '1H': {
                 minutesLimit: 60,
                 isOneTime: false
             },
-            VISIONCREATOR: {
+            '4H': {
                 minutesLimit: 240,
+                isOneTime: false
+            },
+            '10H': {
+                minutesLimit: 600,
                 isOneTime: false
             }
         };
@@ -46,7 +56,7 @@ export default createOperation.mutation({
             .from('capabilities')
             .select('*')
             .eq('user_id', input.userId)
-            .eq('type', 'TIER')
+            .eq('type', input.action === 'grant' ? 'TIER' : input.type)
             .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') { // Ignore "no rows returned" error
@@ -112,20 +122,24 @@ export default createOperation.mutation({
             };
         } else {
             // Revoke action
-            if (!existingCapability) {
-                throw new Error('No tier capability found to revoke');
-            }
+            console.log('Attempting to revoke capability:', {
+                userId: input.userId,
+                type: input.type,
+                tier: input.tier
+            });
 
-            // Deactivate the capability
+            // Deactivate the capability directly using the input
             const { error: updateError } = await context.supabase
                 .from('capabilities')
                 .update({
                     active: false,
-                    config: { ...existingCapability.config, deactivatedAt: now }
+                    config: { deactivatedAt: now }
                 })
-                .eq('id', existingCapability.id);
+                .eq('user_id', input.userId)
+                .eq('id', input.capabilityId);
 
             if (updateError) {
+                console.error('Failed to revoke capability:', updateError);
                 throw new Error(`Failed to revoke capability: ${updateError.message}`);
             }
 
@@ -134,14 +148,18 @@ export default createOperation.mutation({
     }
 });
 
-function getTierDescription(tier: 'FREE' | 'HOMINIO' | 'VISIONCREATOR'): string {
+function getTierDescription(tier: '5M' | '30M' | '1H' | '4H' | '10H'): string {
     switch (tier) {
-        case 'FREE':
-            return 'Free Tier - 5 minutes per month';
-        case 'HOMINIO':
-            return 'Hominio Tier - 60 minutes per month';
-        case 'VISIONCREATOR':
-            return 'Visioncreator Tier - 240 minutes per month';
+        case '5M':
+            return '5 Minutes Trial';
+        case '30M':
+            return '30 Minutes Monthly';
+        case '1H':
+            return '1 Hour Monthly';
+        case '4H':
+            return '4 Hours Monthly';
+        case '10H':
+            return '10 Hours Monthly';
         default:
             return 'Unknown Tier';
     }
