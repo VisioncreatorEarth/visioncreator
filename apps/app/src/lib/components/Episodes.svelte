@@ -49,7 +49,7 @@
 			title: '004 - Visioncreators who co-create Hominio today will co-own tomorrow',
 			description:
 				"We're thrilled to share the next chapter in our story - a video that reveals how Visioncreators like you aren't just users, but true co-creators and co-owners of what we're building. Get ready to see how every contribution, from testing Hominio's features to shaping our community, is part of a bigger vision where success is shared by all.",
-			videoId: '8fee2d57-e3c3-4580-bd11-ae828d86978d',
+			videoId: 'c71eea95-faad-4b50-8bab-967aca8dbc2a',
 			poster: 'images/004_poster.png'
 		}
 	];
@@ -74,14 +74,14 @@
 	});
 </script>
 
-<div class="flex flex-col h-screen overflow-hidden p-4 md:flex-row text-surface-50">
+<div class="flex overflow-hidden flex-col p-4 h-screen md:flex-row text-surface-50">
 	<div class="flex flex-col w-full h-full md:w-2/3 md:pr-4 md:overflow-hidden">
 		<div class="sticky top-0 z-10 px-4 pt-4 -mx-4 bg-surface-900 md:static md:p-0 md:m-0">
 			<h2 class="mb-4 text-2xl font-bold text-primary-400">Now Playing</h2>
 			<VideoPlayer bind:this={videoPlayer} videoId={selectedVideo.videoId} />
 		</div>
 
-		<div class="flex-1 overflow-y-auto pb-20 md:overflow-hidden">
+		<div class="overflow-y-auto flex-1 pb-20 md:overflow-hidden">
 			<div class="mt-4">
 				<h1 class="text-2xl font-semibold h1 md:text-3xl text-primary-200">
 					{selectedVideo.title}
@@ -121,7 +121,7 @@
 
 	<div class="hidden pl-4 w-1/3 md:flex md:flex-col md:h-full episode-list">
 		<h2 class="mb-4 text-2xl font-bold text-primary-400">Episodes</h2>
-		<div class="flex-1 space-y-4 overflow-y-auto pr-2">
+		<div class="overflow-y-auto flex-1 pr-2 space-y-4">
 			{#each $videos as video (video.id)}
 				<button
 					class="flex overflow-hidden relative w-full text-left rounded-lg shadow-lg cursor-pointer video-card bg-surface-700"
