@@ -19,8 +19,8 @@
 	$: temperature = $query.data.temperature;
 	$: streamPotential = $query.data.streamPotential;
 
-	// Launch date: January 7th, 2025, 18:00 CET
-	const launchDate = new Date('2025-01-07T18:00:00+01:00').getTime();
+	// Launch date: January 21st, 2025, 19:00 CET
+	const launchDate = new Date('2025-01-21T19:00:00+01:00').getTime();
 
 	const countdown = readable(0, (set) => {
 		const interval = setInterval(() => {
@@ -108,7 +108,7 @@
 				</div>
 				<div class="text-center">
 					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						${$query.data.inspirations * 5}/m
+						${($query.data.inspirations * 3.33).toFixed(2)}/m
 					</div>
 					<div class="text-xs text-tertiary-300 md:text-sm">income potential</div>
 				</div>
@@ -179,10 +179,20 @@
 								</div>
 							{:else if inspirations === 3}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									<span class="text-2xl font-bold uppercase">Almost there!</span><br />
-									You are currently in the (X) early Hominio BETA program. There is (Y) groups ahead
-									of you. To get in even faster, continue to spread the word about Hominio and inspire
-									more Visioncreators to join.<br />
+									<span class="text-2xl font-bold uppercase">
+										{$query.data.visionRank <= 89 ? 'Congratulations!' : 'Be Patient'}
+									</span><br />
+									{#if $query.data.visionRank <= 89}
+										You're position {$query.data.visionRank} in line for our exclusive first BETA access
+										- limited to only 89 pioneering visioncreators.<br /><br />
+										Keep spreading the word to secure your spot in our early access program and increase
+										your income potential!
+									{:else}
+										Only top 89 visioncreators will get early access. You're position {$query.data
+											.visionRank}.<br /><br />
+										Keep inspiring new Visioncreators to join the waitlist for a chance to reach the
+										first 89 and to increase your income potential!
+									{/if}
 								</p>
 							{:else}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
@@ -223,7 +233,7 @@
 			href="https://unsplash.com/de/fotos/lichtstrahl-in-der-nahe-des-gewassers--p-KCm6xB9I"
 			target="_blank"
 			rel="noopener noreferrer"
-			class="text-2xs text-tertiary-500/80 hover:text-tertiary-500 transition-colors"
+			class="transition-colors text-2xs text-tertiary-500/80 hover:text-tertiary-500"
 		>
 			Image by SpaceX
 		</a>

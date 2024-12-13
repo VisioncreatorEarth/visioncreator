@@ -7,8 +7,8 @@
 
 	let contentWrapper: HTMLDivElement;
 
-	// Launch date: January 7th, 2025, 18:00 CET
-	const launchDate = new Date('2025-01-07T18:00:00+01:00').getTime();
+	// Launch date: January 21st, 2025, 19:00 CET
+	const launchDate = new Date('2025-01-21T19:00:00+01:00').getTime();
 
 	const countdown = readable(0, (set) => {
 		const interval = setInterval(() => {
