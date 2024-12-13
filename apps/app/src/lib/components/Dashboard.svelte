@@ -177,7 +177,7 @@
 										</div>
 									{/each}
 								</div>
-							{:else if inspirations === 3}
+							{:else if inspirations >= 3}
 								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
 									<span class="text-2xl font-bold uppercase">
 										{$query.data.visionRank <= 89 ? 'Congratulations!' : 'Be Patient'}
