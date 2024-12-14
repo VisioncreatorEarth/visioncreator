@@ -6,6 +6,8 @@
 	import { page } from '$app/stores';
 	import { view as meView } from '$lib/views/Leaderboard';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
+	import { view as episodesView } from '$lib/views/Episodes';
+	import { view as leaderboardView } from '$lib/views/Leaderboard';
 	import { createQuery } from '$lib/wundergraph';
 
 	export let showLabels = false;
@@ -45,6 +47,14 @@
 			},
 			view: meView
 		},
+		{
+			metadata: {
+				id: 'Leaderboard',
+				name: 'Leaderboard',
+				icon: 'mdi:trophy'
+			},
+			view: meView
+		},
 		...(hasRequiredCapability
 			? [
 					{
@@ -63,21 +73,7 @@
 				name: 'Episodes',
 				icon: 'mdi:play-circle'
 			},
-			view: {
-				id: 'Episodes',
-				layout: {
-					areas: `"main"`,
-					overflow: 'auto',
-					style: 'mx-auto max-w-6xl'
-				},
-				children: [
-					{
-						id: 'episodes',
-						component: 'Episodes',
-						slot: 'main'
-					}
-				]
-			}
+			view: episodesView
 		}
 	];
 
@@ -113,7 +109,7 @@
 			role="button"
 		>
 			{#if activeViewId === viewItem.metadata.id}
-				<div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary-500" />
+				<div class="absolute bottom-0 left-1/2 w-8 h-0.5 -translate-x-1/2 bg-primary-500" />
 			{/if}
 			<Icon
 				icon={viewItem.metadata.icon}
