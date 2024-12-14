@@ -9,7 +9,6 @@
 
 	const newsletterStatus = createQuery({
 		operationName: 'MyNewsletterStatus',
-		input: { email: userEmail },
 		liveQuery: true
 	});
 
@@ -27,7 +26,7 @@
 		message = "Next video is gonna sparkle. You've subscribed to something extraordinary. ";
 
 		try {
-			await $toggleNewsletterMutation.mutateAsync({ email: userEmail });
+			await $toggleNewsletterMutation.mutateAsync({});
 			Me.update((store) => ({ ...store, newsletter: true }));
 		} catch (error) {
 			console.error('Error during newsletter subscription:', error);

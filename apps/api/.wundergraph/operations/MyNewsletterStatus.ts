@@ -5,14 +5,11 @@ import {
 } from "../generated/wundergraph.factory";
 
 export default createOperation.query({
-  input: z.object({
-    email: z.string().email(),
-  }),
   requireAuthentication: true,
   rbac: {
     requireMatchAll: ["authenticated"],
   },
-  handler: async ({ context, input, user }) => {
+  handler: async ({ context, user }) => {
     if (!user?.customClaims?.id) {
       console.error("Authorization Error: User ID does not match.");
       throw new AuthorizationError({ message: "User ID does not match." });
@@ -24,7 +21,7 @@ export default createOperation.query({
         connectionId: "listmonk-vc",
         providerConfigKey: "listmonk",
         params: {
-          query: `subscribers.email='${input.email}'`,
+          query: `subscribers.email='${user.email}'`,
           page: "1",
           per_page: "1",
         },
