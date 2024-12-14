@@ -62,7 +62,7 @@
 	}
 
 	const subscriptionsQuery = createQuery<SubscriptionsQueryResult>({
-		operationName: 'myPolarSubscriptions',
+		operationName: 'polarMySubscriptions',
 		input: {
 			active: undefined
 		},

@@ -49,7 +49,6 @@ export async function GET({ request }: RequestEvent) {
 			roles
 		};
 
-		console.log('User info:', user);
 
 		return new Response(JSON.stringify(user), {
 			status: 200,

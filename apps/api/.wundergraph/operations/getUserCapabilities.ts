@@ -1,5 +1,4 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import type { Capability } from '../utils/types';
 
 export default createOperation.query({
     input: z.object({

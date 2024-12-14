@@ -6,9 +6,7 @@
 
 	const newsletterStatus = createQuery({
 		operationName: 'MyNewsletterStatus',
-		input: {
-			email: me.email
-		}
+		liveQuery: true
 	});
 
 	const toggleNewsletterMutation = createMutation({
@@ -17,9 +15,7 @@
 
 	const handleToggleNewsletter = async () => {
 		try {
-			const response = await $toggleNewsletterMutation.mutateAsync({
-				email: me.email
-			});
+			const response = await $toggleNewsletterMutation.mutateAsync({});
 			console.log('Toggle newsletter response:', response);
 			await $newsletterStatus.refetch();
 		} catch (error) {
