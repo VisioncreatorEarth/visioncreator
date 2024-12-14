@@ -64,5 +64,11 @@
 			</p>
 			<p class="text-tertiary-600 text-sm @3xl:text-lg">{$query.data.stat2desc}</p>
 		</div>
+		<div class="text-center">
+			<p class="text-xl @3xl:text-4xl font-semibold text-tertiary-400">
+				${$query.data.stat2 * 3.33}/m
+			</p>
+			<p class="text-tertiary-600 text-sm @3xl:text-lg">Income Potential</p>
+		</div>
 	</div>
 </div>

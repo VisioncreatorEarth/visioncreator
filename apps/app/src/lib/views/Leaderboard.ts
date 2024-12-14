@@ -44,14 +44,14 @@ export const view = {
 					description: 'wonderful to have you around',
 					stat1: {
 						query: 'queryUserStats',
-						prop: 'suminvites'
-					},
-					stat1desc: "Pioneers Inspired",
-					stat2: {
-						query: 'queryUserStats',
 						prop: 'userRank'
 					},
-					stat2desc: "Vision Rank",
+					stat1desc: "Vision Rank",
+					stat2: {
+						query: 'queryUserStats',
+						prop: 'suminvites'
+					},
+					stat2desc: "Pioneers Inspired",
 				}
 			},
 			{

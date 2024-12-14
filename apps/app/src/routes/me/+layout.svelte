@@ -9,9 +9,11 @@
 	import { view as hominioDoView } from '$lib/views/HominioDoMe';
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
 	import { view as hominioHostView } from '$lib/views/HominioHostMe';
+	import { view as leaderboardView } from '$lib/views/Leaderboard';
 	import { view as episodesView } from '$lib/views/Episodes';
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
+	import Leaderboard from '$lib/components/Leaderboard.svelte';
 
 	export let data;
 	let { session } = data;
@@ -26,6 +28,7 @@
 		HominioBankMe: hominioBankView,
 		HominioHostMe: hominioHostView,
 		Episodes: episodesView,
+		Leaderboard: leaderboardView,
 		Me: meView
 	};
 
