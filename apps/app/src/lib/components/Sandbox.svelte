@@ -38,14 +38,20 @@
 
 	$: if ($readFileQuery.data) {
 		const result = $readFileQuery.data;
-		if (result.success && result.content !== undefined) {
+		if (result.success && result.content !== undefined && !editorReady) {
 			console.log('✅ Sandbox: File read successful');
 			code = result.content;
 			editorReady = true;
-		} else {
+		} else if (!result.success) {
 			console.error('❌ Sandbox: Failed to read file:', result.error);
 			code = '';
+			editorReady = false;
 		}
+	}
+
+	function handleCodeChange(event: Event) {
+		const textarea = event.target as HTMLTextAreaElement;
+		code = textarea.value;
 	}
 
 	async function runSandbox() {
@@ -99,6 +105,7 @@
 		console.log('🎯 Sandbox: Received file select event:', event.detail);
 		const { name, path } = event.detail;
 		
+		editorReady = false; // Reset editor state for new file
 		currentFileName = name;
 		currentFilePath = path;
 
@@ -218,7 +225,8 @@
 				{/if}
 			</h3>
 			<textarea
-				bind:value={code}
+				value={code}
+				on:input={handleCodeChange}
 				class="flex-1 p-4 min-h-0 font-mono text-sm rounded-md border resize-none bg-surface-900 border-surface-700"
 				spellcheck="false"
 			/>
