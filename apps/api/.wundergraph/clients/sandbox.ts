@@ -3,18 +3,20 @@ import { Sandbox } from '@e2b/code-interpreter';
 
 interface SandboxResponse {
   success: boolean;
-  output?: string;
   error?: string;
+  output?: string;
 }
 
 interface SandboxInfo {
   id: string;
   status: string;
   createdAt: Date;
+  url?: string;
 }
 
 export class SandboxClient {
   private static sandboxes: Map<string, { sandbox: Sandbox; createdAt: Date }> = new Map();
+  private static readonly TEMPLATE_ID = 'i4z636bhd5yig0baz79x'; // Our SvelteKit template
 
   constructor() {
     if (!process.env.E2B_API_KEY) {
@@ -45,6 +47,34 @@ export class SandboxClient {
       return sandbox;
     } catch (error) {
       console.error(' Detailed error creating sandbox:', error);
+      throw error;
+    }
+  }
+
+  async startSandbox(): Promise<SandboxInfo> {
+    try {
+      const sandbox = await Sandbox.create(SandboxClient.TEMPLATE_ID);
+      const id = Math.random().toString(36).substring(7);
+      
+      // Get the sandbox URL for port 5173 (SvelteKit default port)
+      const host = sandbox.getHost(5173);
+      const url = `https://${host}`;
+      console.log('🌐 Sandbox URL:', url);
+      
+      SandboxClient.sandboxes.set(id, {
+        sandbox,
+        createdAt: new Date(),
+      });
+
+      return {
+        success: true,
+        id,
+        status: 'running',
+        createdAt: new Date(),
+        url: url,
+      };
+    } catch (error) {
+      console.error('Failed to start sandbox:', error);
       throw error;
     }
   }
@@ -81,10 +111,12 @@ export class SandboxClient {
       // Map sandbox data ensuring all fields are present
       return activeSandboxes.map(sandbox => {
         console.log('Mapping sandbox:', sandbox);
+        const sandboxInstance = SandboxClient.sandboxes.get(sandbox.sandboxId);
         return {
           id: sandbox.sandboxId || '',
           status: sandbox.name || 'unknown',
-          createdAt: sandbox.startedAt ? new Date(sandbox.startedAt) : new Date()
+          createdAt: sandbox.startedAt ? new Date(sandbox.startedAt) : new Date(),
+          url: sandboxInstance ? `https://${sandboxInstance.sandbox.getHost(5173)}` : undefined
         };
       });
     } catch (error) {

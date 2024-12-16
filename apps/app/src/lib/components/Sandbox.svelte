@@ -2,8 +2,6 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
 
-	let code = 'print("Hello from sandbox!")';
-
 	const sandboxStartMutation = createMutation({
 		operationName: 'sandboxStart'
 	});
@@ -17,104 +15,136 @@
 		operationName: 'sandboxStop'
 	});
 
-	async function runCode() {
+	let selectedSandboxId: string | null = null;
+	let iframeUrl: string | null = null;
+
+	async function runSandbox() {
 		try {
-			console.log('🎯 Running code in sandbox...');
-			const response = await $sandboxStartMutation.mutateAsync({
-				code
-			});
+			console.log('🚀 Starting SvelteKit sandbox...');
+			const response = await $sandboxStartMutation.mutateAsync({});
 			console.log('✨ Sandbox response:', response);
+			
+			if (response.success && response.url) {
+				selectedSandboxId = response.id;
+				iframeUrl = response.url;
+				console.log('🎯 Selected sandbox:', selectedSandboxId);
+				console.log('🌐 Set iframe URL to:', iframeUrl);
+			} else {
+				console.error('❌ Missing URL in sandbox response:', response);
+			}
 		} catch (error) {
-			console.error('❌ Error running code:', error);
+			console.error('❌ Error starting sandbox:', error);
 		}
 	}
 
+	function selectSandbox(sandboxId: string, url: string) {
+		console.log('🔄 Switching to sandbox:', sandboxId, 'with URL:', url);
+		selectedSandboxId = sandboxId;
+		iframeUrl = url;
+	}
+
 	async function stopSandbox(sandboxId: string) {
-		if (!sandboxId) {
-			console.error('❌ No sandbox ID provided');
-			return;
-		}
 		try {
 			console.log('🛑 Stopping sandbox:', sandboxId);
 			const response = await $sandboxStopMutation.mutateAsync({
 				sandboxId
 			});
-			console.log('✨ Stop sandbox response:', response);
-			// Refresh the sandboxes list
-			await $sandboxListQuery.refetch();
+			
+			if (response.success) {
+				console.log('✅ Successfully stopped sandbox:', sandboxId);
+				if (selectedSandboxId === sandboxId) {
+					selectedSandboxId = null;
+					iframeUrl = null;
+				}
+				await $sandboxListQuery.refetch();
+			} else {
+				console.error('❌ Failed to stop sandbox:', response.error);
+			}
 		} catch (error) {
 			console.error('❌ Error stopping sandbox:', error);
 		}
 	}
 
 	onMount(() => {
-		// Initialize any required resources
+		$sandboxListQuery.refetch();
 	});
 </script>
 
-<div class="grid grid-cols-2 gap-4 p-4 bg-surface-800 rounded-lg h-[calc(100vh-2rem)]">
-	<div class="flex gap-4 h-full">
-		<div class="flex flex-col w-64 h-full">
-			<h2 class="mb-2 font-medium text-surface-50">Active Sandboxes:</h2>
-			<div class="overflow-auto flex-1 p-2 rounded-md border bg-surface-900/50 border-surface-700">
-				{#if $sandboxListQuery.isLoading}
-					<p class="text-surface-400">Loading sandboxes...</p>
-				{:else if $sandboxListQuery.error}
-					<p class="text-error-400">Error loading sandboxes: {$sandboxListQuery.error.message}</p>
-				{:else if $sandboxListQuery.data?.sandboxes?.length === 0}
-					<p class="text-surface-400">No active sandboxes</p>
-				{:else}
-					<div class="space-y-2">
-						{#each $sandboxListQuery.data?.sandboxes || [] as sandbox}
-							{#if sandbox && sandbox.id}
-								<div class="p-2 rounded-md border bg-surface-900 border-surface-700">
-									<p class="text-xs truncate">ID: {sandbox.id}</p>
-									<p class="text-xs">Status: {sandbox.status || 'unknown'}</p>
-									<p class="text-xs">Created: {new Date(sandbox.createdAt).toLocaleString()}</p>
-									<button
-										class="mt-2 w-full btn btn-sm variant-soft-error"
-										on:click={() => stopSandbox(sandbox.id)}
-										disabled={$sandboxStopMutation.isLoading}
-									>
-										{$sandboxStopMutation.isLoading ? 'Stopping...' : 'Stop Sandbox'}
-									</button>
-								</div>
-							{/if}
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-		<div class="flex flex-col flex-1 h-full">
-			<label for="code" class="block mb-2 font-medium text-surface-50">Code:</label>
-			<textarea
-				id="code"
-				bind:value={code}
-				class="flex-1 p-2 mb-2 w-full font-mono rounded-md border bg-surface-900 text-surface-50 border-surface-700"
-				placeholder="Enter your Python code here..."
-			/>
+<div class="grid grid-cols-[300px_1fr] gap-4 p-4 bg-surface-800 rounded-lg h-[calc(100vh-2rem)]">
+	<!-- Sidebar with controls -->
+	<div class="flex flex-col gap-4">
+		<div class="flex flex-col gap-2">
 			<button
 				class="w-full btn variant-filled"
-				on:click={runCode}
+				on:click={runSandbox}
 				disabled={$sandboxStartMutation.isLoading}
 			>
-				{$sandboxStartMutation.isLoading ? 'Running...' : 'Run Code'}
+				{$sandboxStartMutation.isLoading ? 'Starting...' : 'Start SvelteKit Sandbox'}
 			</button>
 		</div>
+
+		{#if $sandboxListQuery.isSuccess && $sandboxListQuery.data?.sandboxes?.length > 0}
+			<div class="flex flex-col gap-2">
+				<h3 class="text-lg font-semibold text-surface-50">Running Sandboxes:</h3>
+				{#each $sandboxListQuery.data.sandboxes as sandbox}
+					{#if sandbox.url}
+						<button
+							class="flex flex-col gap-2 p-3 rounded-md border transition-colors cursor-pointer
+								{sandbox.id === selectedSandboxId 
+									? 'bg-surface-700 border-surface-500' 
+									: 'bg-surface-900 border-surface-700 hover:bg-surface-800'}"
+							on:click={() => selectSandbox(sandbox.id, sandbox.url)}
+						>
+							<div class="flex items-center justify-between">
+								<span class="text-sm truncate {sandbox.id === selectedSandboxId ? 'text-surface-50' : 'text-surface-200'}">
+									{sandbox.id}
+								</span>
+								<button
+									class="btn btn-sm variant-soft-error"
+									on:click={(e) => {
+										e.stopPropagation();
+										stopSandbox(sandbox.id);
+									}}
+									disabled={$sandboxStopMutation.isLoading}
+								>
+									Stop
+								</button>
+							</div>
+							{#if sandbox.id === selectedSandboxId}
+								<span class="text-xs text-success-400">Currently Displayed</span>
+							{/if}
+						</button>
+					{/if}
+				{/each}
+			</div>
+		{:else if $sandboxListQuery.isLoading}
+			<p class="text-surface-400">Loading sandboxes...</p>
+		{:else if $sandboxListQuery.error}
+			<p class="text-error-400">Error: {$sandboxListQuery.error.message}</p>
+		{:else}
+			<p class="text-surface-400">No active sandboxes</p>
+		{/if}
 	</div>
 
-	<div class="flex flex-col h-full">
-		<h2 class="mb-2 font-medium text-surface-50">Output:</h2>
-		<div class="overflow-hidden flex-1 rounded-md border bg-surface-900 border-surface-700">
-			{#if $sandboxStartMutation.data?.output}
-				<pre class="overflow-auto p-4 h-full whitespace-pre-wrap">{$sandboxStartMutation.data
-						.output}</pre>
-			{:else if $sandboxStartMutation.data?.error || $sandboxStartMutation.error}
-				<pre class="p-4 whitespace-pre-wrap text-error-400">
-					{$sandboxStartMutation.data?.error || $sandboxStartMutation.error?.message || 'No output'}
-				</pre>
+	<!-- Content Display Area -->
+	<div class="flex flex-col gap-4 relative">
+		<div class="flex-1 rounded-md border bg-surface-900 border-surface-700 overflow-hidden min-h-[600px]">
+			{#if iframeUrl}
+				<div class="absolute top-2 right-2 z-10 bg-surface-800 p-2 rounded-md text-xs opacity-50 hover:opacity-100 transition-opacity">
+					{iframeUrl}
+				</div>
+				<iframe
+					title="SvelteKit Sandbox"
+					src={iframeUrl}
+					class="w-full h-full border-none"
+					sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+					on:load={() => console.log('🎉 iframe loaded')}
+					on:error={(e) => console.error('❌ iframe error:', e)}
+				/>
 			{:else}
-				<p class="p-4 text-surface-400">Run your code to see output here</p>
+				<div class="flex items-center justify-center h-full text-surface-400">
+					<p>Start a sandbox to see the content here</p>
+				</div>
 			{/if}
 		</div>
 	</div>

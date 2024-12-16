@@ -1,30 +1,25 @@
 import { createOperation, z } from "../generated/wundergraph.factory";
 
 export default createOperation.mutation({
-    input: z.object({
-        code: z.string()
-    }),
-    handler: async ({ input, context }) => {
+    input: z.object({}),
+    handler: async ({ context }) => {
         try {
-            console.log('🚀 Creating new sandbox...');
-            const sandbox = await context.sandbox.createSandbox();
-            console.log('✅ Sandbox created');
-
-            console.log('🏃 Running code in sandbox:', input.code);
-            const result = await context.sandbox.runCode(sandbox, input.code);
-            console.log('Code execution result:', result);
+            console.log('🚀 Starting SvelteKit sandbox...');
+            const sandbox = await context.sandbox.startSandbox();
+            console.log('✅ Sandbox started:', sandbox);
 
             return {
                 success: true,
-                output: result.output,
-                error: result.error
+                sandboxId: sandbox.id,
+                status: sandbox.status,
+                url: sandbox.url // Include the URL in the response
             };
         } catch (error) {
-            console.error('❌ Error in sandbox operation:', error);
+            console.error('❌ Error starting sandbox:', error);
             return {
                 success: false,
-                error: error instanceof Error ? error.message : String(error),
+                error: error.message
             };
         }
-    },
+    }
 });
