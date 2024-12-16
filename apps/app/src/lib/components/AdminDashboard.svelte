@@ -446,12 +446,16 @@
 									<h3 class="mb-3 text-sm font-medium text-surface-300">{language}</h3>
 									<div class="space-y-2">
 										{#each languageVoices as voice}
-											<div class="p-3 rounded-lg transition-colors bg-surface-700 hover:bg-surface-600">
+											<div
+												class="p-3 rounded-lg transition-colors bg-surface-700 hover:bg-surface-600"
+											>
 												<div class="flex-1 min-w-0">
-													<div class="flex items-center justify-between gap-2">
+													<div class="flex gap-2 justify-between items-center">
 														<div>
 															<h4 class="font-medium truncate">{voice.name}</h4>
-															<p class="mt-0.5 text-xs truncate text-surface-400">({voice.voiceId})</p>
+															<p class="mt-0.5 text-xs truncate text-surface-400">
+																({voice.voiceId})
+															</p>
 														</div>
 													</div>
 													{#if voice.previewUrl}

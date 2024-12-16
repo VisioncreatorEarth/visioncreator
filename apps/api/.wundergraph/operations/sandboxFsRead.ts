@@ -20,17 +20,21 @@ export default createOperation.query({
                 };
             }
             
-            console.log('🔗 sandboxFsRead: Got sandbox instance:', {
+            // Clean up the path - remove any existing /root/app prefix
+            const cleanPath = input.path.replace(/^\/root\/app\/?/, '');
+            const fullPath = `/root/app/${cleanPath}`;
+            
+            console.log('🔗 sandboxFsRead: Reading file:', {
                 sandboxId: input.sandboxId,
-                path: input.path
+                path: fullPath
             });
             
             try {
                 // Try to read the file
-                const content = await sandbox.files.read(input.path);
+                const content = await sandbox.files.read(fullPath);
                 
                 if (!content && content !== '') {
-                    console.error('❌ sandboxFsRead: No content returned for file:', input.path);
+                    console.error('❌ sandboxFsRead: No content returned for file:', fullPath);
                     return {
                         success: false,
                         error: 'No content returned from file',
@@ -39,7 +43,7 @@ export default createOperation.query({
                 }
                 
                 console.log('✅ sandboxFsRead: Successfully read file:', {
-                    path: input.path,
+                    path: fullPath,
                     contentLength: content?.length || 0
                 });
                 
@@ -50,7 +54,7 @@ export default createOperation.query({
             } catch (readError) {
                 // Check if it's a directory error
                 if (readError.message?.includes('is a directory')) {
-                    console.error('❌ sandboxFsRead: Path is a directory:', input.path);
+                    console.error('❌ sandboxFsRead: Path is a directory:', fullPath);
                     return {
                         success: false,
                         error: 'Cannot read directory as file',
@@ -59,7 +63,7 @@ export default createOperation.query({
                 }
                 
                 console.error('❌ sandboxFsRead: Error reading file:', {
-                    path: input.path,
+                    path: fullPath,
                     error: readError.message,
                     stack: readError.stack
                 });

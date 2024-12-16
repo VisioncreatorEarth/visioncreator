@@ -4,12 +4,17 @@ import { z } from "zod";
 export default createOperation.query({
     input: z.object({
         sandboxId: z.string().min(1, "Sandbox ID is required"),
-        path: z.string().min(1, "Path is required")
+        path: z.string().optional()
     }),
     handler: async ({ input, context }) => {
         try {
             const sandbox = await context.sandbox.getSandboxInstance(input.sandboxId);
-            const files = await sandbox.files.list(input.path);
+            // Remove any existing /root/app prefix from the input path
+            const cleanPath = input.path?.replace(/^\/root\/app\/?/, '') || '';
+            const fullPath = cleanPath ? `/root/app/${cleanPath}` : '/root/app';
+            
+            console.log('📂 Listing files at path:', fullPath);
+            const files = await sandbox.files.list(fullPath);
 
             return {
                 success: true,
