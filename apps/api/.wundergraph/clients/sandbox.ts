@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Sandbox } from '@e2b/code-interpreter';
+import { Sandbox, Filesystem } from '@e2b/code-interpreter';
 
 interface SandboxResponse {
   success: boolean;
@@ -22,7 +22,6 @@ export class SandboxClient {
     if (!process.env.E2B_API_KEY) {
       throw new Error('Missing E2B_API_KEY in environment variables');
     }
-    console.log(' Initializing SandboxClient');
   }
 
   async createSandbox(): Promise<Sandbox> {
@@ -55,12 +54,12 @@ export class SandboxClient {
     try {
       const sandbox = await Sandbox.create(SandboxClient.TEMPLATE_ID);
       const id = Math.random().toString(36).substring(7);
-      
+
       // Get the sandbox URL for port 5173 (SvelteKit default port)
       const host = sandbox.getHost(5173);
       const url = `https://${host}`;
       console.log('🌐 Sandbox URL:', url);
-      
+
       SandboxClient.sandboxes.set(id, {
         sandbox,
         createdAt: new Date(),
@@ -85,8 +84,6 @@ export class SandboxClient {
       const activeSandboxes = await Sandbox.list({
         apiKey: process.env.E2B_API_KEY
       });
-
-      console.log(' Active sandboxes from E2B:', activeSandboxes);
 
       // Update our local cache with any new sandboxes
       for (const sandboxInfo of activeSandboxes) {
@@ -128,12 +125,12 @@ export class SandboxClient {
   async stopSandbox(sandboxId: string): Promise<boolean> {
     try {
       console.log('🛑 Attempting to stop sandbox:', sandboxId);
-      
+
       // Use the static kill method directly
       const killed = await Sandbox.kill(sandboxId, {
         apiKey: process.env.E2B_API_KEY
       });
-      
+
       if (killed) {
         console.log('✅ Successfully stopped sandbox:', sandboxId);
         // Remove from our cache if it exists
@@ -141,7 +138,7 @@ export class SandboxClient {
       } else {
         console.log('⚠️ Sandbox not found or already stopped:', sandboxId);
       }
-      
+
       return killed;
     } catch (error) {
       console.error('❌ Error stopping sandbox:', error);
