@@ -6,6 +6,10 @@ export default createOperation.query({
         sandboxId: z.string().min(1, "Sandbox ID is required"),
         path: z.string().optional()
     }),
+    requireAuthentication: true,
+    rbac: {
+      requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ input, context }) => {
         try {
             const sandbox = await context.sandbox.getSandboxInstance(input.sandboxId);

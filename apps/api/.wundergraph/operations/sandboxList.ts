@@ -1,6 +1,10 @@
 import { createOperation } from "../generated/wundergraph.factory";
 
 export default createOperation.query({
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ context }) => {
         try {
             const sandboxes = await context.sandbox.listSandboxes();

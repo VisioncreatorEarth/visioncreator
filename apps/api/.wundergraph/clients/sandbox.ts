@@ -16,7 +16,7 @@ interface SandboxInfo {
 
 export class SandboxClient {
   private static sandboxes: Map<string, { sandbox: Sandbox; createdAt: Date }> = new Map();
-  private static readonly TEMPLATE_ID = 'i4z636bhd5yig0baz79x'; // Our SvelteKit template
+  private static readonly TEMPLATE_ID = 't17n6duf3p68x33j98x4';
 
   constructor() {
     if (!process.env.E2B_API_KEY) {

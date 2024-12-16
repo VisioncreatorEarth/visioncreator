@@ -2,6 +2,10 @@ import { createOperation, z } from "../generated/wundergraph.factory";
 
 export default createOperation.mutation({
     input: z.object({}),
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ context }) => {
         try {
             console.log('🚀 Starting SvelteKit sandbox...');

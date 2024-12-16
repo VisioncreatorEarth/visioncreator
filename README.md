@@ -131,6 +131,12 @@ You can now access your development server via:
 - `https://127.0.0.1:3000` (local machine)
 - `https://192.168.178.26:3000` (local network/mobile devices)
 
+### Sandbox e2b
+to build a new template run inside of the template root folder
+````
+e2b template build -c /root/.jupyter/start-up.sh
+```
+
 ## Deployment to production
 
 ### Nango 3rd-Party API Gateway

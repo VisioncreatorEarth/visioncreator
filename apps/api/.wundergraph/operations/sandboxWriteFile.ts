@@ -7,12 +7,16 @@ export default createOperation.mutation({
         path: z.string().min(1, "Path is required"),
         content: z.string()
     }),
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ input, context }) => {
         try {
             console.log('Writing file:', input.path);
             const sandbox = await context.sandbox.getSandboxInstance(input.sandboxId);
             await sandbox.files.write(input.path, input.content);
-            
+
             return {
                 success: true
             };

@@ -4,11 +4,15 @@ export default createOperation.mutation({
     input: z.object({
         sandboxId: z.string().min(1, "Sandbox ID is required")
     }),
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ input, context }) => {
         try {
             console.log('🛑 Operation: Stopping sandbox:', input.sandboxId);
             const success = await context.sandbox.stopSandbox(input.sandboxId);
-            
+
             if (!success) {
                 console.error('❌ Operation: Failed to stop sandbox:', input.sandboxId);
                 return {
@@ -16,7 +20,7 @@ export default createOperation.mutation({
                     error: 'Failed to stop sandbox - check server logs for details'
                 };
             }
-            
+
             console.log('✅ Operation: Successfully stopped sandbox:', input.sandboxId);
             return {
                 success: true

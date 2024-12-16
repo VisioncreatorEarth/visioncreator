@@ -6,6 +6,10 @@ export default createOperation.query({
         sandboxId: z.string().min(1, "Sandbox ID is required"),
         path: z.string().min(1, "Path is required")
     }),
+    requireAuthentication: true,
+    rbac: {
+      requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ input, context }) => {
         try {
             console.log('Reading file:', input);
