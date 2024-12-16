@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
+	import FileTree from './FileTree.svelte';
 
 	const sandboxStartMutation = createMutation({
 		operationName: 'sandboxStart'
@@ -87,24 +88,23 @@
 	});
 </script>
 
-<div class="grid grid-cols-[1fr_1fr] gap-4 p-4 bg-surface-800 rounded-lg h-[calc(100vh-2rem)]">
-	<!-- Left side: Sandbox list and Code Editor -->
-	<div class="grid grid-cols-[300px_1fr] gap-4">
-		<!-- Left column: Sandbox Controls and List -->
-		<div class="flex flex-col gap-4">
-			<!-- Sandbox Controls -->
-			<div class="flex flex-col gap-2">
-				<button
-					class="w-full btn variant-filled"
-					on:click={runSandbox}
-					disabled={$sandboxStartMutation.isLoading}
-				>
-					{$sandboxStartMutation.isLoading ? 'Starting...' : 'Start SvelteKit Sandbox'}
-				</button>
-			</div>
+<div class="grid grid-cols-[1fr_2fr] gap-4 p-4 bg-surface-800 rounded-lg h-[calc(100vh-2rem)]">
+	<!-- Left side: Sandbox Controls, List and File Tree -->
+	<div class="flex flex-col gap-4 overflow-hidden">
+		<!-- Sandbox Controls -->
+		<div class="flex-none">
+			<button
+				class="w-full btn variant-filled"
+				on:click={runSandbox}
+				disabled={$sandboxStartMutation.isLoading}
+			>
+				{#if $sandboxStartMutation.isLoading}Starting...{:else}Start New Sandbox{/if}
+			</button>
+		</div>
 
-			<!-- Running Sandboxes List -->
-			{#if $sandboxListQuery.isSuccess && $sandboxListQuery.data?.sandboxes?.length > 0}
+		<!-- Sandbox List -->
+		<div class="flex-1 overflow-y-auto min-h-0">
+			{#if $sandboxListQuery.isSuccess && $sandboxListQuery.data?.sandboxes}
 				<div class="flex flex-col gap-2">
 					<h3 class="text-lg font-semibold text-surface-50">Running Sandboxes:</h3>
 					{#each $sandboxListQuery.data.sandboxes as sandbox}
@@ -151,41 +151,49 @@
 			{/if}
 		</div>
 
-		<!-- Right column: Code Editor -->
-		<div class="flex flex-col gap-2">
-			<h3 class="text-lg font-semibold text-surface-50">Code Editor</h3>
+		<!-- File Tree -->
+		{#if selectedSandboxId}
+			<div class="flex-1 min-h-0 overflow-hidden border border-surface-700 rounded">
+				<FileTree sandboxId={selectedSandboxId} />
+			</div>
+		{/if}
+	</div>
+
+	<!-- Right side: Code Editor and Sandbox Display -->
+	<div class="grid grid-cols-2 gap-4 overflow-hidden">
+		<!-- Code Editor -->
+		<div class="flex flex-col gap-2 overflow-hidden">
+			<h3 class="text-lg font-semibold text-surface-50 flex-none">Code Editor</h3>
 			<textarea
 				bind:value={code}
-				class="flex-1 p-4 font-mono text-sm rounded-md border resize-none bg-surface-900 border-surface-700"
+				class="flex-1 p-4 font-mono text-sm rounded-md border resize-none bg-surface-900 border-surface-700 min-h-0"
 				spellcheck="false"
 			/>
 		</div>
-	</div>
 
-	<!-- Right side: Sandbox Display -->
-	<div class="flex relative flex-col gap-4">
-		<div
-			class="flex-1 rounded-md border bg-surface-900 border-surface-700 overflow-hidden min-h-[600px]"
-		>
-			{#if iframeUrl}
-				<div
-					class="absolute top-2 right-2 z-10 p-2 text-xs rounded-md opacity-50 transition-opacity bg-surface-800 hover:opacity-100"
-				>
-					{iframeUrl}
-				</div>
-				<iframe
-					title="SvelteKit Sandbox"
-					src={iframeUrl}
-					class="w-full h-full border-none"
-					sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
-					on:load={() => console.log('🎉 iframe loaded')}
-					on:error={(e) => console.error('❌ iframe error:', e)}
-				/>
-			{:else}
-				<div class="flex justify-center items-center h-full text-surface-400">
-					<p>Start a sandbox to see the content here</p>
-				</div>
-			{/if}
+		<!-- Sandbox Display -->
+		<div class="flex flex-col overflow-hidden">
+			<div class="flex-1 rounded-md border bg-surface-900 border-surface-700 overflow-hidden">
+				{#if iframeUrl}
+					<div
+						class="absolute top-2 right-2 z-10 p-2 text-xs rounded-md opacity-50 transition-opacity bg-surface-800 hover:opacity-100"
+					>
+						{iframeUrl}
+					</div>
+					<iframe
+						title="SvelteKit Sandbox"
+						src={iframeUrl}
+						class="w-full h-full border-none"
+						sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+						on:load={() => console.log('🎉 iframe loaded')}
+						on:error={(e) => console.error('❌ iframe error:', e)}
+					/>
+				{:else}
+					<div class="flex justify-center items-center h-full text-surface-400">
+						<p>Start a sandbox to see the content here</p>
+					</div>
+				{/if}
+			</div>
 		</div>
 	</div>
 </div>

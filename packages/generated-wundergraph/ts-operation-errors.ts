@@ -35,6 +35,7 @@ export type OperationErrors = {
 	queryMyCapabilities: QueryMyCapabilitiesErrors;
 	queryMyShoppingList: QueryMyShoppingListErrors;
 	queryUserStats: QueryUserStatsErrors;
+	sandboxFiles: SandboxFilesErrors;
 	sandboxList: SandboxListErrors;
 	sandboxStart: SandboxStartErrors;
 	sandboxStop: SandboxStopErrors;
@@ -91,6 +92,7 @@ export type QueryMeErrors = ClientOperationErrors;
 export type QueryMyCapabilitiesErrors = ClientOperationErrors;
 export type QueryMyShoppingListErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
+export type SandboxFilesErrors = ClientOperationErrors;
 export type SandboxListErrors = ClientOperationErrors;
 export type SandboxStartErrors = ClientOperationErrors;
 export type SandboxStopErrors = ClientOperationErrors;
