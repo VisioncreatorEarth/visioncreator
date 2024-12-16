@@ -6,6 +6,7 @@ import * as postmark from "postmark";
 import { Anthropic } from '@anthropic-ai/sdk';
 import OpenAI from "openai";
 import { UltravoxClient } from './clients/ultravox';
+import { SandboxClient } from './clients/sandbox';
 
 class MyContext {
   supabase: ReturnType<typeof createClient>;
@@ -15,6 +16,7 @@ class MyContext {
   anthropic: Anthropic;
   openai: OpenAI;
   ultravox: UltravoxClient;
+  sandbox: SandboxClient;
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -53,13 +55,14 @@ class MyContext {
     //   accessToken: polarAccessToken,
     //   server: "sandbox",
     // });
+    this.ultravox = new UltravoxClient(ultravoxApiKey);
+    this.sandbox = new SandboxClient();
     this.anthropic = new Anthropic({
       apiKey: anthropicApiKey,
     });
     this.openai = new OpenAI({
       apiKey: openAIApiKey
     });
-    this.ultravox = new UltravoxClient(ultravoxApiKey);
   }
 }
 

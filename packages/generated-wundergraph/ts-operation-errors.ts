@@ -35,6 +35,7 @@ export type OperationErrors = {
 	queryMyCapabilities: QueryMyCapabilitiesErrors;
 	queryMyShoppingList: QueryMyShoppingListErrors;
 	queryUserStats: QueryUserStatsErrors;
+	sandboxExample: SandboxExampleErrors;
 	saveMailWIP: SaveMailWIPErrors;
 	sendMail: SendMailErrors;
 	sendMailWIP: SendMailWIPErrors;
@@ -88,6 +89,7 @@ export type QueryMeErrors = ClientOperationErrors;
 export type QueryMyCapabilitiesErrors = ClientOperationErrors;
 export type QueryMyShoppingListErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
+export type SandboxExampleErrors = ClientOperationErrors;
 export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
