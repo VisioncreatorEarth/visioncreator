@@ -15,10 +15,6 @@
 		operationName: 'sandboxStop'
 	});
 
-	const sandboxUpdateMutation = createMutation({
-		operationName: 'sandboxUpdate'
-	});
-
 	let selectedSandboxId: string | null = null;
 	let iframeUrl: string | null = null;
 
@@ -26,11 +22,11 @@
   let count = 0;
 <\/script>
 
-<main class="container mx-auto p-4">
-  <h1 class="text-2xl font-bold mb-4">Hello from SvelteKit!</h1>
+<main class="container p-4 mx-auto">
+  <h1 class="mb-4 text-2xl font-bold">Hello from SvelteKit!</h1>
   
   <button 
-    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    class="px-4 py-2 text-white bg-blue-500 rounded hover:bg-blue-600"
     on:click={() => count++}
   >
     Count is {count}
@@ -44,7 +40,7 @@
 			console.log('🚀 Starting SvelteKit sandbox...');
 			const response = await $sandboxStartMutation.mutateAsync({});
 			console.log('✨ Sandbox response:', response);
-			
+
 			if (response.success && response.url) {
 				selectedSandboxId = response.id;
 				iframeUrl = response.url;
@@ -70,7 +66,7 @@
 			const response = await $sandboxStopMutation.mutateAsync({
 				sandboxId
 			});
-			
+
 			if (response.success) {
 				console.log('✅ Successfully stopped sandbox:', sandboxId);
 				if (selectedSandboxId === sandboxId) {
@@ -83,26 +79,6 @@
 			}
 		} catch (error) {
 			console.error('❌ Error stopping sandbox:', error);
-		}
-	}
-
-	async function updateSandbox() {
-		if (!selectedSandboxId) return;
-
-		try {
-			console.log('📝 Updating sandbox code...');
-			const response = await $sandboxUpdateMutation.mutateAsync({
-				sandboxId: selectedSandboxId,
-				code
-			});
-
-			if (response.success) {
-				console.log('✨ Code updated successfully');
-			} else {
-				console.error('❌ Failed to update code:', response.error);
-			}
-		} catch (error) {
-			console.error('❌ Error updating sandbox:', error);
 		}
 	}
 
@@ -135,13 +111,17 @@
 						{#if sandbox.url}
 							<button
 								class="flex flex-col gap-2 p-3 rounded-md border transition-colors cursor-pointer
-									{sandbox.id === selectedSandboxId 
-										? 'bg-surface-700 border-surface-500' 
-										: 'bg-surface-900 border-surface-700 hover:bg-surface-800'}"
+									{sandbox.id === selectedSandboxId
+									? 'bg-surface-700 border-surface-500'
+									: 'bg-surface-900 border-surface-700 hover:bg-surface-800'}"
 								on:click={() => selectSandbox(sandbox.id, sandbox.url)}
 							>
-								<div class="flex items-center justify-between">
-									<span class="text-sm truncate {sandbox.id === selectedSandboxId ? 'text-surface-50' : 'text-surface-200'}">
+								<div class="flex justify-between items-center">
+									<span
+										class="text-sm truncate {sandbox.id === selectedSandboxId
+											? 'text-surface-50'
+											: 'text-surface-200'}"
+									>
 										{sandbox.id}
 									</span>
 									<button
@@ -176,24 +156,21 @@
 			<h3 class="text-lg font-semibold text-surface-50">Code Editor</h3>
 			<textarea
 				bind:value={code}
-				class="flex-1 p-4 font-mono text-sm bg-surface-900 border border-surface-700 rounded-md resize-none"
+				class="flex-1 p-4 font-mono text-sm rounded-md border resize-none bg-surface-900 border-surface-700"
 				spellcheck="false"
 			/>
-			<button
-				class="w-full btn variant-soft-primary"
-				on:click={updateSandbox}
-				disabled={!selectedSandboxId || $sandboxUpdateMutation.isLoading}
-			>
-				{$sandboxUpdateMutation.isLoading ? 'Updating...' : 'Update Sandbox'}
-			</button>
 		</div>
 	</div>
 
 	<!-- Right side: Sandbox Display -->
-	<div class="flex flex-col gap-4 relative">
-		<div class="flex-1 rounded-md border bg-surface-900 border-surface-700 overflow-hidden min-h-[600px]">
+	<div class="flex relative flex-col gap-4">
+		<div
+			class="flex-1 rounded-md border bg-surface-900 border-surface-700 overflow-hidden min-h-[600px]"
+		>
 			{#if iframeUrl}
-				<div class="absolute top-2 right-2 z-10 bg-surface-800 p-2 rounded-md text-xs opacity-50 hover:opacity-100 transition-opacity">
+				<div
+					class="absolute top-2 right-2 z-10 p-2 text-xs rounded-md opacity-50 transition-opacity bg-surface-800 hover:opacity-100"
+				>
 					{iframeUrl}
 				</div>
 				<iframe
@@ -205,7 +182,7 @@
 					on:error={(e) => console.error('❌ iframe error:', e)}
 				/>
 			{:else}
-				<div class="flex items-center justify-center h-full text-surface-400">
+				<div class="flex justify-center items-center h-full text-surface-400">
 					<p>Start a sandbox to see the content here</p>
 				</div>
 			{/if}

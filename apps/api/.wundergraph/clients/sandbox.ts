@@ -146,6 +146,47 @@ export class SandboxClient {
     }
   }
 
+  async getSandboxInstance(sandboxId: string): Promise<Sandbox> {
+    // First check our cache
+    const cached = SandboxClient.sandboxes.get(sandboxId);
+    if (cached) {
+      return cached.sandbox;
+    }
+
+    // If not in cache, connect to it
+    const sandbox = await Sandbox.connect(sandboxId, {
+      apiKey: process.env.E2B_API_KEY
+    });
+
+    // Add to cache
+    SandboxClient.sandboxes.set(sandboxId, {
+      sandbox,
+      createdAt: new Date()
+    });
+
+    return sandbox;
+  }
+
+  async readFile(sandboxId: string, path: string): Promise<string> {
+    try {
+      const sandbox = await this.getSandboxInstance(sandboxId);
+      return await sandbox.files.read(path);
+    } catch (error) {
+      console.error('Error reading file:', error);
+      throw error;
+    }
+  }
+
+  async writeFile(sandboxId: string, path: string, content: string): Promise<void> {
+    try {
+      const sandbox = await this.getSandboxInstance(sandboxId);
+      await sandbox.files.write(path, content);
+    } catch (error) {
+      console.error('Error writing file:', error);
+      throw error;
+    }
+  }
+
   async runCode(sandbox: Sandbox, code: string): Promise<SandboxResponse> {
     try {
       const execution = await sandbox.runCode(code);
