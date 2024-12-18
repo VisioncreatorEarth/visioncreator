@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { client } from '$lib/wundergraph';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
@@ -13,10 +13,18 @@ interface ShoppingItem {
     icon?: string;
 }
 
+interface ConfirmationData {
+    title: string;
+    message: string;
+    action: () => Promise<any>;
+    data?: any;
+}
+
 interface ToolState {
     currentItems: ShoppingItem[];
     addedItems: ShoppingItem[];
     removedItems: ShoppingItem[];
+    pendingConfirmation: ConfirmationData | null;
 }
 
 async function performOperation(operation: string, input: Record<string, unknown>) {
@@ -50,14 +58,39 @@ function createToolStore() {
     const { subscribe, set, update } = writable<ToolState>({
         currentItems: [],
         addedItems: [],
-        removedItems: []
+        removedItems: [],
+        pendingConfirmation: null
     });
 
     return {
         subscribe,
-        reset: () => set({ currentItems: [], addedItems: [], removedItems: [] }),
+        reset: () => set({
+            currentItems: [],
+            addedItems: [],
+            removedItems: [],
+            pendingConfirmation: null
+        }),
 
-        // Shopping list tool implementation
+        setPendingConfirmation: (confirmation: ConfirmationData | null) => {
+            update(state => ({ ...state, pendingConfirmation: confirmation }));
+        },
+
+        confirmAction: async () => {
+            const state = get({ subscribe });
+            if (state.pendingConfirmation) {
+                try {
+                    await state.pendingConfirmation.action();
+                } finally {
+                    update(state => ({ ...state, pendingConfirmation: null }));
+                }
+            }
+        },
+
+        cancelAction: () => {
+            update(state => ({ ...state, pendingConfirmation: null }));
+        },
+
+        // Tool implementations
         updateShoppingList: async (parameters: any) => {
             try {
                 // Handle double-stringified JSON
@@ -128,7 +161,6 @@ function createToolStore() {
             }
         },
 
-        // Switch view tool implementation
         switchView: async (parameters: any) => {
             try {
                 const component = parameters.component;
@@ -142,22 +174,32 @@ function createToolStore() {
             }
         },
 
-        // Update name tool implementation
         updateName: async (parameters: any) => {
-            try {
-                const result = await performOperation('updateMe', {
-                    name: parameters.name
-                });
+            const store = get({ subscribe });
+            if (!store.pendingConfirmation) {
+                // Set up confirmation
+                update(state => ({
+                    ...state,
+                    pendingConfirmation: {
+                        title: 'Update Name',
+                        message: `Are you sure you want to change your name to "${parameters.name}"?`,
+                        action: async () => {
+                            const result = await performOperation('updateMe', {
+                                name: parameters.name
+                            });
 
-                if (!result.success) {
-                    throw new Error(result.message);
-                }
+                            if (!result.success) {
+                                throw new Error(result.message);
+                            }
 
-                return 'Name updated successfully';
-            } catch (error) {
-                console.error('Error updating name:', error);
-                throw new Error('Failed to update name');
+                            return 'Name updated successfully';
+                        },
+                        data: { name: parameters.name }
+                    }
+                }));
+                return 'Confirmation required';
             }
+            throw new Error('Another confirmation is pending');
         }
     };
 }

@@ -1,6 +1,6 @@
 <!-- AskHominio.svelte -->
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { UltravoxSession } from 'ultravox-client';
 	import { createMutation } from '$lib/wundergraph';
 	import { createMachine } from '$lib/composables/svelteMachine';
@@ -15,7 +15,7 @@
 	import { toolStore } from '$lib/stores/toolStore';
 
 	// Subscribe to the tool store state
-	$: ({ currentItems, addedItems, removedItems } = $toolStore);
+	$: ({ currentItems, addedItems, removedItems, pendingConfirmation } = $toolStore);
 
 	// Define available views
 	const views = [
@@ -408,6 +408,15 @@
 			cleanupCall();
 		}
 	});
+
+	// Handle confirmation actions
+	function handleConfirm() {
+		toolStore.confirmAction();
+	}
+
+	function handleCancel() {
+		toolStore.cancelAction();
+	}
 </script>
 
 <div class="fixed inset-0 z-50 flex flex-col justify-end">
@@ -423,6 +432,27 @@
 			style="max-height: calc(100vh - 120px);"
 		>
 			<div class="space-y-3">
+				{#if pendingConfirmation}
+					<div class="z-50 p-8 text-center rounded-xl backdrop-blur-xl bg-surface-400/10">
+						<h2 class="text-3xl font-bold text-tertiary-200">{pendingConfirmation.title}</h2>
+						<p class="mt-3 text-lg text-tertiary-200/80">{pendingConfirmation.message}</p>
+						<div class="flex gap-4 justify-center mt-6">
+							<button
+								class="btn variant-ghost-tertiary btn-lg @3xl:btn-xl rounded-full"
+								on:click={handleCancel}
+							>
+								Cancel
+							</button>
+							<button
+								class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-lg @3xl:btn-xl rounded-full"
+								on:click={handleConfirm}
+							>
+								Confirm
+							</button>
+						</div>
+					</div>
+				{/if}
+
 				{#if currentItems.length > 0}
 					<div class="z-50 p-4 rounded-xl backdrop-blur-xl bg-surface-400/10">
 						{#if addedItems.length > 0}
