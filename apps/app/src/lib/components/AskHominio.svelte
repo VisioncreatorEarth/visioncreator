@@ -227,13 +227,9 @@
 						}
 					});
 
-					// Register the shopping list tool
+					// Register the tool implementations
 					session.registerToolImplementation('updateShoppingList', toolStore.updateShoppingList);
-
-					// Register the switch view tool
 					session.registerToolImplementation('switchView', toolStore.switchView);
-
-					// Register the update name tool
 					session.registerToolImplementation('updateName', toolStore.updateName);
 
 					context.session = session;
@@ -380,10 +376,8 @@
 	export function stopCall() {
 		if (isCleaningUp) return; // Prevent recursive calls
 		isCleaningUp = true;
-
 		machine.send('DISCONNECT');
 		cleanupCall();
-
 		isCleaningUp = false;
 	}
 

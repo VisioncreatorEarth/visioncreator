@@ -48,6 +48,16 @@
 		isPressed = true;
 		pressStartTime = performance.now();
 
+		// If we're recording, handle the end call click immediately
+		if (isRecording) {
+			if (myIntentRef) {
+				myIntentRef.stopCall();
+			}
+			isPressed = false; // Reset pressed state
+			return;
+		}
+
+		// Otherwise, handle normal long press logic
 		setTimeout(async () => {
 			if (isPressed) {
 				if (performance.now() - pressStartTime >= 500) {
@@ -55,12 +65,6 @@
 					await tick();
 					if (isIntentModalOpen && myIntentRef?.handleLongPressStart) {
 						await myIntentRef.handleLongPressStart();
-					}
-				} else if (performance.now() - pressStartTime < 500) {
-					if (session) {
-						toggleModal('menu');
-					} else {
-						toggleModal('login');
 					}
 				}
 			}
@@ -73,11 +77,9 @@
 
 		if (isPressed) {
 			isPressed = false;
-			if (pressDuration >= 500) {
-				if (isIntentModalOpen && myIntentRef?.handleLongPressEnd) {
-					await myIntentRef.handleLongPressEnd();
-				}
-			} else if (currentTime - lastToggleTime > DEBOUNCE_DELAY) {
+			// Only handle menu toggle for short presses when not recording
+			// and when not starting a long press
+			if (!isRecording && pressDuration < 500 && currentTime - lastToggleTime > DEBOUNCE_DELAY) {
 				if (session) {
 					toggleModal('menu');
 				} else {
@@ -240,10 +242,13 @@
 	/>
 
 	<button
-		class="flex fixed bottom-4 left-1/2 z-50 justify-center items-center w-14 h-14 rounded-full shadow-lg transition-all duration-300 -translate-x-1/2 hover:shadow-xl hover:scale-105"
+		class="flex fixed bottom-4 left-1/2 z-50 justify-center items-center rounded-full shadow-lg transition-all duration-300 -translate-x-1/2 hover:shadow-xl hover:scale-105"
 		class:bg-error-500={isRecording}
 		class:bg-surface-800={isProcessing}
 		class:bg-surface-600={!isRecording && !isProcessing}
+		class:w-14={!isRecording}
+		class:h-14={true}
+		class:w-28={isRecording}
 		on:mousedown={handleMouseDown}
 		on:mouseup={handleMouseUp}
 		on:mouseleave={handleMouseUp}
@@ -253,7 +258,10 @@
 		style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
 	>
 		{#if isRecording}
-			<div class="w-4 h-4 bg-white rounded-full" />
+			<div class="flex items-center gap-2">
+				<div class="w-3 h-3 bg-white rounded-full animate-pulse" />
+				<span class="text-sm font-medium text-white">End Call</span>
+			</div>
 		{:else if isProcessing}
 			<svg class="w-6 h-6 text-tertiary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path

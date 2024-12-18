@@ -307,9 +307,7 @@
 
 	export const handleLongPressEnd = () => {
 		isLongPressActive = false;
-		if ($currentState === 'calling') {
-			machine.send('END_CALL');
-		}
+		// Don't end the call on release anymore
 	};
 
 	onDestroy(() => {
@@ -334,6 +332,12 @@
 			eventBus.off('intent:stateChange', handleStateChange);
 		};
 	});
+
+	export function stopCall() {
+		if ($currentState === 'calling') {
+			machine.send('END_CALL');
+		}
+	}
 </script>
 
 {#if $context.isOpen}
