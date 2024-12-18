@@ -12,118 +12,10 @@
 	import { view as hominioDoView } from '$lib/views/HominioDoMe';
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
 	import { view as hominioHostView } from '$lib/views/HominioHostMe';
+	import { toolStore } from '$lib/stores/toolStore';
 
-	// Create updateShoppingList mutation
-	const addItemsMutation = createMutation({
-		operationName: 'addItemsToShoppingList'
-	});
-
-	// Create updateMe mutation
-	const updateMeMutation = createMutation({
-		operationName: 'updateMe'
-	});
-
-	// Shopping list client tool implementation
-	let currentItems: any[] = [];
-	let addedItems: any[] = [];
-	let removedItems: any[] = [];
-
-	const updateShoppingListTool = async (parameters: any) => {
-		try {
-			// Handle double-stringified JSON
-			let itemsArray;
-			if (typeof parameters.items === 'string') {
-				const parsed = JSON.parse(parameters.items);
-				itemsArray = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
-			} else {
-				itemsArray = parameters.items;
-			}
-
-			// Group items by action
-			addedItems = itemsArray.filter((item: any) => item.action === 'add');
-			removedItems = itemsArray.filter((item: any) => item.action === 'remove');
-
-			// Update display items
-			currentItems = [...addedItems, ...removedItems];
-
-			// Process added items
-			if (addedItems.length > 0) {
-				await $addItemsMutation.mutateAsync({
-					action: 'add',
-					items: addedItems.map((item: any) => ({
-						name: item.name,
-						category: item.category,
-						quantity: item.quantity ? parseFloat(item.quantity) : undefined,
-						unit: item.unit,
-						icon: item.icon
-					}))
-				});
-			}
-
-			// Process removed items
-			if (removedItems.length > 0) {
-				await $addItemsMutation.mutateAsync({
-					action: 'remove',
-					items: removedItems.map((item: any) => ({
-						name: item.name,
-						category: item.category
-					}))
-				});
-			}
-
-			// Switch to HominioShopWithMe view using routing
-			if (browser) {
-				goto('/me?view=HominioShopWithMe', { replaceState: true });
-			}
-
-			return 'Items updated successfully';
-		} catch (error) {
-			console.error('Error updating shopping list:', error);
-			throw new Error('Failed to process shopping list items');
-		}
-	};
-
-	// Switch view tool implementation
-	const switchViewTool = async (parameters: any) => {
-		try {
-			const component = parameters.component;
-			console.log('Switching to component:', component);
-
-			// Use routing to switch views
-			if (browser) {
-				goto(`/me?view=${component}`, { replaceState: true });
-			}
-
-			return `Switched to ${component} view`;
-		} catch (error) {
-			console.error('Error switching view:', error);
-			throw new Error('Failed to switch view');
-		}
-	};
-
-	// Update name tool implementation
-	const updateNameTool = async (parameters: any) => {
-		try {
-			const name = parameters.name;
-			console.log('Name update requested:', name);
-
-			const result = await $updateMeMutation.mutateAsync({
-				name: name
-			});
-
-			console.log('Name update result:', result);
-
-			// Return a simple success message
-			return 'Your name has been updated successfully!';
-		} catch (error) {
-			console.error('Error in updateNameTool:', error);
-			throw new Error('Failed to update name');
-		}
-	};
-
-	const askHominioMutation = createMutation({
-		operationName: 'askHominio'
-	});
+	// Subscribe to the tool store state
+	$: ({ currentItems, addedItems, removedItems } = $toolStore);
 
 	// Define available views
 	const views = [
@@ -168,6 +60,11 @@
 			view: hominioHostView
 		}
 	];
+
+	// Add back at the top of the script section, before the views definition:
+	const askHominioMutation = createMutation({
+		operationName: 'askHominio'
+	});
 
 	// Handle view updates
 	function handleViewUpdate(event: CustomEvent) {
@@ -331,13 +228,13 @@
 					});
 
 					// Register the shopping list tool
-					session.registerToolImplementation('updateShoppingList', updateShoppingListTool);
+					session.registerToolImplementation('updateShoppingList', toolStore.updateShoppingList);
 
 					// Register the switch view tool
-					session.registerToolImplementation('switchView', switchViewTool);
+					session.registerToolImplementation('switchView', toolStore.switchView);
 
 					// Register the update name tool
-					session.registerToolImplementation('updateName', updateNameTool);
+					session.registerToolImplementation('updateName', toolStore.updateName);
 
 					context.session = session;
 
@@ -504,6 +401,9 @@
 		// Reset machine state
 		machine.reset();
 
+		// Reset tool store state
+		toolStore.reset();
+
 		// Notify parent component
 		onCallEnd();
 	}
@@ -516,16 +416,16 @@
 	});
 </script>
 
-<div class="flex fixed inset-0 z-50 flex-col justify-end">
+<div class="fixed inset-0 z-50 flex flex-col justify-end">
 	<div class="absolute inset-0 -z-10 bg-surface-900/10" />
-	<div class="fixed right-0 bottom-0 left-0 z-30 pointer-events-none gradient-overlay">
+	<div class="fixed bottom-0 left-0 right-0 z-30 pointer-events-none gradient-overlay">
 		<div
 			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
 		/>
 	</div>
-	<div class="relative mx-auto mb-20 w-full max-w-2xl">
+	<div class="relative w-full max-w-2xl mx-auto mb-20">
 		<div
-			class="overflow-y-auto absolute inset-x-0 bottom-0 z-40 px-4"
+			class="absolute inset-x-0 bottom-0 z-40 px-4 overflow-y-auto"
 			style="max-height: calc(100vh - 120px);"
 		>
 			<div class="space-y-3">
@@ -561,11 +461,11 @@
 							<div
 								class="inline-flex items-center px-4 py-2 text-sm rounded-full text-tertiary-200 bg-tertiary-500/20"
 							>
-								<span class="flex relative mr-2 w-2 h-2">
+								<span class="relative flex w-2 h-2 mr-2">
 									<span
-										class="inline-flex absolute w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
+										class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-tertiary-400"
 									/>
-									<span class="inline-flex relative w-2 h-2 rounded-full bg-tertiary-500" />
+									<span class="relative inline-flex w-2 h-2 rounded-full bg-tertiary-500" />
 								</span>
 								{displayStatus}
 							</div>
@@ -573,7 +473,7 @@
 					{/if}
 
 					{#if showControls}
-						<div class="flex z-50 justify-center mt-4">
+						<div class="z-50 flex justify-center mt-4">
 							{#if !isCallActive}
 								<button
 									class="px-4 py-2 text-white rounded-lg bg-tertiary-500"
