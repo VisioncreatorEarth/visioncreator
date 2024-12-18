@@ -16,6 +16,8 @@ export type OperationErrors = {
 	getUserStats: GetUserStatsErrors;
 	getUsers: GetUsersErrors;
 	getVoices: GetVoicesErrors;
+	insertDB: InsertDBErrors;
+	insertObject: InsertObjectErrors;
 	manageCapabilities: ManageCapabilitiesErrors;
 	onboardMe: OnboardMeErrors;
 	polarCreateCheckout: PolarCreateCheckoutErrors;
@@ -74,6 +76,8 @@ export type GetUserCapabilitiesErrors = ClientOperationErrors;
 export type GetUserStatsErrors = ClientOperationErrors;
 export type GetUsersErrors = ClientOperationErrors;
 export type GetVoicesErrors = ClientOperationErrors;
+export type InsertDBErrors = ClientOperationErrors;
+export type InsertObjectErrors = ClientOperationErrors;
 export type ManageCapabilitiesErrors = ClientOperationErrors;
 export type OnboardMeErrors = ClientOperationErrors;
 export type PolarCreateCheckoutErrors = ClientOperationErrors;
