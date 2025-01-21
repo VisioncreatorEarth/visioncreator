@@ -1,86 +1,64 @@
 <script lang="ts">
-	import { writable, readable } from 'svelte/store';
-	import { env } from '$env/dynamic/public';
-	import QRCode from '@castlenine/svelte-qrcode';
-	import { eventBus } from '$lib/composables/eventBus';
-	import { onMount, onDestroy } from 'svelte';
-
-	let contentWrapper: HTMLDivElement;
-
+	import { createMutation } from '$lib/wundergraph';
 	export let me;
 	const query = $me.query;
 
-	let showQRCode = writable(false);
-	let linkCopied = writable(false);
+	const FIBONACCI_MILESTONES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
+	const TOTAL_FOUNDERS = 144;
+	const CURRENT_FOUNDERS = 16;
 
-	$: inspirations = $query.data.inspirations;
-	$: fullyUnlocked = inspirations >= 3;
-	$: invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$query.data.qrCodeId}`;
-	$: temperature = $query.data.temperature;
-	$: streamPotential = $query.data.streamPotential;
+	// Calculate all milestone values
+	$: currentCircle = FIBONACCI_MILESTONES.findIndex((n) => n > CURRENT_FOUNDERS) + 1;
+	$: currentTarget = FIBONACCI_MILESTONES[currentCircle - 1];
+	$: previousTotal = currentCircle > 1 ? FIBONACCI_MILESTONES[currentCircle - 2] : 0;
+	$: seatsInCurrentCircle = currentTarget - previousTotal;
+	$: spotsInCurrentCircle = CURRENT_FOUNDERS - previousTotal;
+	$: remainingSeats = currentTarget - CURRENT_FOUNDERS;
+	$: progressPercentage = (spotsInCurrentCircle / seatsInCurrentCircle) * 100;
+	$: circles = FIBONACCI_MILESTONES.map((_, index) => index + 1);
+	$: isCircleFilled = (circle: number) => circle < currentCircle;
 
-	// Launch date: January 21st, 2025, 19:00 CET
-	const launchDate = new Date('2025-01-21T19:00:00+01:00').getTime();
-
-	const countdown = readable(0, (set) => {
-		const interval = setInterval(() => {
-			const now = new Date().getTime();
-			const distance = launchDate - now;
-			set(Math.max(0, Math.floor(distance / 1000)));
-		}, 1000);
-
-		return () => clearInterval(interval);
+	// Setup mail mutation
+	const sendMailMutation = createMutation({
+		operationName: 'sendMail'
 	});
 
-	$: days = Math.floor($countdown / 86400);
-	$: hours = Math.floor(($countdown % 86400) / 3600);
-	$: minutes = Math.floor(($countdown % 3600) / 60);
-	$: seconds = $countdown % 60;
+	let mailSent = false;
 
-	function toggleQRCode() {
-		showQRCode.update((n) => !n);
-	}
-
-	async function copyInvitationLink() {
+	async function handleRequestDetails() {
 		try {
-			await navigator.clipboard.writeText(invitationLink);
-			linkCopied.set(true);
-			setTimeout(() => {
-				linkCopied.set(false);
-			}, 1000);
-		} catch (err) {
-			console.error('Failed to copy the link:', err);
-			alert('Failed to copy the link.');
+			const mailSubject = `${$query.data.name} wants to learn more about becoming a VC`;
+			const mailBody = `Dear ${$query.data.name},
+
+Thank you for your interest in becoming a Visioncreator founding member. We've received your information request.
+
+Summary of Current Status:
+• Circle: ${currentCircle}
+• Available Seats: ${remainingSeats}
+• Total Founders: ${CURRENT_FOUNDERS}
+
+We'll contact you about:
+• Founding member privileges
+• Next steps
+
+We are looking forward to talk to you,
+Chielo, Yvonne and Samuel
+`;
+
+			await $sendMailMutation.mutateAsync({
+				subject: mailSubject,
+				body: mailBody
+			});
+
+			mailSent = true;
+		} catch (error) {
+			console.error('Failed to send mail:', error);
+			alert('Failed to send request. Please try again later.');
 		}
 	}
-
-	async function handleUpdateStats() {
-		await $query.refetch();
-	}
-
-	function setViewportHeight() {
-		if (contentWrapper) {
-			contentWrapper.style.height = `${window.innerHeight}px`;
-		}
-	}
-
-	onMount(() => {
-		eventBus.on('updateStats', handleUpdateStats);
-		if (typeof window !== 'undefined') {
-			window.addEventListener('resize', setViewportHeight);
-			setViewportHeight();
-		}
-	});
-
-	onDestroy(() => {
-		eventBus.off('updateStats', handleUpdateStats);
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('resize', setViewportHeight);
-		}
-	});
 </script>
 
-<div bind:this={contentWrapper} class="@container fixed inset-0 overflow-hidden">
+<div class="@container fixed inset-0 overflow-hidden">
 	<div class="relative w-full h-full">
 		<!-- Background Image -->
 		<div
@@ -91,136 +69,117 @@
 		</div>
 
 		<!-- Grid Layout -->
-		<div class="relative grid h-full grid-rows-[auto_1fr_auto]">
-			<!-- Stats Display -->
-			<div class="flex z-10 gap-6 justify-center p-4 md:justify-end md:pr-8">
-				<div class="text-center">
-					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						{$query.data.visionRank}
-					</div>
-					<div class="text-xs text-tertiary-300 md:text-sm">vision rank</div>
-				</div>
-				<div class="text-center">
-					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						{$query.data.inspirations}
-					</div>
-					<div class="text-xs text-tertiary-300 md:text-sm">inspirations</div>
-				</div>
-				<div class="text-center">
-					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						${($query.data.inspirations * 3.33).toFixed(2)}/m
-					</div>
-					<div class="text-xs text-tertiary-300 md:text-sm">income potential</div>
-				</div>
-			</div>
-
+		<div class="relative grid h-full grid-rows-[auto]">
 			<!-- Main Content -->
-			<div class="flex overflow-y-auto z-10 flex-col justify-center items-center p-4">
-				<!-- Countdown -->
-				{#if !$showQRCode}
-					<div class="mb-8 text-center">
-						<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
-							Launching early BETA access in
-						</h2>
-						<h1 class="text-3xl font-bold text-white sm:text-5xl">
-							{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
-								.toString()
-								.padStart(2, '0')}s
-						</h1>
+			<div class="z-10 flex flex-col items-center justify-center p-4 overflow-y-auto">
+				<div
+					class="flex flex-col items-center justify-center max-w-2xl mx-auto space-y-6 text-center"
+				>
+					<h2
+						class="text-2xl font-bold sm:text-3xl md:text-4xl text-tertiary-100 dark:text-surface-100"
+					>
+						Welcome {$query.data.name} <br />
+						<span class="text-2xl font-thin"
+							>become part of our founding family of {TOTAL_FOUNDERS}</span
+						>
+					</h2>
+
+					<!-- Milestone Progress -->
+					<div
+						class="w-full h-4 max-w-md mb-2 rounded-full bg-tertiary-200/20 dark:bg-surface-800/20"
+					>
+						<div
+							class="h-full transition-all duration-500 rounded-full bg-tertiary-300 dark:bg-surface-200"
+							style="width: {progressPercentage}%"
+						/>
 					</div>
-				{/if}
 
-				<!-- Early Access Section -->
-				<div class="mx-auto w-full max-w-sm md:max-w-2xl">
-					<div class="p-6 rounded-xl bg-surface-900/50 md:p-10">
-						{#if $showQRCode}
-							<div class="flex justify-center mb-6">
-								<QRCode
-									data={invitationLink}
-									backgroundColor="#141a4d"
-									color="#f0ede5"
-									shape="circle"
-									haveBackgroundRoundedEdges
-									logoPath="/logo.png"
-									logoSize="25"
-									logoPadding="4"
-								/>
-							</div>
-							<div class="flex justify-center">
-								<button on:click={toggleQRCode} class="btn variant-ghost-tertiary btn-sm md:btn-md">
-									Hide QR Code
-								</button>
-							</div>
-						{:else}
-							{#if inspirations < 3}
-								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									To get early BETA access to Hominio,<br />
-									inspire {3 - inspirations} more early pioneer{3 - inspirations === 1 ? '' : 's'} to
-									join the waitlist.
-								</p>
+					<div class="space-y-3">
+						<p class="text-xl font-semibold text-tertiary-100 dark:text-surface-100">
+							{remainingSeats} seats left in Circle {currentCircle}
+						</p>
+						<p class="text-base text-tertiary-200 dark:text-surface-200">
+							Join the first <span class="font-bold text-tertiary-100 dark:text-surface-100"
+								>{CURRENT_FOUNDERS}</span
+							> Visioncreators building the future
+						</p>
+					</div>
 
-								<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
-									{#each Array(3).fill(false) as _, i}
-										<div
-											class="p-3 rounded-xl md:p-12 {i < inspirations
-												? 'bg-secondary-500/40'
-												: 'bg-surface-900/60'}"
-										>
-											<Icon
-												icon={i < inspirations
-													? 'solar:user-bold-duotone'
-													: 'solar:lock-password-bold-duotone'}
-												class={`w-12 h-12 md:w-16 md:h-16 ${
-													i < inspirations ? 'text-secondary-300' : 'text-surface-300'
-												}`}
-											/>
-										</div>
-									{/each}
+					<!-- Circle Display -->
+					<div class="w-full max-w-md space-y-2">
+						<div class="flex justify-between w-full mt-2">
+							{#each circles as circle}
+								<div class="flex flex-col items-center">
+									<div
+										class={`w-2 h-2 rounded-full ${
+											isCircleFilled(circle)
+												? 'bg-tertiary-300 dark:bg-surface-200'
+												: 'bg-tertiary-200/40 dark:bg-surface-800/40'
+										}`}
+									/>
+									<span class="mt-1 text-xs font-medium text-tertiary-200 dark:text-surface-200">
+										C{circle}
+									</span>
 								</div>
-							{:else if inspirations >= 3}
-								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									<span class="text-2xl font-bold uppercase">
-										{$query.data.visionRank <= 89 ? 'Congratulations!' : 'Be Patient'}
-									</span><br />
-									{#if $query.data.visionRank <= 89}
-										You're position {$query.data.visionRank} in line for our exclusive early BETA access
-										- limited to only 89 pioneers.<br /><br />
-										Keep spreading the word to secure your BETA access spot.
-									{:else}
-										Only top 89 pioneers will get early access. You're position {$query.data
-											.visionRank}.<br /><br />
-										Keep spreading the word for a chance to reach the first 89.
-									{/if}
-								</p>
-							{:else}
-								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									Welcome to a new way of living and working<br />
-									enjoy playing with Hominio
-								</p>
-							{/if}
-
-							<div class="flex gap-3 justify-center items-center md:gap-6">
-								<button
-									on:click={copyInvitationLink}
-									class="btn variant-ghost-tertiary btn-sm md:btn-md"
-									disabled={$linkCopied}
-								>
-									{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
-								</button>
-								<button
-									on:click={toggleQRCode}
-									class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
-								>
-									Show Invite Code
-								</button>
-							</div>
-						{/if}
+							{/each}
+						</div>
 					</div>
+
+					{#if !mailSent}
+						<!-- CTA Button -->
+						<button
+							class=" btn bg-gradient-to-br variant-gradient-secondary-primary btn-md"
+							on:click={handleRequestDetails}
+							disabled={$sendMailMutation.isLoading}
+						>
+							{#if $sendMailMutation.isLoading}
+								<div class="flex items-center justify-center gap-2">
+									<span>Processing...</span>
+								</div>
+							{:else}
+								Request Details By Mail Now
+							{/if}
+						</button>
+					{:else}
+						<!-- Success Card -->
+						<div
+							class="p-6 mt-8 border rounded-lg bg-tertiary-500/10 dark:bg-surface-800/50 border-tertiary-500/20 dark:border-surface-600/20"
+						>
+							<div class="flex flex-col items-center gap-4">
+								<!-- Success Icon -->
+								<div
+									class="flex items-center justify-center w-12 h-12 rounded-full bg-tertiary-500/20 dark:bg-surface-700/50"
+								>
+									<svg
+										class="w-6 h-6 text-tertiary-500 dark:text-surface-200"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								</div>
+
+								<!-- Success Message -->
+								<div class="text-center">
+									<h3 class="text-lg font-semibold text-tertiary-100 dark:text-surface-100">
+										Request Sent Successfully
+									</h3>
+									<p class="mt-2 text-sm text-tertiary-200/90 dark:text-surface-200/90">
+										Please check your email for a confirmation. Our team will reach out with
+										detailed information within 2 business days.
+									</p>
+								</div>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
-
-			<!-- Bottom Spacer -->
-			<div class="z-10 h-16" />
 		</div>
 	</div>
 </div>

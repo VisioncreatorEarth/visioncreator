@@ -156,7 +156,7 @@ export default createOperation.mutation({
                                         </tr>
                                         <tr>
                                           <td style="padding-bottom: 32px">
-                                            <p style="margin: 0; font-size: 14px; color: #f0ede5;">
+                                            <p style="margin: 0; font-size: 14px; color: #f0ede5; white-space: pre-line; line-height: 1.5;">
                                               ${input.body}
                                             </p>
                                           </td>

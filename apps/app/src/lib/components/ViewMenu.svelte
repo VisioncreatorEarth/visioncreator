@@ -47,14 +47,14 @@
 			},
 			view: meView
 		},
-		{
-			metadata: {
-				id: 'Leaderboard',
-				name: 'Leaderboard',
-				icon: 'mdi:trophy'
-			},
-			view: meView
-		},
+		// {
+		// 	metadata: {
+		// 		id: 'Leaderboard',
+		// 		name: 'Leaderboard',
+		// 		icon: 'mdi:trophy'
+		// 	},
+		// 	view: meView
+		// },
 		...(hasRequiredCapability
 			? [
 					{
@@ -66,15 +66,15 @@
 						view: hominioShopView
 					}
 			  ]
-			: []),
-		{
-			metadata: {
-				id: 'Episodes',
-				name: 'Episodes',
-				icon: 'mdi:play-circle'
-			},
-			view: episodesView
-		}
+			: [])
+		// {
+		// 	metadata: {
+		// 		id: 'Episodes',
+		// 		name: 'Episodes',
+		// 		icon: 'mdi:play-circle'
+		// 	},
+		// 	view: episodesView
+		// }
 	];
 
 	function handleViewSelect(viewItem: any) {

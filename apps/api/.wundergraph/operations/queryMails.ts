@@ -15,7 +15,7 @@ export default createOperation.query({
   }),
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["admin"],
+    requireMatchAll: ["authenticated", "admin"],
   },
   handler: async ({ input, context }) => {
     const { data, error } = await context.supabase

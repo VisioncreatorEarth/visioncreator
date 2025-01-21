@@ -1,0 +1,1470 @@
+Running your first Sandbox
+This guide will show you how to start your first E2B Sandbox.
+
+1. Create E2B account
+Every new E2B account get $100 in credits. You can sign up here.
+
+2. Set your environment variables
+Navigate to the E2B Dashboard.
+Copy your API key.
+Paste your E2B API key into your .env file.
+.env
+E2B_API_KEY=e2b_***
+
+Copy
+Copied!
+3. Install E2B SDK
+Install the E2B SDK to your project by running the following command in your terminal.
+
+
+JavaScript & TypeScript
+
+Python
+Terminal
+npm i @e2b/code-interpreter dotenv
+
+Copy
+Copied!
+4. Write code for starting Sandbox
+We'll write the minimal code for starting Sandbox, executing Python inside it and listing all files inside the root directory.
+
+
+JavaScript & TypeScript
+
+Python
+index.ts
+import 'dotenv/config'
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = await Sandbox.create() // By default the sandbox is alive for 5 minutes
+const execution = await sbx.runCode('print("hello world")') // Execute Python inside the sandbox
+console.log(execution.logs)
+
+const files = await sbx.files.list('/')
+console.log(files)
+
+Copy
+Copied!
+5. Start your first E2B Sandbox
+Run the code with the following command:
+
+
+JavaScript & TypeScript
+
+Python
+Terminal
+npx tsx ./index.ts
+
+
+Anthropic
+Simple
+# pip install anthropic e2b-code-interpreter
+from anthropic import Anthropic
+from e2b_code_interpreter import Sandbox
+
+# Create Anthropic client
+anthropic = Anthropic()
+system_prompt = "You are a helpful assistant that can execute python code in a Jupyter notebook. Only respond with the code to be executed and nothing else. Strip backticks in code blocks."
+prompt = "Calculate how many r's are in the word 'strawberry'"
+
+# Send messages to Anthropic API
+response = anthropic.messages.create(
+    model="claude-3-5-sonnet-20240620",
+    max_tokens=1024,
+    messages=[
+        {"role": "assistant", "content": system_prompt},
+        {"role": "user", "content": prompt}
+    ]
+)
+
+# Extract code from response
+code = response.content[0].text
+
+# Execute code in E2B Sandbox
+with Sandbox() as sandbox:
+    execution = sandbox.run_code(code)
+    result = execution.logs.stdout
+
+print(result)
+
+Copy
+Copied!
+Function calling
+# pip install anthropic e2b-code-interpreter
+from anthropic import Anthropic
+from e2b_code_interpreter import Sandbox
+
+# Create Anthropic client
+client = Anthropic()
+model = "claude-3-5-sonnet-20240620"
+
+# Define the messages
+messages = [
+    {
+        "role": "user",
+        "content": "Calculate how many r's are in the word 'strawberry'"
+    }
+]
+
+# Define the tools
+tools = [{
+    "name": "execute_python",
+    "description": "Execute python code in a Jupyter notebook cell and return (not print) the result",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "code": {
+                "type": "string",
+                "description": "The python code to execute in a single cell"
+            }
+        },
+        "required": ["code"]
+    }
+}]
+
+# Generate text with Anthropic
+message = client.messages.create(
+    model=model,
+    max_tokens=1024,
+    messages=messages,
+    tools=tools
+)
+
+# Append the response message to the messages list
+messages.append({
+    "role": "assistant",
+    "content": message.content
+})
+
+# Execute the tool if it's called by the model
+if message.stop_reason == "tool_use":
+    tool_use = next(block for block in message.content if block.type == "tool_use")
+    tool_name = tool_use.name
+    tool_input = tool_use.input
+
+    if tool_name == "execute_python":
+        with Sandbox() as sandbox:
+            code = tool_input['code']
+            execution = sandbox.run_code(code)
+            result = execution.text
+
+        # Append the tool result to the messages list
+        messages.append({
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": result,
+                }
+            ],
+        })
+
+# Generate the final response
+final_response = client.messages.create(
+    model=model,
+    max_tokens=1024,
+    messages=messages,
+    tools=tools
+)
+
+print(final_response.content[0].text)
+
+Upload & downloads files
+E2B Sandbox allows you to upload and downloads file to and from the Sandbox.
+
+An alternative way to get your data to the sandbox is to create a custom sandbox template.
+
+Upload file
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+// Read local file
+const content = fs.readFileSync('/local/file')
+
+const sbx = await Sandbox.create()
+// Upload file to the sandbox to path '/home/user/my-file'
+await sbx.files.write('/home/user/my-file', content)
+
+Copy
+Copied!
+Upload multiple files
+Currently, if you want to upload multiple files, you need to upload each one of the separately. We're working on a better solution.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+// Read local files
+const fileA = fs.readFileSync('/local/file/a')
+const fileB = fs.readFileSync('/local/file/b')
+
+const sbx = await Sandbox.create()
+// Upload file A to the sandbox to path '/home/user/my-file-a'
+await sbx.files.write('/home/user/my-file-a', content)
+// Upload file B to the sandbox to path '/home/user/my-file-b'
+await sbx.files.write('/home/user/my-file-b', content)
+
+Copy
+Copied!
+Upload directory
+We currently don't support an easy way to upload a whole directory. You need to upload each file separately.
+
+We're working on a better solution.
+
+Download file
+To download a file, you need to first get the file's content and then write it to a local file.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = await Sandbox.create()
+// Download file from the sandbox to path '/home/user/my-file'
+const content = await sbx.files.read('/home/user/my-file')
+// Write file to local path
+fs.writeFileSync('/local/file', content)
+
+Copy
+Copied!
+Download multiple files
+To download multiple files, you need to download each one of them separately from the sandbox.
+
+We're working on a better solution.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = await Sandbox.create()
+// Download file A from the sandbox to path '/home/user/my-file'
+const contentA = await sbx.files.read('/home/user/my-file-a')
+// Write file A to local path
+fs.writeFileSync('/local/file/a', contentA)
+
+// Download file B from the sandbox to path '/home/user/my-file'
+const contentB = await sbx.files.read('/home/user/my-file-b')
+// Write file B to local path
+fs.writeFileSync('/local/file/b', contentB)
+
+Copy
+Copied!
+Download directory
+We currently don't support an easy way to download a whole directory. You need to download each file separately.
+
+We're working on a better solution.
+
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Install custom packages
+There are two ways to install custom packages in the E2B Sandbox.
+
+Create custom sandbox with preinstalled packages.
+Install packages during the sandbox runtime.
+Create a custom sandbox
+Use this option if you know beforehand what packages you need in the sandbox.
+
+Prerequisites:
+
+E2B CLI
+Docker running
+Custom sandbox template is a Docker image that we automatically convert to a sandbox that you can then start with our SDK.
+
+1. Install E2B CLI
+Install the E2B CLI globally on your machine with NPM.
+
+Terminal
+npm i -g @e2b/cli
+
+Copy
+Copied!
+2. Login to E2B CLI
+Before you can create a custom sandbox, you need to login to E2B CLI.
+
+Terminal
+e2b auth login
+
+Copy
+Copied!
+2. Initialize a sandbox template
+Terminal
+e2b template init
+
+Copy
+Copied!
+3. Specify the packages you need in e2b.Dockerfile
+Edit the E2B Dockerfile to install the packages you need.
+
+You need to use the e2bdev/code-interpreter:latest base image.
+
+e2b.Dockerfile
+FROM e2bdev/code-interpreter:latest
+
+RUN pip install cowsay
+RUN npm install cowsay
+
+Copy
+Copied!
+4. Build the sandbox template
+Run the following command to build the sandbox template.
+
+Terminal
+e2b template build -c "/root/.jupyter/start-up.sh"
+
+Copy
+Copied!
+This will take a while, as it convert the Docker image to a sandbox which is a small VM. At the end of the process you will see the sandbox ID like this:
+
+Running postprocessing. It can take up to few minutes.
+
+Postprocessing finished.
+
+✅ Building sandbox template YOUR_TEMPLATE_ID finished.
+
+Copy
+Copied!
+5. Start your custom sandbox
+Now you can pass the template ID to the SDK to start your custom sandbox.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = Sandbox.create({
+  template: 'YOUR_TEMPLATE_ID',
+})
+
+Copy
+Copied!
+Install packages during the sandbox runtime
+Use this option if don't know beforehand what packages you need in the sandbox. You can install packages with the package manager of your choice.
+
+The packages installed during the runtime are available only in the running sandbox instance. When you start a new sandbox instance, the packages are not be available.
+
+1. Install Python packages with PIP
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = Sandbox.create()
+sbx.commands.run('pip install cowsay') // This will install the cowsay package
+sbx.runCode(`
+  import cowsay
+  cowsay.cow("Hello, world!")
+`)
+
+Copy
+Copied!
+2. Install Node.js packages with NPM
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = Sandbox.create()
+sbx.commands.run('npm install cowsay') // This will install the cowsay package
+sbx.runCode(`
+  const cowsay = require('cowsay')
+  console.log(cowsay.say({ text: 'Hello, world!' }))
+`, { language: 'javascript' })
+
+Copy
+Copied!
+3. Install packages with package manager of your choice
+Since E2B Sandboxes are Debian based machines, you can use any package manager supported by Debian. You just need to make sure that the package manager is already installed in the sandbox.
+
+For example, to install curl and git, you can use the following commands:
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = Sandbox.create()
+await sbx.commands.run('apt-get update && apt-get install -y curl git')
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Run JavaScript code
+Use the runCode/run_code method to run JavaScript code inside the sandbox. You'll need to pass the language parameter with value javascript or js.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sbx = await Sandbox.create()
+const execution = await sbx.runCode('console.log("Hello, world!")', { language: 'js' })
+console.log(execution)
+
+Connect to running sandbox
+If you have a running sandbox, you can connect to it using the Sandbox.connect() method and then start controlling it with our SDK.
+
+This is useful if you want to, for example, reuse the same sandbox instance for the same user after a short period of inactivity.
+
+1. Get the sandbox ID
+To connect to a running sandbox, you first need to retrieve its ID. You can do this by calling the Sandbox.list() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from "@e2b/code-interpreter"
+
+// Get all running sandboxes
+const runningSandboxes = await Sandbox.list() 
+
+if (runningSandboxes.length === 0) {
+  throw new Error("No running sandboxes found")
+}
+
+// Get the ID of the sandbox you want to connect to
+const sandboxId = runningSandboxes[0].sandboxId
+
+Copy
+Copied!
+2. Connect to the sandbox
+Now that you have the sandbox ID, you can connect to the sandbox using the Sandbox.connect() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from "@e2b/code-interpreter"
+
+// Get all running sandboxes
+const runningSandboxes = await Sandbox.list()
+
+if (runningSandboxes.length === 0) {
+  throw new Error("No running sandboxes found")
+}
+
+// Get the ID of the sandbox you want to connect to
+const sandboxId = runningSandboxes[0].sandboxId
+
+// Connect to the sandbox
+const sandbox = await Sandbox.connect(sandboxId) 
+// Now you can use the sandbox as usual
+// ...
+
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+List running sandboxes
+You can list all running sandboxes using the Sandbox.list() method.
+
+Once you have information about running sandbox, you can connect to it using the Sandbox.connect() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create({
+  metadata: {
+    name: 'My Sandbox',
+  },
+})
+
+const runningSandboxes = await Sandbox.list() 
+const runningSandbox = runningSandboxes[0]
+console.log('Running sandbox metadata:', runningSandbox.metadata)
+console.log('Running sandbox id:', runningSandbox.sandboxId)
+console.log('Running sandbox started at:', runningSandbox.startedAt)
+console.log('Running sandbox template id:', runningSandbox.templateId)
+
+Copy
+Copied!
+The code above will output something like this:
+
+
+JavaScript & TypeScript
+
+Python
+Terminal
+Running sandbox metadata: {
+  name: "My Sandbox",
+}
+Running sandbox id: ixjj3iankaishgcge4jwn-b0b684e9
+Running sandbox started at: 2024-10-15T21:13:07.311Z
+Running sandbox template id: 3e4rngfa34txe0gxc1zf
+
+Copy
+Copied!
+
+
+Setting environment variables
+There are 3 ways to set environment variables in a sandbox:
+
+Global environment variables when creating the sandbox.
+When running code in the sandbox.
+When running commands in the sandbox.
+1. Global environment variables
+You can set global environment variables when creating a sandbox.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create({
+  env: { 
+    MY_VAR: 'my_value', 
+  }, 
+})
+
+Copy
+Copied!
+2. Setting environment variables when running code
+You can set environment variables for specific code execution call in the sandbox.
+
+If you had a global environment variable with the same name, it will be overridden.
+
+
+JavaScript & TypeScript
+
+Python
+const sandbox = await Sandbox.create()
+const result = await sandbox.runCode('import os; print(os.environ.get("MY_VAR"))', {
+  envs: { 
+    MY_VAR: 'my_value', 
+  }, 
+})
+
+Copy
+Copied!
+3. Setting environment variables when running commands
+You can set environment variables for specific command execution in the sandbox.
+
+If you had a global environment variable with the same name, it will be overridden.
+
+
+JavaScript & TypeScript
+
+Python
+const sandbox = await Sandbox.create()
+sandbox.commands.run('echo $MY_VAR', {
+  envs: { 
+    MY_VAR: '123', 
+  }, 
+})
+
+Sandbox metadata
+Metadata is a way to attach arbitrary key-value pairs for a sandbox.
+
+This is useful in various scenarios, for example:
+
+Associate a sandbox with a user session.
+Store custom user data for a sandbox like API keys.
+Associate a sandbox with a user ID and connect to it later.
+You specify metadata when creating a sandbox and can access it later through listing running sandboxes with Sandbox.list() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+// Create sandbox with metadata.
+const sandbox = await Sandbox.create({
+  metadata: {
+    userId: '123', 
+  },
+})
+
+// List running sandboxes and access metadata.
+const runningSandboxes = await Sandbox.list()
+// Will print:
+// {
+//   'userId': '123',
+// }
+console.log(runningSandboxes[0].metadata)
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Sandbox lifecycle
+When you start the sandbox, it stays alive for 5 minutes by default but you can change it by passing the timeout parameter. After the time passes, the sandbox will be automatically shutdown.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+// Create sandbox with and keep it running for 60 seconds.
+// 🚨 Note: The units are milliseconds.
+const sandbox = await Sandbox.create({
+  timeoutMs: 60_000, 
+})
+
+Copy
+Copied!
+Change sandbox timeout during runtime
+You can change the sandbox timeout when it's running by calling the the setTimeout method in JavaScript or set_timeout method in Python.
+
+When you call the set timeout method, the sandbox timeout will be reset to the new value that you specified.
+
+This can be useful if you want to extend the sandbox lifetime when it's already running. You can for example start with a sandbox with 1 minute timeout and then periodically call set timout every time user interacts with it in your app.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+// Create sandbox with and keep it running for 60 seconds.
+const sandbox = await Sandbox.create({ timeoutMs: 60_000 })
+
+// Change the sandbox timeout to 30 seconds.
+// 🚨 The new timeout will be 30 seconds from now.
+await sandbox.setTimeout(30_000)
+
+Copy
+Copied!
+Shutdown sandbox
+You can shutdown the sandbox any time even before the timeout is up by calling the kill method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+// Create sandbox with and keep it running for 60 seconds.
+const sandbox = await Sandbox.create({ timeoutMs: 60_000 })
+
+// Shutdown the sandbox immediately.
+await sandbox.kill()
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+
+Sandbox templates
+Sandbox templates allow you to customize the sandbox environment to your needs.
+
+To create a sandbox template, you specify the e2b.Dockerfile. We then take this Dockerfile and create a new sandbox template from it and give you back a template ID.
+
+You can then use this template ID to create a new sandbox with the SDK based on the template you created.
+
+How to create custom sandbox
+Steps
+
+Install E2B CLI
+Initialize sandbox template
+Customize e2b.Dockerfile
+Build your sandbox template
+Start your custom sandbox
+1. Install E2B CLI
+Install E2B CLI with npm:
+
+Terminal
+npm i @e2b/cli
+
+Copy
+Copied!
+2. Initialize sandbox template
+The following command will create a basic e2b.Dockerfile in the current directory.
+
+Terminal
+e2b template init
+
+Copy
+Copied!
+3. Customize e2b.Dockerfile
+Now you can customize your sandbox template by editing the e2b.Dockerfile file.
+
+e2b.Dockerfile
+# Make sure to use this base image
+FROM e2bdev/code-interpreter:latest 
+
+# Install some Python packages
+RUN pip install cowsay 
+
+Copy
+Copied!
+4. Build your sandbox template
+Now you can build your sandbox template. We'll use Docker and the E2B CLI. What is going to happen is that E2B CLI will call Docker to build the image and then push it to the E2B cloud. Then we convert the Docker image to a micro VM that can be then launched as a sandbox with our SDK.
+
+Terminal
+e2b template build -c "/root/.jupyter/start-up.sh"
+
+Copy
+Copied!
+This process will take a moment. In the end, you'll see your template ID that you'll need to use to create a sandbox with the SDK.
+
+5. Start your custom sandbox
+Now you can use the template ID to create a sandbox with the SDK.
+
+
+JavaScript & TypeScript
+
+Python
+import { sandbox } from '@e2b/code-interpreter'
+
+// Your template ID from the previous step
+const templateID = 'id-of-your-template' 
+// Pass the template ID to the `Sandbox.create` method
+const sandbox = await Sandbox.create(templateID) 
+
+// The template installed cowsay, so we can use it
+const execution = await sandbox.runCode(`
+import cowsay
+cowsay.say('Hello from E2B!')
+`)
+
+console.log(execution.stdout)
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Customize sandbox CPU & RAM
+You can customize the CPU and RAM of your sandbox template via E2B CLI.
+
+You'll need to create a sandbox template first.
+
+During the build step, you can specify the CPU and RAM of your sandbox template.
+
+The following command will create a sandbox template with 2 CPUs and 2GB of RAM.
+
+Terminal
+e2b template build -c "/root/.jupyter/start-up.sh" --cpu-count 2 --memory-mb 2048
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Filesystem
+Each E2B Sandbox has its own isolated filesystem. The Hobby tier sandboxes come with 1 GB of the free disk space and Pro tier sandboxes come with 5 GB.
+
+With E2B SDK you can:
+
+Read and write files to the sandbox.
+Watch directory for changes.
+Upload data to the sandbox.
+Download data from the sandbox.
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Read & write files
+Reading files
+You can read files from the sandbox filesystem using the files.reado() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+const sandbox = await Sandbox.create()
+const fileContent = await sandbox.files.read('/path/to/file')
+
+Copy
+Copied!
+Writing files
+You can write files to the sandbox filesystem using the files.write() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+const sandbox = await Sandbox.create()
+await sandbox.files.write('/path/to/file', 'file content')
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Watch sandbox directory for changes
+You can watch a directory for changes using the files.watchDir() method in JavaScript and files.watch_dir() method in Python.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox, FilesystemEventType } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+const dirname = '/home/user'
+
+// Start watching directory for changes
+const handle = await sandbox.files.watchDir(dirname, async (event) => { 
+  console.log(event) 
+  if (event.type === FilesystemEventType.WRITE) { 
+    console.log(`wrote to file ${event.name}`) 
+  } 
+}) 
+
+// Trigger file write event
+await sandbox.files.write(`${dirname}/my-file`, 'hello')
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Upload data to sandbox
+You can upload data to the sandbox using the files.write() method.
+
+
+JavaScript & TypeScript
+
+Python
+import fs from 'fs'
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+
+// Read file from local filesystem
+const content = fs.readFileSync('/local/path')
+// Upload file to sandbox
+await sandbox.files.write('/path/in/sandbox', content)
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Download data from sandbox
+You can download data from the sandbox using the files.read() method.
+
+
+JavaScript & TypeScript
+
+Python
+import fs from 'fs'
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+
+// Read file from sandbox
+const content = await sandbox.files.read('/path/in/sandbox')
+// Write file to local filesystem
+fs.writeFileSync('/local/path', content)
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Running commands in sandbox
+You can run terminal commands inside the sandbox using the commands.run() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+const result = await sandbox.commands.run('ls -l')
+console.log(result)
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Streaming command output
+To stream command output as it is being executed, pass the onStdout, onStderr callbacks to the commands.run() method in JavaScript or the on_stdout, on_stderr callbacks to the commands.run() method in Python.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+const result = await sandbox.commands.run('echo hello; sleep 1; echo world', {
+  onStdout: (data) => {
+    console.log(data)
+  },
+  onStderr: (data) => {
+    console.log(data)
+  },
+})
+console.log(result)
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Running commands in background
+To run commands in background, pass the background option to the commands.run() method. This will return immediately and the command will continue to run in the sandbox. You can then later kill the command using the commands.kill() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+
+// Start the command in the background
+const command = await sandbox.commands.run('echo hello; sleep 10; echo world', {
+  background: true, 
+  onStdout: (data) => {
+    console.log(data)
+  },
+})
+
+// Kill the command
+await command.kill()
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Running commands in background
+To run commands in background, pass the background option to the commands.run() method. This will return immediately and the command will continue to run in the sandbox. You can then later kill the command using the commands.kill() method.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const sandbox = await Sandbox.create()
+
+// Start the command in the background
+const command = await sandbox.commands.run('echo hello; sleep 10; echo world', {
+  background: true, 
+  onStdout: (data) => {
+    console.log(data)
+  },
+})
+
+// Kill the command
+await command.kill()
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Streaming
+Use E2B SDK allows you to stream the output, and results when executing code in the sandbox.
+
+Stream stdout and stderr
+When using the runCode() method in JavaScript or run_code() in Python you can pass onStdout/on_stdout and onStderr/on_stderr callbacks to handle the output.
+
+
+JavaScript & TypeScript
+
+Python
+import { Sandbox } from '@e2b/code-interpreter'
+
+const codeToRun = `
+  import time
+  import sys
+  print("This goes first to stdout")
+  time.sleep(3)
+  print("This goes later to stderr", file=sys.stderr)
+  time.sleep(3)
+  print("This goes last")
+`
+const sandbox = await Sandbox.create()
+sandbox.runCode(codeToRun, {
+  // Use `onError` to handle runtime code errors
+  onError: error => console.error('error:', error), 
+  onStdout: data => console.log('stdout:', data), 
+  onStderr: data => console.error('stderr:', data), 
+})
+
+Copy
+Copied!
+The code above will print the following:
+
+
+JavaScript
+
+Python
+stdout: {
+  error: false,
+  line: "This goes first to stdout\n",
+  timestamp: 1729049666861000,
+}
+stderr: {
+  error: true,
+  line: "This goes later to stderr\n",
+  timestamp: 1729049669924000,
+}
+stdout: {
+  error: false,
+  line: "This goes last\n",
+  timestamp: 1729049672664000,
+}
+
+Copy
+Copied!
+Stream results
+When using the runCode() method in JavaScript or run_code() in Python you can pass onResults/on_results callback to receive results from the sandbox like charts, tables, text, and more.
+
+
+JavaScript & TypeScript
+
+Python
+const codeToRun = `
+import matplotlib.pyplot as plt
+
+# Prepare data
+categories = ['Category A', 'Category B', 'Category C', 'Category D']
+values = [10, 20, 15, 25]
+
+# Create and customize the bar chart
+plt.figure(figsize=(10, 6))
+plt.bar(categories, values, color='green')
+plt.xlabel('Categories')
+plt.ylabel('Values')
+plt.title('Values by Category')
+
+# Display the chart
+plt.show()
+`
+const sandbox = await Sandbox.create()
+await sandbox.runCode(codeToRun, {
+  onResult: result => console.log('result:', result), 
+})
+
+Copy
+Copied!
+© FoundryLabs, Inc. 2024. All rights reserved.
+
+Follow us on X (f.k.a. Twitter)
+
+Sandbox
+E2B cloud sandbox is a secure and isolated cloud environment.
+
+The sandbox allows you to:
+
+Access Linux OS
+Create, list, and delete files and directories
+Run commands
+Run isolated code
+Access the internet
+Check docs here.
+
+Use Sandbox.create to create a new sandbox.
+
+Example
+import { Sandbox } from 'e2b'
+
+const sandbox = await Sandbox.create()
+
+Copy
+Copied!
+Properties
+Property	Modifier	Type	Description
+commands	readonly	Commands	Module for running commands in the sandbox
+files	readonly	Filesystem	Module for interacting with the sandbox filesystem
+pty	readonly	Pty	Module for interacting with the sandbox pseudo-terminals
+sandboxId	readonly	string	Unique identifier of the sandbox.
+Methods
+downloadUrl()
+downloadUrl(path: string): string
+
+Copy
+Copied!
+Get the URL to download a file from the sandbox.
+
+Parameters
+Parameter	Type	Description
+path	string	path to the file to download.
+Returns
+string
+
+URL for downloading file.
+
+getHost()
+getHost(port: number): string
+
+Copy
+Copied!
+Get the host address for the specified sandbox port. You can then use this address to connect to the sandbox port from outside the sandbox via HTTP or WebSocket.
+
+Parameters
+Parameter	Type	Description
+port	number	number of the port in the sandbox.
+Returns
+string
+
+host address of the sandbox port.
+
+Example
+const sandbox = await Sandbox.create()
+// Start an HTTP server
+await sandbox.commands.exec('python3 -m http.server 3000')
+// Get the hostname of the HTTP server
+const serverURL = sandbox.getHost(3000)
+
+Copy
+Copied!
+isRunning()
+isRunning(opts?: Pick<ConnectionOpts, "requestTimeoutMs">): Promise<boolean>
+
+Copy
+Copied!
+Check if the sandbox is running.
+
+Parameters
+Parameter	Type
+opts?	Pick<ConnectionOpts, "requestTimeoutMs">
+Returns
+Promise<boolean>
+
+true if the sandbox is running, false otherwise.
+
+Example
+const sandbox = await Sandbox.create()
+await sandbox.isRunning() // Returns true
+
+await sandbox.kill()
+await sandbox.isRunning() // Returns false
+
+Copy
+Copied!
+kill()
+kill(opts?: Pick<SandboxOpts, "requestTimeoutMs">): Promise<void>
+
+Copy
+Copied!
+Kill the sandbox.
+
+Parameters
+Parameter	Type	Description
+opts?	Pick<SandboxOpts, "requestTimeoutMs">	connection options.
+Returns
+Promise<void>
+
+setTimeout()
+setTimeout(timeoutMs: number, opts?: Pick<SandboxOpts, "requestTimeoutMs">): Promise<void>
+
+Copy
+Copied!
+Set the timeout of the sandbox. After the timeout expires the sandbox will be automatically killed.
+
+This method can extend or reduce the sandbox timeout set when creating the sandbox or from the last call to .setTimeout. Maximum time a sandbox can be kept alive is 24 hours (86_400_000 milliseconds) for Pro users and 1 hour (3_600_000 milliseconds) for Hobby users.
+
+Parameters
+Parameter	Type	Description
+timeoutMs	number	timeout in milliseconds.
+opts?	Pick<SandboxOpts, "requestTimeoutMs">	connection options.
+Returns
+Promise<void>
+
+uploadUrl()
+uploadUrl(path?: string): string
+
+Copy
+Copied!
+Get the URL to upload a file to the sandbox.
+
+You have to send a POST request to this URL with the file as multipart/form-data.
+
+Parameters
+Parameter	Type	Description
+path?	string	the directory where to upload the file, defaults to user's home directory.
+Returns
+string
+
+URL for uploading file.
+
+connect()
+static connect<S>(
+   this: S, 
+   sandboxId: string, 
+opts?: Omit<SandboxOpts, "timeoutMs" | "metadata" | "envs">): Promise<InstanceType<S>>
+
+Copy
+Copied!
+Connect to an existing sandbox. With sandbox ID you can connect to the same sandbox from different places or environments (serverless functions, etc).
+
+Type Parameters
+Type Parameter
+S extends typeof Sandbox
+Parameters
+Parameter	Type	Description
+this	S	-
+sandboxId	string	sandbox ID.
+opts?	Omit<SandboxOpts, "timeoutMs" | "metadata" | "envs">	connection options.
+Returns
+Promise<InstanceType<S>>
+
+sandbox instance for the existing sandbox.
+
+Example
+const sandbox = await Sandbox.create()
+const sandboxId = sandbox.sandboxId
+
+// Connect to the same sandbox.
+const sameSandbox = await Sandbox.connect(sandboxId)
+
+Copy
+Copied!
+create()
+create(this, opts)
+static create<S>(this: S, opts?: SandboxOpts): Promise<InstanceType<S>>
+
+Copy
+Copied!
+Create a new sandbox from the default base sandbox template.
+
+Type Parameters
+Type Parameter
+S extends typeof Sandbox
+Parameters
+Parameter	Type	Description
+this	S	-
+opts?	SandboxOpts	connection options.
+Returns
+Promise<InstanceType<S>>
+
+sandbox instance for the new sandbox.
+
+Example
+const sandbox = await Sandbox.create()
+
+Copy
+Copied!
+Constructs
+Sandbox
+
+create(this, template, opts)
+static create<S>(
+   this: S, 
+   template: string, 
+opts?: SandboxOpts): Promise<InstanceType<S>>
+
+Copy
+Copied!
+Create a new sandbox from the specified sandbox template.
+
+Type Parameters
+Type Parameter
+S extends typeof Sandbox
+Parameters
+Parameter	Type	Description
+this	S	-
+template	string	sandbox template name or ID.
+opts?	SandboxOpts	connection options.
+Returns
+Promise<InstanceType<S>>
+
+sandbox instance for the new sandbox.
+
+Example
+const sandbox = await Sandbox.create('<template-name-or-id>')
+
+Copy
+Copied!
+Constructs
+Sandbox
+
+kill()
+static kill(sandboxId: string, opts?: SandboxApiOpts): Promise<boolean>
+
+Copy
+Copied!
+Kill the sandbox specified by sandbox ID.
+
+Parameters
+Parameter	Type	Description
+sandboxId	string	sandbox ID.
+opts?	SandboxApiOpts	connection options.
+Returns
+Promise<boolean>
+
+true if the sandbox was found and killed, false otherwise.
+
+list()
+static list(opts?: SandboxApiOpts): Promise<SandboxInfo[]>
+
+Copy
+Copied!
+List all running sandboxes.
+
+Parameters
+Parameter	Type	Description
+opts?	SandboxApiOpts	connection options.
+Returns
+Promise<SandboxInfo[]>
+
+list of running sandboxes.
+
+setTimeout()
+static setTimeout(
+   sandboxId: string, 
+   timeoutMs: number, 
+opts?: SandboxApiOpts): Promise<void>
+
+Copy
+Copied!
+Set the timeout of the specified sandbox. After the timeout expires the sandbox will be automatically killed.
+
+This method can extend or reduce the sandbox timeout set when creating the sandbox or from the last call to Sandbox.setTimeout.
+
+Maximum time a sandbox can be kept alive is 24 hours (86_400_000 milliseconds) for Pro users and 1 hour (3_600_000 milliseconds) for Hobby users.
+
+Parameters
+Parameter	Type	Description
+sandboxId	string	sandbox ID.
+timeoutMs	number	timeout in milliseconds.
+opts?	SandboxApiOpts	connection options.
+Returns
+Promise<void>
+
+Interfaces
+SandboxOpts
+Options for creating a new Sandbox.
+
+Properties
+accessToken?
+optional accessToken: string;
+
+Copy
+Copied!
+E2B access token to use for authentication.
+
+Default
+E2B_ACCESS_TOKEN // environment variable
+
+Copy
+Copied!
+apiKey?
+optional apiKey: string;
+
+Copy
+Copied!
+E2B API key to use for authentication.
+
+Default
+E2B_API_KEY // environment variable
+
+Copy
+Copied!
+debug?
+optional debug: boolean;
+
+Copy
+Copied!
+Internal
+
+If true the SDK starts in the debug mode and connects to the local envd API server.
+
+Default
+E2B_DEBUG // environment variable or false
+
+domain?
+optional domain: string;
+
+Copy
+Copied!
+Domain to use for the API.
+
+Default
+E2B_DOMAIN // environment variable or e2b.dev
+
+envs?
+optional envs: Record<string, string>;
+
+Copy
+Copied!
+Custom environment variables for the sandbox.
+
+Used when executing commands and code in the sandbox. Can be overridden with the envs argument when executing commands or code.
+
+Default
+{}
+
+Copy
+Copied!
+logger?
+optional logger: Logger;
+
+Copy
+Copied!
+Logger to use for logging messages. It can accept any object that implements Logger interface—for example, console.
+
+metadata?
+optional metadata: Record<string, string>;
+
+Copy
+Copied!
+Custom metadata for the sandbox.
+
+Default
+{}
+
+Copy
+Copied!
+requestTimeoutMs?
+optional requestTimeoutMs: number;
+
+Copy
+Copied!
+Timeout for requests to the API in milliseconds.
+
+Default
+30_000 // 30 seconds
+
+Copy
+Copied!
+timeoutMs?
+optional timeoutMs: number;
+
+Copy
+Copied!
+Timeout for the sandbox in milliseconds. Maximum time a sandbox can be kept alive is 24 hours (86_400_000 milliseconds) for Pro users and 1 hour (3_600_000 milliseconds) for Hobby users.
+
+Default
+300_000 // 5 minutes

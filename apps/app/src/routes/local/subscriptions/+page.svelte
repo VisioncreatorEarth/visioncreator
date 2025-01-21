@@ -273,7 +273,7 @@
 	}
 </script>
 
-<div class="container mx-auto mt-8 max-w-6xl">
+<div class="container max-w-6xl mx-auto mt-8">
 	<h1 class="mb-8 text-3xl font-bold text-center">Choose Your Plan</h1>
 
 	{#if isLoading}
@@ -305,7 +305,7 @@
 								<p class="text-lg">{product.description}</p>
 								<ul class="mt-4 space-y-3">
 									{#each benefits[product.id === 'free-product' ? 'free-product' : product.name.toLowerCase()] as benefit}
-										<li class="flex gap-2 items-center">
+										<li class="flex items-center gap-2">
 											<span class="text-xl text-primary-500">
 												<iconify-icon icon={benefit.icon} />
 											</span>
@@ -326,7 +326,7 @@
 								$subscriptionsQuery.isLoading}
 						>
 							{#if $updateSubscriptionMutation.isLoading}
-								<div class="flex gap-2 justify-center items-center">
+								<div class="flex items-center justify-center gap-2">
 									<svg
 										class="w-4 h-4 animate-spin"
 										xmlns="http://www.w3.org/2000/svg"
@@ -350,7 +350,7 @@
 									<span>Updating...</span>
 								</div>
 							{:else if $checkoutMutation.isLoading}
-								<div class="flex gap-2 justify-center items-center">
+								<div class="flex items-center justify-center gap-2">
 									<svg
 										class="w-4 h-4 animate-spin"
 										xmlns="http://www.w3.org/2000/svg"
@@ -387,7 +387,7 @@
 </div>
 
 {#if $subscriptionsQuery.data?.subscriptions?.length > 0}
-	<div class="mx-auto mt-8 max-w-6xl">
+	<div class="max-w-6xl mx-auto mt-8">
 		<h2 class="mb-4 text-2xl font-semibold dark:text-gray-200">Your Subscriptions</h2>
 		<div
 			class="relative overflow-x-auto shadow-md sm:rounded-lg max-h-[500px] bg-surface-50-900-token"

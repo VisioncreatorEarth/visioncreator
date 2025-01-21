@@ -145,7 +145,10 @@ const CALL_CONFIG = {
     {
       temporaryTool: {
         modelToolName: 'updateName',
-        description: 'Update the name. Use this tool when a name needs to be updated. You must NEVER emit text when doing a tool call or using any tool.',
+        description: `Update the name. Use this tool when a name needs to be updated. 
+            The update requires user confirmation. Wait for the confirmation before announcing any changes. 
+            If the user wants to modify the name while confirmation is pending, use the tool again with the new name.
+            You must NEVER emit text when doing a tool call or using any tool.`,
         dynamicParameters: [
           {
             name: 'name',

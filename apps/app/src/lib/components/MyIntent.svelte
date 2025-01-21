@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import { derived } from 'svelte/store';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { createMachine, type MachineConfig } from '$lib/composables/svelteMachine';
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { eventBus } from '$lib/composables/eventBus';
-	import { onMount } from 'svelte';
 	import AskHominio from './AskHominio.svelte';
 
 	export let session: any;
@@ -307,21 +306,38 @@
 
 	export const handleLongPressEnd = () => {
 		isLongPressActive = false;
-		if ($currentState === 'calling') {
-			machine.send('END_CALL');
-		}
+		// Don't end the call on release anymore
 	};
 
-	onDestroy(() => {
-		if (durationInterval) {
-			clearInterval(durationInterval);
+	let warningTimeout: NodeJS.Timeout;
+	let warningMessage = '';
+
+	function showWarning(message: string) {
+		warningMessage = message;
+		warningTimeout = setTimeout(() => {
+			warningMessage = '';
+		}, 3000);
+	}
+
+	function handleVisibilityChange() {
+		if (document.hidden && $currentState === 'calling') {
+			showWarning('Call will end if you leave this page');
+			// Give user a moment to return
+			setTimeout(() => {
+				if (document.hidden && $currentState === 'calling') {
+					console.log('Page hidden, ending call...');
+					machine.send('END_CALL');
+				}
+			}, 1000);
 		}
-		// Only call stopCall if we're still in the calling state
-		if ($currentState === 'calling' && askHominioComponent) {
-			askHominioComponent.stopCall();
+	}
+
+	function handleBlur() {
+		if ($currentState === 'calling') {
+			console.log('Window blurred, ending call...');
+			machine.send('END_CALL');
 		}
-		intentActions.cleanup(machine.getState().context);
-	});
+	}
 
 	onMount(() => {
 		const handleStateChange = (event: string) => {
@@ -330,10 +346,21 @@
 
 		eventBus.on('intent:stateChange', handleStateChange);
 
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		window.addEventListener('blur', handleBlur);
+
 		return () => {
 			eventBus.off('intent:stateChange', handleStateChange);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			window.removeEventListener('blur', handleBlur);
 		};
 	});
+
+	export function stopCall() {
+		if ($currentState === 'calling') {
+			machine.send('END_CALL');
+		}
+	}
 </script>
 
 {#if $context.isOpen}
@@ -464,5 +491,11 @@
 		<div
 			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
 		/>
+	</div>
+{/if}
+
+{#if warningMessage}
+	<div class="z-50 p-4 text-center rounded-xl backdrop-blur-xl bg-error-500/10 animate-fade-in">
+		<p class="text-lg font-medium text-error-400">{warningMessage}</p>
 	</div>
 {/if}
