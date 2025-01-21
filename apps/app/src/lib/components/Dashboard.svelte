@@ -1,86 +1,12 @@
 <script lang="ts">
-	import { writable, readable } from 'svelte/store';
-	import { env } from '$env/dynamic/public';
-	import QRCode from '@castlenine/svelte-qrcode';
-	import { eventBus } from '$lib/composables/eventBus';
-	import { onMount, onDestroy } from 'svelte';
-
-	let contentWrapper: HTMLDivElement;
+	import { writable } from 'svelte/store';
 
 	export let me;
-	const query = $me.query;
 
 	let showQRCode = writable(false);
-	let linkCopied = writable(false);
-
-	$: inspirations = $query.data.inspirations;
-	$: fullyUnlocked = inspirations >= 3;
-	$: invitationLink = `${env.PUBLIC_BASE_URL}/?visionid=${$query.data.qrCodeId}`;
-	$: temperature = $query.data.temperature;
-	$: streamPotential = $query.data.streamPotential;
-
-	// Launch date: January 21st, 2025, 19:00 CET
-	const launchDate = new Date('2025-01-21T19:00:00+01:00').getTime();
-
-	const countdown = readable(0, (set) => {
-		const interval = setInterval(() => {
-			const now = new Date().getTime();
-			const distance = launchDate - now;
-			set(Math.max(0, Math.floor(distance / 1000)));
-		}, 1000);
-
-		return () => clearInterval(interval);
-	});
-
-	$: days = Math.floor($countdown / 86400);
-	$: hours = Math.floor(($countdown % 86400) / 3600);
-	$: minutes = Math.floor(($countdown % 3600) / 60);
-	$: seconds = $countdown % 60;
-
-	function toggleQRCode() {
-		showQRCode.update((n) => !n);
-	}
-
-	async function copyInvitationLink() {
-		try {
-			await navigator.clipboard.writeText(invitationLink);
-			linkCopied.set(true);
-			setTimeout(() => {
-				linkCopied.set(false);
-			}, 1000);
-		} catch (err) {
-			console.error('Failed to copy the link:', err);
-			alert('Failed to copy the link.');
-		}
-	}
-
-	async function handleUpdateStats() {
-		await $query.refetch();
-	}
-
-	function setViewportHeight() {
-		if (contentWrapper) {
-			contentWrapper.style.height = `${window.innerHeight}px`;
-		}
-	}
-
-	onMount(() => {
-		eventBus.on('updateStats', handleUpdateStats);
-		if (typeof window !== 'undefined') {
-			window.addEventListener('resize', setViewportHeight);
-			setViewportHeight();
-		}
-	});
-
-	onDestroy(() => {
-		eventBus.off('updateStats', handleUpdateStats);
-		if (typeof window !== 'undefined') {
-			window.removeEventListener('resize', setViewportHeight);
-		}
-	});
 </script>
 
-<div bind:this={contentWrapper} class="@container fixed inset-0 overflow-hidden">
+<div class="@container fixed inset-0 overflow-hidden">
 	<div class="relative w-full h-full">
 		<!-- Background Image -->
 		<div
@@ -91,136 +17,69 @@
 		</div>
 
 		<!-- Grid Layout -->
-		<div class="relative grid h-full grid-rows-[auto_1fr_auto]">
-			<!-- Stats Display -->
-			<div class="flex z-10 gap-6 justify-center p-4 md:justify-end md:pr-8">
-				<div class="text-center">
-					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						{$query.data.visionRank}
-					</div>
-					<div class="text-xs text-tertiary-300 md:text-sm">vision rank</div>
-				</div>
-				<div class="text-center">
-					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						{$query.data.inspirations}
-					</div>
-					<div class="text-xs text-tertiary-300 md:text-sm">inspirations</div>
-				</div>
-				<div class="text-center">
-					<div class="text-xl font-medium text-white md:text-2xl lg:text-3xl">
-						${($query.data.inspirations * 3.33).toFixed(2)}/m
-					</div>
-					<div class="text-xs text-tertiary-300 md:text-sm">income potential</div>
-				</div>
-			</div>
-
+		<div class="relative grid h-full grid-rows-[auto]">
 			<!-- Main Content -->
-			<div class="flex overflow-y-auto z-10 flex-col justify-center items-center p-4">
-				<!-- Countdown -->
+			<div class="z-10 flex flex-col items-center justify-center p-4 overflow-y-auto">
+				<!-- Founding Family Message -->
 				{#if !$showQRCode}
-					<div class="mb-8 text-center">
-						<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">
-							Launching early BETA access in
+					<div
+						class="flex flex-col items-center justify-center max-w-2xl mx-auto space-y-6 text-center"
+					>
+						<h2
+							class="text-2xl font-bold sm:text-3xl md:text-4xl text-tertiary-100 dark:text-surface-100"
+						>
+							Join the founding family of 144
 						</h2>
-						<h1 class="text-3xl font-bold text-white sm:text-5xl">
-							{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
-								.toString()
-								.padStart(2, '0')}s
-						</h1>
+
+						<!-- Milestone Progress -->
+						<div
+							class="w-full h-4 max-w-md mb-2 rounded-full bg-tertiary-200/20 dark:bg-surface-800/20"
+						>
+							<div
+								class="h-full transition-all duration-500 rounded-full bg-tertiary-300 dark:bg-surface-200"
+								style="width: {(18 / 21) * 100}%"
+							/>
+						</div>
+
+						<div class="space-y-3">
+							<p class="text-xl font-semibold text-tertiary-100 dark:text-surface-100">
+								Last 3 seats in Founding Circle 6
+							</p>
+							<p class="text-base text-tertiary-200 dark:text-surface-200">
+								Join <span class="font-bold text-tertiary-100 dark:text-surface-100">18</span> visionaries
+								in our most privileged circles
+							</p>
+						</div>
+
+						<!-- Simplified Circle Display -->
+						<div class="w-full max-w-md space-y-2">
+							<div class="flex justify-between w-full mt-2">
+								{#each Array.from({ length: 11 }, (_, i) => i + 1) as circle}
+									<div class="flex flex-col items-center">
+										<div
+											class={`w-2 h-2 rounded-full ${
+												circle <= 6
+													? 'bg-tertiary-300 dark:bg-surface-200'
+													: 'bg-tertiary-200/40 dark:bg-surface-800/40'
+											}`}
+										/>
+										<span class="mt-1 text-xs font-medium text-tertiary-200 dark:text-surface-200">
+											C{circle}
+										</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+
+						<!-- CTA Button -->
+						<button
+							class="px-8 py-4 mt-8 text-lg font-semibold text-white transition-all duration-200 transform rounded-full bg-tertiary-500 dark:bg-surface-500 hover:bg-tertiary-600 dark:hover:bg-surface-600 hover:scale-105"
+						>
+							Request Details by Mail
+						</button>
 					</div>
 				{/if}
-
-				<!-- Early Access Section -->
-				<div class="mx-auto w-full max-w-sm md:max-w-2xl">
-					<div class="p-6 rounded-xl bg-surface-900/50 md:p-10">
-						{#if $showQRCode}
-							<div class="flex justify-center mb-6">
-								<QRCode
-									data={invitationLink}
-									backgroundColor="#141a4d"
-									color="#f0ede5"
-									shape="circle"
-									haveBackgroundRoundedEdges
-									logoPath="/logo.png"
-									logoSize="25"
-									logoPadding="4"
-								/>
-							</div>
-							<div class="flex justify-center">
-								<button on:click={toggleQRCode} class="btn variant-ghost-tertiary btn-sm md:btn-md">
-									Hide QR Code
-								</button>
-							</div>
-						{:else}
-							{#if inspirations < 3}
-								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									To get early BETA access to Hominio,<br />
-									inspire {3 - inspirations} more early pioneer{3 - inspirations === 1 ? '' : 's'} to
-									join the waitlist.
-								</p>
-
-								<div class="flex gap-4 justify-center items-center mb-6 md:gap-10">
-									{#each Array(3).fill(false) as _, i}
-										<div
-											class="p-3 rounded-xl md:p-12 {i < inspirations
-												? 'bg-secondary-500/40'
-												: 'bg-surface-900/60'}"
-										>
-											<Icon
-												icon={i < inspirations
-													? 'solar:user-bold-duotone'
-													: 'solar:lock-password-bold-duotone'}
-												class={`w-12 h-12 md:w-16 md:h-16 ${
-													i < inspirations ? 'text-secondary-300' : 'text-surface-300'
-												}`}
-											/>
-										</div>
-									{/each}
-								</div>
-							{:else if inspirations >= 3}
-								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									<span class="text-2xl font-bold uppercase">
-										{$query.data.visionRank <= 89 ? 'Congratulations!' : 'Be Patient'}
-									</span><br />
-									{#if $query.data.visionRank <= 89}
-										You're position {$query.data.visionRank} in line for our exclusive early BETA access
-										- limited to only 89 pioneers.<br /><br />
-										Keep spreading the word to secure your BETA access spot.
-									{:else}
-										Only top 89 pioneers will get early access. You're position {$query.data
-											.visionRank}.<br /><br />
-										Keep spreading the word for a chance to reach the first 89.
-									{/if}
-								</p>
-							{:else}
-								<p class="mb-6 text-base text-center text-tertiary-300 md:text-xl">
-									Welcome to a new way of living and working<br />
-									enjoy playing with Hominio
-								</p>
-							{/if}
-
-							<div class="flex gap-3 justify-center items-center md:gap-6">
-								<button
-									on:click={copyInvitationLink}
-									class="btn variant-ghost-tertiary btn-sm md:btn-md"
-									disabled={$linkCopied}
-								>
-									{$linkCopied ? 'Copied!' : 'Copy Invite Link'}
-								</button>
-								<button
-									on:click={toggleQRCode}
-									class="bg-gradient-to-br btn btn-sm md:btn-md variant-gradient-secondary-primary"
-								>
-									Show Invite Code
-								</button>
-							</div>
-						{/if}
-					</div>
-				</div>
 			</div>
-
-			<!-- Bottom Spacer -->
-			<div class="z-10 h-16" />
 		</div>
 	</div>
 </div>
