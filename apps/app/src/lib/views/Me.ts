@@ -26,18 +26,9 @@ export const view = {
 				component: 'Dashboard',
 				slot: 'main',
 				map: {
-					temperature: '2',
-					inspirations: {
-						query: 'queryUserStats',
-						prop: 'suminvites'
-					},
-					visionRank: {
-						query: 'queryUserStats',
-						prop: 'userRank'
-					},
-					qrCodeId: {
+					name: {
 						query: 'queryMe',
-						prop: 'id'
+						prop: 'name'
 					}
 				}
 			}
