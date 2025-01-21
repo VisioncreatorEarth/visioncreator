@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
 	import FileTree from './FileTree.svelte';
@@ -141,9 +141,7 @@
 </script>
 
 <div class="grid grid-cols-[1fr_3fr] gap-4 p-4 bg-surface-800 rounded-lg h-[calc(100vh-2rem)]">
-	<!-- Left side: Sandbox Controls, List and File Tree -->
-	<div class="flex overflow-hidden flex-col gap-4">
-		<!-- Sandbox Controls -->
+	<div class="flex flex-col gap-4 overflow-hidden">
 		<div class="flex-none">
 			<button
 				class="w-full btn variant-filled"
@@ -154,8 +152,7 @@
 			</button>
 		</div>
 
-		<!-- Sandbox List -->
-		<div class="overflow-y-auto flex-none max-h-48">
+		<div class="flex-none overflow-y-auto max-h-48">
 			{#if $sandboxListQuery.isSuccess && $sandboxListQuery.data?.sandboxes}
 				<div class="flex flex-col gap-2">
 					<h3 class="text-lg font-semibold text-surface-50">Running Sandboxes:</h3>
@@ -168,7 +165,7 @@
 									: 'bg-surface-900 border-surface-700 hover:bg-surface-800'}"
 								on:click={() => selectSandbox(sandbox.id, sandbox.url)}
 							>
-								<div class="flex justify-between items-center">
+								<div class="flex items-center justify-between">
 									<span
 										class="text-sm truncate {sandbox.id === selectedSandboxId
 											? 'text-surface-50'
@@ -203,18 +200,15 @@
 			{/if}
 		</div>
 
-		<!-- File Tree -->
 		{#if selectedSandboxId}
-			<div class="overflow-hidden flex-1 min-h-0 rounded border border-surface-700">
+			<div class="flex-1 min-h-0 overflow-hidden border rounded border-surface-700">
 				<FileTree sandboxId={selectedSandboxId} on:fileSelect={handleFileSelect} />
 			</div>
 		{/if}
 	</div>
 
-	<!-- Right side: Code Editor and Sandbox Display -->
 	<div class="grid grid-cols-[2fr_3fr] gap-4 overflow-hidden">
-		<!-- Code Editor -->
-		<div class="flex overflow-hidden flex-col gap-2">
+		<div class="flex flex-col gap-2 overflow-hidden">
 			<h3 class="flex-none text-lg font-semibold text-surface-50">
 				{#if currentFileName}
 					<span class="text-sm text-surface-400">
@@ -227,7 +221,7 @@
 			<textarea
 				value={code}
 				on:input={handleCodeChange}
-				class="flex-1 p-4 min-h-0 font-mono text-sm rounded-md border resize-none bg-surface-900 border-surface-700"
+				class="flex-1 min-h-0 p-4 font-mono text-sm border rounded-md resize-none bg-surface-900 border-surface-700"
 				spellcheck="false"
 			/>
 			<button
@@ -238,12 +232,11 @@
 			</button>
 		</div>
 
-		<!-- Sandbox Display -->
-		<div class="flex overflow-hidden flex-col">
-			<div class="overflow-hidden flex-1 rounded-md border bg-surface-900 border-surface-700">
+		<div class="flex flex-col overflow-hidden">
+			<div class="flex-1 overflow-hidden border rounded-md bg-surface-900 border-surface-700">
 				{#if iframeUrl}
 					<div
-						class="absolute top-2 right-2 z-10 p-2 text-xs rounded-md opacity-50 transition-opacity bg-surface-800 hover:opacity-100"
+						class="absolute z-10 p-2 text-xs transition-opacity rounded-md opacity-50 top-2 right-2 bg-surface-800 hover:opacity-100"
 					>
 						{iframeUrl}
 					</div>
@@ -256,7 +249,7 @@
 						on:error={(e) => console.error('❌ iframe error:', e)}
 					/>
 				{:else}
-					<div class="flex justify-center items-center h-full text-surface-400">
+					<div class="flex items-center justify-center h-full text-surface-400">
 						<p>Start a sandbox to see the content here</p>
 					</div>
 				{/if}
@@ -270,4 +263,4 @@
 		height: 100%;
 		overflow-y: auto;
 	}
-</style>
+</style> -->

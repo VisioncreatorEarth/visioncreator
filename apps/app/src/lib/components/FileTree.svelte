@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import { createQuery } from '$lib/wundergraph';
 	import { createEventDispatcher } from 'svelte';
 
@@ -104,4 +104,4 @@
 		height: 100%;
 		overflow-y: auto;
 	}
-</style>
+</style> -->
