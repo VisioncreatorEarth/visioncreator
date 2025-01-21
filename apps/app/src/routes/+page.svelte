@@ -113,7 +113,7 @@
 					on:click={openSignUp}
 					class="bg-gradient-to-br signup-btn btn btn-lg variant-gradient-secondary-primary"
 				>
-					Join The Founding Circle Waitlist
+					Join The Waitlist For More Details
 				</button>
 			</div>
 		</div>
