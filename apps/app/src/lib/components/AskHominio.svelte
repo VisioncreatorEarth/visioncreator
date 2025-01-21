@@ -258,6 +258,57 @@
 						machine.send('ERROR');
 					});
 
+					// Update the tool registration to handle confirmation responses better
+					session.registerToolImplementation('updateName', async (params) => {
+						try {
+							const response = await toolStore.updateName(params);
+
+							if (response?.status === 'awaiting_confirmation') {
+								return {
+									status: 'pending',
+									message: response.message
+								};
+							} else if (response?.status === 'pending_update') {
+								// Handle case where confirmation is already showing but can be updated
+								if (pendingConfirmation?.updateParams) {
+									pendingConfirmation.updateParams(params);
+								}
+								return {
+									status: 'pending',
+									message: response.message
+								};
+							}
+							return response;
+						} catch (error) {
+							return {
+								status: 'error',
+								message: error.message
+							};
+						}
+					});
+
+					// Add event listener for tool confirmations with better messaging
+					context.session.addEventListener('tool:confirmation:completed', (event) => {
+						const { success, action, data, error, cancelled } = event.detail;
+
+						if (cancelled) {
+							context.session.sendMessage({
+								role: 'system',
+								content: `The ${action.toLowerCase()} was cancelled. Would you like to try again with a different name?`
+							});
+						} else if (success) {
+							context.session.sendMessage({
+								role: 'system',
+								content: data // Use the success message from the action
+							});
+						} else {
+							context.session.sendMessage({
+								role: 'system',
+								content: `Sorry, there was an error: ${error?.message || 'Unknown error'}`
+							});
+						}
+					});
+
 					// Join the call with retry logic
 					let retries = 0;
 					const maxRetries = 3;

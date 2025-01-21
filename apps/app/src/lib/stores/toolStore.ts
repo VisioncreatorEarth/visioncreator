@@ -18,6 +18,8 @@ interface ConfirmationData {
     message: string;
     action: () => Promise<any>;
     data?: any;
+    pendingResponse?: boolean;
+    updateParams?: (newParams: any) => void;
 }
 
 interface ToolState {
@@ -72,14 +74,33 @@ function createToolStore() {
         }),
 
         setPendingConfirmation: (confirmation: ConfirmationData | null) => {
-            update(state => ({ ...state, pendingConfirmation: confirmation }));
+            update(state => ({
+                ...state,
+                pendingConfirmation: confirmation ? {
+                    ...confirmation,
+                    pendingResponse: true
+                } : null
+            }));
         },
 
         confirmAction: async () => {
             const state = get({ subscribe });
             if (state.pendingConfirmation) {
                 try {
-                    await state.pendingConfirmation.action();
+                    const result = await state.pendingConfirmation.action();
+                    eventBus.emit('tool:confirmation:completed', {
+                        success: true,
+                        action: state.pendingConfirmation.title,
+                        data: result
+                    });
+                    return result;
+                } catch (error) {
+                    eventBus.emit('tool:confirmation:completed', {
+                        success: false,
+                        action: state.pendingConfirmation.title,
+                        error: error
+                    });
+                    throw error;
                 } finally {
                     update(state => ({ ...state, pendingConfirmation: null }));
                 }
@@ -87,6 +108,14 @@ function createToolStore() {
         },
 
         cancelAction: () => {
+            const state = get({ subscribe });
+            if (state.pendingConfirmation) {
+                eventBus.emit('tool:confirmation:completed', {
+                    success: false,
+                    action: state.pendingConfirmation.title,
+                    cancelled: true
+                });
+            }
             update(state => ({ ...state, pendingConfirmation: null }));
         },
 
@@ -176,30 +205,51 @@ function createToolStore() {
 
         updateName: async (parameters: any) => {
             const store = get({ subscribe });
-            if (!store.pendingConfirmation) {
-                // Set up confirmation
+            if (!store.pendingConfirmation ||
+                (store.pendingConfirmation.data?.name !== parameters.name)) {
+
+                const createNameAction = (name: string) => async () => {
+                    const result = await performOperation('updateMe', {
+                        name: name
+                    });
+
+                    if (!result.success) {
+                        throw new Error(result.message);
+                    }
+
+                    return `Name successfully updated to ${name}`;
+                };
+
                 update(state => ({
                     ...state,
                     pendingConfirmation: {
                         title: 'Update Name',
                         message: `Are you sure you want to change your name to "${parameters.name}"?`,
-                        action: async () => {
-                            const result = await performOperation('updateMe', {
-                                name: parameters.name
-                            });
-
-                            if (!result.success) {
-                                throw new Error(result.message);
-                            }
-
-                            return 'Name updated successfully';
-                        },
-                        data: { name: parameters.name }
+                        action: createNameAction(parameters.name),
+                        data: { name: parameters.name },
+                        pendingResponse: true,
+                        updateParams: (newParams: any) => {
+                            update(state => ({
+                                ...state,
+                                pendingConfirmation: {
+                                    ...state.pendingConfirmation!,
+                                    message: `Are you sure you want to change your name to "${newParams.name}"?`,
+                                    action: createNameAction(newParams.name),
+                                    data: { name: newParams.name }
+                                }
+                            }));
+                        }
                     }
                 }));
-                return 'Confirmation required';
+                return {
+                    status: 'awaiting_confirmation',
+                    message: "I'll update your name after you confirm the change."
+                };
             }
-            throw new Error('Another confirmation is pending');
+            return {
+                status: 'pending_update',
+                message: 'Would you like to update the name to something else?'
+            };
         }
     };
 }
