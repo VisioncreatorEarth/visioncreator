@@ -92,32 +92,28 @@
 		<!-- Grid Layout -->
 		<div class="relative grid h-full grid-rows-[auto_1fr_auto]">
 			<div class="z-10 pt-6 pb-4 text-center">
-				<img src="/logo.png" alt="Visioncreator logo" class="mx-auto w-20 opacity-80" />
-				<!-- Countdown -->
+				<img src="/logo.png" alt="Visioncreator logo" class="w-20 mx-auto opacity-80" />
 				<div class="mt-4 text-center">
-					<h2 class="mb-4 text-base text-tertiary-300 sm:text-lg md:text-2xl">Launching BETA in</h2>
-					<h1 class="text-3xl font-bold text-white sm:text-5xl">
-						{days}d {hours.toString().padStart(2, '0')}h {minutes.toString().padStart(2, '0')}m {seconds
-							.toString()
-							.padStart(2, '0')}s
-					</h1>
+					<h2 class="mb-2 text-sm text-tertiary-300/90 sm:text-base">Limited to</h2>
+					<h1 class="text-2xl font-bold text-white sm:text-3xl">144 Founding Pioneers</h1>
 				</div>
 			</div>
-			<div class="flex overflow-hidden z-10 items-center w-full h-full">
-				<div class="p-4 mx-auto w-full max-w-screen-md">
+			<div class="z-10 flex items-center w-full h-full overflow-hidden">
+				<div class="w-full max-w-screen-md p-4 mx-auto">
 					<div class="relative w-full h-full aspect-[16/9] max-h-full">
 						<div class="absolute inset-0">
-							<VideoPlayer videoId="8fee2d57-e3c3-4580-bd11-ae828d86978d" />
+							<VideoPlayer videoId="e0a19ff2-c41c-4c13-b6b0-8050bc8f351a" />
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="flex z-10 justify-center items-center mt-4 mb-16">
+
+			<div class="z-10 flex items-center justify-center mt-4 mb-16">
 				<button
 					on:click={openSignUp}
 					class="bg-gradient-to-br signup-btn btn btn-lg variant-gradient-secondary-primary"
 				>
-					Sign Up To Waitlist
+					Join The Founding Circle Waitlist
 				</button>
 			</div>
 		</div>
