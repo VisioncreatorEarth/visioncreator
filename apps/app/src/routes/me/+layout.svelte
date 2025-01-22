@@ -11,9 +11,9 @@
 	import { view as hominioHostView } from '$lib/views/HominioHostMe';
 	import { view as leaderboardView } from '$lib/views/Leaderboard';
 	import { view as episodesView } from '$lib/views/Episodes';
+	import { view as proposalsView } from '$lib/views/Proposals';
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import SubscribeToNewsletter from '$lib/components/SubscribeToNewsletter.svelte';
-	import Leaderboard from '$lib/components/Leaderboard.svelte';
 
 	export let data;
 	let { session } = data;
@@ -28,6 +28,7 @@
 		HominioBankMe: hominioBankView,
 		HominioHostMe: hominioHostView,
 		Episodes: episodesView,
+		Proposals: proposalsView,
 		Leaderboard: leaderboardView,
 		Me: meView
 	};
@@ -96,9 +97,9 @@
 </script>
 
 {#if $meQuery.isLoading}
-	<div class="flex justify-center items-center h-screen">Loading...</div>
+	<div class="flex items-center justify-center h-screen">Loading...</div>
 {:else if meData && !meData.onboarded}
-	<div class="flex justify-center items-center px-4 w-full min-h-screen sm:px-6 md:px-8">
+	<div class="flex items-center justify-center w-full min-h-screen px-4 sm:px-6 md:px-8">
 		<div class="w-full max-w-3xl">
 			<SubscribeToNewsletter
 				userEmail={session.user.email || ''}
@@ -107,7 +108,7 @@
 		</div>
 	</div>
 {:else if !meData}
-	<div class="flex justify-center items-center h-screen text-red-500">Error loading user data</div>
+	<div class="flex items-center justify-center h-screen text-red-500">Error loading user data</div>
 {:else}
 	<slot />
 

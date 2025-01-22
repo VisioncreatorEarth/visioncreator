@@ -4,10 +4,10 @@
 	import { goto } from '$app/navigation';
 	import { dynamicView } from '$lib/stores';
 	import { page } from '$app/stores';
-	import { view as meView } from '$lib/views/Leaderboard';
+	import { view as meView } from '$lib/views/Me';
 	import { view as hominioShopView } from '$lib/views/HominioShopWithMe';
-	import { view as episodesView } from '$lib/views/Episodes';
-	import { view as leaderboardView } from '$lib/views/Leaderboard';
+	import { view as proposalsView } from '$lib/views/Proposals';
+
 	import { createQuery } from '$lib/wundergraph';
 
 	export let showLabels = false;
@@ -47,14 +47,14 @@
 			},
 			view: meView
 		},
-		// {
-		// 	metadata: {
-		// 		id: 'Leaderboard',
-		// 		name: 'Leaderboard',
-		// 		icon: 'mdi:trophy'
-		// 	},
-		// 	view: meView
-		// },
+		{
+			metadata: {
+				id: 'Proposals',
+				name: 'Proposals',
+				icon: 'mdi:lightbulb'
+			},
+			view: proposalsView
+		},
 		...(hasRequiredCapability
 			? [
 					{
@@ -67,24 +67,14 @@
 					}
 			  ]
 			: [])
-		// {
-		// 	metadata: {
-		// 		id: 'Episodes',
-		// 		name: 'Episodes',
-		// 		icon: 'mdi:play-circle'
-		// 	},
-		// 	view: episodesView
-		// }
 	];
 
 	function handleViewSelect(viewItem: any) {
 		if (viewItem.metadata.id !== 'MyDashboard') {
-			// Only add URL param for non-dashboard views
 			const searchParams = new URLSearchParams($page.url.searchParams);
 			searchParams.set('view', viewItem.metadata.id);
 			goto(`/me?${searchParams.toString()}`);
 		} else {
-			// For dashboard, go to clean /me URL
 			goto('/me');
 		}
 		dynamicView.set(viewItem.view);

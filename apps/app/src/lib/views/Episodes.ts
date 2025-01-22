@@ -1,4 +1,5 @@
 export const view = {
+
     id: 'HelloEarth',
     layout: {
         areas: `
