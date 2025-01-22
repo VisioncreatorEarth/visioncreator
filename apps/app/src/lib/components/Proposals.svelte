@@ -9,11 +9,10 @@
 		id: string;
 		title: string;
 		author: string;
-		requestedAmount: number;
-		expectedResults: string;
-		commitment: string;
 		votes: number;
 		description: string;
+		expectedResults: string;
+		commitment: string;
 		state: ProposalState;
 		estimatedDelivery: string;
 	}
@@ -32,7 +31,7 @@
 	const currentUser: Writable<UserProfile> = writable({
 		id: '1',
 		name: 'Samuel Andert',
-		votesAvailable: 100,
+		votesAvailable: 25,
 		votesUsed: 0,
 		proposalsCreated: 1,
 		proposalsVoted: new Set(),
@@ -44,27 +43,38 @@
 			id: '1',
 			title: 'Modern Landing Page Development',
 			author: 'David Chen',
-			requestedAmount: 800,
+			votes: 3,
 			expectedResults: '+500 new signups/month, 40% conversion rate improvement',
 			commitment:
 				'Payment released upon successful deployment with A/B test showing >35% conversion improvement',
-			votes: 24,
 			description:
-				'Design and develop a high-converting landing page using modern web technologies (SvelteKit, Tailwind). The landing page will feature interactive components, dynamic content loading, and mobile-first responsive design. Key features include: personalized user journey flows, integrated analytics dashboard for real-time conversion tracking, A/B testing infrastructure for continuous optimization, and seamless integration with our existing authentication system. The design will follow atomic design principles, ensuring consistent branding and maximum reusability of components.',
+				'High-converting landing page development using SvelteKit and Tailwind.\n\n' +
+				'Key Features:\n' +
+				'• Interactive components and dynamic content loading\n' +
+				'• Mobile-first responsive design\n' +
+				'• Personalized user journey flows\n' +
+				'• Real-time conversion tracking\n' +
+				'• A/B testing infrastructure\n\n' +
+				'Following atomic design principles for consistent branding and maximum component reusability.',
 			state: 'doing',
 			estimatedDelivery: '3 weeks'
 		},
 		{
 			id: '2',
-			title: 'VisionCreator Launch Event',
+			title: 'Visioncreator Launch Event',
 			author: 'Maria Garcia',
-			requestedAmount: 1000,
+			votes: 5,
 			expectedResults: '100+ attendees, 20 new active pioneers, 5 potential partnerships',
 			commitment:
 				'Payment released after successful event completion with minimum 80 verified attendees',
-			votes: 31,
 			description:
-				'Organize a startup networking event to showcase VisionCreator. This comprehensive event will include multiple interactive workshops, keynote presentations from successful entrepreneurs, and dedicated networking sessions. We will secure a premium venue in the city center, arrange professional video coverage, and implement a sophisticated registration system. The event will feature live demonstrations of the platform, success story presentations from early adopters, and interactive Q&A sessions. Post-event activities include follow-up networking opportunities, resource sharing, and community building initiatives.',
+				'Premium startup networking event to showcase Visioncreator.\n\n' +
+				'Event Components:\n' +
+				'• Interactive workshops and keynote presentations\n' +
+				'• Live platform demonstrations\n' +
+				'• Professional video coverage\n' +
+				'• Dedicated networking sessions\n\n' +
+				'Post-event: Follow-up networking, resource sharing, and community building initiatives.',
 			state: 'voting',
 			estimatedDelivery: '2 weeks'
 		},
@@ -72,12 +82,17 @@
 			id: '3',
 			title: 'Community Task Board Development',
 			author: 'Alex Kumar',
-			requestedAmount: 600,
+			votes: 2,
 			expectedResults: '30% improved task completion rate, 50% faster project initialization',
 			commitment: 'Payment released upon deployment with all features tested and documented',
-			votes: 28,
 			description:
-				'Build an interactive task board for community projects using SvelteKit and Tailwind. This comprehensive project management tool will include real-time collaboration features, customizable workflow states, and detailed progress tracking. Key features include: drag-and-drop task management, real-time updates using websockets, integrated commenting system, file attachment support, and automated progress tracking. The board will also feature advanced filtering options, priority management, deadline tracking, and integration with popular calendar systems. Mobile responsiveness and offline support will ensure seamless usage across all devices.',
+				'Interactive task board development using SvelteKit and Tailwind.\n\n' +
+				'Core Features:\n' +
+				'• Real-time collaboration with websockets\n' +
+				'• Drag-and-drop task management\n' +
+				'• Integrated commenting system\n' +
+				'• Advanced filtering and priority management\n' +
+				'• Mobile responsiveness and offline support',
 			state: 'pending_payout',
 			estimatedDelivery: '4 weeks'
 		},
@@ -85,12 +100,17 @@
 			id: '4',
 			title: 'Vision Pitch Video Production',
 			author: 'Sarah Miller',
-			requestedAmount: 750,
+			votes: 4,
 			expectedResults: '40% better conversion rate, 2x faster onboarding understanding',
 			commitment: 'Payment released upon delivery of final video with positive community feedback',
-			votes: 42,
 			description:
-				'Create a professional pitch video explaining the VisionCreator concept. This comprehensive video production will include professional script writing, custom animations, professional voice-over recording, and multiple language support. The video will feature high-quality motion graphics, real user testimonials, and detailed platform demonstrations. We will create multiple versions optimized for different platforms (website, social media, presentations) and include interactive elements for deeper engagement. The production process includes storyboarding, multiple revision rounds, professional sound design, and careful attention to brand guidelines.',
+				'Professional pitch video production for Visioncreator.\n\n' +
+				'Deliverables:\n' +
+				'• Custom animations and motion graphics\n' +
+				'• Professional voice-over recording\n' +
+				'• Platform demonstrations and user testimonials\n' +
+				'• Multiple platform-optimized versions\n\n' +
+				'Including multiple revision rounds and professional sound design.',
 			state: 'done',
 			estimatedDelivery: '1 week'
 		},
@@ -98,12 +118,17 @@
 			id: '5',
 			title: 'Social Media Growth Partnership',
 			author: 'Tom Wilson',
-			requestedAmount: 900,
+			votes: 1,
 			expectedResults: '10k new followers, 25% engagement rate, 100 qualified leads/month',
 			commitment: 'Revenue sharing: 20% of converted leads for 6 months, minimum 3 posts/week',
-			votes: 35,
 			description:
-				'Launch a comprehensive social media campaign across Twitter, LinkedIn, and Instagram. This strategic growth initiative will include daily content creation, community engagement, and targeted lead generation. We will develop a content calendar focusing on educational content, success stories, and platform features. The campaign includes creation of viral-optimized content, engagement with industry influencers, and development of lead magnets. We will implement advanced analytics tracking, A/B test different content types, and optimize posting schedules based on engagement data. The partnership includes regular performance reports, strategy adjustments, and collaborative content creation with community members.',
+				'Strategic social media campaign across major platforms.\n\n' +
+				'Campaign Elements:\n' +
+				'• Daily educational content creation\n' +
+				'• Community engagement strategy\n' +
+				'• Lead generation system\n' +
+				'• Influencer collaborations\n' +
+				'• Performance analytics and optimization',
 			state: 'voting',
 			estimatedDelivery: '3 weeks'
 		}
@@ -112,12 +137,36 @@
 	let showNewProposalModal = false;
 	let newProposal: Partial<Proposal> = {};
 
-	// Add dashboard metrics
-	const dashboardMetrics = {
-		poolAmount: 4458,
-		visionCreators: 17,
-		monthlyIncome: 0
+	// Update dashboard metrics to be writable
+	const dashboardMetrics = writable({
+		visionCreators: 17
+	});
+
+	// Update reactive statements to include dependencies
+	$: totalContributionPool = Math.round($dashboardMetrics.visionCreators * 365 * 0.75);
+
+	$: deliveredPool = $proposals
+		.filter((p) => p.state === 'done')
+		.reduce((sum, p) => sum + calculateLockedValue(p.state), 0);
+
+	$: lockedPool = $proposals
+		.filter((p) => p.state === 'doing' || p.state === 'pending_payout')
+		.reduce((sum, p) => sum + calculateLockedValue(p.state), 0);
+
+	$: votingPool = totalContributionPool - lockedPool - deliveredPool;
+
+	$: poolMetrics = {
+		totalContributionPool,
+		votingPool,
+		lockedPool,
+		deliveredPool
 	};
+
+	// Make proposalValues depend on both proposals and votingPool
+	$: proposalValues = $proposals.map((proposal) => ({
+		id: proposal.id,
+		value: calculateDynamicPrice(proposal.votes, proposal.state, votingPool)
+	}));
 
 	function getStateColor(state: ProposalState): string {
 		switch (state) {
@@ -222,11 +271,57 @@
 	}
 
 	function submitProposal(): void {
-		if (newProposal.title && newProposal.requestedAmount) {
+		if (newProposal.title && newProposal.expectedResults) {
 			$proposals = [...$proposals, newProposal as Proposal];
 			showNewProposalModal = false;
 			newProposal = {};
 		}
+	}
+
+	// Calculate fixed value for a non-voting proposal based on its state
+	function getFixedStateValue(state: ProposalState): number {
+		switch (state) {
+			case 'doing':
+				return 450;
+			case 'pending_payout':
+				return 650;
+			case 'done':
+				return 750;
+			default:
+				return 0;
+		}
+	}
+
+	// Calculate locked value for a non-voting proposal
+	function calculateLockedValue(proposalState: ProposalState): number {
+		if (proposalState === 'voting') return 0;
+		return getFixedStateValue(proposalState);
+	}
+
+	// Update calculateDynamicPrice to take votingPool as parameter
+	function calculateDynamicPrice(
+		proposalVotes: number,
+		proposalState: ProposalState,
+		currentVotingPool: number
+	): number {
+		// If proposal is not in voting state, return its fixed value
+		if (proposalState !== 'voting') {
+			return calculateLockedValue(proposalState);
+		}
+
+		// For voting proposals, calculate based on voting pool
+		const votingProposals = $proposals.filter((p) => p.state === 'voting');
+		const totalVotingVotes = votingProposals.reduce((sum, p) => sum + p.votes, 0);
+
+		if (totalVotingVotes === 0) return 0;
+		return Math.round((proposalVotes / totalVotingVotes) * currentVotingPool);
+	}
+
+	// Add function to adjust VisionCreators count
+	function adjustVisionCreators(increment: boolean): void {
+		$dashboardMetrics.visionCreators = increment
+			? $dashboardMetrics.visionCreators + 1
+			: Math.max(0, $dashboardMetrics.visionCreators - 1);
 	}
 </script>
 
@@ -245,16 +340,54 @@
 				<div class="p-4 border rounded-lg border-surface-700/50">
 					<div class="space-y-6">
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">{dashboardMetrics.poolAmount}€</p>
+							<p class="text-3xl font-bold text-tertiary-100">
+								{Math.round($dashboardMetrics.visionCreators * 365 * 0.75)}€
+							</p>
 							<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
 						</div>
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">{dashboardMetrics.visionCreators}</p>
-							<p class="text-sm text-tertiary-300">Visioncreators Invested</p>
+							<p class="text-3xl font-bold text-tertiary-100">
+								{poolMetrics.votingPool}€
+							</p>
+							<p class="text-sm text-tertiary-300">Voting Pool</p>
 						</div>
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">{dashboardMetrics.monthlyIncome}€</p>
-							<p class="text-sm text-tertiary-300">Monthly Income Stream</p>
+							<p class="text-3xl font-bold text-tertiary-100">
+								{poolMetrics.lockedPool}€
+							</p>
+							<p class="text-sm text-tertiary-300">Locked Pool</p>
+						</div>
+						<div>
+							<p class="text-3xl font-bold text-tertiary-100">
+								{poolMetrics.deliveredPool}€
+							</p>
+							<p class="text-sm text-tertiary-300">Delivered</p>
+						</div>
+						<div class="flex items-center justify-between">
+							<div>
+								<p class="text-3xl font-bold text-tertiary-100">
+									{$dashboardMetrics.visionCreators}
+								</p>
+								<p class="text-sm text-tertiary-300">Visioncreators Invested</p>
+							</div>
+							<div class="flex flex-col gap-2">
+								<button
+									on:click={() => adjustVisionCreators(true)}
+									class="flex items-center justify-center w-8 h-8 transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+								>
+									<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+										<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+									</svg>
+								</button>
+								<button
+									on:click={() => adjustVisionCreators(false)}
+									class="flex items-center justify-center w-8 h-8 transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+								>
+									<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+										<path fill="currentColor" d="M19 13H5v-2h14v2z" />
+									</svg>
+								</button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -346,8 +479,12 @@
 							>
 								<div class="p-8 space-y-8">
 									<div class="text-right">
-										<p class="text-2xl font-bold text-tertiary-100">{proposal.requestedAmount}€</p>
-										<p class="text-sm text-tertiary-300">requested</p>
+										<p class="text-2xl font-bold text-tertiary-100">
+											{proposalValues.find((p) => p.id === proposal.id)?.value}€
+										</p>
+										<p class="text-sm text-tertiary-300">
+											{proposal.state === 'voting' ? 'current value' : 'locked value'}
+										</p>
 									</div>
 									<div>
 										<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
