@@ -18,7 +18,27 @@
 		estimatedDelivery: string;
 	}
 
-	const userVotesLeft: Writable<number> = writable(10);
+	// Add user profile type
+	interface UserProfile {
+		id: string;
+		name: string;
+		votesAvailable: number;
+		votesUsed: number;
+		proposalsCreated: number;
+		proposalsVoted: Set<string>;
+		proposalVoteCounts: Map<string, number>; // Track votes per proposal
+	}
+
+	const currentUser: Writable<UserProfile> = writable({
+		id: '1',
+		name: 'Samuel Andert',
+		votesAvailable: 100,
+		votesUsed: 0,
+		proposalsCreated: 1,
+		proposalsVoted: new Set(),
+		proposalVoteCounts: new Map()
+	});
+
 	const proposals: Writable<Proposal[]> = writable([
 		{
 			id: '1',
@@ -92,6 +112,13 @@
 	let showNewProposalModal = false;
 	let newProposal: Partial<Proposal> = {};
 
+	// Add dashboard metrics
+	const dashboardMetrics = {
+		poolAmount: 4458,
+		visionCreators: 17,
+		monthlyIncome: 0
+	};
+
 	function getStateColor(state: ProposalState): string {
 		switch (state) {
 			case 'voting':
@@ -152,10 +179,36 @@
 		}
 	}
 
-	function vote(proposalId: string): void {
-		if ($userVotesLeft > 0) {
-			$userVotesLeft--;
-			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes + 1 } : p));
+	function calculateQuadraticCost(currentVotes: number): number {
+		return (currentVotes + 1) * (currentVotes + 1);
+	}
+
+	function vote(proposalId: string, isIncrease: boolean): void {
+		$currentUser = { ...$currentUser };
+		const currentVoteCount = $currentUser.proposalVoteCounts.get(proposalId) || 0;
+
+		if (isIncrease) {
+			const cost = calculateQuadraticCost(currentVoteCount);
+			if ($currentUser.votesAvailable >= cost) {
+				$currentUser.votesAvailable -= cost;
+				$currentUser.votesUsed += cost;
+				$currentUser.proposalVoteCounts.set(proposalId, currentVoteCount + 1);
+				$currentUser.proposalsVoted.add(proposalId);
+
+				$proposals = $proposals.map((p) =>
+					p.id === proposalId ? { ...p, votes: p.votes + 1 } : p
+				);
+			}
+		} else if (currentVoteCount > 0) {
+			const cost = calculateQuadraticCost(currentVoteCount - 1);
+			$currentUser.votesAvailable += cost;
+			$currentUser.votesUsed -= cost;
+			$currentUser.proposalVoteCounts.set(proposalId, currentVoteCount - 1);
+			if (currentVoteCount - 1 === 0) {
+				$currentUser.proposalsVoted.delete(proposalId);
+			}
+
+			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes - 1 } : p));
 		}
 	}
 
@@ -177,164 +230,199 @@
 	}
 </script>
 
-<div class="container p-6 mx-auto space-y-8">
-	<div class="flex items-center justify-between">
-		<div>
-			<h1 class="text-2xl font-bold text-tertiary-100">Community Proposals</h1>
-			<p class="text-tertiary-200">Votes remaining: {$userVotesLeft}</p>
-		</div>
-		<button
-			on:click={createProposal}
-			class="btn bg-gradient-to-br variant-gradient-secondary-primary"
-		>
-			Create Proposal
-		</button>
-	</div>
+<div class="flex w-screen h-screen overflow-hidden">
+	<!-- Company Stats Sidebar -->
+	<div
+		class="fixed top-0 left-0 h-screen p-6 border-r w-80 border-surface-700/50 bg-surface-800/30"
+	>
+		<div class="space-y-6">
+			<div class="flex items-center gap-4">
+				<img src="/logo.png" alt="Visioncreator Logo" class="w-16 h-16 rounded-full" />
+				<h1 class="text-2xl font-bold text-tertiary-100">Visioncreator GmbH</h1>
+			</div>
 
-	<div class="grid gap-6">
-		{#each $proposals as proposal}
-			<div class="overflow-hidden border card border-surface-700/50 rounded-xl">
-				<div class="flex">
-					<!-- Left side: Votes only -->
-					<div class="flex flex-col items-center w-40 p-6">
-						<div class="text-center">
-							<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
-							<p class="text-sm text-tertiary-300">votes</p>
+			<div class="space-y-4">
+				<div class="p-4 border rounded-lg border-surface-700/50">
+					<div class="space-y-6">
+						<div>
+							<p class="text-3xl font-bold text-tertiary-100">{dashboardMetrics.poolAmount}€</p>
+							<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
 						</div>
-						{#if proposal.state === 'voting'}
-							<button
-								on:click={() => vote(proposal.id)}
-								disabled={$userVotesLeft === 0}
-								class="w-full mt-4 btn variant-ghost-tertiary"
-							>
-								Vote
-							</button>
-						{/if}
-					</div>
-
-					<!-- Middle: Content -->
-					<div class="flex-grow p-6 space-y-6 border-l border-r border-surface-700/50">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
-							>
-								<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
-							</div>
-							<div>
-								<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-								<p class="text-sm text-tertiary-300">by {proposal.author}</p>
-							</div>
+						<div>
+							<p class="text-3xl font-bold text-tertiary-100">{dashboardMetrics.visionCreators}</p>
+							<p class="text-sm text-tertiary-300">Visioncreators Invested</p>
 						</div>
-
-						<div class="space-y-6">
-							<div>
-								<h4 class="font-semibold text-tertiary-200">Commitment</h4>
-								<p class="text-sm text-tertiary-300">{proposal.commitment}</p>
-							</div>
-							<div class="pr-12">
-								<h4 class="font-semibold text-tertiary-200">Description</h4>
-								<p class="text-sm whitespace-pre-line text-tertiary-300">{proposal.description}</p>
-							</div>
-						</div>
-					</div>
-
-					<!-- Right side: Metrics -->
-					<div
-						class="w-[280px] shrink-0 flex flex-col justify-between {getStateBgColor(
-							proposal.state
-						)}"
-					>
-						<div class="p-8 space-y-8">
-							<div class="text-right">
-								<p class="text-2xl font-bold text-tertiary-100">{proposal.requestedAmount}€</p>
-								<p class="text-sm text-tertiary-300">requested</p>
-							</div>
-							<div>
-								<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
-									Expected Results
-								</h4>
-								<p class="text-sm text-right text-tertiary-300">{proposal.expectedResults}</p>
-							</div>
-							<div class="text-right">
-								<h4 class="mb-2 text-sm font-semibold text-tertiary-200">Estimated Delivery</h4>
-								<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
-							</div>
-						</div>
-						<div class="w-full p-2 text-center bg-surface-900/50">
-							<div class="flex items-center justify-center gap-2 {getStateColor(proposal.state)}">
-								<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
-								<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
-							</div>
+						<div>
+							<p class="text-3xl font-bold text-tertiary-100">{dashboardMetrics.monthlyIncome}€</p>
+							<p class="text-sm text-tertiary-300">Monthly Income Stream</p>
 						</div>
 					</div>
 				</div>
 			</div>
-		{/each}
+		</div>
+	</div>
+
+	<!-- Main Content -->
+	<div class="flex-grow w-full overflow-y-auto">
+		<div class="max-w-5xl p-6 mx-auto space-y-8">
+			<div class="grid gap-6">
+				{#each $proposals as proposal}
+					<div class="overflow-hidden border card border-surface-700/50 rounded-xl">
+						<div class="flex">
+							<!-- Left side: Votes -->
+							<div class="flex flex-col items-center w-40 p-6">
+								<div class="text-center">
+									<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
+									<p class="text-sm text-tertiary-300">votes</p>
+								</div>
+								{#if proposal.state === 'voting'}
+									<div class="flex flex-col items-center w-full gap-2 mt-4">
+										<button
+											on:click={() => vote(proposal.id, true)}
+											disabled={$currentUser.votesAvailable <
+												calculateQuadraticCost(
+													$currentUser.proposalVoteCounts.get(proposal.id) || 0
+												)}
+											class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+										>
+											<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
+												<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+											</svg>
+										</button>
+										<span class="text-2xl font-bold text-tertiary-100">
+											{$currentUser.proposalVoteCounts.get(proposal.id) || 0}
+										</span>
+										<button
+											on:click={() => vote(proposal.id, false)}
+											disabled={!$currentUser.proposalVoteCounts.get(proposal.id)}
+											class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+										>
+											<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
+												<path fill="currentColor" d="M19 13H5v-2h14v2z" />
+											</svg>
+										</button>
+										<p class="text-xs text-center text-tertiary-400">
+											Next vote costs: {calculateQuadraticCost(
+												$currentUser.proposalVoteCounts.get(proposal.id) || 0
+											)}
+										</p>
+									</div>
+								{/if}
+							</div>
+
+							<!-- Middle: Content -->
+							<div class="flex-grow p-6 space-y-6 border-l border-r border-surface-700/50">
+								<div class="flex items-center gap-4">
+									<div
+										class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
+									>
+										<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
+									</div>
+									<div>
+										<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+										<p class="text-sm text-tertiary-300">by {proposal.author}</p>
+									</div>
+								</div>
+
+								<div class="space-y-6">
+									<div>
+										<h4 class="font-semibold text-tertiary-200">Commitment</h4>
+										<p class="text-sm text-tertiary-300">{proposal.commitment}</p>
+									</div>
+									<div class="pr-12">
+										<h4 class="font-semibold text-tertiary-200">Description</h4>
+										<p class="text-sm whitespace-pre-line text-tertiary-300">
+											{proposal.description}
+										</p>
+									</div>
+								</div>
+							</div>
+
+							<!-- Right side: Metrics -->
+							<div
+								class="w-[280px] shrink-0 flex flex-col justify-between {getStateBgColor(
+									proposal.state
+								)}"
+							>
+								<div class="p-8 space-y-8">
+									<div class="text-right">
+										<p class="text-2xl font-bold text-tertiary-100">{proposal.requestedAmount}€</p>
+										<p class="text-sm text-tertiary-300">requested</p>
+									</div>
+									<div>
+										<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
+											Expected Results
+										</h4>
+										<p class="text-sm text-right text-tertiary-300">{proposal.expectedResults}</p>
+									</div>
+									<div class="text-right">
+										<h4 class="mb-2 text-sm font-semibold text-tertiary-200">Estimated Delivery</h4>
+										<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
+									</div>
+								</div>
+								<div class="w-full p-2 text-center bg-surface-900/50">
+									<div
+										class="flex items-center justify-center gap-2 {getStateColor(proposal.state)}"
+									>
+										<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
+										<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+
+	<!-- User Sidebar -->
+	<div
+		class="fixed top-0 right-0 h-screen p-6 border-l w-80 border-surface-700/50 bg-surface-800/30"
+	>
+		<div class="space-y-6">
+			<div class="flex items-center gap-4">
+				<div class="flex items-center justify-center w-16 h-16 rounded-full bg-surface-700/50">
+					<Icon icon="mdi:account" class="w-8 h-8 text-tertiary-300" />
+				</div>
+				<div>
+					<h3 class="text-xl font-semibold text-tertiary-100">{$currentUser.name}</h3>
+					<p class="text-sm text-tertiary-300">Visioncreator</p>
+				</div>
+			</div>
+
+			<div class="space-y-4">
+				<div class="p-4 border rounded-lg border-surface-700/50">
+					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Voting Power</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.votesAvailable}</p>
+							<p class="text-xs text-tertiary-300">Available</p>
+						</div>
+						<div>
+							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.votesUsed}</p>
+							<p class="text-xs text-tertiary-300">Used</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="p-4 border rounded-lg border-surface-700/50">
+					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Activity</h4>
+					<div class="grid grid-cols-2 gap-4">
+						<div>
+							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.proposalsVoted.size}</p>
+							<p class="text-xs text-tertiary-300">Proposals Voted</p>
+						</div>
+						<div>
+							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.proposalsCreated}</p>
+							<p class="text-xs text-tertiary-300">Proposals Created</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
-
-{#if showNewProposalModal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-		<div class="w-full max-w-2xl p-6 card bg-surface-800">
-			<h2 class="mb-4 text-xl font-bold text-tertiary-100">Create New Proposal</h2>
-			<div class="grid gap-4">
-				<div>
-					<label class="label">Title</label>
-					<input
-						type="text"
-						bind:value={newProposal.title}
-						class="input bg-surface-900"
-						placeholder="Proposal title"
-					/>
-				</div>
-				<div>
-					<label class="label">Requested Amount (€)</label>
-					<input
-						type="number"
-						bind:value={newProposal.requestedAmount}
-						class="input bg-surface-900"
-						placeholder="Amount in euros (500-1000€)"
-					/>
-				</div>
-				<div>
-					<label class="label">Expected Results</label>
-					<textarea
-						bind:value={newProposal.expectedResults}
-						class="textarea bg-surface-900"
-						placeholder="What measurable results will this achieve? (e.g., +500 signups/month)"
-					/>
-				</div>
-				<div>
-					<label class="label">Description</label>
-					<textarea
-						bind:value={newProposal.description}
-						class="textarea bg-surface-900"
-						placeholder="Describe your proposal in detail"
-					/>
-				</div>
-				<div>
-					<label class="label">Commitment</label>
-					<textarea
-						bind:value={newProposal.commitment}
-						class="textarea bg-surface-900"
-						placeholder="When and under what conditions should the payment be released?"
-					/>
-				</div>
-			</div>
-			<div class="flex justify-end gap-4 mt-6">
-				<button on:click={() => (showNewProposalModal = false)} class="btn variant-ghost-surface">
-					Cancel
-				</button>
-				<button
-					on:click={submitProposal}
-					class="btn bg-gradient-to-br variant-gradient-secondary-primary"
-				>
-					Submit Proposal
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
 
 <style>
 	.card {

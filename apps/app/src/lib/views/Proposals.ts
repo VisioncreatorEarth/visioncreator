@@ -18,8 +18,6 @@ export const view = {
 			areas: `"main"`,
 			rows: '1fr',
 			gap: '0',
-			overflow: 'auto',
-			style: 'max-w-6xl mx-auto'
 		},
 		children: [
 			{
