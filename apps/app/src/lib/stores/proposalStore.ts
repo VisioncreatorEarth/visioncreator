@@ -635,18 +635,18 @@ export function adjustVisionCreators(increment: boolean): void {
 // UI Helper Functions
 export function getStateColor(state: ProposalState): string {
     switch (state) {
+        case 'idea':
+            return 'text-surface-200';
         case 'proposal':
-            return 'text-tertiary-300';
+            return 'text-blue-300';
         case 'pending_approval':
-            return 'text-warning-400';
+            return 'text-tertiary-500';
         case 'doing':
             return 'text-primary-400';
         case 'pending_payout':
             return 'text-secondary-400';
         case 'done':
             return 'text-success-400';
-        case 'idea':
-            return 'text-tertiary-300';
         default:
             return 'text-tertiary-300';
     }
@@ -692,18 +692,18 @@ export function getStateLabel(state: ProposalState): string {
 
 export function getStateBgColor(state: ProposalState): string {
     switch (state) {
+        case 'idea':
+            return 'bg-surface-600/20';
         case 'proposal':
-            return 'bg-tertiary-500/10';
+            return 'bg-blue-900/20';
         case 'pending_approval':
-            return 'bg-warning-900/20';
+            return 'bg-tertiary-300/10';
         case 'doing':
             return 'bg-primary-900/20';
         case 'pending_payout':
             return 'bg-secondary-900/20';
         case 'done':
             return 'bg-success-900/20';
-        case 'idea':
-            return 'bg-tertiary-500/10';
         default:
             return 'bg-tertiary-500/10';
     }
