@@ -493,16 +493,10 @@ HOW THIS SYSTEM WORKS:
 	// Calculate vote threshold (increase to 10%)
 	$: voteThreshold = Math.ceil($poolMetrics.totalActiveVotes * 0.1);
 
-	// Update filtered and sorted proposals to handle ideas separately
+	// Update filtered and sorted proposals to only sort by votes
 	$: filteredAndSortedProposals = $proposals
 		.filter((p) => p.state === activeFilter)
-		.sort((a, b) => {
-			// First by expanded state
-			if (a.id === expandedProposalId) return -1;
-			if (b.id === expandedProposalId) return 1;
-			// Then by votes
-			return b.votes - a.votes;
-		});
+		.sort((a, b) => b.votes - a.votes);
 
 	// Watch for state transitions including idea threshold
 	$: {
@@ -531,10 +525,17 @@ HOW THIS SYSTEM WORKS:
 		expandedProposalId = expandedProposalId === id ? null : id;
 		// Add smooth scrolling when proposal is expanded
 		if (expandedProposalId) {
-			const element = document.getElementById(`proposal-${id}`);
-			if (element) {
-				element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			}
+			setTimeout(() => {
+				const element = document.getElementById(`proposal-${id}`);
+				const tabsHeight = document.getElementById('proposal-tabs')?.offsetHeight || 0;
+				if (element) {
+					const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+					window.scrollTo({
+						top: elementTop - tabsHeight - 16, // 16px for some padding
+						behavior: 'smooth'
+					});
+				}
+			}, 0);
 		}
 	}
 
@@ -660,11 +661,17 @@ HOW THIS SYSTEM WORKS:
 	function resetProposal(proposalId: string): void {
 		$proposals = $proposals.map((p) => {
 			if (p.id === proposalId) {
-				// Return votes to user
+				// Return all votes to user
 				const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
 				$currentUser.tokens += userVotes;
 				$currentUser.proposalsVoted.delete(proposalId);
-				return { ...p, votes: p.votes - userVotes, state: 'proposal' as ProposalState };
+
+				// Reset proposal to initial state
+				return {
+					...p,
+					votes: 0,
+					state: 'idea' as ProposalState
+				};
 			}
 			return p;
 		});
@@ -773,9 +780,12 @@ HOW THIS SYSTEM WORKS:
 	<!-- Main Content -->
 	<div class="flex-grow w-full overflow-y-auto">
 		<div class="w-full">
-			<div class="max-w-5xl px-6 mx-auto">
+			<div class="relative max-w-5xl px-6 mx-auto">
 				<!-- Tabs Bar -->
-				<div class="sticky top-0 z-10 flex gap-2 py-4 bg-surface-900/95 backdrop-blur-sm">
+				<div
+					id="proposal-tabs"
+					class="sticky top-0 z-10 flex w-full gap-2 py-4 bg-surface-900/95 backdrop-blur-sm"
+				>
 					{#each PROPOSAL_STATES as state}
 						<button class={getTabClasses(state)} on:click={() => (activeFilter = state)}>
 							<div class="flex items-center gap-2">
@@ -786,6 +796,7 @@ HOW THIS SYSTEM WORKS:
 					{/each}
 				</div>
 
+				<!-- Proposals List -->
 				<div class="grid gap-6 py-6">
 					{#each filteredAndSortedProposals as proposal}
 						<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
@@ -838,7 +849,11 @@ HOW THIS SYSTEM WORKS:
 										{#if proposal.state === 'proposal'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
+													{Math.round(
+														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+															proposal.budgetRequested) *
+															100
+													)}%
 												</p>
 												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 													<div
@@ -853,18 +868,14 @@ HOW THIS SYSTEM WORKS:
 														)}%"
 													/>
 												</div>
-												<p class="text-sm font-medium text-tertiary-300">
-													{Math.round(
-														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-															proposal.budgetRequested) *
-															100
-													)}% funded
+												<p class="text-sm text-tertiary-300">
+													{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
 												</p>
 											</div>
 										{:else if proposal.state === 'idea'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{proposal.votes} / {voteThreshold}
+													{Math.round((proposal.votes / voteThreshold) * 100)}%
 												</p>
 												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 													<div
@@ -875,8 +886,8 @@ HOW THIS SYSTEM WORKS:
 														)}%"
 													/>
 												</div>
-												<p class="text-sm font-medium text-tertiary-300">
-													{voteThreshold - proposal.votes} more votes needed
+												<p class="text-sm text-tertiary-300">
+													{proposal.votes} / {voteThreshold} votes
 												</p>
 											</div>
 										{:else}
