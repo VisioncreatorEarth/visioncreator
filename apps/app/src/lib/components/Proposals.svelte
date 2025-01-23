@@ -463,6 +463,31 @@ HOW THIS SYSTEM WORKS:
 						</div>
 					</div>
 				</div>
+
+				{#if $currentUser.proposalsVoted.size > 0}
+					<div class="p-4 border rounded-lg border-surface-700/50">
+						<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Voted Proposals</h4>
+						<div class="space-y-2">
+							{#each Array.from($currentUser.proposalsVoted.entries()) as [proposalId, votes]}
+								{#if votes > 0}
+									{@const proposal = $proposals.find((p) => p.id === proposalId)}
+									{#if proposal}
+										<div
+											class="flex items-center justify-between gap-2 p-2 rounded-lg {getStateBgColor(
+												proposal.state
+											)}"
+										>
+											<p class="text-sm text-tertiary-300">{proposal.title}</p>
+											<span class="text-sm font-medium {getStateColor(proposal.state)}">
+												{votes}/{proposal.votes}
+											</span>
+										</div>
+									{/if}
+								{/if}
+							{/each}
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>
