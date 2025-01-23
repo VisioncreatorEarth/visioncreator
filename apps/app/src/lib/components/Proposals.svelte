@@ -249,7 +249,7 @@ HOW THIS SYSTEM WORKS:
 				'Including comprehensive documentation and onboarding materials.',
 			state: 'proposal',
 			estimatedDelivery: '4 weeks',
-			budgetRequested: 1800
+			budgetRequested: 500
 		},
 		{
 			id: '8',
@@ -517,42 +517,70 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
+	// Helper function to center proposal in view
+	function centerProposalInView(proposalId: string) {
+		const element = document.getElementById(`proposal-${proposalId}`);
+		const tabsHeight = document.getElementById('proposal-tabs')?.offsetHeight || 0;
+		if (element) {
+			const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+			const windowHeight = window.innerHeight;
+			const elementHeight = element.offsetHeight;
+			const targetScroll = elementTop - tabsHeight - (windowHeight - elementHeight) / 2;
+			window.scrollTo({
+				top: targetScroll,
+				behavior: 'smooth'
+			});
+		}
+	}
+
+	// Watch for any changes that might affect proposal position
+	$: {
+		if (expandedProposalId) {
+			requestAnimationFrame(() => {
+				centerProposalInView(expandedProposalId as string);
+			});
+		}
+	}
+
 	// Replace expanded state tracking
 	let expandedProposalId: string | null = null;
 	let activeFilter: ProposalState = 'proposal';
 
 	function toggleProposal(id: string) {
 		expandedProposalId = expandedProposalId === id ? null : id;
-		// Add smooth scrolling when proposal is expanded
 		if (expandedProposalId) {
-			setTimeout(() => {
-				const element = document.getElementById(`proposal-${id}`);
-				const tabsHeight = document.getElementById('proposal-tabs')?.offsetHeight || 0;
-				if (element) {
-					const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
-					window.scrollTo({
-						top: elementTop - tabsHeight - 16, // 16px for some padding
-						behavior: 'smooth'
-					});
-				}
-			}, 0);
+			requestAnimationFrame(() => {
+				centerProposalInView(expandedProposalId as string);
+			});
 		}
 	}
 
-	// Update voting function to handle increment/decrement
+	// Calculate quadratic cost for next vote
+	function getNextVoteCost(currentVotes: number): number {
+		return (currentVotes + 1) * (currentVotes + 1) - currentVotes * currentVotes;
+	}
+
+	// Update voting function to handle quadratic voting
 	function vote(proposalId: string, isIncrease: boolean): void {
 		const proposal = $proposals.find((p) => p.id === proposalId);
 		if (!proposal) return;
 
-		if (isIncrease && $currentUser.tokens > 0) {
-			$currentUser.tokens -= 1;
+		if (isIncrease) {
 			const currentVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
-			$currentUser.proposalsVoted.set(proposalId, currentVotes + 1);
-			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes + 1 } : p));
-		} else if (!isIncrease && proposal.votes > 0) {
+			const nextVoteCost = getNextVoteCost(currentVotes);
+
+			if ($currentUser.tokens >= nextVoteCost) {
+				$currentUser.tokens -= nextVoteCost;
+				$currentUser.proposalsVoted.set(proposalId, currentVotes + 1);
+				$proposals = $proposals.map((p) =>
+					p.id === proposalId ? { ...p, votes: p.votes + 1 } : p
+				);
+			}
+		} else {
 			const currentVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
 			if (currentVotes > 0) {
-				$currentUser.tokens += 1;
+				const refundAmount = getNextVoteCost(currentVotes - 1);
+				$currentUser.tokens += refundAmount;
 				$currentUser.proposalsVoted.set(proposalId, currentVotes - 1);
 				$proposals = $proposals.map((p) =>
 					p.id === proposalId ? { ...p, votes: p.votes - 1 } : p
@@ -909,16 +937,19 @@ HOW THIS SYSTEM WORKS:
 											<div class="flex flex-col items-center w-full gap-2">
 												<button
 													on:click|stopPropagation={() => vote(proposal.id, true)}
-													disabled={$currentUser.tokens < 1}
+													disabled={$currentUser.tokens <
+														getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
 													class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 												>
 													<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
 														<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 													</svg>
 												</button>
-												<span class="text-2xl font-bold text-tertiary-100">
-													{$currentUser.proposalsVoted.get(proposal.id) || 0}
-												</span>
+												<div class="flex flex-col items-center">
+													<span class="text-2xl font-bold text-tertiary-100">
+														{$currentUser.proposalsVoted.get(proposal.id) || 0}
+													</span>
+												</div>
 												<button
 													on:click|stopPropagation={() => vote(proposal.id, false)}
 													disabled={($currentUser.proposalsVoted.get(proposal.id) || 0) === 0}
@@ -928,6 +959,15 @@ HOW THIS SYSTEM WORKS:
 														<path fill="currentColor" d="M19 13H5v-2h14v2z" />
 													</svg>
 												</button>
+												{#if $currentUser.tokens >= getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
+													<div class="flex flex-col items-center text-center">
+														<span class="text-xs text-tertiary-300">next vote</span>
+														<span class="text-xs text-tertiary-300"
+															>+{getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
+															tokens</span
+														>
+													</div>
+												{/if}
 											</div>
 										{:else if proposal.state === 'pending_approval' || proposal.state === 'doing' || proposal.state === 'pending_payout' || proposal.state === 'done'}
 											<button
@@ -1011,17 +1051,7 @@ HOW THIS SYSTEM WORKS:
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.tokens}</p>
-							<p class="text-xs text-tertiary-300">Available</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="p-4 border rounded-lg border-surface-700/50">
-					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Activity</h4>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.proposalsVoted.size}</p>
-							<p class="text-xs text-tertiary-300">Proposals Voted</p>
+							<p class="text-xs text-tertiary-300">Tokens Available</p>
 						</div>
 					</div>
 				</div>
