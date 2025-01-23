@@ -70,6 +70,11 @@ HOW THIS SYSTEM WORKS:
 		.filter((p) => p.state === $activeTab)
 		.sort((a, b) => b.votes - a.votes);
 
+	// Reset expanded view when tab changes
+	$: if ($activeTab) {
+		expandedProposalId = null;
+	}
+
 	// Calculate vote threshold (10%)
 	$: voteThreshold = Math.ceil($poolMetrics.totalActiveVotes * IDEA_VOTE_THRESHOLD_PERCENTAGE);
 
@@ -221,7 +226,10 @@ HOW THIS SYSTEM WORKS:
 					{#each PROPOSAL_STATES as state}
 						<button
 							class={getTabClasses(state)}
-							on:click={() => setActiveTab(state)}
+							on:click={() => {
+								expandedProposalId = null;
+								setActiveTab(state);
+							}}
 							aria-selected={$activeTab === state}
 						>
 							<div class="flex items-center gap-2">
@@ -588,11 +596,27 @@ HOW THIS SYSTEM WORKS:
 									{@const proposal = $proposals.find((p) => p.id === proposalId)}
 									{#if proposal}
 										<div
-											class="flex items-center justify-between gap-2 p-2 rounded-lg {getStateBgColor(
+											class="flex items-center justify-between gap-2 p-2 rounded-lg cursor-pointer hover:bg-surface-800/50 {getStateBgColor(
 												proposal.state
 											)}"
+											on:click={() => {
+												setActiveTab(proposal.state);
+												// Ensure we set expandedProposalId after the tab change
+												setTimeout(() => {
+													expandedProposalId = proposal.id;
+													requestAnimationFrame(() => {
+														centerProposalInView(proposal.id);
+													});
+												}, 0);
+											}}
 										>
-											<p class="text-sm text-tertiary-300">{proposal.title}</p>
+											<div class="flex items-center gap-2">
+												<Icon
+													icon={getStateIcon(proposal.state)}
+													class="w-4 h-4 {getStateColor(proposal.state)}"
+												/>
+												<p class="text-sm text-tertiary-300">{proposal.title}</p>
+											</div>
 											<span class="text-sm font-medium {getStateColor(proposal.state)}">
 												{#if proposal.state === 'proposal'}
 													{Math.round(
