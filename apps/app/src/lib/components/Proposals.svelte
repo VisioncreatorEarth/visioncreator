@@ -3,33 +3,43 @@ HOW THIS SYSTEM WORKS:
 
 1. Overview:
    This is a community-driven proposal and voting system where members can:
+   - Submit and vote on ideas (initial stage)
+   - Convert ideas to proposals once they reach 10% vote threshold
    - Vote on proposals using tokens
    - Track proposal progress
    - Move proposals through different states
    - Manage budget allocations
 
-2. Budget System:
-   - There's a main "Community Contribution Pool" calculated from number of VisionCreators
-   - This pool is divided into three parts:
-     * Voting Pool: Available for active voting proposals
-     * Locked Pool: For proposals in progress
-     * Delivered Pool: For completed proposals
+2. Voting Process:
+   Stage 1 - Ideas:
+   - Community members can submit and vote on ideas
+   - Ideas need to reach 10% of total active votes to become proposals
+   - Ideas don't have budget allocations
+   - Voting on ideas uses the same tokens as proposals
 
-3. Voting Process:
+   Stage 2 - Proposals:
    - Each user has tokens they can use to vote
    - More votes = larger share of the voting pool
    - When voting on a proposal:
      * Adding a vote increases the proposal's budget allocation
      * Removing a vote decreases the allocation
      * Budget is automatically distributed based on vote percentages
-     * If a proposal gets more budget than requested, excess is redistributed to other proposals
+     * If a proposal gets more budget than requested, excess is redistributed
 
-4. Proposal States:
-   - Voting: Open for community votes
+3. Proposal States:
+   - Idea: Initial stage, needs 10% votes to advance
+   - Proposal: Open for community votes and budget allocation
    - Pending Approval: Reached requested budget, waiting for review
    - In Progress: Work has started
    - Review: Work completed, waiting for verification
    - Completed: Fully delivered and paid
+
+4. Budget System:
+   - There's a main "Community Contribution Pool" calculated from number of VisionCreators
+   - This pool is divided into three parts:
+     * Voting Pool: Available for active voting proposals
+     * Locked Pool: For proposals in progress
+     * Delivered Pool: For completed proposals
 
 5. Budget Allocation Rules:
    - Each proposal has a fixed requested budget
@@ -38,12 +48,14 @@ HOW THIS SYSTEM WORKS:
    - Once a proposal reaches its requested budget, it moves to "Pending Approval"
 
 6. State Transitions:
-   - Automatic: Voting → Pending Approval (when budget reached)
+   - Automatic: 
+     * Idea → Proposal (when 10% vote threshold reached)
+     * Proposal → Pending Approval (when budget reached)
    - Manual: Through state cycle button for other states
    - Cycle: In Progress → Review → Completed
 
 7. Visual Feedback:
-   - Progress bars show % of requested budget
+   - Progress bars show % of requested budget or votes needed
    - Color coding for different states
    - Real-time updates of budget allocations
    - Clear indicators for voting power and proposal status
@@ -54,10 +66,17 @@ HOW THIS SYSTEM WORKS:
 	import type { Writable } from 'svelte/store';
 	import Icon from '@iconify/svelte';
 
-	type ProposalState = 'voting' | 'pending_approval' | 'doing' | 'pending_payout' | 'done';
+	type ProposalState =
+		| 'idea'
+		| 'proposal'
+		| 'pending_approval'
+		| 'doing'
+		| 'pending_payout'
+		| 'done';
 
 	const PROPOSAL_STATES: ProposalState[] = [
-		'voting',
+		'idea',
+		'proposal',
 		'pending_approval',
 		'doing',
 		'pending_payout',
@@ -81,14 +100,14 @@ HOW THIS SYSTEM WORKS:
 		id: string;
 		name: string;
 		tokens: number;
-		proposalsVoted: Set<string>;
+		proposalsVoted: Map<string, number>;
 	}
 
 	const currentUser: Writable<UserProfile> = writable({
 		id: '1',
 		name: 'Samuel Andert',
 		tokens: 25,
-		proposalsVoted: new Set()
+		proposalsVoted: new Map()
 	});
 
 	const proposals: Writable<Proposal[]> = writable([
@@ -129,7 +148,7 @@ HOW THIS SYSTEM WORKS:
 				'• Professional video coverage\n' +
 				'• Dedicated networking sessions\n\n' +
 				'Post-event: Follow-up networking, resource sharing, and community building initiatives.',
-			state: 'voting',
+			state: 'proposal',
 			estimatedDelivery: '2 weeks',
 			budgetRequested: 1200
 		},
@@ -188,7 +207,7 @@ HOW THIS SYSTEM WORKS:
 				'• Platform-specific content templates\n' +
 				'• Analytics baseline and tracking setup\n\n' +
 				'Including A/B testing of different messaging approaches.',
-			state: 'voting',
+			state: 'proposal',
 			estimatedDelivery: '1 week',
 			budgetRequested: 600
 		},
@@ -208,7 +227,7 @@ HOW THIS SYSTEM WORKS:
 				'• Referral analytics dashboard\n' +
 				'• Integration with existing user system\n\n' +
 				'Focus on sustainable growth and quality referrals.',
-			state: 'voting',
+			state: 'proposal',
 			estimatedDelivery: '3 weeks',
 			budgetRequested: 1400
 		},
@@ -228,7 +247,7 @@ HOW THIS SYSTEM WORKS:
 				'• Transparent tracking system\n' +
 				'• Community feedback loops\n\n' +
 				'Including comprehensive documentation and onboarding materials.',
-			state: 'voting',
+			state: 'proposal',
 			estimatedDelivery: '4 weeks',
 			budgetRequested: 1800
 		},
@@ -248,9 +267,109 @@ HOW THIS SYSTEM WORKS:
 				'• Video guidelines and templates\n' +
 				'• Quality control mechanisms\n\n' +
 				'Including creator guidelines and best practices documentation.',
-			state: 'voting',
+			state: 'proposal',
 			estimatedDelivery: '2 weeks',
 			budgetRequested: 900
+		},
+		{
+			id: '10',
+			title: 'Community Newsletter System',
+			author: 'Rachel Kim',
+			votes: 2,
+			expectedResults: 'Increased community engagement and awareness',
+			commitment: 'Weekly newsletter delivery with community highlights',
+			description:
+				'Weekly newsletter system to keep the community informed.\n\n' +
+				'Features:\n' +
+				'• Automated content aggregation\n' +
+				'• Community contribution highlights\n' +
+				'• Project updates and milestones\n' +
+				'• Upcoming events calendar\n' +
+				'• Member spotlights\n\n' +
+				'Focus on celebrating community achievements and fostering engagement.',
+			state: 'idea',
+			estimatedDelivery: '1 week',
+			budgetRequested: 400
+		},
+		{
+			id: '11',
+			title: 'Community Mentorship Program',
+			author: 'David Park',
+			votes: 1,
+			expectedResults: 'Knowledge sharing and skill development within community',
+			commitment: 'Monthly mentorship sessions and progress tracking',
+			description:
+				'Structured mentorship program connecting experienced members with newcomers.\n\n' +
+				'Program Components:\n' +
+				'• Mentor-mentee matching system\n' +
+				'• Goal setting framework\n' +
+				'• Progress tracking tools\n' +
+				'• Resource sharing platform\n' +
+				'• Success story showcase\n\n' +
+				'Building stronger connections through knowledge sharing.',
+			state: 'idea',
+			estimatedDelivery: '2 weeks',
+			budgetRequested: 600
+		},
+		{
+			id: '12',
+			title: 'Community Hackathon Event',
+			author: 'Lisa Wang',
+			votes: 3,
+			expectedResults: 'Innovation boost and new project initiatives',
+			commitment: 'Weekend-long event with prizes and showcases',
+			description:
+				'48-hour hackathon focused on community improvements.\n\n' +
+				'Event Structure:\n' +
+				'• Team formation support\n' +
+				'• Project idea workshops\n' +
+				'• Mentorship sessions\n' +
+				'• Demo presentations\n' +
+				'• Prize categories\n\n' +
+				'Fostering innovation and collaboration within the community.',
+			state: 'idea',
+			estimatedDelivery: '3 weeks',
+			budgetRequested: 1200
+		},
+		{
+			id: '13',
+			title: 'Community Podcast Series',
+			author: 'Michael Chen',
+			votes: 1,
+			expectedResults: 'Broader reach and deeper community insights',
+			commitment: 'Bi-weekly episodes featuring community members',
+			description:
+				'Regular podcast highlighting community stories and insights.\n\n' +
+				'Content Focus:\n' +
+				'• Member success stories\n' +
+				'• Project deep dives\n' +
+				'• Industry trends\n' +
+				'• Community updates\n' +
+				'• Guest interviews\n\n' +
+				'Sharing our community story with the world.',
+			state: 'idea',
+			estimatedDelivery: '2 weeks',
+			budgetRequested: 800
+		},
+		{
+			id: '14',
+			title: 'Community Learning Hub',
+			author: 'Sarah Johnson',
+			votes: 2,
+			expectedResults: 'Centralized knowledge sharing and skill development',
+			commitment: 'Launch with 10 initial courses and weekly updates',
+			description:
+				'Online learning platform for community skill sharing.\n\n' +
+				'Platform Features:\n' +
+				'• Course creation tools\n' +
+				'• Interactive workshops\n' +
+				'• Resource library\n' +
+				'• Progress tracking\n' +
+				'• Certification system\n\n' +
+				'Empowering community growth through education.',
+			state: 'idea',
+			estimatedDelivery: '4 weeks',
+			budgetRequested: 1500
 		}
 	]);
 
@@ -269,13 +388,13 @@ HOW THIS SYSTEM WORKS:
 
 	// Remove the fixed state values function as we'll use budgetRequested instead
 	function getFixedStateValue(state: ProposalState, budgetRequested: number): number {
-		if (state === 'voting') return 0;
+		if (state === 'proposal') return 0;
 		return budgetRequested;
 	}
 
 	// Calculate dynamic prices for voting proposals with redistribution
 	function calculateVotingValues(proposals: Proposal[], votingPool: number): Map<string, number> {
-		const votingProposals = proposals.filter((p) => p.state === 'voting');
+		const votingProposals = proposals.filter((p) => p.state === 'proposal');
 		const totalVotes = votingProposals.reduce((sum, p) => sum + p.votes, 0);
 		if (totalVotes === 0) return new Map(votingProposals.map((p) => [p.id, 0]));
 
@@ -346,7 +465,7 @@ HOW THIS SYSTEM WORKS:
 		const voting = Math.max(0, total - locked);
 
 		const totalActiveVotes = $proposals
-			.filter((p) => p.state === 'voting')
+			.filter((p) => p.state === 'proposal')
 			.reduce((sum, p) => sum + p.votes, 0);
 
 		return {
@@ -365,18 +484,34 @@ HOW THIS SYSTEM WORKS:
 		return $proposals.map((proposal) => ({
 			id: proposal.id,
 			value:
-				proposal.state === 'voting'
+				proposal.state === 'proposal'
 					? votingValues.get(proposal.id) || 0
 					: getFixedStateValue(proposal.state, proposal.budgetRequested)
 		}));
 	});
 
-	// Watch for state transitions
+	// Calculate vote threshold (increase to 10%)
+	$: voteThreshold = Math.ceil($poolMetrics.totalActiveVotes * 0.1);
+
+	// Update filtered and sorted proposals to handle ideas separately
+	$: filteredAndSortedProposals = $proposals
+		.filter((p) => p.state === activeFilter)
+		.sort((a, b) => {
+			// First by expanded state
+			if (a.id === expandedProposalId) return -1;
+			if (b.id === expandedProposalId) return 1;
+			// Then by votes
+			return b.votes - a.votes;
+		});
+
+	// Watch for state transitions including idea threshold
 	$: {
 		const updatedProposals = $proposals.map((p) => {
-			if (p.state === 'voting') {
-				const value = $proposalValues.find((v) => v.id === p.id)?.value || 0;
-				if (value >= p.budgetRequested) {
+			if (p.state === 'idea' && p.votes >= voteThreshold) {
+				return { ...p, state: 'proposal' as ProposalState };
+			} else if (p.state === 'proposal') {
+				const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
+				if (proposalValue >= p.budgetRequested) {
 					return { ...p, state: 'pending_approval' as ProposalState };
 				}
 			}
@@ -390,18 +525,17 @@ HOW THIS SYSTEM WORKS:
 
 	// Replace expanded state tracking
 	let expandedProposalId: string | null = null;
-	let activeFilter: ProposalState = 'voting';
-
-	$: filteredAndSortedProposals = $proposals
-		.filter((p) => p.state === activeFilter)
-		.sort((a, b) => {
-			if (a.id === expandedProposalId) return -1;
-			if (b.id === expandedProposalId) return 1;
-			return b.votes - a.votes;
-		});
+	let activeFilter: ProposalState = 'proposal';
 
 	function toggleProposal(id: string) {
 		expandedProposalId = expandedProposalId === id ? null : id;
+		// Add smooth scrolling when proposal is expanded
+		if (expandedProposalId) {
+			const element = document.getElementById(`proposal-${id}`);
+			if (element) {
+				element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+		}
 	}
 
 	// Update voting function to handle increment/decrement
@@ -411,10 +545,18 @@ HOW THIS SYSTEM WORKS:
 
 		if (isIncrease && $currentUser.tokens > 0) {
 			$currentUser.tokens -= 1;
+			const currentVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
+			$currentUser.proposalsVoted.set(proposalId, currentVotes + 1);
 			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes + 1 } : p));
 		} else if (!isIncrease && proposal.votes > 0) {
-			$currentUser.tokens += 1;
-			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes - 1 } : p));
+			const currentVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
+			if (currentVotes > 0) {
+				$currentUser.tokens += 1;
+				$currentUser.proposalsVoted.set(proposalId, currentVotes - 1);
+				$proposals = $proposals.map((p) =>
+					p.id === proposalId ? { ...p, votes: p.votes - 1 } : p
+				);
+			}
 		}
 	}
 
@@ -429,7 +571,7 @@ HOW THIS SYSTEM WORKS:
 	function cycleProposalState(proposalId: string): void {
 		const states: ProposalState[] = ['doing', 'pending_payout', 'done'];
 		$proposals = $proposals.map((p) => {
-			if (p.id === proposalId && p.state !== 'voting') {
+			if (p.id === proposalId && p.state !== 'proposal') {
 				const currentIndex = states.indexOf(p.state);
 				const nextIndex = (currentIndex + 1) % states.length;
 				return { ...p, state: states[nextIndex] };
@@ -441,7 +583,7 @@ HOW THIS SYSTEM WORKS:
 	// Update state styling functions
 	function getStateColor(state: ProposalState): string {
 		switch (state) {
-			case 'voting':
+			case 'proposal':
 				return 'text-tertiary-300';
 			case 'pending_approval':
 				return 'text-secondary-400';
@@ -451,6 +593,8 @@ HOW THIS SYSTEM WORKS:
 				return 'text-warning-400';
 			case 'done':
 				return 'text-success-400';
+			case 'idea':
+				return 'text-tertiary-300';
 			default:
 				return 'text-tertiary-300';
 		}
@@ -458,7 +602,7 @@ HOW THIS SYSTEM WORKS:
 
 	function getStateIcon(state: ProposalState): string {
 		switch (state) {
-			case 'voting':
+			case 'proposal':
 				return 'mdi:vote';
 			case 'pending_approval':
 				return 'mdi:clock-check';
@@ -468,6 +612,8 @@ HOW THIS SYSTEM WORKS:
 				return 'mdi:cash-clock';
 			case 'done':
 				return 'mdi:check-circle';
+			case 'idea':
+				return 'mdi:lightbulb';
 			default:
 				return 'mdi:help-circle';
 		}
@@ -475,8 +621,8 @@ HOW THIS SYSTEM WORKS:
 
 	function getStateLabel(state: ProposalState): string {
 		switch (state) {
-			case 'voting':
-				return 'Voting';
+			case 'proposal':
+				return 'Proposal';
 			case 'pending_approval':
 				return 'Pending Approval';
 			case 'doing':
@@ -485,6 +631,8 @@ HOW THIS SYSTEM WORKS:
 				return 'Review';
 			case 'done':
 				return 'Completed';
+			case 'idea':
+				return 'Idea';
 			default:
 				return 'Unknown';
 		}
@@ -492,7 +640,7 @@ HOW THIS SYSTEM WORKS:
 
 	function getStateBgColor(state: ProposalState): string {
 		switch (state) {
-			case 'voting':
+			case 'proposal':
 				return 'bg-surface-700/30';
 			case 'pending_approval':
 				return 'bg-secondary-900/20';
@@ -502,6 +650,8 @@ HOW THIS SYSTEM WORKS:
 				return 'bg-warning-900/20';
 			case 'done':
 				return 'bg-success-900/20';
+			case 'idea':
+				return 'bg-tertiary-900/20';
 			default:
 				return 'bg-surface-700/30';
 		}
@@ -511,8 +661,10 @@ HOW THIS SYSTEM WORKS:
 		$proposals = $proposals.map((p) => {
 			if (p.id === proposalId) {
 				// Return votes to user
-				$currentUser.tokens += p.votes;
-				return { ...p, votes: 0, state: 'voting' as ProposalState };
+				const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
+				$currentUser.tokens += userVotes;
+				$currentUser.proposalsVoted.delete(proposalId);
+				return { ...p, votes: p.votes - userVotes, state: 'proposal' as ProposalState };
 			}
 			return p;
 		});
@@ -555,7 +707,7 @@ HOW THIS SYSTEM WORKS:
 
 			<div class="space-y-4">
 				<div class="p-4 border rounded-lg border-surface-700/50">
-					<div class="space-y-6">
+					<div class="space-y-4">
 						<div>
 							<p class="text-3xl font-bold text-tertiary-100">
 								{$poolMetrics.totalContributionPool}€
@@ -563,32 +715,32 @@ HOW THIS SYSTEM WORKS:
 							<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
 						</div>
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">
+							<p class="text-lg font-bold text-tertiary-100">
 								{$poolMetrics.votingPool}€
 							</p>
-							<p class="text-sm text-tertiary-300">Voting Pool</p>
+							<p class="text-sm text-tertiary-300">Available in Voting Pool</p>
 						</div>
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">
+							<p class="text-lg font-bold text-tertiary-100">
 								{$poolMetrics.lockedPool}€
 							</p>
 							<p class="text-sm text-tertiary-300">Locked Pool</p>
 						</div>
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">
+							<p class="text-lg font-bold text-tertiary-100">
 								{$poolMetrics.deliveredPool}€
 							</p>
 							<p class="text-sm text-tertiary-300">Delivered</p>
 						</div>
 						<div>
-							<p class="text-3xl font-bold text-tertiary-100">
+							<p class="text-lg font-bold text-tertiary-100">
 								{$poolMetrics.totalActiveVotes}
 							</p>
 							<p class="text-sm text-tertiary-300">Total Active Votes</p>
 						</div>
 						<div class="flex items-center justify-between">
 							<div>
-								<p class="text-3xl font-bold text-tertiary-100">
+								<p class="text-lg font-bold text-tertiary-100">
 									{$dashboardMetrics.visionCreators}
 								</p>
 								<p class="text-sm text-tertiary-300">Visioncreators Invested</p>
@@ -636,7 +788,7 @@ HOW THIS SYSTEM WORKS:
 
 				<div class="grid gap-6 py-6">
 					{#each filteredAndSortedProposals as proposal}
-						<div class={getProposalCardClasses(proposal)}>
+						<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
 							<!-- Collapsed Header (always visible) -->
 							<div
 								class="flex items-center cursor-pointer hover:bg-surface-800/50"
@@ -683,7 +835,7 @@ HOW THIS SYSTEM WORKS:
 										</div>
 									</div>
 									<div class="text-right">
-										{#if proposal.state === 'voting'}
+										{#if proposal.state === 'proposal'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
 													{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
@@ -709,6 +861,24 @@ HOW THIS SYSTEM WORKS:
 													)}% funded
 												</p>
 											</div>
+										{:else if proposal.state === 'idea'}
+											<div class="flex flex-col items-end gap-1">
+												<p class="text-2xl font-bold text-tertiary-100">
+													{proposal.votes} / {voteThreshold}
+												</p>
+												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+													<div
+														class="h-full transition-all duration-300 bg-tertiary-500"
+														style="width: {Math.min(
+															100,
+															Math.round((proposal.votes / voteThreshold) * 100)
+														)}%"
+													/>
+												</div>
+												<p class="text-sm font-medium text-tertiary-300">
+													{voteThreshold - proposal.votes} more votes needed
+												</p>
+											</div>
 										{:else}
 											<p class="text-2xl font-bold text-tertiary-100">
 												{proposal.budgetRequested}€
@@ -724,7 +894,7 @@ HOW THIS SYSTEM WORKS:
 								<div class="flex border-t border-surface-700/50">
 									<!-- Left side: Voting Controls -->
 									<div class="flex flex-col items-center w-40 p-6">
-										{#if proposal.state === 'voting'}
+										{#if proposal.state === 'proposal' || proposal.state === 'idea'}
 											<div class="flex flex-col items-center w-full gap-2">
 												<button
 													on:click|stopPropagation={() => vote(proposal.id, true)}
@@ -736,11 +906,11 @@ HOW THIS SYSTEM WORKS:
 													</svg>
 												</button>
 												<span class="text-2xl font-bold text-tertiary-100">
-													{proposal.votes}
+													{$currentUser.proposalsVoted.get(proposal.id) || 0}
 												</span>
 												<button
 													on:click|stopPropagation={() => vote(proposal.id, false)}
-													disabled={proposal.votes === 0}
+													disabled={($currentUser.proposalsVoted.get(proposal.id) || 0) === 0}
 													class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 												>
 													<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
@@ -761,23 +931,27 @@ HOW THIS SYSTEM WORKS:
 
 									<!-- Middle: Content -->
 									<div class="flex-grow p-6 space-y-6 border-l border-r border-surface-700/50">
-										<div class="space-y-6">
-											<div>
-												<h4 class="font-semibold text-tertiary-200">Commitment</h4>
-												<p class="text-sm text-tertiary-300">{proposal.commitment}</p>
-											</div>
-											<div class="pr-12">
-												<h4 class="font-semibold text-tertiary-200">Description</h4>
-												<p class="text-sm whitespace-pre-line text-tertiary-300">
-													{proposal.description}
-												</p>
-											</div>
+										<div class="pr-12">
+											<h4 class="font-semibold text-tertiary-200">Description</h4>
+											<p class="text-sm whitespace-pre-line text-tertiary-300">
+												{proposal.description}
+											</p>
 										</div>
 									</div>
 
 									<!-- Right side: Metrics -->
 									<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)}">
 										<div class="p-8 space-y-8">
+											{#if proposal.state !== 'idea'}
+												<div>
+													<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
+														Commitment
+													</h4>
+													<p class="text-sm text-right text-tertiary-300">
+														{proposal.commitment}
+													</p>
+												</div>
+											{/if}
 											<div>
 												<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
 													Expected Results
@@ -786,12 +960,14 @@ HOW THIS SYSTEM WORKS:
 													{proposal.expectedResults}
 												</p>
 											</div>
-											<div class="text-right">
-												<h4 class="mb-2 text-sm font-semibold text-tertiary-200">
-													Estimated Delivery
-												</h4>
-												<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
-											</div>
+											{#if proposal.state !== 'idea'}
+												<div class="text-right">
+													<h4 class="mb-2 text-sm font-semibold text-tertiary-200">
+														Estimated Delivery
+													</h4>
+													<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
+												</div>
+											{/if}
 										</div>
 									</div>
 								</div>
