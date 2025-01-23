@@ -25,7 +25,7 @@
 		votesUsed: number;
 		proposalsCreated: number;
 		proposalsVoted: Set<string>;
-		proposalVoteCounts: Map<string, number>; // Track votes per proposal
+		proposalVoteCounts: Map<string, number>;
 	}
 
 	const currentUser: Writable<UserProfile> = writable({
@@ -131,6 +131,96 @@
 				'• Performance analytics and optimization',
 			state: 'voting',
 			estimatedDelivery: '3 weeks'
+		},
+		{
+			id: '6',
+			title: 'Community Analytics Dashboard',
+			author: 'Emma Thompson',
+			votes: 1,
+			expectedResults: '90% user engagement visibility, real-time metrics tracking',
+			commitment: 'Payment released upon successful deployment with 2 weeks of stable operation',
+			description:
+				'Interactive analytics dashboard for community insights.\n\n' +
+				'Features:\n' +
+				'• Real-time engagement metrics\n' +
+				'• Custom report generation\n' +
+				'• User activity heatmaps\n' +
+				'• Automated weekly summaries\n' +
+				'• Integration with existing platform',
+			state: 'voting',
+			estimatedDelivery: '4 weeks'
+		},
+		{
+			id: '7',
+			title: 'Mobile App Development',
+			author: 'Ryan Park',
+			votes: 2,
+			expectedResults: '1000+ downloads in first month, 4.5+ star rating',
+			commitment: 'Payment released on successful app store approval and 100+ active users',
+			description:
+				'Native mobile app development for iOS and Android.\n\n' +
+				'Key Features:\n' +
+				'• Offline support\n' +
+				'• Push notifications\n' +
+				'• Biometric authentication\n' +
+				'• Social sharing integration\n' +
+				'• Performance analytics',
+			state: 'voting',
+			estimatedDelivery: '8 weeks'
+		},
+		{
+			id: '8',
+			title: 'Content Creation Workshop Series',
+			author: 'Lisa Chen',
+			votes: 0,
+			expectedResults: '50+ trained creators, 30% increase in content quality',
+			commitment: 'Payment released after completion of all workshops with 85% attendance rate',
+			description:
+				'Six-week workshop series for content creators.\n\n' +
+				'Workshop Topics:\n' +
+				'• Brand storytelling\n' +
+				'• Visual content creation\n' +
+				'• SEO optimization\n' +
+				'• Analytics interpretation\n' +
+				'• Community engagement strategies',
+			state: 'voting',
+			estimatedDelivery: '6 weeks'
+		},
+		{
+			id: '9',
+			title: 'AI-Powered Recommendation Engine',
+			author: 'Michael Zhang',
+			votes: 1,
+			expectedResults: '40% better content discovery, 25% increased user engagement',
+			commitment: 'Payment released upon successful implementation with A/B test results',
+			description:
+				'Machine learning-based recommendation system.\n\n' +
+				'Features:\n' +
+				'• Personalized content suggestions\n' +
+				'• User behavior analysis\n' +
+				'• Content clustering\n' +
+				'• Performance monitoring\n' +
+				'• A/B testing framework',
+			state: 'voting',
+			estimatedDelivery: '5 weeks'
+		},
+		{
+			id: '10',
+			title: 'Community Mentorship Program',
+			author: 'Sophie Anderson',
+			votes: 2,
+			expectedResults: '30 mentor-mentee pairs, 80% satisfaction rate',
+			commitment: 'Payment released after successful program completion and feedback collection',
+			description:
+				'Structured mentorship program implementation.\n\n' +
+				'Program Components:\n' +
+				'• Matching algorithm development\n' +
+				'• Progress tracking system\n' +
+				'• Resource library\n' +
+				'• Regular check-in framework\n' +
+				'• Success metrics dashboard',
+			state: 'voting',
+			estimatedDelivery: '3 weeks'
 		}
 	]);
 
@@ -170,6 +260,14 @@
 
 	// Add expanded state tracking
 	let expandedProposals = new Set<string>();
+
+	// Change default state filter to 'voting'
+	let selectedStateFilter: ProposalState = 'voting';
+
+	// Filter proposals based on selected state
+	$: filteredProposals = $proposals
+		.filter((p) => p.state === selectedStateFilter)
+		.sort((a, b) => b.votes - a.votes);
 
 	function toggleProposal(id: string) {
 		if (expandedProposals.has(id)) {
@@ -409,138 +507,188 @@
 
 	<!-- Main Content -->
 	<div class="flex-grow w-full overflow-y-auto">
-		<div class="max-w-5xl p-6 mx-auto space-y-8">
-			<div class="grid gap-6">
-				{#each $proposals as proposal}
-					<div
-						class="overflow-hidden transition-all duration-200 border card border-surface-700/50 rounded-xl"
-					>
-						<!-- Collapsed Header (always visible) -->
-						<div
-							class="flex items-center cursor-pointer hover:bg-surface-800/50"
-							on:click={() => toggleProposal(proposal.id)}
+		<div class="w-full">
+			<!-- Tab Navigation -->
+			<div class="max-w-5xl px-6 mx-auto">
+				<div
+					class="sticky top-0 z-10 border-b bg-surface-900/95 backdrop-blur-sm border-surface-700/50"
+				>
+					<div class="flex gap-2 -mb-px">
+						<button
+							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
+							'voting'
+								? 'border-tertiary-500 text-tertiary-100'
+								: 'border-transparent text-tertiary-400'}"
+							on:click={() => (selectedStateFilter = 'voting')}
 						>
-							<!-- Left side: Votes -->
-							<div class="flex flex-col items-center w-40 p-6">
-								<div class="text-center">
-									<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
-									<p class="text-sm text-tertiary-300">votes</p>
-								</div>
-							</div>
+							Voting
+						</button>
+						<button
+							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
+							'doing'
+								? 'border-tertiary-500 text-tertiary-100'
+								: 'border-transparent text-tertiary-400'}"
+							on:click={() => (selectedStateFilter = 'doing')}
+						>
+							In Progress
+						</button>
+						<button
+							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
+							'pending_payout'
+								? 'border-tertiary-500 text-tertiary-100'
+								: 'border-transparent text-tertiary-400'}"
+							on:click={() => (selectedStateFilter = 'pending_payout')}
+						>
+							Review
+						</button>
+						<button
+							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
+							'done'
+								? 'border-tertiary-500 text-tertiary-100'
+								: 'border-transparent text-tertiary-400'}"
+							on:click={() => (selectedStateFilter = 'done')}
+						>
+							Completed
+						</button>
+					</div>
+				</div>
+			</div>
 
-							<!-- Middle: Basic Info -->
+			<div class="max-w-5xl px-6 mx-auto">
+				<div class="grid gap-6 py-6">
+					{#each filteredProposals as proposal}
+						<div
+							class="overflow-hidden transition-all duration-200 border card border-surface-700/50 rounded-xl"
+						>
+							<!-- Collapsed Header (always visible) -->
 							<div
-								class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+								class="flex items-center cursor-pointer hover:bg-surface-800/50"
+								on:click={() => toggleProposal(proposal.id)}
 							>
-								<div class="flex items-center gap-4">
-									<div
-										class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
-									>
-										<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
-									</div>
-									<div>
-										<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-										<p class="text-sm text-tertiary-300">by {proposal.author}</p>
-									</div>
-								</div>
-							</div>
-
-							<!-- Right side: Value and State -->
-							<div class="w-[280px] shrink-0 p-6 flex flex-col {getStateBgColor(proposal.state)}">
-								<div
-									class="flex items-center justify-end gap-2 mb-2 {getStateColor(proposal.state)}"
-								>
-									<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
-									<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
-								</div>
-								<div class="text-right">
-									<p class="text-2xl font-bold text-tertiary-100">
-										{proposalValues.find((p) => p.id === proposal.id)?.value}€
-									</p>
-									<p class="text-sm text-tertiary-300">
-										{proposal.state === 'voting' ? 'current value' : 'locked value'}
-									</p>
-								</div>
-							</div>
-						</div>
-
-						<!-- Expanded Content -->
-						{#if expandedProposals.has(proposal.id)}
-							<div class="flex border-t border-surface-700/50">
-								<!-- Left side: Voting Controls -->
+								<!-- Left side: Votes -->
 								<div class="flex flex-col items-center w-40 p-6">
-									{#if proposal.state === 'voting'}
-										<div class="flex flex-col items-center w-full gap-2">
-											<button
-												on:click|stopPropagation={() => vote(proposal.id, true)}
-												disabled={$currentUser.votesAvailable <
-													calculateQuadraticCost(
+									<div class="text-center">
+										<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
+										<p class="text-sm text-tertiary-300">votes</p>
+									</div>
+								</div>
+
+								<!-- Middle: Basic Info -->
+								<div
+									class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+								>
+									<div class="flex items-center gap-4">
+										<div
+											class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
+										>
+											<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
+										</div>
+										<div>
+											<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+											<p class="text-sm text-tertiary-300">by {proposal.author}</p>
+										</div>
+									</div>
+								</div>
+
+								<!-- Right side: Value and State -->
+								<div class="w-[280px] shrink-0 p-6 flex flex-col {getStateBgColor(proposal.state)}">
+									<div
+										class="flex items-center justify-end gap-2 mb-2 {getStateColor(proposal.state)}"
+									>
+										<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
+										<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
+									</div>
+									<div class="text-right">
+										<p class="text-2xl font-bold text-tertiary-100">
+											{proposalValues.find((p) => p.id === proposal.id)?.value}€
+										</p>
+										<p class="text-sm text-tertiary-300">
+											{proposal.state === 'voting' ? 'current budget allocation' : 'locked value'}
+										</p>
+									</div>
+								</div>
+							</div>
+
+							<!-- Expanded Content -->
+							{#if expandedProposals.has(proposal.id)}
+								<div class="flex border-t border-surface-700/50">
+									<!-- Left side: Voting Controls -->
+									<div class="flex flex-col items-center w-40 p-6">
+										{#if proposal.state === 'voting'}
+											<div class="flex flex-col items-center w-full gap-2">
+												<button
+													on:click|stopPropagation={() => vote(proposal.id, true)}
+													disabled={$currentUser.votesAvailable <
+														calculateQuadraticCost(
+															$currentUser.proposalVoteCounts.get(proposal.id) || 0
+														)}
+													class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+												>
+													<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
+														<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+													</svg>
+												</button>
+												<span class="text-2xl font-bold text-tertiary-100">
+													{$currentUser.proposalVoteCounts.get(proposal.id) || 0}
+												</span>
+												<button
+													on:click|stopPropagation={() => vote(proposal.id, false)}
+													disabled={!$currentUser.proposalVoteCounts.get(proposal.id)}
+													class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+												>
+													<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
+														<path fill="currentColor" d="M19 13H5v-2h14v2z" />
+													</svg>
+												</button>
+												<p class="text-xs text-center text-tertiary-400">
+													Next vote costs: {calculateQuadraticCost(
 														$currentUser.proposalVoteCounts.get(proposal.id) || 0
 													)}
-												class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-											>
-												<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
-													<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-												</svg>
-											</button>
-											<span class="text-2xl font-bold text-tertiary-100">
-												{$currentUser.proposalVoteCounts.get(proposal.id) || 0}
-											</span>
-											<button
-												on:click|stopPropagation={() => vote(proposal.id, false)}
-												disabled={!$currentUser.proposalVoteCounts.get(proposal.id)}
-												class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-											>
-												<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
-													<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-												</svg>
-											</button>
-											<p class="text-xs text-center text-tertiary-400">
-												Next vote costs: {calculateQuadraticCost(
-													$currentUser.proposalVoteCounts.get(proposal.id) || 0
-												)}
-											</p>
-										</div>
-									{/if}
-								</div>
+												</p>
+											</div>
+										{/if}
+									</div>
 
-								<!-- Middle: Content -->
-								<div class="flex-grow p-6 space-y-6 border-l border-r border-surface-700/50">
-									<div class="space-y-6">
-										<div>
-											<h4 class="font-semibold text-tertiary-200">Commitment</h4>
-											<p class="text-sm text-tertiary-300">{proposal.commitment}</p>
+									<!-- Middle: Content -->
+									<div class="flex-grow p-6 space-y-6 border-l border-r border-surface-700/50">
+										<div class="space-y-6">
+											<div>
+												<h4 class="font-semibold text-tertiary-200">Commitment</h4>
+												<p class="text-sm text-tertiary-300">{proposal.commitment}</p>
+											</div>
+											<div class="pr-12">
+												<h4 class="font-semibold text-tertiary-200">Description</h4>
+												<p class="text-sm whitespace-pre-line text-tertiary-300">
+													{proposal.description}
+												</p>
+											</div>
 										</div>
-										<div class="pr-12">
-											<h4 class="font-semibold text-tertiary-200">Description</h4>
-											<p class="text-sm whitespace-pre-line text-tertiary-300">
-												{proposal.description}
-											</p>
+									</div>
+
+									<!-- Right side: Metrics -->
+									<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)}">
+										<div class="p-8 space-y-8">
+											<div>
+												<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
+													Expected Results
+												</h4>
+												<p class="text-sm text-right text-tertiary-300">
+													{proposal.expectedResults}
+												</p>
+											</div>
+											<div class="text-right">
+												<h4 class="mb-2 text-sm font-semibold text-tertiary-200">
+													Estimated Delivery
+												</h4>
+												<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
+											</div>
 										</div>
 									</div>
 								</div>
-
-								<!-- Right side: Metrics -->
-								<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)}">
-									<div class="p-8 space-y-8">
-										<div>
-											<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
-												Expected Results
-											</h4>
-											<p class="text-sm text-right text-tertiary-300">{proposal.expectedResults}</p>
-										</div>
-										<div class="text-right">
-											<h4 class="mb-2 text-sm font-semibold text-tertiary-200">
-												Estimated Delivery
-											</h4>
-											<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
-										</div>
-									</div>
-								</div>
-							</div>
-						{/if}
-					</div>
-				{/each}
+							{/if}
+						</div>
+					{/each}
+				</div>
 			</div>
 		</div>
 	</div>
