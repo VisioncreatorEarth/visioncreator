@@ -102,7 +102,7 @@
 				<div class="w-full max-w-screen-md p-4 mx-auto">
 					<div class="relative w-full h-full aspect-[16/9] max-h-full">
 						<div class="absolute inset-0">
-							<VideoPlayer videoId="3c4f3a6f-2ca2-450b-a4fe-36df8b599ddc" />
+							<VideoPlayer videoId="6885e528-37da-4ac5-adc1-3759e642c307" />
 						</div>
 					</div>
 				</div>
