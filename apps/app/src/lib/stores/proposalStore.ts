@@ -158,7 +158,7 @@ const initialProposals: Proposal[] = [
         id: '1',
         title: 'Modern Landing Page Development',
         author: 'David Chen',
-        votes: 3,
+        votes: 2,
         expectedResults: '+500 new signups/month, 40% conversion rate improvement',
         commitment: 'Payment released upon successful deployment with A/B test showing >35% conversion improvement',
         description:
@@ -178,7 +178,7 @@ const initialProposals: Proposal[] = [
         id: '2',
         title: 'Visioncreator Launch Event',
         author: 'Maria Garcia',
-        votes: 5,
+        votes: 3,
         expectedResults: '100+ attendees, 20 new active pioneers, 5 potential partnerships',
         commitment: 'Payment released after successful event completion with minimum 80 verified attendees',
         description:
@@ -197,7 +197,7 @@ const initialProposals: Proposal[] = [
         id: '3',
         title: 'Community Task Board Development',
         author: 'Alex Kumar',
-        votes: 2,
+        votes: 1,
         expectedResults: '30% improved task completion rate, 50% faster project initialization',
         commitment: 'Payment released upon deployment with all features tested and documented',
         description:
@@ -216,7 +216,7 @@ const initialProposals: Proposal[] = [
         id: '4',
         title: 'Vision Pitch Video Production',
         author: 'Sarah Miller',
-        votes: 4,
+        votes: 2,
         expectedResults: '40% better conversion rate, 2x faster onboarding understanding',
         commitment: 'Payment released upon delivery of final video with positive community feedback',
         description:
@@ -235,7 +235,7 @@ const initialProposals: Proposal[] = [
         id: '5',
         title: 'Social Media Brand Update',
         author: 'Sophie Anderson',
-        votes: 6,
+        votes: 3,
         expectedResults: '40% increase in profile visits, 25% higher engagement rate',
         commitment: 'Payment released upon completion of all platform updates with community approval',
         description:
@@ -255,7 +255,7 @@ const initialProposals: Proposal[] = [
         id: '6',
         title: 'Community Invite System Development',
         author: 'Marcus Chen',
-        votes: 8,
+        votes: 2,
         expectedResults: '200% increase in referrals, 40% higher retention of referred users',
         commitment: 'Payment released upon successful deployment and first month of operation',
         description:
@@ -275,7 +275,7 @@ const initialProposals: Proposal[] = [
         id: '7',
         title: 'Governance Model Update',
         author: 'Elena Rodriguez',
-        votes: 7,
+        votes: 2,
         expectedResults: '50% faster decision making, 30% higher community participation',
         commitment: 'Payment released after successful implementation and first governance cycle',
         description:
@@ -295,7 +295,7 @@ const initialProposals: Proposal[] = [
         id: '8',
         title: 'Proposal Video Requirement System',
         author: 'Chris Taylor',
-        votes: 4,
+        votes: 2,
         expectedResults: '60% better proposal understanding, 45% higher engagement on proposals',
         commitment: 'Payment released upon system implementation and first 5 successful submissions',
         description:
@@ -315,7 +315,7 @@ const initialProposals: Proposal[] = [
         id: '10',
         title: 'Community Newsletter System',
         author: 'Rachel Kim',
-        votes: 2,
+        votes: 1,
         expectedResults: 'Increased community engagement and awareness',
         commitment: 'Weekly newsletter delivery with community highlights',
         description:
@@ -335,7 +335,7 @@ const initialProposals: Proposal[] = [
         id: '11',
         title: 'Community Mentorship Program',
         author: 'David Park',
-        votes: 1,
+        votes: 0,
         expectedResults: 'Knowledge sharing and skill development within community',
         commitment: 'Monthly mentorship sessions and progress tracking',
         description:
@@ -355,7 +355,7 @@ const initialProposals: Proposal[] = [
         id: '12',
         title: 'Community Hackathon Event',
         author: 'Lisa Wang',
-        votes: 3,
+        votes: 1,
         expectedResults: 'Innovation boost and new project initiatives',
         commitment: 'Weekend-long event with prizes and showcases',
         description:
@@ -375,7 +375,7 @@ const initialProposals: Proposal[] = [
         id: '13',
         title: 'Community Podcast Series',
         author: 'Michael Chen',
-        votes: 1,
+        votes: 0,
         expectedResults: 'Broader reach and deeper community insights',
         commitment: 'Bi-weekly episodes featuring community members',
         description:
@@ -395,7 +395,7 @@ const initialProposals: Proposal[] = [
         id: '14',
         title: 'Community Learning Hub',
         author: 'Sarah Johnson',
-        votes: 2,
+        votes: 1,
         expectedResults: 'Centralized knowledge sharing and skill development',
         commitment: 'Launch with 10 initial courses and weekly updates',
         description:
@@ -424,6 +424,12 @@ export const currentUser = writable<UserProfile>({
 export const dashboardMetrics = writable<DashboardMetrics>({
     visionCreators: 17
 });
+export const activeTab = writable<ProposalState>('proposal');
+
+// Function to change active tab
+export function setActiveTab(state: ProposalState): void {
+    activeTab.set(state);
+}
 
 // Helper Functions
 function getFixedStateValue(state: ProposalState, budgetRequested: number): number {
@@ -431,15 +437,52 @@ function getFixedStateValue(state: ProposalState, budgetRequested: number): numb
     return budgetRequested;
 }
 
+// Helper function to check if a state is active (votes count towards total)
+function isActiveState(state: ProposalState): boolean {
+    return state === 'idea' || state === 'proposal' || state === 'pending_approval';
+}
+
+// Update poolMetrics to use the new active state logic
+export const poolMetrics = derived([dashboardMetrics, proposals], ([$dashboardMetrics, $proposals]) => {
+    const delivered = $proposals
+        .filter((p) => p.state === 'done')
+        .reduce((sum, p) => sum + p.budgetRequested, 0);
+
+    const total = Math.max(0, Math.round($dashboardMetrics.visionCreators * 365 * 0.75) - delivered);
+
+    const locked = $proposals
+        .filter((p) => p.state === 'doing' || p.state === 'pending_payout' || p.state === 'pending_approval')
+        .reduce((sum, p) => sum + p.budgetRequested, 0);
+
+    const voting = Math.max(0, total - locked);
+
+    // Update totalActiveVotes to only count votes from active states
+    const totalActiveVotes = $proposals
+        .filter((p) => isActiveState(p.state))
+        .reduce((sum, p) => sum + p.votes, 0);
+
+    return {
+        totalContributionPool: total,
+        votingPool: voting,
+        lockedPool: locked,
+        deliveredPool: delivered,
+        totalActiveVotes
+    };
+});
+
+// Update voting values calculation to use active states
 function calculateVotingValues(proposals: Proposal[], votingPool: number): Map<string, number> {
     const votingProposals = proposals.filter((p) => p.state === 'proposal');
-    const totalVotes = votingProposals.reduce((sum, p) => sum + p.votes, 0);
+    // Update total votes to only count active states
+    const totalVotes = proposals
+        .filter((p) => isActiveState(p.state))
+        .reduce((sum, p) => sum + p.votes, 0);
+
     if (totalVotes === 0) return new Map(votingProposals.map((p) => [p.id, 0]));
 
     const allocations = new Map<string, number>();
     const overAllocated = new Map<string, number>();
 
-    // Calculate initial values
     votingProposals.forEach((proposal) => {
         const rawValue = Math.round((proposal.votes / totalVotes) * votingPool);
         if (rawValue > proposal.budgetRequested) {
@@ -480,33 +523,11 @@ function calculateVotingValues(proposals: Proposal[], votingPool: number): Map<s
     return allocations;
 }
 
+// Constants
+export const MIN_TOTAL_VOTES_FOR_PROPOSAL = 10;
+export const IDEA_VOTE_THRESHOLD_PERCENTAGE = 0.1; // 10%
+
 // Derived Stores
-export const poolMetrics = derived([dashboardMetrics, proposals], ([$dashboardMetrics, $proposals]) => {
-    const delivered = $proposals
-        .filter((p) => p.state === 'done')
-        .reduce((sum, p) => sum + p.budgetRequested, 0);
-
-    const total = Math.max(0, Math.round($dashboardMetrics.visionCreators * 365 * 0.75) - delivered);
-
-    const locked = $proposals
-        .filter((p) => p.state === 'doing' || p.state === 'pending_payout' || p.state === 'pending_approval')
-        .reduce((sum, p) => sum + p.budgetRequested, 0);
-
-    const voting = Math.max(0, total - locked);
-
-    const totalActiveVotes = $proposals
-        .filter((p) => p.state === 'proposal')
-        .reduce((sum, p) => sum + p.votes, 0);
-
-    return {
-        totalContributionPool: total,
-        votingPool: voting,
-        lockedPool: locked,
-        deliveredPool: delivered,
-        totalActiveVotes
-    };
-});
-
 export const proposalValues = derived([proposals, poolMetrics], ([$proposals, $poolMetrics]) => {
     const votingValues = calculateVotingValues($proposals, $poolMetrics.votingPool);
 
@@ -577,6 +598,7 @@ export function resetProposal(proposalId: string): void {
     });
 }
 
+// Update cycleProposalState to handle vote release
 export function cycleProposalState(proposalId: string): void {
     const states: ProposalState[] = ['doing', 'pending_payout', 'done'];
     proposals.update(($proposals) => {
@@ -584,7 +606,19 @@ export function cycleProposalState(proposalId: string): void {
             if (p.id === proposalId && p.state !== 'proposal') {
                 const currentIndex = states.indexOf(p.state);
                 const nextIndex = (currentIndex + 1) % states.length;
-                return { ...p, state: states[nextIndex] };
+                const nextState = states[nextIndex];
+
+                // If moving to 'doing', release votes back to users
+                if (nextState === 'doing' && isActiveState(p.state)) {
+                    currentUser.update(($currentUser) => {
+                        const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
+                        $currentUser.tokens += userVotes;
+                        $currentUser.proposalsVoted.delete(proposalId);
+                        return $currentUser;
+                    });
+                }
+
+                return { ...p, state: nextState };
             }
             return p;
         });
@@ -604,11 +638,11 @@ export function getStateColor(state: ProposalState): string {
         case 'proposal':
             return 'text-tertiary-300';
         case 'pending_approval':
-            return 'text-secondary-400';
+            return 'text-warning-400';
         case 'doing':
             return 'text-primary-400';
         case 'pending_payout':
-            return 'text-warning-400';
+            return 'text-secondary-400';
         case 'done':
             return 'text-success-400';
         case 'idea':
@@ -659,18 +693,38 @@ export function getStateLabel(state: ProposalState): string {
 export function getStateBgColor(state: ProposalState): string {
     switch (state) {
         case 'proposal':
-            return 'bg-surface-700/30';
+            return 'bg-tertiary-500/10';
         case 'pending_approval':
-            return 'bg-secondary-900/20';
+            return 'bg-warning-900/20';
         case 'doing':
             return 'bg-primary-900/20';
         case 'pending_payout':
-            return 'bg-warning-900/20';
+            return 'bg-secondary-900/20';
         case 'done':
             return 'bg-success-900/20';
         case 'idea':
-            return 'bg-tertiary-900/20';
+            return 'bg-tertiary-500/10';
         default:
-            return 'bg-surface-700/30';
+            return 'bg-tertiary-500/10';
     }
+}
+
+// Update state transition logic to use active states
+export function checkProposalStateTransitions($proposals: Proposal[], voteThreshold: number, $proposalValues: { id: string; value: number }[]): Proposal[] {
+    // Update total votes to only count active states
+    const totalVotes = $proposals
+        .filter((p) => isActiveState(p.state))
+        .reduce((sum, p) => sum + p.votes, 0);
+
+    return $proposals.map((p) => {
+        if (p.state === 'idea' && p.votes >= voteThreshold && totalVotes >= MIN_TOTAL_VOTES_FOR_PROPOSAL) {
+            return { ...p, state: 'proposal' as ProposalState };
+        } else if (p.state === 'proposal') {
+            const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
+            if (proposalValue >= p.budgetRequested) {
+                return { ...p, state: 'pending_approval' as ProposalState };
+            }
+        }
+        return p;
+    });
 } 

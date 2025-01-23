@@ -26,6 +26,8 @@ HOW THIS SYSTEM WORKS:
 		poolMetrics,
 		proposalValues,
 		dashboardMetrics,
+		activeTab,
+		setActiveTab,
 		type ProposalState,
 		type Proposal,
 		vote,
@@ -36,7 +38,10 @@ HOW THIS SYSTEM WORKS:
 		getStateIcon,
 		getStateLabel,
 		getStateBgColor,
-		getNextVoteCost
+		getNextVoteCost,
+		MIN_TOTAL_VOTES_FOR_PROPOSAL,
+		IDEA_VOTE_THRESHOLD_PERCENTAGE,
+		checkProposalStateTransitions
 	} from '$lib/stores/proposalStore';
 
 	const PROPOSAL_STATES: ProposalState[] = [
@@ -50,30 +55,31 @@ HOW THIS SYSTEM WORKS:
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
-	let activeFilter: ProposalState = 'proposal';
 
-	// Update filtered and sorted proposals to only sort by votes
+	// Make tab classes reactive to activeTab changes
+	$: getTabClasses = (state: ProposalState) => {
+		const baseClasses = 'px-4 py-2 text-sm font-medium transition-colors rounded-lg';
+		const stateColor = getStateColor(state);
+		const isActive = $activeTab === state;
+		const bgColor = isActive ? getStateBgColor(state) : 'hover:bg-surface-700/20';
+		return `${baseClasses} ${stateColor} ${bgColor}`;
+	};
+
+	// Update filtered and sorted proposals to use activeTab
 	$: filteredAndSortedProposals = $proposals
-		.filter((p) => p.state === activeFilter)
+		.filter((p) => p.state === $activeTab)
 		.sort((a, b) => b.votes - a.votes);
 
 	// Calculate vote threshold (10%)
-	$: voteThreshold = Math.ceil($poolMetrics.totalActiveVotes * 0.1);
+	$: voteThreshold = Math.ceil($poolMetrics.totalActiveVotes * IDEA_VOTE_THRESHOLD_PERCENTAGE);
 
 	// Watch for state transitions including idea threshold
 	$: {
-		const updatedProposals = $proposals.map((p) => {
-			if (p.state === 'idea' && p.votes >= voteThreshold) {
-				return { ...p, state: 'proposal' as ProposalState };
-			} else if (p.state === 'proposal') {
-				const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
-				if (proposalValue >= p.budgetRequested) {
-					return { ...p, state: 'pending_approval' as ProposalState };
-				}
-			}
-			return p;
-		});
-
+		const updatedProposals = checkProposalStateTransitions(
+			$proposals,
+			voteThreshold,
+			$proposalValues
+		);
 		if (JSON.stringify(updatedProposals) !== JSON.stringify($proposals)) {
 			$proposals = updatedProposals;
 		}
@@ -113,19 +119,9 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
-	function getTabClasses(state: ProposalState): string {
-		const baseClasses = 'px-4 py-2 text-sm font-medium transition-colors rounded-lg';
-		const activeClasses =
-			activeFilter === state
-				? `${getStateBgColor(state)} ${getStateColor(state)}`
-				: 'hover:bg-surface-700/30';
-		return `${baseClasses} ${activeClasses}`;
-	}
-
 	function getProposalCardClasses(proposal: Proposal): string {
-		const baseClasses =
-			'overflow-hidden transition-all duration-200 border card border-surface-700/50 rounded-xl';
-		return baseClasses;
+		const baseClasses = 'overflow-hidden transition-all duration-200 border card rounded-xl';
+		return `${baseClasses} border-surface-700/50 ${getStateBgColor(proposal.state)} bg-opacity-5`;
 	}
 
 	function getProposalValueClasses(proposal: Proposal): string {
@@ -223,7 +219,11 @@ HOW THIS SYSTEM WORKS:
 					class="sticky top-0 z-10 flex w-full gap-2 py-4 bg-surface-900/95 backdrop-blur-sm"
 				>
 					{#each PROPOSAL_STATES as state}
-						<button class={getTabClasses(state)} on:click={() => (activeFilter = state)}>
+						<button
+							class={getTabClasses(state)}
+							on:click={() => setActiveTab(state)}
+							aria-selected={$activeTab === state}
+						>
 							<div class="flex items-center gap-2">
 								<Icon icon={getStateIcon(state)} class="w-4 h-4" />
 								{getStateLabel(state)}
