@@ -1,9 +1,68 @@
+<!--
+HOW THIS SYSTEM WORKS:
+
+1. Overview:
+   This is a community-driven proposal and voting system where members can:
+   - Vote on proposals using tokens
+   - Track proposal progress
+   - Move proposals through different states
+   - Manage budget allocations
+
+2. Budget System:
+   - There's a main "Community Contribution Pool" calculated from number of VisionCreators
+   - This pool is divided into three parts:
+     * Voting Pool: Available for active voting proposals
+     * Locked Pool: For proposals in progress
+     * Delivered Pool: For completed proposals
+
+3. Voting Process:
+   - Each user has tokens they can use to vote
+   - More votes = larger share of the voting pool
+   - When voting on a proposal:
+     * Adding a vote increases the proposal's budget allocation
+     * Removing a vote decreases the allocation
+     * Budget is automatically distributed based on vote percentages
+     * If a proposal gets more budget than requested, excess is redistributed to other proposals
+
+4. Proposal States:
+   - Voting: Open for community votes
+   - Pending Approval: Reached requested budget, waiting for review
+   - In Progress: Work has started
+   - Review: Work completed, waiting for verification
+   - Completed: Fully delivered and paid
+
+5. Budget Allocation Rules:
+   - Each proposal has a fixed requested budget
+   - Can't allocate more than requested budget to any proposal
+   - Excess budget is automatically redistributed to other voting proposals
+   - Once a proposal reaches its requested budget, it moves to "Pending Approval"
+
+6. State Transitions:
+   - Automatic: Voting → Pending Approval (when budget reached)
+   - Manual: Through state cycle button for other states
+   - Cycle: In Progress → Review → Completed
+
+7. Visual Feedback:
+   - Progress bars show % of requested budget
+   - Color coding for different states
+   - Real-time updates of budget allocations
+   - Clear indicators for voting power and proposal status
+-->
+
 <script lang="ts">
-	import { writable } from 'svelte/store';
+	import { writable, derived } from 'svelte/store';
 	import type { Writable } from 'svelte/store';
 	import Icon from '@iconify/svelte';
 
-	type ProposalState = 'voting' | 'doing' | 'pending_payout' | 'done';
+	type ProposalState = 'voting' | 'pending_approval' | 'doing' | 'pending_payout' | 'done';
+
+	const PROPOSAL_STATES: ProposalState[] = [
+		'voting',
+		'pending_approval',
+		'doing',
+		'pending_payout',
+		'done'
+	];
 
 	interface Proposal {
 		id: string;
@@ -15,27 +74,21 @@
 		commitment: string;
 		state: ProposalState;
 		estimatedDelivery: string;
+		budgetRequested: number;
 	}
 
-	// Add user profile type
 	interface UserProfile {
 		id: string;
 		name: string;
-		votesAvailable: number;
-		votesUsed: number;
-		proposalsCreated: number;
+		tokens: number;
 		proposalsVoted: Set<string>;
-		proposalVoteCounts: Map<string, number>;
 	}
 
 	const currentUser: Writable<UserProfile> = writable({
 		id: '1',
 		name: 'Samuel Andert',
-		votesAvailable: 25,
-		votesUsed: 0,
-		proposalsCreated: 1,
-		proposalsVoted: new Set(),
-		proposalVoteCounts: new Map()
+		tokens: 25,
+		proposalsVoted: new Set()
 	});
 
 	const proposals: Writable<Proposal[]> = writable([
@@ -57,7 +110,8 @@
 				'• A/B testing infrastructure\n\n' +
 				'Following atomic design principles for consistent branding and maximum component reusability.',
 			state: 'doing',
-			estimatedDelivery: '3 weeks'
+			estimatedDelivery: '3 weeks',
+			budgetRequested: 700
 		},
 		{
 			id: '2',
@@ -76,7 +130,8 @@
 				'• Dedicated networking sessions\n\n' +
 				'Post-event: Follow-up networking, resource sharing, and community building initiatives.',
 			state: 'voting',
-			estimatedDelivery: '2 weeks'
+			estimatedDelivery: '2 weeks',
+			budgetRequested: 1200
 		},
 		{
 			id: '3',
@@ -94,7 +149,8 @@
 				'• Advanced filtering and priority management\n' +
 				'• Mobile responsiveness and offline support',
 			state: 'pending_payout',
-			estimatedDelivery: '4 weeks'
+			estimatedDelivery: '4 weeks',
+			budgetRequested: 900
 		},
 		{
 			id: '4',
@@ -112,115 +168,89 @@
 				'• Multiple platform-optimized versions\n\n' +
 				'Including multiple revision rounds and professional sound design.',
 			state: 'done',
-			estimatedDelivery: '1 week'
+			estimatedDelivery: '1 week',
+			budgetRequested: 1000
 		},
 		{
 			id: '5',
-			title: 'Social Media Growth Partnership',
-			author: 'Tom Wilson',
-			votes: 1,
-			expectedResults: '10k new followers, 25% engagement rate, 100 qualified leads/month',
-			commitment: 'Revenue sharing: 20% of converted leads for 6 months, minimum 3 posts/week',
+			title: 'Social Media Brand Update',
+			author: 'Sophie Anderson',
+			votes: 6,
+			expectedResults: '40% increase in profile visits, 25% higher engagement rate',
+			commitment:
+				'Payment released upon completion of all platform updates with community approval',
 			description:
-				'Strategic social media campaign across major platforms.\n\n' +
-				'Campaign Elements:\n' +
-				'• Daily educational content creation\n' +
-				'• Community engagement strategy\n' +
-				'• Lead generation system\n' +
-				'• Influencer collaborations\n' +
-				'• Performance analytics and optimization',
+				'Comprehensive social media brand refresh across all major platforms.\n\n' +
+				'Deliverables:\n' +
+				'• Custom banner designs for each platform\n' +
+				'• Optimized bio and intro texts\n' +
+				'• Brand style guide for social content\n' +
+				'• Platform-specific content templates\n' +
+				'• Analytics baseline and tracking setup\n\n' +
+				'Including A/B testing of different messaging approaches.',
 			state: 'voting',
-			estimatedDelivery: '3 weeks'
+			estimatedDelivery: '1 week',
+			budgetRequested: 600
 		},
 		{
 			id: '6',
-			title: 'Community Analytics Dashboard',
-			author: 'Emma Thompson',
-			votes: 1,
-			expectedResults: '90% user engagement visibility, real-time metrics tracking',
-			commitment: 'Payment released upon successful deployment with 2 weeks of stable operation',
+			title: 'Community Invite System Development',
+			author: 'Marcus Chen',
+			votes: 8,
+			expectedResults: '200% increase in referrals, 40% higher retention of referred users',
+			commitment: 'Payment released upon successful deployment and first month of operation',
 			description:
-				'Interactive analytics dashboard for community insights.\n\n' +
-				'Features:\n' +
-				'• Real-time engagement metrics\n' +
-				'• Custom report generation\n' +
-				'• User activity heatmaps\n' +
-				'• Automated weekly summaries\n' +
-				'• Integration with existing platform',
+				'Gamified invite system with incentive mechanics.\n\n' +
+				'Core Features:\n' +
+				'• Multi-tier reward structure\n' +
+				'• Automated tracking and distribution\n' +
+				'• Custom invite links and QR codes\n' +
+				'• Referral analytics dashboard\n' +
+				'• Integration with existing user system\n\n' +
+				'Focus on sustainable growth and quality referrals.',
 			state: 'voting',
-			estimatedDelivery: '4 weeks'
+			estimatedDelivery: '3 weeks',
+			budgetRequested: 1400
 		},
 		{
 			id: '7',
-			title: 'Mobile App Development',
-			author: 'Ryan Park',
-			votes: 2,
-			expectedResults: '1000+ downloads in first month, 4.5+ star rating',
-			commitment: 'Payment released on successful app store approval and 100+ active users',
+			title: 'Governance Model Update',
+			author: 'Elena Rodriguez',
+			votes: 7,
+			expectedResults: '50% faster decision making, 30% higher community participation',
+			commitment: 'Payment released after successful implementation and first governance cycle',
 			description:
-				'Native mobile app development for iOS and Android.\n\n' +
-				'Key Features:\n' +
-				'• Offline support\n' +
-				'• Push notifications\n' +
-				'• Biometric authentication\n' +
-				'• Social sharing integration\n' +
-				'• Performance analytics',
+				'Modernized governance system with enhanced participation mechanics.\n\n' +
+				'Key Components:\n' +
+				'• Streamlined proposal process\n' +
+				'• Weighted voting mechanisms\n' +
+				'• Automated execution of approved proposals\n' +
+				'• Transparent tracking system\n' +
+				'• Community feedback loops\n\n' +
+				'Including comprehensive documentation and onboarding materials.',
 			state: 'voting',
-			estimatedDelivery: '8 weeks'
+			estimatedDelivery: '4 weeks',
+			budgetRequested: 1800
 		},
 		{
 			id: '8',
-			title: 'Content Creation Workshop Series',
-			author: 'Lisa Chen',
-			votes: 0,
-			expectedResults: '50+ trained creators, 30% increase in content quality',
-			commitment: 'Payment released after completion of all workshops with 85% attendance rate',
+			title: 'Proposal Video Requirement System',
+			author: 'Chris Taylor',
+			votes: 4,
+			expectedResults: '60% better proposal understanding, 45% higher engagement on proposals',
+			commitment: 'Payment released upon system implementation and first 5 successful submissions',
 			description:
-				'Six-week workshop series for content creators.\n\n' +
-				'Workshop Topics:\n' +
-				'• Brand storytelling\n' +
-				'• Visual content creation\n' +
-				'• SEO optimization\n' +
-				'• Analytics interpretation\n' +
-				'• Community engagement strategies',
+				'Integrated video submission and distribution system for proposals.\n\n' +
+				'System Features:\n' +
+				'• Video upload and processing pipeline\n' +
+				'• Automated social media distribution\n' +
+				'• Engagement tracking and analytics\n' +
+				'• Video guidelines and templates\n' +
+				'• Quality control mechanisms\n\n' +
+				'Including creator guidelines and best practices documentation.',
 			state: 'voting',
-			estimatedDelivery: '6 weeks'
-		},
-		{
-			id: '9',
-			title: 'AI-Powered Recommendation Engine',
-			author: 'Michael Zhang',
-			votes: 1,
-			expectedResults: '40% better content discovery, 25% increased user engagement',
-			commitment: 'Payment released upon successful implementation with A/B test results',
-			description:
-				'Machine learning-based recommendation system.\n\n' +
-				'Features:\n' +
-				'• Personalized content suggestions\n' +
-				'• User behavior analysis\n' +
-				'• Content clustering\n' +
-				'• Performance monitoring\n' +
-				'• A/B testing framework',
-			state: 'voting',
-			estimatedDelivery: '5 weeks'
-		},
-		{
-			id: '10',
-			title: 'Community Mentorship Program',
-			author: 'Sophie Anderson',
-			votes: 2,
-			expectedResults: '30 mentor-mentee pairs, 80% satisfaction rate',
-			commitment: 'Payment released after successful program completion and feedback collection',
-			description:
-				'Structured mentorship program implementation.\n\n' +
-				'Program Components:\n' +
-				'• Matching algorithm development\n' +
-				'• Progress tracking system\n' +
-				'• Resource library\n' +
-				'• Regular check-in framework\n' +
-				'• Success metrics dashboard',
-			state: 'voting',
-			estimatedDelivery: '3 weeks'
+			estimatedDelivery: '2 weeks',
+			budgetRequested: 900
 		}
 	]);
 
@@ -232,56 +262,189 @@
 		visionCreators: 17
 	});
 
-	// Update reactive statements to include dependencies
-	$: totalContributionPool = Math.round($dashboardMetrics.visionCreators * 365 * 0.75);
-
-	$: deliveredPool = $proposals
-		.filter((p) => p.state === 'done')
-		.reduce((sum, p) => sum + calculateLockedValue(p.state), 0);
-
-	$: lockedPool = $proposals
-		.filter((p) => p.state === 'doing' || p.state === 'pending_payout')
-		.reduce((sum, p) => sum + calculateLockedValue(p.state), 0);
-
-	$: votingPool = totalContributionPool - lockedPool - deliveredPool;
-
-	$: poolMetrics = {
-		totalContributionPool,
-		votingPool,
-		lockedPool,
-		deliveredPool
-	};
-
-	// Make proposalValues depend on both proposals and votingPool
-	$: proposalValues = $proposals.map((proposal) => ({
-		id: proposal.id,
-		value: calculateDynamicPrice(proposal.votes, proposal.state, votingPool)
-	}));
-
-	// Add expanded state tracking
-	let expandedProposals = new Set<string>();
-
-	// Change default state filter to 'voting'
-	let selectedStateFilter: ProposalState = 'voting';
-
-	// Filter proposals based on selected state
-	$: filteredProposals = $proposals
-		.filter((p) => p.state === selectedStateFilter)
-		.sort((a, b) => b.votes - a.votes);
-
-	function toggleProposal(id: string) {
-		if (expandedProposals.has(id)) {
-			expandedProposals.delete(id);
-		} else {
-			expandedProposals.add(id);
-		}
-		expandedProposals = expandedProposals; // Trigger reactivity
+	interface ProposalValue {
+		id: string;
+		value: number;
 	}
 
+	// Remove the fixed state values function as we'll use budgetRequested instead
+	function getFixedStateValue(state: ProposalState, budgetRequested: number): number {
+		if (state === 'voting') return 0;
+		return budgetRequested;
+	}
+
+	// Calculate dynamic prices for voting proposals with redistribution
+	function calculateVotingValues(proposals: Proposal[], votingPool: number): Map<string, number> {
+		const votingProposals = proposals.filter((p) => p.state === 'voting');
+		const totalVotes = votingProposals.reduce((sum, p) => sum + p.votes, 0);
+		if (totalVotes === 0) return new Map(votingProposals.map((p) => [p.id, 0]));
+
+		// First pass: Calculate initial allocations
+		let remainingPool = votingPool;
+		const allocations = new Map<string, number>();
+		const overAllocated = new Map<string, number>();
+
+		// Calculate initial values
+		votingProposals.forEach((proposal) => {
+			const rawValue = Math.round((proposal.votes / totalVotes) * votingPool);
+			if (rawValue > proposal.budgetRequested) {
+				allocations.set(proposal.id, proposal.budgetRequested);
+				overAllocated.set(proposal.id, rawValue - proposal.budgetRequested);
+				remainingPool -= proposal.budgetRequested;
+			} else {
+				allocations.set(proposal.id, rawValue);
+				remainingPool -= rawValue;
+			}
+		});
+
+		// Calculate total excess budget
+		const excessBudget = Array.from(overAllocated.values()).reduce((sum, value) => sum + value, 0);
+		if (excessBudget === 0) return allocations;
+
+		// Redistribute excess budget to remaining proposals that aren't at their limit
+		const eligibleProposals = votingProposals.filter(
+			(p) => !overAllocated.has(p.id) && (allocations.get(p.id) || 0) < p.budgetRequested
+		);
+
+		if (eligibleProposals.length > 0) {
+			const eligibleVotes = eligibleProposals.reduce((sum, p) => sum + p.votes, 0);
+			eligibleProposals.forEach((proposal) => {
+				const currentAllocation = allocations.get(proposal.id) || 0;
+				const additionalAllocation = Math.round((proposal.votes / eligibleVotes) * excessBudget);
+				const newAllocation = Math.min(
+					currentAllocation + additionalAllocation,
+					proposal.budgetRequested
+				);
+				allocations.set(proposal.id, newAllocation);
+			});
+		}
+
+		return allocations;
+	}
+
+	// Create derived store for pool metrics
+	const poolMetrics = derived([dashboardMetrics, proposals], ([$dashboardMetrics, $proposals]) => {
+		// Calculate total delivered amount
+		const delivered = $proposals
+			.filter((p) => p.state === 'done')
+			.reduce((sum, p) => sum + p.budgetRequested, 0);
+
+		// Calculate initial total pool (now subtracting delivered amount)
+		const total = Math.max(
+			0,
+			Math.round($dashboardMetrics.visionCreators * 365 * 0.75) - delivered
+		);
+
+		// Calculate locked amount (in progress and pending)
+		const locked = $proposals
+			.filter(
+				(p) => p.state === 'doing' || p.state === 'pending_payout' || p.state === 'pending_approval'
+			)
+			.reduce((sum, p) => sum + p.budgetRequested, 0);
+
+		// Calculate remaining voting pool
+		const voting = Math.max(0, total - locked);
+
+		const totalActiveVotes = $proposals
+			.filter((p) => p.state === 'voting')
+			.reduce((sum, p) => sum + p.votes, 0);
+
+		return {
+			totalContributionPool: total,
+			votingPool: voting,
+			lockedPool: locked,
+			deliveredPool: delivered,
+			totalActiveVotes
+		};
+	});
+
+	// Create derived store for proposal values
+	const proposalValues = derived([proposals, poolMetrics], ([$proposals, $poolMetrics]) => {
+		const votingValues = calculateVotingValues($proposals, $poolMetrics.votingPool);
+
+		return $proposals.map((proposal) => ({
+			id: proposal.id,
+			value:
+				proposal.state === 'voting'
+					? votingValues.get(proposal.id) || 0
+					: getFixedStateValue(proposal.state, proposal.budgetRequested)
+		}));
+	});
+
+	// Watch for state transitions
+	$: {
+		const updatedProposals = $proposals.map((p) => {
+			if (p.state === 'voting') {
+				const value = $proposalValues.find((v) => v.id === p.id)?.value || 0;
+				if (value >= p.budgetRequested) {
+					return { ...p, state: 'pending_approval' as ProposalState };
+				}
+			}
+			return p;
+		});
+
+		if (JSON.stringify(updatedProposals) !== JSON.stringify($proposals)) {
+			$proposals = updatedProposals;
+		}
+	}
+
+	// Replace expanded state tracking
+	let expandedProposalId: string | null = null;
+	let activeFilter: ProposalState = 'voting';
+
+	$: filteredAndSortedProposals = $proposals
+		.filter((p) => p.state === activeFilter)
+		.sort((a, b) => {
+			if (a.id === expandedProposalId) return -1;
+			if (b.id === expandedProposalId) return 1;
+			return b.votes - a.votes;
+		});
+
+	function toggleProposal(id: string) {
+		expandedProposalId = expandedProposalId === id ? null : id;
+	}
+
+	// Update voting function to handle increment/decrement
+	function vote(proposalId: string, isIncrease: boolean): void {
+		const proposal = $proposals.find((p) => p.id === proposalId);
+		if (!proposal) return;
+
+		if (isIncrease && $currentUser.tokens > 0) {
+			$currentUser.tokens -= 1;
+			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes + 1 } : p));
+		} else if (!isIncrease && proposal.votes > 0) {
+			$currentUser.tokens += 1;
+			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes - 1 } : p));
+		}
+	}
+
+	// Add function to adjust VisionCreators count
+	function adjustVisionCreators(increment: boolean): void {
+		$dashboardMetrics.visionCreators = increment
+			? $dashboardMetrics.visionCreators + 1
+			: Math.max(0, $dashboardMetrics.visionCreators - 1);
+	}
+
+	// Add function to cycle through states for non-voting proposals
+	function cycleProposalState(proposalId: string): void {
+		const states: ProposalState[] = ['doing', 'pending_payout', 'done'];
+		$proposals = $proposals.map((p) => {
+			if (p.id === proposalId && p.state !== 'voting') {
+				const currentIndex = states.indexOf(p.state);
+				const nextIndex = (currentIndex + 1) % states.length;
+				return { ...p, state: states[nextIndex] };
+			}
+			return p;
+		});
+	}
+
+	// Update state styling functions
 	function getStateColor(state: ProposalState): string {
 		switch (state) {
 			case 'voting':
 				return 'text-tertiary-300';
+			case 'pending_approval':
+				return 'text-secondary-400';
 			case 'doing':
 				return 'text-primary-400';
 			case 'pending_payout':
@@ -297,6 +460,8 @@
 		switch (state) {
 			case 'voting':
 				return 'mdi:vote';
+			case 'pending_approval':
+				return 'mdi:clock-check';
 			case 'doing':
 				return 'mdi:progress-wrench';
 			case 'pending_payout':
@@ -312,6 +477,8 @@
 		switch (state) {
 			case 'voting':
 				return 'Voting';
+			case 'pending_approval':
+				return 'Pending Approval';
 			case 'doing':
 				return 'In Progress';
 			case 'pending_payout':
@@ -327,6 +494,8 @@
 		switch (state) {
 			case 'voting':
 				return 'bg-surface-700/30';
+			case 'pending_approval':
+				return 'bg-secondary-900/20';
 			case 'doing':
 				return 'bg-primary-900/20';
 			case 'pending_payout':
@@ -338,100 +507,38 @@
 		}
 	}
 
-	function calculateQuadraticCost(currentVotes: number): number {
-		return (currentVotes + 1) * (currentVotes + 1);
-	}
-
-	function vote(proposalId: string, isIncrease: boolean): void {
-		$currentUser = { ...$currentUser };
-		const currentVoteCount = $currentUser.proposalVoteCounts.get(proposalId) || 0;
-
-		if (isIncrease) {
-			const cost = calculateQuadraticCost(currentVoteCount);
-			if ($currentUser.votesAvailable >= cost) {
-				$currentUser.votesAvailable -= cost;
-				$currentUser.votesUsed += cost;
-				$currentUser.proposalVoteCounts.set(proposalId, currentVoteCount + 1);
-				$currentUser.proposalsVoted.add(proposalId);
-
-				$proposals = $proposals.map((p) =>
-					p.id === proposalId ? { ...p, votes: p.votes + 1 } : p
-				);
+	function resetProposal(proposalId: string): void {
+		$proposals = $proposals.map((p) => {
+			if (p.id === proposalId) {
+				// Return votes to user
+				$currentUser.tokens += p.votes;
+				return { ...p, votes: 0, state: 'voting' as ProposalState };
 			}
-		} else if (currentVoteCount > 0) {
-			const cost = calculateQuadraticCost(currentVoteCount - 1);
-			$currentUser.votesAvailable += cost;
-			$currentUser.votesUsed -= cost;
-			$currentUser.proposalVoteCounts.set(proposalId, currentVoteCount - 1);
-			if (currentVoteCount - 1 === 0) {
-				$currentUser.proposalsVoted.delete(proposalId);
-			}
-
-			$proposals = $proposals.map((p) => (p.id === proposalId ? { ...p, votes: p.votes - 1 } : p));
-		}
+			return p;
+		});
 	}
 
-	function createProposal(): void {
-		showNewProposalModal = true;
-		newProposal = {
-			id: Math.random().toString(36).substr(2, 9),
-			votes: 0,
-			state: 'voting'
-		};
+	function getTabClasses(state: ProposalState): string {
+		const baseClasses = 'px-4 py-2 text-sm font-medium transition-colors rounded-lg';
+		const activeClasses =
+			activeFilter === state
+				? `${getStateBgColor(state)} ${getStateColor(state)}`
+				: 'hover:bg-surface-700/30';
+		return `${baseClasses} ${activeClasses}`;
 	}
 
-	function submitProposal(): void {
-		if (newProposal.title && newProposal.expectedResults) {
-			$proposals = [...$proposals, newProposal as Proposal];
-			showNewProposalModal = false;
-			newProposal = {};
-		}
+	function getProposalCardClasses(proposal: Proposal): string {
+		const baseClasses =
+			'overflow-hidden transition-all duration-200 border card border-surface-700/50 rounded-xl';
+		return baseClasses;
 	}
 
-	// Calculate fixed value for a non-voting proposal based on its state
-	function getFixedStateValue(state: ProposalState): number {
-		switch (state) {
-			case 'doing':
-				return 450;
-			case 'pending_payout':
-				return 650;
-			case 'done':
-				return 750;
-			default:
-				return 0;
-		}
+	function getProposalValueClasses(proposal: Proposal): string {
+		return `w-[280px] shrink-0 p-6 flex flex-col ${getStateBgColor(proposal.state)}`;
 	}
 
-	// Calculate locked value for a non-voting proposal
-	function calculateLockedValue(proposalState: ProposalState): number {
-		if (proposalState === 'voting') return 0;
-		return getFixedStateValue(proposalState);
-	}
-
-	// Update calculateDynamicPrice to take votingPool as parameter
-	function calculateDynamicPrice(
-		proposalVotes: number,
-		proposalState: ProposalState,
-		currentVotingPool: number
-	): number {
-		// If proposal is not in voting state, return its fixed value
-		if (proposalState !== 'voting') {
-			return calculateLockedValue(proposalState);
-		}
-
-		// For voting proposals, calculate based on voting pool
-		const votingProposals = $proposals.filter((p) => p.state === 'voting');
-		const totalVotingVotes = votingProposals.reduce((sum, p) => sum + p.votes, 0);
-
-		if (totalVotingVotes === 0) return 0;
-		return Math.round((proposalVotes / totalVotingVotes) * currentVotingPool);
-	}
-
-	// Add function to adjust VisionCreators count
-	function adjustVisionCreators(increment: boolean): void {
-		$dashboardMetrics.visionCreators = increment
-			? $dashboardMetrics.visionCreators + 1
-			: Math.max(0, $dashboardMetrics.visionCreators - 1);
+	function getStateTextClasses(proposal: Proposal): string {
+		return `flex items-center gap-2 ${getStateColor(proposal.state)}`;
 	}
 </script>
 
@@ -451,27 +558,33 @@
 					<div class="space-y-6">
 						<div>
 							<p class="text-3xl font-bold text-tertiary-100">
-								{Math.round($dashboardMetrics.visionCreators * 365 * 0.75)}€
+								{$poolMetrics.totalContributionPool}€
 							</p>
 							<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
 						</div>
 						<div>
 							<p class="text-3xl font-bold text-tertiary-100">
-								{poolMetrics.votingPool}€
+								{$poolMetrics.votingPool}€
 							</p>
 							<p class="text-sm text-tertiary-300">Voting Pool</p>
 						</div>
 						<div>
 							<p class="text-3xl font-bold text-tertiary-100">
-								{poolMetrics.lockedPool}€
+								{$poolMetrics.lockedPool}€
 							</p>
 							<p class="text-sm text-tertiary-300">Locked Pool</p>
 						</div>
 						<div>
 							<p class="text-3xl font-bold text-tertiary-100">
-								{poolMetrics.deliveredPool}€
+								{$poolMetrics.deliveredPool}€
 							</p>
 							<p class="text-sm text-tertiary-300">Delivered</p>
+						</div>
+						<div>
+							<p class="text-3xl font-bold text-tertiary-100">
+								{$poolMetrics.totalActiveVotes}
+							</p>
+							<p class="text-sm text-tertiary-300">Total Active Votes</p>
 						</div>
 						<div class="flex items-center justify-between">
 							<div>
@@ -508,58 +621,22 @@
 	<!-- Main Content -->
 	<div class="flex-grow w-full overflow-y-auto">
 		<div class="w-full">
-			<!-- Tab Navigation -->
 			<div class="max-w-5xl px-6 mx-auto">
-				<div
-					class="sticky top-0 z-10 border-b bg-surface-900/95 backdrop-blur-sm border-surface-700/50"
-				>
-					<div class="flex gap-2 -mb-px">
-						<button
-							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
-							'voting'
-								? 'border-tertiary-500 text-tertiary-100'
-								: 'border-transparent text-tertiary-400'}"
-							on:click={() => (selectedStateFilter = 'voting')}
-						>
-							Voting
+				<!-- Tabs Bar -->
+				<div class="sticky top-0 z-10 flex gap-2 py-4 bg-surface-900/95 backdrop-blur-sm">
+					{#each PROPOSAL_STATES as state}
+						<button class={getTabClasses(state)} on:click={() => (activeFilter = state)}>
+							<div class="flex items-center gap-2">
+								<Icon icon={getStateIcon(state)} class="w-4 h-4" />
+								{getStateLabel(state)}
+							</div>
 						</button>
-						<button
-							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
-							'doing'
-								? 'border-tertiary-500 text-tertiary-100'
-								: 'border-transparent text-tertiary-400'}"
-							on:click={() => (selectedStateFilter = 'doing')}
-						>
-							In Progress
-						</button>
-						<button
-							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
-							'pending_payout'
-								? 'border-tertiary-500 text-tertiary-100'
-								: 'border-transparent text-tertiary-400'}"
-							on:click={() => (selectedStateFilter = 'pending_payout')}
-						>
-							Review
-						</button>
-						<button
-							class="px-4 py-3 text-sm font-medium transition-colors border-b-2 hover:text-tertiary-200 {selectedStateFilter ===
-							'done'
-								? 'border-tertiary-500 text-tertiary-100'
-								: 'border-transparent text-tertiary-400'}"
-							on:click={() => (selectedStateFilter = 'done')}
-						>
-							Completed
-						</button>
-					</div>
+					{/each}
 				</div>
-			</div>
 
-			<div class="max-w-5xl px-6 mx-auto">
 				<div class="grid gap-6 py-6">
-					{#each filteredProposals as proposal}
-						<div
-							class="overflow-hidden transition-all duration-200 border card border-surface-700/50 rounded-xl"
-						>
+					{#each filteredAndSortedProposals as proposal}
+						<div class={getProposalCardClasses(proposal)}>
 							<!-- Collapsed Header (always visible) -->
 							<div
 								class="flex items-center cursor-pointer hover:bg-surface-800/50"
@@ -590,27 +667,60 @@
 									</div>
 								</div>
 
-								<!-- Right side: Value and State -->
-								<div class="w-[280px] shrink-0 p-6 flex flex-col {getStateBgColor(proposal.state)}">
-									<div
-										class="flex items-center justify-end gap-2 mb-2 {getStateColor(proposal.state)}"
-									>
-										<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
-										<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
+								<!-- Right side: Value -->
+								<div class={getProposalValueClasses(proposal)}>
+									<div class="flex items-center justify-between mb-2">
+										<button
+											on:click|stopPropagation={() => resetProposal(proposal.id)}
+											class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+										>
+											<Icon icon="mdi:refresh" class="w-4 h-4" />
+											Reset
+										</button>
+										<div class={getStateTextClasses(proposal)}>
+											<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
+											<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
+										</div>
 									</div>
 									<div class="text-right">
-										<p class="text-2xl font-bold text-tertiary-100">
-											{proposalValues.find((p) => p.id === proposal.id)?.value}€
-										</p>
-										<p class="text-sm text-tertiary-300">
-											{proposal.state === 'voting' ? 'current budget allocation' : 'locked value'}
-										</p>
+										{#if proposal.state === 'voting'}
+											<div class="flex flex-col items-end gap-1">
+												<p class="text-2xl font-bold text-tertiary-100">
+													{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
+												</p>
+												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+													<div
+														class="h-full transition-all duration-300 bg-tertiary-500"
+														style="width: {Math.min(
+															100,
+															Math.round(
+																(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+																	proposal.budgetRequested) *
+																	100
+															)
+														)}%"
+													/>
+												</div>
+												<p class="text-sm font-medium text-tertiary-300">
+													{Math.round(
+														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+															proposal.budgetRequested) *
+															100
+													)}% funded
+												</p>
+											</div>
+										{:else}
+											<p class="text-2xl font-bold text-tertiary-100">
+												{proposal.budgetRequested}€
+											</p>
+											<p class="text-sm text-tertiary-300">locked value</p>
+										{/if}
 									</div>
 								</div>
 							</div>
 
 							<!-- Expanded Content -->
-							{#if expandedProposals.has(proposal.id)}
+							{#if expandedProposalId === proposal.id}
 								<div class="flex border-t border-surface-700/50">
 									<!-- Left side: Voting Controls -->
 									<div class="flex flex-col items-center w-40 p-6">
@@ -618,10 +728,7 @@
 											<div class="flex flex-col items-center w-full gap-2">
 												<button
 													on:click|stopPropagation={() => vote(proposal.id, true)}
-													disabled={$currentUser.votesAvailable <
-														calculateQuadraticCost(
-															$currentUser.proposalVoteCounts.get(proposal.id) || 0
-														)}
+													disabled={$currentUser.tokens < 1}
 													class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 												>
 													<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
@@ -629,23 +736,26 @@
 													</svg>
 												</button>
 												<span class="text-2xl font-bold text-tertiary-100">
-													{$currentUser.proposalVoteCounts.get(proposal.id) || 0}
+													{proposal.votes}
 												</span>
 												<button
 													on:click|stopPropagation={() => vote(proposal.id, false)}
-													disabled={!$currentUser.proposalVoteCounts.get(proposal.id)}
+													disabled={proposal.votes === 0}
 													class="flex items-center justify-center w-12 h-12 transition-colors rounded-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 												>
 													<svg class="w-8 h-8 text-tertiary-300" viewBox="0 0 24 24">
 														<path fill="currentColor" d="M19 13H5v-2h14v2z" />
 													</svg>
 												</button>
-												<p class="text-xs text-center text-tertiary-400">
-													Next vote costs: {calculateQuadraticCost(
-														$currentUser.proposalVoteCounts.get(proposal.id) || 0
-													)}
-												</p>
 											</div>
+										{:else if proposal.state === 'pending_approval' || proposal.state === 'doing' || proposal.state === 'pending_payout' || proposal.state === 'done'}
+											<button
+												on:click|stopPropagation={() => cycleProposalState(proposal.id)}
+												class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+											>
+												<Icon icon="mdi:arrow-right-circle" class="w-5 h-5" />
+												Next State
+											</button>
 										{/if}
 									</div>
 
@@ -713,12 +823,8 @@
 					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Voting Power</h4>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.votesAvailable}</p>
+							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.tokens}</p>
 							<p class="text-xs text-tertiary-300">Available</p>
-						</div>
-						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.votesUsed}</p>
-							<p class="text-xs text-tertiary-300">Used</p>
 						</div>
 					</div>
 				</div>
@@ -729,10 +835,6 @@
 						<div>
 							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.proposalsVoted.size}</p>
 							<p class="text-xs text-tertiary-300">Proposals Voted</p>
-						</div>
-						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.proposalsCreated}</p>
-							<p class="text-xs text-tertiary-300">Proposals Created</p>
 						</div>
 					</div>
 				</div>
