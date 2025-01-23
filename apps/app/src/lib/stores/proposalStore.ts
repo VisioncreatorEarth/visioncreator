@@ -636,9 +636,9 @@ export function adjustVisionCreators(increment: boolean): void {
 export function getStateColor(state: ProposalState): string {
     switch (state) {
         case 'idea':
-            return 'text-surface-200';
-        case 'proposal':
             return 'text-blue-300';
+        case 'proposal':
+            return 'text-surface-200';
         case 'pending_approval':
             return 'text-tertiary-500';
         case 'doing':
@@ -693,9 +693,9 @@ export function getStateLabel(state: ProposalState): string {
 export function getStateBgColor(state: ProposalState): string {
     switch (state) {
         case 'idea':
-            return 'bg-surface-600/20';
-        case 'proposal':
             return 'bg-blue-900/20';
+        case 'proposal':
+            return 'bg-surface-600/20';
         case 'pending_approval':
             return 'bg-tertiary-300/10';
         case 'doing':

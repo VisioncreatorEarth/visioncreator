@@ -234,110 +234,117 @@ HOW THIS SYSTEM WORKS:
 
 				<!-- Proposals List -->
 				<div class="grid gap-6 py-6">
-					{#each filteredAndSortedProposals as proposal}
-						<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
-							<!-- Collapsed Header (always visible) -->
-							<div
-								class="flex items-center cursor-pointer hover:bg-surface-800/50"
-								on:click={() => toggleProposal(proposal.id)}
-							>
-								<!-- Left side: Votes -->
-								<div class="flex flex-col items-center w-40 p-6">
-									<div class="text-center">
-										<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
-										<p class="text-sm text-tertiary-300">votes</p>
-									</div>
-								</div>
-
-								<!-- Middle: Basic Info -->
-								<div
-									class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+					{#if expandedProposalId}
+						{@const proposal = $proposals.find((p) => p.id === expandedProposalId)}
+						{#if proposal}
+							<div class="mb-4">
+								<button
+									on:click={() => (expandedProposalId = null)}
+									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
 								>
-									<div class="flex items-center gap-4">
-										<div
-											class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
-										>
-											<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
-										</div>
-										<div>
-											<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-											<p class="text-sm text-tertiary-300">by {proposal.author}</p>
-										</div>
-									</div>
-								</div>
-
-								<!-- Right side: Value -->
-								<div class={getProposalValueClasses(proposal)}>
-									<div class="flex items-center justify-between mb-2">
-										<button
-											on:click|stopPropagation={() => resetProposal(proposal.id)}
-											class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-										>
-											<Icon icon="mdi:refresh" class="w-4 h-4" />
-											Reset
-										</button>
-										<div class={getStateTextClasses(proposal)}>
-											<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
-											<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
-										</div>
-									</div>
-									<div class="text-right">
-										{#if proposal.state === 'proposal'}
-											<div class="flex flex-col items-end gap-1">
-												<p class="text-2xl font-bold text-tertiary-100">
-													{Math.round(
-														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-															proposal.budgetRequested) *
-															100
-													)}%
-												</p>
-												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-													<div
-														class="h-full transition-all duration-300 bg-tertiary-500"
-														style="width: {Math.min(
-															100,
-															Math.round(
-																(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-																	proposal.budgetRequested) *
-																	100
-															)
-														)}%"
-													/>
-												</div>
-												<p class="text-sm text-tertiary-300">
-													{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
-												</p>
-											</div>
-										{:else if proposal.state === 'idea'}
-											<div class="flex flex-col items-end gap-1">
-												<p class="text-2xl font-bold text-tertiary-100">
-													{Math.round((proposal.votes / voteThreshold) * 100)}%
-												</p>
-												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-													<div
-														class="h-full transition-all duration-300 bg-tertiary-500"
-														style="width: {Math.min(
-															100,
-															Math.round((proposal.votes / voteThreshold) * 100)
-														)}%"
-													/>
-												</div>
-												<p class="text-sm text-tertiary-300">
-													{proposal.votes} / {voteThreshold} votes
-												</p>
-											</div>
-										{:else}
-											<p class="text-2xl font-bold text-tertiary-100">
-												{proposal.budgetRequested}€
-											</p>
-											<p class="text-sm text-tertiary-300">locked value</p>
-										{/if}
-									</div>
-								</div>
+									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
+									Back to List
+								</button>
 							</div>
+							<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
+								<!-- Proposal Header -->
+								<div class="flex items-center">
+									<!-- Left side: Votes -->
+									<div class="flex flex-col items-center w-40 p-6">
+										<div class="text-center">
+											<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
+											<p class="text-sm text-tertiary-300">votes</p>
+										</div>
+									</div>
 
-							<!-- Expanded Content -->
-							{#if expandedProposalId === proposal.id}
+									<!-- Middle: Basic Info -->
+									<div
+										class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+									>
+										<div class="flex items-center gap-4">
+											<div
+												class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
+											>
+												<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
+											</div>
+											<div>
+												<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+												<p class="text-sm text-tertiary-300">by {proposal.author}</p>
+											</div>
+										</div>
+									</div>
+
+									<!-- Right side: Value -->
+									<div class={getProposalValueClasses(proposal)}>
+										<div class="flex items-center justify-between mb-2">
+											<button
+												on:click|stopPropagation={() => resetProposal(proposal.id)}
+												class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+											>
+												<Icon icon="mdi:refresh" class="w-4 h-4" />
+												Reset
+											</button>
+											<div class={getStateTextClasses(proposal)}>
+												<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
+												<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
+											</div>
+										</div>
+										<div class="text-right">
+											{#if proposal.state === 'proposal'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round(
+															(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+																proposal.budgetRequested) *
+																100
+														)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																100,
+																Math.round(
+																	(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+																		proposal.budgetRequested) *
+																		100
+																)
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
+													</p>
+												</div>
+											{:else if proposal.state === 'idea'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round((proposal.votes / voteThreshold) * 100)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																100,
+																Math.round((proposal.votes / voteThreshold) * 100)
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{proposal.votes} / {voteThreshold} votes
+													</p>
+												</div>
+											{:else}
+												<p class="text-2xl font-bold text-tertiary-100">
+													{proposal.budgetRequested}€
+												</p>
+												<p class="text-sm text-tertiary-300">locked value</p>
+											{/if}
+										</div>
+									</div>
+								</div>
+
+								<!-- Expanded Content -->
 								<div class="flex border-t border-surface-700/50">
 									<!-- Left side: Voting Controls -->
 									<div class="flex flex-col items-center w-40 p-6">
@@ -430,9 +437,117 @@ HOW THIS SYSTEM WORKS:
 										</div>
 									</div>
 								</div>
-							{/if}
-						</div>
-					{/each}
+							</div>
+						{/if}
+					{:else}
+						{#each filteredAndSortedProposals as proposal}
+							<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
+								<div
+									class="flex items-center cursor-pointer hover:bg-surface-800/50"
+									on:click={() => {
+										expandedProposalId = proposal.id;
+										requestAnimationFrame(() => {
+											centerProposalInView(proposal.id);
+										});
+									}}
+								>
+									<!-- Left side: Votes -->
+									<div class="flex flex-col items-center w-40 p-6">
+										<div class="text-center">
+											<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
+											<p class="text-sm text-tertiary-300">votes</p>
+										</div>
+									</div>
+
+									<!-- Middle: Basic Info -->
+									<div
+										class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+									>
+										<div class="flex items-center gap-4">
+											<div
+												class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
+											>
+												<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
+											</div>
+											<div>
+												<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+												<p class="text-sm text-tertiary-300">by {proposal.author}</p>
+											</div>
+										</div>
+									</div>
+
+									<!-- Right side: Value -->
+									<div class={getProposalValueClasses(proposal)}>
+										<div class="flex items-center justify-between mb-2">
+											<button
+												on:click|stopPropagation={() => resetProposal(proposal.id)}
+												class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+											>
+												<Icon icon="mdi:refresh" class="w-4 h-4" />
+												Reset
+											</button>
+											<div class={getStateTextClasses(proposal)}>
+												<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
+												<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
+											</div>
+										</div>
+										<div class="text-right">
+											{#if proposal.state === 'proposal'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round(
+															(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+																proposal.budgetRequested) *
+																100
+														)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																100,
+																Math.round(
+																	(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+																		proposal.budgetRequested) *
+																		100
+																)
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
+													</p>
+												</div>
+											{:else if proposal.state === 'idea'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round((proposal.votes / voteThreshold) * 100)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																100,
+																Math.round((proposal.votes / voteThreshold) * 100)
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{proposal.votes} / {voteThreshold} votes
+													</p>
+												</div>
+											{:else}
+												<p class="text-2xl font-bold text-tertiary-100">
+													{proposal.budgetRequested}€
+												</p>
+												<p class="text-sm text-tertiary-300">locked value</p>
+											{/if}
+										</div>
+									</div>
+								</div>
+							</div>
+						{/each}
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -479,7 +594,15 @@ HOW THIS SYSTEM WORKS:
 										>
 											<p class="text-sm text-tertiary-300">{proposal.title}</p>
 											<span class="text-sm font-medium {getStateColor(proposal.state)}">
-												{votes}/{proposal.votes}
+												{#if proposal.state === 'proposal'}
+													{Math.round(
+														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
+															proposal.budgetRequested) *
+															100
+													)}%
+												{:else if proposal.state === 'idea'}
+													{Math.round((proposal.votes / voteThreshold) * 100)}%
+												{/if}
 											</span>
 										</div>
 									{/if}
