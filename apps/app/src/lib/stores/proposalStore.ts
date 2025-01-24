@@ -730,17 +730,17 @@ export function getStateIcon(state: ProposalState): string {
 export function getStateLabel(state: ProposalState): string {
     switch (state) {
         case 'idea':
-            return 'Idea';
+            return 'Ideas';
         case 'draft':
-            return 'Draft';
+            return 'Drafts';
         case 'offer':
-            return 'Offer';
+            return 'Offers';
         case 'pending':
             return 'Pending';
         case 'in_progress':
             return 'In Progress';
         case 'review':
-            return 'Review';
+            return 'Reviews';
         case 'completed':
             return 'Completed';
         case 'rejected':

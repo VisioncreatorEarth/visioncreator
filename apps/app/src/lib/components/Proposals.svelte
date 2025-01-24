@@ -45,10 +45,33 @@ HOW THIS SYSTEM WORKS:
 		PROPOSAL_TABS
 	} from '$lib/stores/proposalStore';
 	import Messages from './Messages.svelte';
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
 	let detailTab: 'chat' | 'details' | 'todos' = 'chat';
+
+	// Handle URL parameters for proposal selection
+	$: if ($page.url.searchParams.get('id')) {
+		const proposalId = $page.url.searchParams.get('id');
+		if (proposalId) {
+			const proposal = $proposals.find((p) => p.id === proposalId);
+			if (proposal) {
+				// First set the active tab
+				setActiveTab(proposal.state);
+				// Then wait for the tab change to complete before expanding
+				setTimeout(() => {
+					expandedProposalId = proposalId;
+					// Center the proposal after the DOM updates
+					requestAnimationFrame(() => {
+						centerProposalInView(proposalId);
+					});
+				}, 0);
+			}
+		}
+	}
 
 	// Make tab classes reactive to activeTab changes
 	$: getTabClasses = (state: ProposalState) => {
@@ -241,7 +264,11 @@ HOW THIS SYSTEM WORKS:
 						{#if proposal}
 							<div class="mb-4">
 								<button
-									on:click={() => (expandedProposalId = null)}
+									on:click={() => {
+										expandedProposalId = null;
+										// Update URL to remove the id parameter
+										goto(`/me?view=Proposals`, { replaceState: true });
+									}}
 									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
 								>
 									<Icon icon="mdi:arrow-left" class="w-5 h-5" />

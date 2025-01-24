@@ -25,16 +25,25 @@ HOW THIS COMPONENT WORKS:
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
 	import Icon from '@iconify/svelte';
-	import { getStateIcon, getStateLabel, type ProposalState } from '$lib/stores/proposalStore';
+	import {
+		getStateIcon,
+		getStateLabel,
+		getStateColor,
+		getStateBgColor,
+		type ProposalState,
+		type Proposal
+	} from '$lib/stores/proposalStore';
 	import { proposals, currentUser } from '$lib/stores/proposalStore';
 	import { messageStore, type Message } from '$lib/stores/messageStore';
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	export let show = false;
 	export let onClose: () => void;
 
 	const PROPOSAL_STATES: ProposalState[] = [
 		'idea',
+		'draft',
 		'offer',
 		'pending',
 		'in_progress',
@@ -44,7 +53,7 @@ HOW THIS COMPONENT WORKS:
 	];
 
 	let selectedChannel: ProposalState = 'idea';
-	let selectedThread: string | null = null;
+	let selectedThread: Proposal | null = null;
 	let messageInput = '';
 	let messages: Message[] = [];
 	let messageContainer: HTMLDivElement;
@@ -62,11 +71,11 @@ HOW THIS COMPONENT WORKS:
 	}
 
 	function selectThread(threadId: string) {
-		selectedThread = threadId;
-		if (threadId) {
+		selectedThread = $proposals.find((p) => p.id === threadId) as Proposal;
+		if (selectedThread) {
 			// Initialize thread if needed and subscribe to messages
-			messageStore.createThread(threadId, 'proposal');
-			const threadMessages = messageStore.getThreadMessages(threadId);
+			messageStore.createThread(selectedThread.id, 'proposal');
+			const threadMessages = messageStore.getThreadMessages(selectedThread.id);
 			if (unsubscribe) unsubscribe();
 			unsubscribe = threadMessages.subscribe((value) => {
 				messages = value;
@@ -75,15 +84,15 @@ HOW THIS COMPONENT WORKS:
 				}
 			});
 			// Mark messages as read
-			messageStore.markAsRead(threadId, $currentUser.id);
+			messageStore.markAsRead(selectedThread.id, $currentUser.id);
 		}
 	}
 
-	function handleSubmit() {
-		if (!messageInput.trim() || !selectedThread) return;
+	function sendMessage() {
+		if (!selectedThread || !messageInput.trim()) return;
 
 		messageStore.sendMessage({
-			contextId: selectedThread,
+			contextId: selectedThread.id,
 			contextType: 'proposal',
 			content: messageInput.trim(),
 			sender: {
@@ -91,9 +100,7 @@ HOW THIS COMPONENT WORKS:
 				name: $currentUser.name
 			}
 		});
-
 		messageInput = '';
-		isScrolledToBottom = true;
 	}
 
 	function scrollToBottom() {
@@ -133,12 +140,17 @@ HOW THIS COMPONENT WORKS:
 		);
 	}
 
+	function goToProposal(proposalId: string) {
+		onClose();
+		goto(`/me?view=Proposals&id=${proposalId}`);
+	}
+
 	onDestroy(() => {
 		if (unsubscribe) unsubscribe();
 	});
 
 	$: channelProposals = $proposals.filter((p) => p.state === selectedChannel);
-	$: selectedProposal = selectedThread ? $proposals.find((p) => p.id === selectedThread) : null;
+	$: selectedProposal = selectedThread;
 </script>
 
 {#if show}
@@ -171,8 +183,8 @@ HOW THIS COMPONENT WORKS:
 									<button
 										class="flex items-center w-full gap-2 px-2 py-1.5 rounded-lg text-sm {selectedChannel ===
 										state
-											? 'bg-tertiary-500/20 text-tertiary-100'
-											: 'hover:bg-surface-700/50 text-tertiary-300'}"
+											? getStateBgColor(state) + ' ' + getStateColor(state)
+											: 'hover:bg-surface-700/50 ' + getStateColor(state)}"
 										on:click={() => selectChannel(state)}
 									>
 										<Icon icon={getStateIcon(state)} class="w-4 h-4" />
@@ -198,16 +210,20 @@ HOW THIS COMPONENT WORKS:
 						<!-- Threads List -->
 						<div class="p-2">
 							{#each channelProposals as proposal}
-								<button
-									class="flex flex-col w-full gap-1 p-3 text-left transition-colors rounded-lg {selectedThread ===
-									proposal.id
+								<div
+									class="flex items-center w-full gap-2 p-3 text-left transition-colors rounded-lg {selectedThread &&
+									selectedThread.id === proposal.id
 										? 'bg-tertiary-500/20'
 										: 'hover:bg-surface-700/50'}"
-									on:click={() => selectThread(proposal.id)}
 								>
-									<div class="text-sm font-medium text-tertiary-100">{proposal.title}</div>
-									<div class="text-xs text-tertiary-300">by {proposal.author}</div>
-								</button>
+									<button
+										class="flex flex-col flex-grow gap-1"
+										on:click={() => selectThread(proposal.id)}
+									>
+										<div class="text-sm font-medium text-tertiary-100">{proposal.title}</div>
+										<div class="text-xs text-tertiary-300">by {proposal.author}</div>
+									</button>
+								</div>
 							{/each}
 						</div>
 					</div>
@@ -216,7 +232,7 @@ HOW THIS COMPONENT WORKS:
 					<div class="flex flex-col flex-grow bg-surface-800/30">
 						<!-- Channel Header -->
 						<div
-							class="flex items-center h-16 px-4 border-b border-surface-700/50 bg-surface-800/50"
+							class="flex items-center justify-between h-16 px-4 border-b border-surface-700/50 bg-surface-800/50"
 						>
 							{#if selectedProposal}
 								<div class="flex flex-col">
@@ -225,6 +241,17 @@ HOW THIS COMPONENT WORKS:
 									</h3>
 									<p class="text-sm text-tertiary-300">by {selectedProposal.author}</p>
 								</div>
+								<button
+									on:click={() => goToProposal(selectedThread?.id || '')}
+									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg {selectedThread
+										? `${getStateColor(selectedThread.state)} ${getStateBgColor(
+												selectedThread.state
+										  )}`
+										: ''}"
+								>
+									<span>Open Proposal</span>
+									<Icon icon="mdi:arrow-top-right" class="w-4 h-4" />
+								</button>
 							{:else}
 								<div class="text-sm text-tertiary-400">Select a thread to start chatting</div>
 							{/if}
@@ -303,12 +330,12 @@ HOW THIS COMPONENT WORKS:
 									<input
 										type="text"
 										bind:value={messageInput}
-										on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+										on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
 										placeholder="Message this thread..."
 										class="flex-grow px-4 py-2 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-tertiary-500/50 focus:outline-none"
 									/>
 									<button
-										on:click={handleSubmit}
+										on:click={sendMessage}
 										disabled={!messageInput.trim()}
 										class="px-4 py-2 font-medium rounded-lg bg-tertiary-500 text-tertiary-50 hover:bg-tertiary-600 disabled:opacity-50 disabled:cursor-not-allowed"
 									>
