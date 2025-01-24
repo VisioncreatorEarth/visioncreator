@@ -43,14 +43,16 @@ HOW THIS SYSTEM WORKS:
 		IDEA_VOTE_THRESHOLD_PERCENTAGE,
 		checkProposalStateTransitions
 	} from '$lib/stores/proposalStore';
+	import Messages from './Messages.svelte';
 
 	const PROPOSAL_STATES: ProposalState[] = [
 		'idea',
-		'proposal',
-		'pending_approval',
-		'doing',
-		'pending_payout',
-		'done'
+		'offer',
+		'pending',
+		'in_progress',
+		'review',
+		'completed',
+		'rejected'
 	];
 
 	let showNewProposalModal = false;
@@ -260,7 +262,7 @@ HOW THIS SYSTEM WORKS:
 								<div class="flex items-center">
 									<!-- Left side: Votes -->
 									<div class="flex flex-col items-center w-40 p-6">
-										{#if proposal.state === 'proposal' || proposal.state === 'idea'}
+										{#if proposal.state === 'offer' || proposal.state === 'idea'}
 											<div class="flex items-center justify-center gap-4">
 												<div class="text-center">
 													<div
@@ -303,7 +305,7 @@ HOW THIS SYSTEM WORKS:
 													</button>
 												</div>
 											</div>
-										{:else if proposal.state === 'pending_approval' || proposal.state === 'doing' || proposal.state === 'pending_payout' || proposal.state === 'done'}
+										{:else if proposal.state === 'pending' || proposal.state === 'in_progress' || proposal.state === 'review' || proposal.state === 'completed' || proposal.state === 'rejected'}
 											<div class="text-center">
 												<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
 												<p class="text-sm text-tertiary-300">votes</p>
@@ -344,7 +346,7 @@ HOW THIS SYSTEM WORKS:
 											</div>
 										</div>
 										<div class="text-right">
-											{#if proposal.state === 'proposal'}
+											{#if proposal.state === 'offer'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
 														{Math.round(
@@ -453,62 +455,7 @@ HOW THIS SYSTEM WORKS:
 												</p>
 											</div>
 										{:else if detailTab === 'chat'}
-											<div class="flex flex-col h-[400px]">
-												<!-- Chat Messages -->
-												<div
-													class="flex-grow p-4 mb-4 space-y-4 overflow-y-auto rounded-lg bg-surface-800/50"
-												>
-													<!-- Example Messages -->
-													<div class="flex gap-3">
-														<div class="flex-shrink-0 w-8 h-8 rounded-full bg-surface-700/50">
-															<Icon icon="mdi:account" class="w-8 h-8 p-1 text-tertiary-300" />
-														</div>
-														<div class="flex-grow">
-															<div class="flex items-center gap-2 mb-1">
-																<span class="text-sm font-medium text-tertiary-200">David Chen</span
-																>
-																<span class="text-xs text-tertiary-400">2h ago</span>
-															</div>
-															<p class="p-3 text-sm rounded-lg bg-surface-700/30 text-tertiary-300">
-																Here's the latest update on the landing page development. We've
-																completed the hero section and are moving on to the features
-																showcase.
-															</p>
-														</div>
-													</div>
-													<div class="flex gap-3">
-														<div class="flex-shrink-0 w-8 h-8 rounded-full bg-surface-700/50">
-															<Icon icon="mdi:account" class="w-8 h-8 p-1 text-tertiary-300" />
-														</div>
-														<div class="flex-grow">
-															<div class="flex items-center gap-2 mb-1">
-																<span class="text-sm font-medium text-tertiary-200"
-																	>Maria Garcia</span
-																>
-																<span class="text-xs text-tertiary-400">1h ago</span>
-															</div>
-															<p class="p-3 text-sm rounded-lg bg-surface-700/30 text-tertiary-300">
-																The animations look great! Could we add some micro-interactions to
-																improve user engagement?
-															</p>
-														</div>
-													</div>
-												</div>
-
-												<!-- Chat Input -->
-												<div class="flex gap-2">
-													<input
-														type="text"
-														placeholder="Type your message..."
-														class="flex-grow px-4 py-2 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-tertiary-500/50 focus:outline-none"
-													/>
-													<button
-														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600 text-tertiary-50"
-													>
-														Send
-													</button>
-												</div>
-											</div>
+											<Messages contextId={proposal.id} contextType="proposal" height="400px" />
 										{:else if detailTab === 'todos'}
 											<div class="space-y-4">
 												<!-- Todo Header -->
@@ -578,7 +525,7 @@ HOW THIS SYSTEM WORKS:
 
 									<!-- Right side: Metrics -->
 									<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)}">
-										{#if proposal.state === 'pending_approval' || proposal.state === 'doing' || proposal.state === 'pending_payout' || proposal.state === 'done'}
+										{#if proposal.state === 'pending' || proposal.state === 'in_progress' || proposal.state === 'review' || proposal.state === 'completed'}
 											<div class="p-4 border-b border-surface-700/50">
 												<button
 													on:click|stopPropagation={() => cycleProposalState(proposal.id)}
@@ -635,7 +582,7 @@ HOW THIS SYSTEM WORKS:
 								>
 									<!-- Left side: Votes -->
 									<div class="flex flex-col items-center w-40 p-6">
-										{#if proposal.state === 'proposal' || proposal.state === 'idea'}
+										{#if proposal.state === 'offer' || proposal.state === 'idea'}
 											<div class="flex items-center justify-center gap-4">
 												<div class="text-center">
 													<div
@@ -678,7 +625,7 @@ HOW THIS SYSTEM WORKS:
 													</button>
 												</div>
 											</div>
-										{:else if proposal.state === 'pending_approval' || proposal.state === 'doing' || proposal.state === 'pending_payout' || proposal.state === 'done'}
+										{:else if proposal.state === 'pending' || proposal.state === 'in_progress' || proposal.state === 'review' || proposal.state === 'completed' || proposal.state === 'rejected'}
 											<div class="text-center">
 												<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
 												<p class="text-sm text-tertiary-300">votes</p>
@@ -719,7 +666,7 @@ HOW THIS SYSTEM WORKS:
 											</div>
 										</div>
 										<div class="text-right">
-											{#if proposal.state === 'proposal'}
+											{#if proposal.state === 'offer'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
 														{Math.round(

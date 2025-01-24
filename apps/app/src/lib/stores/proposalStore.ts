@@ -114,11 +114,12 @@ import { writable, derived } from 'svelte/store';
 // Types
 export type ProposalState =
     | 'idea'
-    | 'proposal'
-    | 'pending_approval'
-    | 'doing'
-    | 'pending_payout'
-    | 'done';
+    | 'offer'
+    | 'pending'
+    | 'in_progress'
+    | 'review'
+    | 'completed'
+    | 'rejected';
 
 export interface Proposal {
     id: string;
@@ -170,7 +171,7 @@ const initialProposals: Proposal[] = [
             '• Real-time conversion tracking\n' +
             '• A/B testing infrastructure\n\n' +
             'Following atomic design principles for consistent branding and maximum component reusability.',
-        state: 'doing',
+        state: 'in_progress',
         estimatedDelivery: '3 weeks',
         budgetRequested: 700
     },
@@ -189,7 +190,7 @@ const initialProposals: Proposal[] = [
             '• Professional video coverage\n' +
             '• Dedicated networking sessions\n\n' +
             'Post-event: Follow-up networking, resource sharing, and community building initiatives.',
-        state: 'proposal',
+        state: 'offer',
         estimatedDelivery: '2 weeks',
         budgetRequested: 1200
     },
@@ -208,7 +209,7 @@ const initialProposals: Proposal[] = [
             '• Integrated commenting system\n' +
             '• Advanced filtering and priority management\n' +
             '• Mobile responsiveness and offline support',
-        state: 'pending_payout',
+        state: 'review',
         estimatedDelivery: '4 weeks',
         budgetRequested: 900
     },
@@ -227,7 +228,7 @@ const initialProposals: Proposal[] = [
             '• Platform demonstrations and user testimonials\n' +
             '• Multiple platform-optimized versions\n\n' +
             'Including multiple revision rounds and professional sound design.',
-        state: 'done',
+        state: 'completed',
         estimatedDelivery: '1 week',
         budgetRequested: 1000
     },
@@ -247,7 +248,7 @@ const initialProposals: Proposal[] = [
             '• Platform-specific content templates\n' +
             '• Analytics baseline and tracking setup\n\n' +
             'Including A/B testing of different messaging approaches.',
-        state: 'proposal',
+        state: 'offer',
         estimatedDelivery: '1 week',
         budgetRequested: 600
     },
@@ -267,7 +268,7 @@ const initialProposals: Proposal[] = [
             '• Referral analytics dashboard\n' +
             '• Integration with existing user system\n\n' +
             'Focus on sustainable growth and quality referrals.',
-        state: 'proposal',
+        state: 'offer',
         estimatedDelivery: '3 weeks',
         budgetRequested: 1400
     },
@@ -287,7 +288,7 @@ const initialProposals: Proposal[] = [
             '• Transparent tracking system\n' +
             '• Community feedback loops\n\n' +
             'Including comprehensive documentation and onboarding materials.',
-        state: 'proposal',
+        state: 'offer',
         estimatedDelivery: '4 weeks',
         budgetRequested: 500
     },
@@ -307,7 +308,7 @@ const initialProposals: Proposal[] = [
             '• Video guidelines and templates\n' +
             '• Quality control mechanisms\n\n' +
             'Including creator guidelines and best practices documentation.',
-        state: 'proposal',
+        state: 'offer',
         estimatedDelivery: '2 weeks',
         budgetRequested: 900
     },
@@ -410,6 +411,26 @@ const initialProposals: Proposal[] = [
         state: 'idea',
         estimatedDelivery: '4 weeks',
         budgetRequested: 1500
+    },
+    {
+        id: '15',
+        title: 'AI Content Generation System',
+        author: 'James Wilson',
+        votes: 0,
+        expectedResults: 'Automated content creation and distribution',
+        commitment: 'Delivery of working AI content generation system with API',
+        description:
+            'AI-powered content generation system for community posts.\n\n' +
+            'System Features:\n' +
+            '• GPT-4 integration for text generation\n' +
+            '• Image generation capabilities\n' +
+            '• Content quality filters\n' +
+            '• Automated posting schedule\n' +
+            '• Performance analytics\n\n' +
+            'Rejected due to concerns about AI-generated content quality and authenticity.',
+        state: 'rejected',
+        estimatedDelivery: '6 weeks',
+        budgetRequested: 2500
     }
 ];
 
@@ -424,7 +445,7 @@ export const currentUser = writable<UserProfile>({
 export const dashboardMetrics = writable<DashboardMetrics>({
     visionCreators: 17
 });
-export const activeTab = writable<ProposalState>('proposal');
+export const activeTab = writable<ProposalState>('offer');
 
 // Function to change active tab
 export function setActiveTab(state: ProposalState): void {
@@ -433,25 +454,25 @@ export function setActiveTab(state: ProposalState): void {
 
 // Helper Functions
 function getFixedStateValue(state: ProposalState, budgetRequested: number): number {
-    if (state === 'proposal') return 0;
+    if (state === 'offer') return 0;
     return budgetRequested;
 }
 
 // Helper function to check if a state is active (votes count towards total)
 function isActiveState(state: ProposalState): boolean {
-    return state === 'idea' || state === 'proposal' || state === 'pending_approval';
+    return state === 'idea' || state === 'offer' || state === 'pending';
 }
 
-// Update poolMetrics to use the new active state logic
+// Update poolMetrics to use the new state logic
 export const poolMetrics = derived([dashboardMetrics, proposals], ([$dashboardMetrics, $proposals]) => {
     const delivered = $proposals
-        .filter((p) => p.state === 'done')
+        .filter((p) => p.state === 'completed')
         .reduce((sum, p) => sum + p.budgetRequested, 0);
 
     const total = Math.max(0, Math.round($dashboardMetrics.visionCreators * 365 * 0.75) - delivered);
 
     const locked = $proposals
-        .filter((p) => p.state === 'doing' || p.state === 'pending_payout' || p.state === 'pending_approval')
+        .filter((p) => p.state === 'in_progress' || p.state === 'review' || p.state === 'pending')
         .reduce((sum, p) => sum + p.budgetRequested, 0);
 
     const voting = Math.max(0, total - locked);
@@ -472,7 +493,7 @@ export const poolMetrics = derived([dashboardMetrics, proposals], ([$dashboardMe
 
 // Update voting values calculation to use active states
 function calculateVotingValues(proposals: Proposal[], votingPool: number): Map<string, number> {
-    const votingProposals = proposals.filter((p) => p.state === 'proposal');
+    const votingProposals = proposals.filter((p) => p.state === 'offer');
     // Update total votes to only count active states
     const totalVotes = proposals
         .filter((p) => isActiveState(p.state))
@@ -534,7 +555,7 @@ export const proposalValues = derived([proposals, poolMetrics], ([$proposals, $p
     return $proposals.map((proposal) => ({
         id: proposal.id,
         value:
-            proposal.state === 'proposal'
+            proposal.state === 'offer'
                 ? votingValues.get(proposal.id) || 0
                 : getFixedStateValue(proposal.state, proposal.budgetRequested)
     }));
@@ -598,18 +619,18 @@ export function resetProposal(proposalId: string): void {
     });
 }
 
-// Update cycleProposalState to handle vote release
+// Update cycleProposalState to handle the new state flow
 export function cycleProposalState(proposalId: string): void {
-    const states: ProposalState[] = ['doing', 'pending_payout', 'done'];
+    const states: ProposalState[] = ['in_progress', 'review', 'completed'];
     proposals.update(($proposals) => {
         return $proposals.map((p) => {
-            if (p.id === proposalId && p.state !== 'proposal') {
+            if (p.id === proposalId && p.state !== 'offer' && p.state !== 'idea') {
                 const currentIndex = states.indexOf(p.state);
                 const nextIndex = (currentIndex + 1) % states.length;
                 const nextState = states[nextIndex];
 
-                // If moving to 'doing', release votes back to users
-                if (nextState === 'doing' && isActiveState(p.state)) {
+                // If moving to 'in_progress', release votes back to users
+                if (nextState === 'in_progress' && isActiveState(p.state)) {
                     currentUser.update(($currentUser) => {
                         const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
                         $currentUser.tokens += userVotes;
@@ -637,16 +658,18 @@ export function getStateColor(state: ProposalState): string {
     switch (state) {
         case 'idea':
             return 'text-blue-300';
-        case 'proposal':
+        case 'offer':
             return 'text-surface-200';
-        case 'pending_approval':
+        case 'pending':
             return 'text-tertiary-500';
-        case 'doing':
+        case 'in_progress':
             return 'text-primary-400';
-        case 'pending_payout':
+        case 'review':
             return 'text-secondary-400';
-        case 'done':
+        case 'completed':
             return 'text-success-400';
+        case 'rejected':
+            return 'text-error-400';
         default:
             return 'text-tertiary-300';
     }
@@ -654,18 +677,20 @@ export function getStateColor(state: ProposalState): string {
 
 export function getStateIcon(state: ProposalState): string {
     switch (state) {
-        case 'proposal':
-            return 'mdi:vote';
-        case 'pending_approval':
-            return 'mdi:clock-check';
-        case 'doing':
-            return 'mdi:progress-wrench';
-        case 'pending_payout':
-            return 'mdi:cash-clock';
-        case 'done':
-            return 'mdi:check-circle';
         case 'idea':
             return 'mdi:lightbulb';
+        case 'offer':
+            return 'mdi:handshake';
+        case 'pending':
+            return 'mdi:clock-check';
+        case 'in_progress':
+            return 'mdi:progress-wrench';
+        case 'review':
+            return 'mdi:cash-clock';
+        case 'completed':
+            return 'mdi:check-circle';
+        case 'rejected':
+            return 'mdi:close-circle';
         default:
             return 'mdi:help-circle';
     }
@@ -673,18 +698,20 @@ export function getStateIcon(state: ProposalState): string {
 
 export function getStateLabel(state: ProposalState): string {
     switch (state) {
-        case 'proposal':
-            return 'Proposal';
-        case 'pending_approval':
-            return 'Pending Approval';
-        case 'doing':
-            return 'In Progress';
-        case 'pending_payout':
-            return 'Review';
-        case 'done':
-            return 'Completed';
         case 'idea':
             return 'Idea';
+        case 'offer':
+            return 'Offer';
+        case 'pending':
+            return 'Pending';
+        case 'in_progress':
+            return 'In Progress';
+        case 'review':
+            return 'Review';
+        case 'completed':
+            return 'Completed';
+        case 'rejected':
+            return 'Rejected';
         default:
             return 'Unknown';
     }
@@ -694,37 +721,59 @@ export function getStateBgColor(state: ProposalState): string {
     switch (state) {
         case 'idea':
             return 'bg-blue-900/20';
-        case 'proposal':
+        case 'offer':
             return 'bg-surface-600/20';
-        case 'pending_approval':
+        case 'pending':
             return 'bg-tertiary-300/10';
-        case 'doing':
+        case 'in_progress':
             return 'bg-primary-900/20';
-        case 'pending_payout':
+        case 'review':
             return 'bg-secondary-900/20';
-        case 'done':
+        case 'completed':
             return 'bg-success-900/20';
+        case 'rejected':
+            return 'bg-error-900/20';
         default:
             return 'bg-tertiary-500/10';
     }
 }
 
-// Update state transition logic to use active states
+// Update state transition logic
 export function checkProposalStateTransitions($proposals: Proposal[], voteThreshold: number, $proposalValues: { id: string; value: number }[]): Proposal[] {
-    // Update total votes to only count active states
     const totalVotes = $proposals
         .filter((p) => isActiveState(p.state))
         .reduce((sum, p) => sum + p.votes, 0);
 
     return $proposals.map((p) => {
         if (p.state === 'idea' && p.votes >= voteThreshold && totalVotes >= MIN_TOTAL_VOTES_FOR_PROPOSAL) {
-            return { ...p, state: 'proposal' as ProposalState };
-        } else if (p.state === 'proposal') {
+            return { ...p, state: 'offer' as ProposalState };
+        } else if (p.state === 'offer') {
             const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
             if (proposalValue >= p.budgetRequested) {
-                return { ...p, state: 'pending_approval' as ProposalState };
+                return { ...p, state: 'pending' as ProposalState };
             }
         }
         return p;
+    });
+}
+
+// Add function to reject a proposal
+export function rejectProposal(proposalId: string): void {
+    proposals.update(($proposals) => {
+        return $proposals.map((p) => {
+            if (p.id === proposalId) {
+                // Return votes to users if in an active state
+                if (isActiveState(p.state)) {
+                    currentUser.update(($currentUser) => {
+                        const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
+                        $currentUser.tokens += userVotes;
+                        $currentUser.proposalsVoted.delete(proposalId);
+                        return $currentUser;
+                    });
+                }
+                return { ...p, state: 'rejected' as ProposalState };
+            }
+            return p;
+        });
     });
 } 
