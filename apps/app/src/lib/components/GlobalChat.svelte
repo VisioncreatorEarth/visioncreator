@@ -35,6 +35,7 @@ HOW THIS COMPONENT WORKS:
 	} from '$lib/stores/proposalStore';
 	import { proposals, currentUser } from '$lib/stores/proposalStore';
 	import { messageStore, type Message } from '$lib/stores/messageStore';
+	import { activityStore, type Activity } from '$lib/stores/activityStore';
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -52,41 +53,207 @@ HOW THIS COMPONENT WORKS:
 		'rejected'
 	];
 
-	let selectedChannel: ProposalState = 'idea';
-	let selectedThread: Proposal | null = null;
+	const GLOBAL_CHANNELS: Array<{ id: ChannelType; label: string; icon: string }> = [
+		{ id: 'general', label: 'General', icon: 'mdi:chat' },
+		{ id: 'announcements', label: 'Announcements', icon: 'mdi:bullhorn' },
+		{ id: 'activity', label: 'Activity', icon: 'mdi:timeline-clock' },
+		{ id: 'help', label: 'Help & Support', icon: 'mdi:help-circle' }
+	];
+
+	type ChannelType = ProposalState | 'general' | 'announcements' | 'help' | 'activity';
+
+	interface DefaultThread {
+		id: string;
+		title: string;
+		author: string;
+		state: ChannelType;
+		description: string;
+		isPinned: boolean;
+	}
+
+	// Default threads for all channels
+	const DEFAULT_THREADS: Record<ChannelType, DefaultThread> = {
+		activity: {
+			id: 'activity-thread',
+			title: 'Activity Stream',
+			author: 'System',
+			state: 'activity',
+			description: 'Track all proposal updates and system activities.',
+			isPinned: true
+		},
+		general: {
+			id: 'general-thread',
+			title: 'General Discussion',
+			author: 'Visioncreator',
+			state: 'general',
+			description: 'General community discussions and updates.',
+			isPinned: true
+		},
+		announcements: {
+			id: 'announcements-thread',
+			title: 'Important Announcements',
+			author: 'Visioncreator',
+			state: 'announcements',
+			description: 'Official announcements and important updates.',
+			isPinned: true
+		},
+		help: {
+			id: 'help-thread',
+			title: 'Help & Support',
+			author: 'Visioncreator',
+			state: 'help',
+			description: 'Get help and support from the community.',
+			isPinned: true
+		},
+		idea: {
+			id: 'idea-thread',
+			title: 'Ideas Discussion',
+			author: 'Visioncreator',
+			state: 'idea',
+			description: 'Discuss new ideas and proposals.',
+			isPinned: true
+		},
+		draft: {
+			id: 'draft-thread',
+			title: 'Draft Proposals',
+			author: 'Visioncreator',
+			state: 'draft',
+			description: 'Discuss and refine draft proposals.',
+			isPinned: true
+		},
+		offer: {
+			id: 'offer-thread',
+			title: 'Active Offers',
+			author: 'Visioncreator',
+			state: 'offer',
+			description: 'Discuss current offers and voting.',
+			isPinned: true
+		},
+		pending: {
+			id: 'pending-thread',
+			title: 'Pending Approvals',
+			author: 'Visioncreator',
+			state: 'pending',
+			description: 'Discuss proposals pending approval.',
+			isPinned: true
+		},
+		in_progress: {
+			id: 'in_progress-thread',
+			title: 'In Progress Updates',
+			author: 'Visioncreator',
+			state: 'in_progress',
+			description: 'Updates on ongoing projects.',
+			isPinned: true
+		},
+		review: {
+			id: 'review-thread',
+			title: 'Review Discussion',
+			author: 'Visioncreator',
+			state: 'review',
+			description: 'Discuss proposals under review.',
+			isPinned: true
+		},
+		completed: {
+			id: 'completed-thread',
+			title: 'Completed Projects',
+			author: 'Visioncreator',
+			state: 'completed',
+			description: 'Discuss completed projects and lessons learned.',
+			isPinned: true
+		},
+		rejected: {
+			id: 'rejected-thread',
+			title: 'Rejected Proposals',
+			author: 'Visioncreator',
+			state: 'rejected',
+			description: 'Discuss rejected proposals and improvements.',
+			isPinned: true
+		}
+	};
+
+	let selectedChannel: ChannelType = 'general';
+	let selectedThread: DefaultThread | Proposal | null = DEFAULT_THREADS.general;
 	let messageInput = '';
 	let messages: Message[] = [];
 	let messageContainer: HTMLDivElement;
 	let isScrolledToBottom = true;
 	let unsubscribe: () => void;
 
+	// Helper functions for channel type checking
+	function isProposalState(channel: ChannelType): channel is ProposalState {
+		return PROPOSAL_STATES.includes(channel as ProposalState);
+	}
+
+	function getChannelIcon(channel: ChannelType): string {
+		const globalChannel = GLOBAL_CHANNELS.find((c) => c.id === channel);
+		return globalChannel ? globalChannel.icon : getStateIcon(channel as ProposalState);
+	}
+
+	function getChannelLabel(channel: ChannelType): string {
+		const globalChannel = GLOBAL_CHANNELS.find((c) => c.id === channel);
+		return globalChannel ? globalChannel.label : getStateLabel(channel as ProposalState);
+	}
+
+	function getThreadType(channel: ChannelType): 'proposal' | 'global' {
+		return isProposalState(channel) ? 'proposal' : 'global';
+	}
+
+	// Update header based on channel type
+	$: channelHeader = getChannelLabel(selectedChannel);
+
+	// Update threads view based on channel type
+	$: showThreadsList = true; // Always show threads list since we have default threads
+
+	// Update channel proposals with pinned threads
+	$: channelProposals = [
+		DEFAULT_THREADS[selectedChannel], // Add default thread first
+		...(isProposalState(selectedChannel)
+			? $proposals.filter((p) => p.state === selectedChannel)
+			: []) // Add regular proposals only for proposal channels
+	];
+
 	function handleClose() {
 		onClose();
 	}
 
-	function selectChannel(channel: ProposalState) {
+	function selectChannel(channel: ChannelType) {
 		selectedChannel = channel;
-		selectedThread = null;
-		messages = [];
+		// Select the default thread for the channel
+		selectedThread = DEFAULT_THREADS[channel];
+		// Initialize thread based on channel type
+		initializeThread(DEFAULT_THREADS[channel].id, getThreadType(channel));
 	}
 
 	function selectThread(threadId: string) {
-		selectedThread = $proposals.find((p) => p.id === threadId) as Proposal;
+		const defaultThread = DEFAULT_THREADS[selectedChannel];
+		if (threadId === defaultThread.id) {
+			selectedThread = defaultThread;
+		} else {
+			selectedThread = $proposals.find((p) => p.id === threadId) || null;
+		}
+
 		if (selectedThread) {
-			// Initialize thread if needed and subscribe to messages
-			messageStore.createThread(selectedThread.id, 'proposal');
-			const threadMessages = messageStore.getThreadMessages(selectedThread.id);
-			if (unsubscribe) unsubscribe();
-			unsubscribe = threadMessages.subscribe((value) => {
-				messages = value;
-				if (isScrolledToBottom) {
-					scrollToBottom();
-				}
-			});
-			// Mark messages as read
-			messageStore.markAsRead(selectedThread.id, $currentUser.id);
+			initializeThread(selectedThread.id, getThreadType(selectedChannel));
 		}
 	}
+
+	function initializeThread(threadId: string, type: 'proposal' | 'global') {
+		messageStore.createThread(threadId, type);
+		const threadMessages = messageStore.getThreadMessages(threadId);
+		if (unsubscribe) unsubscribe();
+		unsubscribe = threadMessages.subscribe((value) => {
+			messages = value;
+			if (isScrolledToBottom) {
+				scrollToBottom();
+			}
+		});
+		messageStore.markAsRead(threadId, $currentUser.id);
+	}
+
+	// Initialize with general channel and its default thread
+	onMount(() => {
+		selectChannel('general');
+	});
 
 	function sendMessage() {
 		if (!selectedThread || !messageInput.trim()) return;
@@ -149,7 +316,8 @@ HOW THIS COMPONENT WORKS:
 		if (unsubscribe) unsubscribe();
 	});
 
-	$: channelProposals = $proposals.filter((p) => p.state === selectedChannel);
+	$: isProposalChannel = !GLOBAL_CHANNELS.find((c) => c.id === selectedChannel);
+
 	$: selectedProposal = selectedThread;
 </script>
 
@@ -175,6 +343,26 @@ HOW THIS COMPONENT WORKS:
 
 						<!-- Channel List -->
 						<div class="p-2">
+							<!-- Global Channels -->
+							<div class="mb-4">
+								<div class="px-2 py-1 text-xs font-semibold uppercase text-tertiary-400">
+									Global Channels
+								</div>
+								{#each GLOBAL_CHANNELS as channel}
+									<button
+										class="flex items-center w-full gap-2 px-2 py-1.5 rounded-lg text-sm {selectedChannel ===
+										channel.id
+											? 'bg-tertiary-500/20 text-tertiary-100'
+											: 'hover:bg-surface-700/50 text-tertiary-300'}"
+										on:click={() => selectChannel(channel.id)}
+									>
+										<Icon icon={channel.icon} class="w-4 h-4" />
+										<span># {channel.label.toLowerCase()}</span>
+									</button>
+								{/each}
+							</div>
+
+							<!-- Proposal Channels -->
 							<div class="mb-4">
 								<div class="px-2 py-1 text-xs font-semibold uppercase text-tertiary-400">
 									Proposal Channels
@@ -200,32 +388,46 @@ HOW THIS COMPONENT WORKS:
 						<!-- Header -->
 						<div class="flex items-center h-16 px-4 border-b border-surface-700/50">
 							<div class="flex items-center gap-2">
-								<Icon icon={getStateIcon(selectedChannel)} class="w-5 h-5 text-tertiary-300" />
+								<Icon icon={getChannelIcon(selectedChannel)} class="w-5 h-5 text-tertiary-300" />
 								<h3 class="text-lg font-semibold text-tertiary-100">
-									{getStateLabel(selectedChannel)}
+									{channelHeader}
 								</h3>
 							</div>
 						</div>
 
-						<!-- Threads List -->
-						<div class="p-2">
-							{#each channelProposals as proposal}
-								<div
-									class="flex items-center w-full gap-2 p-3 text-left transition-colors rounded-lg {selectedThread &&
-									selectedThread.id === proposal.id
-										? 'bg-tertiary-500/20'
-										: 'hover:bg-surface-700/50'}"
-								>
-									<button
-										class="flex flex-col flex-grow gap-1"
-										on:click={() => selectThread(proposal.id)}
+						<!-- Threads List or Global Chat -->
+						{#if showThreadsList}
+							<div class="p-2">
+								{#each channelProposals as proposal}
+									<div
+										class="flex items-center w-full gap-2 p-3 text-left transition-colors rounded-lg {selectedThread &&
+										selectedThread.id === proposal.id
+											? 'bg-surface-700/20'
+											: 'hover:bg-surface-700/50'}"
 									>
-										<div class="text-sm font-medium text-tertiary-100">{proposal.title}</div>
-										<div class="text-xs text-tertiary-300">by {proposal.author}</div>
-									</button>
+										<button
+											class="flex flex-col flex-grow gap-1"
+											on:click={() => selectThread(proposal.id)}
+										>
+											{#if proposal?.isPinned}
+												<div class="flex items-center gap-1 text-xs text-tertiary-400">
+													<Icon icon="mdi:pin" class="w-3 h-3" />
+													<span>Pinned Thread</span>
+												</div>
+											{/if}
+											<div class="text-sm font-medium text-tertiary-100">{proposal.title}</div>
+											<div class="text-xs text-tertiary-300">responsible {proposal.author}</div>
+										</button>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="p-4">
+								<div class="text-sm text-center text-tertiary-400">
+									Welcome to {getChannelLabel(selectedChannel)}
 								</div>
-							{/each}
-						</div>
+							</div>
+						{/if}
 					</div>
 
 					<!-- Main Chat Area -->
@@ -239,7 +441,7 @@ HOW THIS COMPONENT WORKS:
 									<h3 class="text-lg font-semibold text-tertiary-100">
 										{selectedProposal.title}
 									</h3>
-									<p class="text-sm text-tertiary-300">by {selectedProposal.author}</p>
+									<p class="text-sm text-tertiary-300">responsible {selectedProposal.author}</p>
 								</div>
 								<button
 									on:click={() => goToProposal(selectedThread?.id || '')}
@@ -263,7 +465,40 @@ HOW THIS COMPONENT WORKS:
 							on:scroll={handleScroll}
 							class="flex-grow p-4 space-y-2 overflow-y-auto"
 						>
-							{#if selectedProposal}
+							{#if selectedChannel === 'activity'}
+								{#if $activityStore.length === 0}
+									<div class="text-sm text-center text-tertiary-400">No activities yet</div>
+								{:else}
+									{#each $activityStore as activity}
+										<div class="flex items-start gap-2 p-2 rounded-lg hover:bg-surface-700/20">
+											<div
+												class="flex items-center justify-center w-8 h-8 rounded-full bg-tertiary-500/10"
+											>
+												<Icon icon="mdi:timeline-clock" class="w-5 h-5 text-tertiary-300" />
+											</div>
+											<div class="flex-grow">
+												<p class="text-sm text-tertiary-200">
+													{activityStore.formatActivity(activity)}
+												</p>
+												<p class="text-xs text-tertiary-400">
+													{new Date(activity.timestamp).toLocaleString()}
+												</p>
+											</div>
+											{#if activity.proposalId}
+												<button
+													class="px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
+													on:click={() => {
+														onClose();
+														goto(`/me?view=Proposals&id=${activity.proposalId}`);
+													}}
+												>
+													View Proposal
+												</button>
+											{/if}
+										</div>
+									{/each}
+								{/if}
+							{:else if selectedProposal}
 								{#if messages.length === 0}
 									<div class="text-sm text-center text-tertiary-400">
 										Start the discussion about "{selectedProposal.title}"

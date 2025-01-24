@@ -109,7 +109,8 @@ HOW THE PROPOSAL SYSTEM WORKS:
      * Vote distributions
 */
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import { activityStore } from './activityStore';
 
 // Types
 export type ProposalState =
@@ -147,6 +148,7 @@ export interface Proposal {
         risks: string;
         dependencies: string[];
     };
+    isPinned?: boolean;
 }
 
 export interface UserProfile {
@@ -648,30 +650,48 @@ export function resetProposal(proposalId: string): void {
     });
 }
 
-// Update cycleProposalState to handle the new state flow
-export function cycleProposalState(proposalId: string): void {
-    const states: ProposalState[] = ['in_progress', 'review', 'completed'];
-    proposals.update(($proposals) => {
-        return $proposals.map((p) => {
-            if (p.id === proposalId && p.state !== 'offer' && p.state !== 'idea') {
-                const currentIndex = states.indexOf(p.state);
-                const nextIndex = (currentIndex + 1) % states.length;
-                const nextState = states[nextIndex];
+// Helper function to get the next state in the workflow
+function getNextState(currentState: ProposalState): ProposalState {
+    const stateFlow: Record<ProposalState, ProposalState> = {
+        idea: 'draft',
+        draft: 'offer',
+        offer: 'pending',
+        pending: 'in_progress',
+        in_progress: 'review',
+        review: 'completed',
+        completed: 'completed',
+        rejected: 'rejected'
+    };
+    return stateFlow[currentState];
+}
 
-                // If moving to 'in_progress', release votes back to users
-                if (nextState === 'in_progress' && isActiveState(p.state)) {
-                    currentUser.update(($currentUser) => {
-                        const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
-                        $currentUser.tokens += userVotes;
-                        $currentUser.proposalsVoted.delete(proposalId);
-                        return $currentUser;
-                    });
-                }
+export function cycleProposalState(proposalId: string) {
+    const currentUserValue = get(currentUser);
+    proposals.update((proposals) => {
+        const proposal = proposals.find((p) => p.id === proposalId);
+        if (!proposal) return proposals;
 
-                return { ...p, state: nextState };
-            }
-            return p;
+        const previousState = proposal.state;
+        const newState = getNextState(proposal.state);
+
+        // Track state change in activity
+        activityStore.addActivity({
+            type: 'state_change',
+            proposalId,
+            proposalTitle: proposal.title,
+            actor: currentUserValue.name,
+            previousState,
+            newState
         });
+
+        return proposals.map((p) =>
+            p.id === proposalId
+                ? {
+                    ...p,
+                    state: newState
+                }
+                : p
+        );
     });
 }
 
@@ -779,6 +799,16 @@ export function checkProposalStateTransitions($proposals: Proposal[], voteThresh
 
     return $proposals.map((p) => {
         if (p.state === 'idea' && p.votes >= voteThreshold && totalVotes >= MIN_TOTAL_VOTES_FOR_PROPOSAL) {
+            // Track state change in activity stream
+            activityStore.addActivity({
+                type: 'state_change',
+                proposalId: p.id,
+                proposalTitle: p.title,
+                actor: 'System',
+                previousState: 'idea',
+                newState: 'draft'
+            });
+
             // Move to draft state first when vote threshold is reached
             return {
                 ...p,
@@ -801,24 +831,28 @@ export function checkProposalStateTransitions($proposals: Proposal[], voteThresh
     });
 }
 
-// Add function to reject a proposal
-export function rejectProposal(proposalId: string): void {
-    proposals.update(($proposals) => {
-        return $proposals.map((p) => {
-            if (p.id === proposalId) {
-                // Return votes to users if in an active state
-                if (isActiveState(p.state)) {
-                    currentUser.update(($currentUser) => {
-                        const userVotes = $currentUser.proposalsVoted.get(proposalId) || 0;
-                        $currentUser.tokens += userVotes;
-                        $currentUser.proposalsVoted.delete(proposalId);
-                        return $currentUser;
-                    });
-                }
-                return { ...p, state: 'rejected' as ProposalState };
-            }
-            return p;
+export function rejectProposal(proposalId: string) {
+    const currentUserValue = get(currentUser);
+    proposals.update((proposals) => {
+        const proposal = proposals.find((p) => p.id === proposalId);
+        if (!proposal) return proposals;
+
+        // Track rejection in activity
+        activityStore.addActivity({
+            type: 'proposal_rejected',
+            proposalId,
+            proposalTitle: proposal.title,
+            actor: currentUserValue.name
         });
+
+        return proposals.map((p) =>
+            p.id === proposalId
+                ? {
+                    ...p,
+                    state: 'rejected'
+                }
+                : p
+        );
     });
 }
 
@@ -858,4 +892,26 @@ export function moveProposalToOffer(proposalId: string): void {
 
 export function canVoteOnProposal(proposal: Proposal): boolean {
     return proposal.state === 'offer';
+}
+
+// Add activity tracking for new proposals
+export function createProposal(proposal: Omit<Proposal, 'id' | 'state' | 'votes'>) {
+    const currentUserValue = get(currentUser);
+    const newProposal = {
+        ...proposal,
+        id: crypto.randomUUID(),
+        state: 'idea' as const,
+        votes: 0
+    };
+
+    // Track new proposal in activity
+    activityStore.addActivity({
+        type: 'proposal_created',
+        proposalId: newProposal.id,
+        proposalTitle: newProposal.title,
+        actor: currentUserValue.name
+    });
+
+    proposals.update((proposals) => [...proposals, newProposal]);
+    return newProposal.id;
 } 

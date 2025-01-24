@@ -42,7 +42,8 @@ HOW THIS SYSTEM WORKS:
 		MIN_TOTAL_VOTES_FOR_PROPOSAL,
 		IDEA_VOTE_THRESHOLD_PERCENTAGE,
 		checkProposalStateTransitions,
-		PROPOSAL_TABS
+		PROPOSAL_TABS,
+		rejectProposal
 	} from '$lib/stores/proposalStore';
 	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
@@ -343,7 +344,7 @@ HOW THIS SYSTEM WORKS:
 											</div>
 											<div>
 												<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-												<p class="text-sm text-tertiary-300">by {proposal.author}</p>
+												<p class="text-sm text-tertiary-300">responsible {proposal.author}</p>
 											</div>
 										</div>
 									</div>
@@ -412,7 +413,9 @@ HOW THIS SYSTEM WORKS:
 												<p class="text-2xl font-bold text-tertiary-100">
 													{proposal.budgetRequested}€
 												</p>
-												<p class="text-sm text-tertiary-300">locked value</p>
+												<p class="text-sm text-tertiary-300">
+													{proposal.state === 'draft' ? 'requested budget' : 'locked value'}
+												</p>
 											{/if}
 										</div>
 									</div>
@@ -449,92 +452,195 @@ HOW THIS SYSTEM WORKS:
 														Details
 													</div>
 												</button>
-												<button
-													class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-													'todos'
-														? 'bg-tertiary-500/20 text-tertiary-100'
-														: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-													on:click={() => (detailTab = 'todos')}
-												>
-													<div class="flex items-center gap-2">
-														<Icon icon="mdi:checkbox-marked" class="w-4 h-4" />
-														Todos
-													</div>
-												</button>
+												{#if proposal.state !== 'idea'}
+													<button
+														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
+														'todos'
+															? 'bg-tertiary-500/20 text-tertiary-100'
+															: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
+														on:click={() => (detailTab = 'todos')}
+													>
+														<div class="flex items-center gap-2">
+															<Icon icon="mdi:checkbox-marked" class="w-4 h-4" />
+															Todos
+														</div>
+													</button>
+												{/if}
 											</div>
 										</div>
 
 										<!-- Tab Content -->
 										{#if detailTab === 'details'}
-											<div class="pr-12">
-												<h4 class="font-semibold text-tertiary-200">Description</h4>
-												<p class="text-sm whitespace-pre-line text-tertiary-300">
-													{proposal.description}
-												</p>
+											<div class="flex flex-col gap-6">
+												<div class="flex flex-col gap-2">
+													<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
+													<p
+														class="text-base leading-relaxed text-tertiary-100 whitespace-pre-line"
+													>
+														{proposal.description}
+													</p>
+												</div>
+
+												<div class="flex flex-col gap-2">
+													<h3 class="text-sm font-medium text-tertiary-300">
+														Expected Results & Success Metrics
+													</h3>
+													<p class="text-base leading-relaxed text-tertiary-100">
+														{proposal.expectedResults}
+													</p>
+												</div>
+
+												<div class="flex flex-col gap-2">
+													<h3 class="text-sm font-medium text-tertiary-300">
+														Commitment & Deliverables
+													</h3>
+													<p class="text-base leading-relaxed text-tertiary-100">
+														{proposal.commitment}
+													</p>
+												</div>
+
+												<div class="flex flex-col gap-2">
+													<h3 class="text-sm font-medium text-tertiary-300">
+														Timeline & Milestones
+													</h3>
+													<div
+														class="flex items-center gap-2 px-4 py-3 rounded-lg bg-surface-800/50"
+													>
+														<Icon icon="mdi:calendar" class="w-5 h-5 text-tertiary-300" />
+														<p class="text-base text-tertiary-100">
+															Estimated delivery: {proposal.estimatedDelivery}
+														</p>
+													</div>
+												</div>
+
+												{#if proposal.draftDetails}
+													<div class="flex flex-col gap-2">
+														<h3 class="text-sm font-medium text-tertiary-300">
+															Technical Implementation
+														</h3>
+														<p class="text-base leading-relaxed text-tertiary-100">
+															{proposal.draftDetails.timeToRealization}
+														</p>
+													</div>
+
+													<div class="flex flex-col gap-2">
+														<h3 class="text-sm font-medium text-tertiary-300">
+															Definition of Done
+														</h3>
+														<p class="text-base leading-relaxed text-tertiary-100">
+															{proposal.draftDetails.definitionOfDone}
+														</p>
+													</div>
+
+													<div class="flex flex-col gap-2">
+														<h3 class="text-sm font-medium text-tertiary-300">
+															Risks & Mitigation
+														</h3>
+														<p class="text-base leading-relaxed text-tertiary-100">
+															{proposal.draftDetails.risks}
+														</p>
+													</div>
+
+													{#if proposal.draftDetails.dependencies.length > 0}
+														<div class="flex flex-col gap-2">
+															<h3 class="text-sm font-medium text-tertiary-300">Dependencies</h3>
+															<ul class="space-y-2">
+																{#each proposal.draftDetails.dependencies as dependency}
+																	<li class="flex items-center gap-2 text-base text-tertiary-100">
+																		<Icon
+																			icon="mdi:link-variant"
+																			class="w-5 h-5 text-tertiary-300"
+																		/>
+																		{dependency}
+																	</li>
+																{/each}
+															</ul>
+														</div>
+													{/if}
+												{/if}
 											</div>
 										{:else if detailTab === 'chat'}
 											<Messages contextId={proposal.id} contextType="proposal" height="400px" />
 										{:else if detailTab === 'todos'}
-											<div class="space-y-4">
-												<!-- Todo Header -->
-												<div class="flex items-center justify-between">
-													<h4 class="font-semibold text-tertiary-200">Task List</h4>
-													<button
-														class="px-3 py-1 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
+											<div class="space-y-1">
+												<div
+													class="flex items-center gap-3 px-3 py-2 transition-colors rounded-lg bg-surface-800/50 hover:bg-surface-700/50"
+												>
+													<input
+														type="checkbox"
+														class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
+														checked
+													/>
+													<span class="flex-grow text-sm line-through text-tertiary-400"
+														>Set up project repository</span
 													>
+													<div class="flex items-center gap-3">
 														<div class="flex items-center gap-2">
-															<Icon icon="mdi:plus" class="w-4 h-4" />
-															Add Task
+															<div
+																class="flex items-center justify-center w-6 h-6 rounded-full bg-tertiary-500/10"
+															>
+																<span class="text-xs font-medium text-tertiary-300">JD</span>
+															</div>
+															<span class="text-xs text-tertiary-400">2d ago</span>
 														</div>
-													</button>
-												</div>
-
-												<!-- Todo List -->
-												<div class="space-y-2">
-													<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-800/50">
-														<input
-															type="checkbox"
-															class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
-															checked
-														/>
-														<span class="flex-grow text-sm line-through text-tertiary-400"
-															>Set up project repository</span
+														<span
+															class="px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-300"
+															>Frontend</span
 														>
-														<span class="text-xs text-tertiary-400">Completed</span>
-													</div>
-													<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-800/50">
-														<input
-															type="checkbox"
-															class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
-														/>
-														<span class="flex-grow text-sm text-tertiary-200"
-															>Implement hero section</span
-														>
-														<span class="text-xs text-tertiary-400">In Progress</span>
-													</div>
-													<div class="flex items-center gap-3 p-3 rounded-lg bg-surface-800/50">
-														<input
-															type="checkbox"
-															class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
-														/>
-														<span class="flex-grow text-sm text-tertiary-200"
-															>Add responsive design</span
-														>
-														<span class="text-xs text-tertiary-400">Pending</span>
 													</div>
 												</div>
 
-												<!-- Progress Bar -->
-												<div class="mt-6">
-													<div class="flex items-center justify-between mb-2">
-														<span class="text-sm text-tertiary-300">Progress</span>
-														<span class="text-sm font-medium text-tertiary-200">33%</span>
+												<div
+													class="flex items-center gap-3 px-3 py-2 transition-colors rounded-lg bg-surface-800/50 hover:bg-surface-700/50"
+												>
+													<input
+														type="checkbox"
+														class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
+													/>
+													<span class="flex-grow text-sm text-tertiary-200"
+														>Implement hero section</span
+													>
+													<div class="flex items-center gap-3">
+														<div class="flex items-center gap-2">
+															<div
+																class="flex items-center justify-center w-6 h-6 rounded-full bg-tertiary-500/10"
+															>
+																<span class="text-xs font-medium text-tertiary-300">JS</span>
+															</div>
+															<span class="text-xs text-tertiary-400">5d left</span>
+														</div>
+														<span
+															class="px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-300"
+															>Design</span
+														>
 													</div>
-													<div class="w-full h-2 overflow-hidden rounded-full bg-surface-700/50">
-														<div
-															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: 33%"
-														/>
+												</div>
+
+												<div
+													class="flex items-center gap-3 px-3 py-2 transition-colors rounded-lg bg-surface-800/50 hover:bg-surface-700/50"
+												>
+													<input
+														type="checkbox"
+														class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
+													/>
+													<span class="flex-grow text-sm text-tertiary-200"
+														>Add responsive design</span
+													>
+													<div class="flex items-center gap-3">
+														<div class="flex items-center gap-2">
+															<div
+																class="flex items-center justify-center w-6 h-6 rounded-full bg-surface-700/50"
+															>
+																<Icon icon="mdi:account" class="w-5 h-5 text-tertiary-400" />
+															</div>
+															<span class="text-xs text-tertiary-300"
+																>responsible {proposal.author}</span
+															>
+														</div>
+														<span
+															class="px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-300"
+															>Frontend</span
+														>
 													</div>
 												</div>
 											</div>
@@ -543,42 +649,71 @@ HOW THIS SYSTEM WORKS:
 
 									<!-- Right side: Metrics -->
 									<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)}">
-										{#if proposal.state === 'pending' || proposal.state === 'in_progress' || proposal.state === 'review' || proposal.state === 'completed'}
+										{#if proposal.state !== 'idea'}
 											<div class="p-4 border-b border-surface-700/50">
-												<button
-													on:click|stopPropagation={() => cycleProposalState(proposal.id)}
-													class="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-												>
-													<Icon icon="mdi:arrow-right-circle" class="w-5 h-5" />
-													Next State
-												</button>
+												<div class="flex items-center justify-between gap-2">
+													<button
+														on:click|stopPropagation={() => cycleProposalState(proposal.id)}
+														class="flex items-center justify-center flex-grow gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+													>
+														<Icon icon="mdi:arrow-right-circle" class="w-5 h-5" />
+														Next State
+													</button>
+													<button
+														on:click|stopPropagation={() => rejectProposal(proposal.id)}
+														class="flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-error-500/20 bg-error-500/10"
+													>
+														<Icon icon="mdi:close-circle" class="w-5 h-5 text-error-400" />
+													</button>
+												</div>
 											</div>
 										{/if}
-										<div class="p-8 space-y-8">
-											{#if proposal.state !== 'idea'}
+										<div class="p-6 space-y-4">
+											<!-- Summary Section -->
+											<div>
+												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+													Summary
+												</h4>
+												<p class="text-xs text-right text-tertiary-300">
+													{proposal.description.length > 120
+														? proposal.description.slice(0, 120) + '...'
+														: proposal.description}
+												</p>
+											</div>
+
+											{#if proposal.state === 'idea'}
 												<div>
-													<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
+													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+														Expected Results
+													</h4>
+													<p class="text-xs text-right text-tertiary-300">
+														{proposal.expectedResults}
+													</p>
+												</div>
+											{:else}
+												<div>
+													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+														Expected Results
+													</h4>
+													<p class="text-xs text-right text-tertiary-300">
+														{proposal.expectedResults}
+													</p>
+												</div>
+												<div>
+													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
 														Commitment
 													</h4>
-													<p class="text-sm text-right text-tertiary-300">
+													<p class="text-xs text-right text-tertiary-300">
 														{proposal.commitment}
 													</p>
 												</div>
-											{/if}
-											<div>
-												<h4 class="mb-2 text-sm font-semibold text-right text-tertiary-200">
-													Expected Results
-												</h4>
-												<p class="text-sm text-right text-tertiary-300">
-													{proposal.expectedResults}
-												</p>
-											</div>
-											{#if proposal.state !== 'idea'}
-												<div class="text-right">
-													<h4 class="mb-2 text-sm font-semibold text-tertiary-200">
+												<div>
+													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
 														Estimated Delivery
 													</h4>
-													<p class="text-sm text-tertiary-300">{proposal.estimatedDelivery}</p>
+													<p class="text-xs text-right text-tertiary-300">
+														{proposal.estimatedDelivery}
+													</p>
 												</div>
 											{/if}
 										</div>
@@ -663,7 +798,7 @@ HOW THIS SYSTEM WORKS:
 											</div>
 											<div>
 												<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-												<p class="text-sm text-tertiary-300">by {proposal.author}</p>
+												<p class="text-sm text-tertiary-300">responsible {proposal.author}</p>
 											</div>
 										</div>
 									</div>
@@ -732,7 +867,9 @@ HOW THIS SYSTEM WORKS:
 												<p class="text-2xl font-bold text-tertiary-100">
 													{proposal.budgetRequested}€
 												</p>
-												<p class="text-sm text-tertiary-300">locked value</p>
+												<p class="text-sm text-tertiary-300">
+													{proposal.state === 'draft' ? 'requested budget' : 'locked value'}
+												</p>
 											{/if}
 										</div>
 									</div>
