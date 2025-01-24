@@ -8,6 +8,7 @@ HOW THIS COMPONENT WORKS:
    - Provides a familiar messaging interface
    - Supports dark/light mode
    - Handles modal display and animations
+   - Uses messageStore for real-time chat functionality
 
 2. Props:
    - show: Boolean to control modal visibility
@@ -17,15 +18,17 @@ HOW THIS COMPONENT WORKS:
    - Three-column layout (Channels > Threads > Chat)
    - Channel list by proposal states
    - Thread list showing proposals
-   - Message input with emoji support
-   - User presence indicators
+   - Real-time message updates
+   - Message persistence
 -->
 
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
 	import Icon from '@iconify/svelte';
 	import { getStateIcon, getStateLabel, type ProposalState } from '$lib/stores/proposalStore';
-	import { proposals } from '$lib/stores/proposalStore';
+	import { proposals, currentUser } from '$lib/stores/proposalStore';
+	import { messageStore, type Message } from '$lib/stores/messageStore';
+	import { onMount, onDestroy } from 'svelte';
 
 	export let show = false;
 	export let onClose: () => void;
@@ -43,6 +46,10 @@ HOW THIS COMPONENT WORKS:
 	let selectedChannel: ProposalState = 'idea';
 	let selectedThread: string | null = null;
 	let messageInput = '';
+	let messages: Message[] = [];
+	let messageContainer: HTMLDivElement;
+	let isScrolledToBottom = true;
+	let unsubscribe: () => void;
 
 	function handleClose() {
 		onClose();
@@ -51,11 +58,84 @@ HOW THIS COMPONENT WORKS:
 	function selectChannel(channel: ProposalState) {
 		selectedChannel = channel;
 		selectedThread = null;
+		messages = [];
 	}
 
 	function selectThread(threadId: string) {
 		selectedThread = threadId;
+		if (threadId) {
+			// Initialize thread if needed and subscribe to messages
+			messageStore.createThread(threadId, 'proposal');
+			const threadMessages = messageStore.getThreadMessages(threadId);
+			if (unsubscribe) unsubscribe();
+			unsubscribe = threadMessages.subscribe((value) => {
+				messages = value;
+				if (isScrolledToBottom) {
+					scrollToBottom();
+				}
+			});
+			// Mark messages as read
+			messageStore.markAsRead(threadId, $currentUser.id);
+		}
 	}
+
+	function handleSubmit() {
+		if (!messageInput.trim() || !selectedThread) return;
+
+		messageStore.sendMessage({
+			contextId: selectedThread,
+			contextType: 'proposal',
+			content: messageInput.trim(),
+			sender: {
+				id: $currentUser.id,
+				name: $currentUser.name
+			}
+		});
+
+		messageInput = '';
+		isScrolledToBottom = true;
+	}
+
+	function scrollToBottom() {
+		if (messageContainer) {
+			messageContainer.scrollTop = messageContainer.scrollHeight;
+		}
+	}
+
+	function handleScroll() {
+		if (messageContainer) {
+			const { scrollTop, scrollHeight, clientHeight } = messageContainer;
+			isScrolledToBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 10;
+		}
+	}
+
+	// Format timestamp
+	function formatTime(date: Date): string {
+		return new Intl.DateTimeFormat('en', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false
+		}).format(date);
+	}
+
+	// Check if message is from current user
+	function isOwnMessage(message: Message): boolean {
+		return message.sender.id === $currentUser.id;
+	}
+
+	// Group messages by sender and time (within 5 minutes)
+	function shouldGroupWithPrevious(message: Message, index: number): boolean {
+		if (index === 0) return false;
+		const prevMessage = messages[index - 1];
+		return (
+			prevMessage.sender.id === message.sender.id &&
+			message.timestamp.getTime() - prevMessage.timestamp.getTime() < 5 * 60 * 1000
+		);
+	}
+
+	onDestroy(() => {
+		if (unsubscribe) unsubscribe();
+	});
 
 	$: channelProposals = $proposals.filter((p) => p.state === selectedChannel);
 	$: selectedProposal = selectedThread ? $proposals.find((p) => p.id === selectedThread) : null;
@@ -151,11 +231,63 @@ HOW THIS COMPONENT WORKS:
 						</div>
 
 						<!-- Messages Area -->
-						<div class="flex-grow p-4 overflow-y-auto">
+						<div
+							bind:this={messageContainer}
+							on:scroll={handleScroll}
+							class="flex-grow p-4 space-y-2 overflow-y-auto"
+						>
 							{#if selectedProposal}
-								<div class="text-sm text-tertiary-400 text-center">
-									Welcome to the discussion about "{selectedProposal.title}"
-								</div>
+								{#if messages.length === 0}
+									<div class="text-sm text-tertiary-400 text-center">
+										Start the discussion about "{selectedProposal.title}"
+									</div>
+								{:else}
+									{#each messages as message, i}
+										{@const grouped = shouldGroupWithPrevious(message, i)}
+										{@const own = isOwnMessage(message)}
+
+										<div class="flex gap-2 {own ? 'flex-row-reverse' : ''}">
+											{#if !grouped}
+												<div class="flex-shrink-0 w-6 h-6 rounded-full bg-surface-700/50">
+													<Icon icon="mdi:account" class="w-6 h-6 p-1 text-tertiary-300" />
+												</div>
+											{:else}
+												<div class="w-6" />
+											{/if}
+
+											<div class="flex-grow {own ? 'items-end' : ''} max-w-[80%]">
+												{#if !grouped}
+													<div
+														class="flex items-center gap-2 mb-0.5 {own ? 'flex-row-reverse' : ''}"
+													>
+														<span class="text-xs font-medium text-tertiary-200">
+															{message.sender.name}
+														</span>
+													</div>
+												{/if}
+
+												<div class="flex flex-col {own ? 'items-end' : ''}">
+													<div
+														class="relative px-3 py-1 text-sm rounded-lg {own
+															? 'bg-blue-900/20 text-blue-300'
+															: 'bg-surface-600/80 text-tertiary-50'} {grouped ? 'mt-0.5' : 'mt-0'}"
+													>
+														<p>
+															{message.content}
+														</p>
+														<span
+															class="block text-[9px] opacity-50 {own
+																? 'text-right mr-[1px] text-blue-300'
+																: 'text-left ml-[1px] text-tertiary-200'} -mb-0.5 mt-[1px]"
+														>
+															{formatTime(message.timestamp)}
+														</span>
+													</div>
+												</div>
+											</div>
+										</div>
+									{/each}
+								{/if}
 							{:else}
 								<div class="flex flex-col items-center justify-center h-full text-tertiary-400">
 									<Icon icon="mdi:chat-outline" class="w-12 h-12 mb-2 opacity-50" />
@@ -171,10 +303,12 @@ HOW THIS COMPONENT WORKS:
 									<input
 										type="text"
 										bind:value={messageInput}
+										on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
 										placeholder="Message this thread..."
 										class="flex-grow px-4 py-2 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-tertiary-500/50 focus:outline-none"
 									/>
 									<button
+										on:click={handleSubmit}
 										disabled={!messageInput.trim()}
 										class="px-4 py-2 font-medium rounded-lg bg-tertiary-500 text-tertiary-50 hover:bg-tertiary-600 disabled:opacity-50 disabled:cursor-not-allowed"
 									>
