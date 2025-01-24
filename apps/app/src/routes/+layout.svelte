@@ -109,35 +109,37 @@
 	<ActionModal {session} {supabase} on:signout={handleSignOut} />
 
 	<!-- Navigation Pill -->
-	<div class="fixed z-40 -translate-x-1/2 bottom-5 left-1/2">
-		<div
-			class="relative flex items-center border rounded-full shadow-xl bg-surface-300/10 border-surface-200/20 backdrop-blur-sm"
-		>
-			<!-- Chat Button -->
-			<button
-				on:click={toggleChat}
-				class="flex items-center justify-center px-4 transition-all rounded-full h-11 text-surface-200 hover:bg-surface-200/30 hover:text-white"
+	{#if data.session}
+		<div class="fixed z-40 -translate-x-1/2 bottom-5 left-1/2">
+			<div
+				class="relative flex items-center border rounded-full shadow-xl bg-surface-300/10 border-surface-200/20 backdrop-blur-sm"
 			>
-				<Icon icon="mingcute:chat-2-fill" class="w-7 h-7" />
-			</button>
+				<!-- Chat Button -->
+				<button
+					on:click={toggleChat}
+					class="flex items-center justify-center px-4 transition-all rounded-full h-11 text-surface-200 hover:bg-surface-200/30 hover:text-white"
+				>
+					<Icon icon="mingcute:chat-2-fill" class="w-7 h-7" />
+				</button>
 
-			<!-- Logo Button (Taller) -->
-			<button
-				class="relative z-10 flex items-center justify-center w-12 h-12 text-white transition-all rounded-full shadow-xl bg-primary-500 hover:bg-primary-600 hover:scale-105 ring-2 ring-surface-200/30"
-				style="margin-top: -1.5rem; margin-bottom: -1.5rem;"
-			>
-				<Icon icon="mdi:plus" class="w-7 h-7" />
-			</button>
+				<!-- Logo Button (Taller) -->
+				<button
+					class="relative z-10 flex items-center justify-center w-12 h-12 text-white transition-all rounded-full shadow-xl bg-primary-500 hover:bg-primary-600 hover:scale-105 ring-2 ring-surface-200/30"
+					style="margin-top: -1.5rem; margin-bottom: -1.5rem;"
+				>
+					<Icon icon="mdi:plus" class="w-7 h-7" />
+				</button>
 
-			<!-- Home Button -->
-			<button
-				on:click={() => goto('/')}
-				class="flex items-center justify-center px-4 transition-all rounded-full h-11 text-surface-200 hover:bg-surface-200/30 hover:text-white"
-			>
-				<Icon icon="material-symbols:family-home-rounded" class="w-7 h-7" />
-			</button>
+				<!-- Home Button -->
+				<button
+					on:click={() => goto('/')}
+					class="flex items-center justify-center px-4 transition-all rounded-full h-11 text-surface-200 hover:bg-surface-200/30 hover:text-white"
+				>
+					<Icon icon="material-symbols:family-home-rounded" class="w-7 h-7" />
+				</button>
+			</div>
 		</div>
-	</div>
+	{/if}
 
 	<!-- Global Chat Modal -->
 	<GlobalChat show={$chatStore} onClose={closeChat} />
