@@ -41,19 +41,10 @@ HOW THIS SYSTEM WORKS:
 		getNextVoteCost,
 		MIN_TOTAL_VOTES_FOR_PROPOSAL,
 		IDEA_VOTE_THRESHOLD_PERCENTAGE,
-		checkProposalStateTransitions
+		checkProposalStateTransitions,
+		PROPOSAL_TABS
 	} from '$lib/stores/proposalStore';
 	import Messages from './Messages.svelte';
-
-	const PROPOSAL_STATES: ProposalState[] = [
-		'idea',
-		'offer',
-		'pending',
-		'in_progress',
-		'review',
-		'completed',
-		'rejected'
-	];
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
@@ -226,7 +217,7 @@ HOW THIS SYSTEM WORKS:
 					id="proposal-tabs"
 					class="sticky top-0 z-10 flex w-full gap-2 py-4 bg-surface-900/95 backdrop-blur-sm"
 				>
-					{#each PROPOSAL_STATES as state}
+					{#each PROPOSAL_TABS as state}
 						<button
 							class={getTabClasses(state)}
 							on:click={() => {
@@ -262,7 +253,7 @@ HOW THIS SYSTEM WORKS:
 								<div class="flex items-center">
 									<!-- Left side: Votes -->
 									<div class="flex flex-col items-center w-40 p-6">
-										{#if proposal.state === 'offer' || proposal.state === 'idea'}
+										{#if proposal.state === 'idea' || proposal.state === 'offer' || proposal.state === 'draft'}
 											<div class="flex items-center justify-center gap-4">
 												<div class="text-center">
 													<div
@@ -305,7 +296,7 @@ HOW THIS SYSTEM WORKS:
 													</button>
 												</div>
 											</div>
-										{:else if proposal.state === 'pending' || proposal.state === 'in_progress' || proposal.state === 'review' || proposal.state === 'completed' || proposal.state === 'rejected'}
+										{:else}
 											<div class="text-center">
 												<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
 												<p class="text-sm text-tertiary-300">votes</p>
@@ -582,7 +573,7 @@ HOW THIS SYSTEM WORKS:
 								>
 									<!-- Left side: Votes -->
 									<div class="flex flex-col items-center w-40 p-6">
-										{#if proposal.state === 'offer' || proposal.state === 'idea'}
+										{#if proposal.state === 'idea' || proposal.state === 'offer' || proposal.state === 'draft'}
 											<div class="flex items-center justify-center gap-4">
 												<div class="text-center">
 													<div
@@ -625,7 +616,7 @@ HOW THIS SYSTEM WORKS:
 													</button>
 												</div>
 											</div>
-										{:else if proposal.state === 'pending' || proposal.state === 'in_progress' || proposal.state === 'review' || proposal.state === 'completed' || proposal.state === 'rejected'}
+										{:else}
 											<div class="text-center">
 												<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
 												<p class="text-sm text-tertiary-300">votes</p>
@@ -784,7 +775,7 @@ HOW THIS SYSTEM WORKS:
 												<p class="text-sm text-tertiary-300">{proposal.title}</p>
 											</div>
 											<span class="text-sm font-medium {getStateColor(proposal.state)}">
-												{#if proposal.state === 'proposal'}
+												{#if proposal.state === 'offer'}
 													{Math.round(
 														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
 															proposal.budgetRequested) *

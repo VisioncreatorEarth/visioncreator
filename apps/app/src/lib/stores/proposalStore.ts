@@ -114,12 +114,20 @@ import { writable, derived } from 'svelte/store';
 // Types
 export type ProposalState =
     | 'idea'
+    | 'draft'
     | 'offer'
     | 'pending'
     | 'in_progress'
     | 'review'
     | 'completed'
     | 'rejected';
+
+export interface ProposalTask {
+    id: string;
+    title: string;
+    description: string;
+    completed: boolean;
+}
 
 export interface Proposal {
     id: string;
@@ -132,6 +140,13 @@ export interface Proposal {
     state: ProposalState;
     estimatedDelivery: string;
     budgetRequested: number;
+    tasks?: ProposalTask[];
+    draftDetails?: {
+        timeToRealization: string;
+        definitionOfDone: string;
+        risks: string;
+        dependencies: string[];
+    };
 }
 
 export interface UserProfile {
@@ -445,7 +460,21 @@ export const currentUser = writable<UserProfile>({
 export const dashboardMetrics = writable<DashboardMetrics>({
     visionCreators: 17
 });
-export const activeTab = writable<ProposalState>('offer');
+
+// Default active tab is now 'idea'
+export const activeTab = writable<ProposalState>('idea');
+
+// Update the tab order to include draft state
+export const PROPOSAL_TABS: ProposalState[] = [
+    'idea',
+    'draft',
+    'offer',
+    'pending',
+    'in_progress',
+    'review',
+    'completed',
+    'rejected'
+];
 
 // Function to change active tab
 export function setActiveTab(state: ProposalState): void {
@@ -460,7 +489,7 @@ function getFixedStateValue(state: ProposalState, budgetRequested: number): numb
 
 // Helper function to check if a state is active (votes count towards total)
 function isActiveState(state: ProposalState): boolean {
-    return state === 'idea' || state === 'offer' || state === 'pending';
+    return state === 'idea' || state === 'offer';
 }
 
 // Update poolMetrics to use the new state logic
@@ -679,14 +708,16 @@ export function getStateIcon(state: ProposalState): string {
     switch (state) {
         case 'idea':
             return 'mdi:lightbulb';
+        case 'draft':
+            return 'mdi:file-document-edit';
         case 'offer':
             return 'mdi:handshake';
         case 'pending':
-            return 'mdi:clock-check';
+            return 'mdi:timer-sand';
         case 'in_progress':
             return 'mdi:progress-wrench';
         case 'review':
-            return 'mdi:cash-clock';
+            return 'mdi:clipboard-check';
         case 'completed':
             return 'mdi:check-circle';
         case 'rejected':
@@ -700,6 +731,8 @@ export function getStateLabel(state: ProposalState): string {
     switch (state) {
         case 'idea':
             return 'Idea';
+        case 'draft':
+            return 'Draft';
         case 'offer':
             return 'Offer';
         case 'pending':
@@ -746,7 +779,18 @@ export function checkProposalStateTransitions($proposals: Proposal[], voteThresh
 
     return $proposals.map((p) => {
         if (p.state === 'idea' && p.votes >= voteThreshold && totalVotes >= MIN_TOTAL_VOTES_FOR_PROPOSAL) {
-            return { ...p, state: 'offer' as ProposalState };
+            // Move to draft state first when vote threshold is reached
+            return {
+                ...p,
+                state: 'draft' as ProposalState,
+                tasks: [],
+                draftDetails: {
+                    timeToRealization: '',
+                    definitionOfDone: '',
+                    risks: '',
+                    dependencies: []
+                }
+            };
         } else if (p.state === 'offer') {
             const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
             if (proposalValue >= p.budgetRequested) {
@@ -776,4 +820,42 @@ export function rejectProposal(proposalId: string): void {
             return p;
         });
     });
+}
+
+// Move proposal to draft state
+export function moveProposalToDraft(proposalId: string): void {
+    proposals.update(($proposals) => {
+        return $proposals.map((p) => {
+            if (p.id === proposalId && p.state === 'idea') {
+                return {
+                    ...p,
+                    state: 'draft',
+                    tasks: [],
+                    draftDetails: {
+                        timeToRealization: '',
+                        definitionOfDone: '',
+                        risks: '',
+                        dependencies: []
+                    }
+                };
+            }
+            return p;
+        });
+    });
+}
+
+// Move proposal from draft to offer
+export function moveProposalToOffer(proposalId: string): void {
+    proposals.update(($proposals) => {
+        return $proposals.map((p) => {
+            if (p.id === proposalId && p.state === 'draft' && p.budgetRequested > 0) {
+                return { ...p, state: 'offer' };
+            }
+            return p;
+        });
+    });
+}
+
+export function canVoteOnProposal(proposal: Proposal): boolean {
+    return proposal.state === 'offer';
 } 

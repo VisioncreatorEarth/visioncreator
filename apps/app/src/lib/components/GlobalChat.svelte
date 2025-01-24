@@ -164,7 +164,7 @@ HOW THIS COMPONENT WORKS:
 						<!-- Channel List -->
 						<div class="p-2">
 							<div class="mb-4">
-								<div class="px-2 py-1 text-xs font-semibold text-tertiary-400 uppercase">
+								<div class="px-2 py-1 text-xs font-semibold uppercase text-tertiary-400">
 									Proposal Channels
 								</div>
 								{#each PROPOSAL_STATES as state}
@@ -184,7 +184,7 @@ HOW THIS COMPONENT WORKS:
 					</div>
 
 					<!-- Threads List -->
-					<div class="w-72 border-r border-surface-600/50 bg-surface-800/50">
+					<div class="border-r w-72 border-surface-600/50 bg-surface-800/50">
 						<!-- Header -->
 						<div class="flex items-center h-16 px-4 border-b border-surface-700/50">
 							<div class="flex items-center gap-2">
@@ -238,7 +238,7 @@ HOW THIS COMPONENT WORKS:
 						>
 							{#if selectedProposal}
 								{#if messages.length === 0}
-									<div class="text-sm text-tertiary-400 text-center">
+									<div class="text-sm text-center text-tertiary-400">
 										Start the discussion about "{selectedProposal.title}"
 									</div>
 								{:else}
@@ -323,7 +323,7 @@ HOW THIS COMPONENT WORKS:
 
 			<!-- Close Button Extension (Now relative to modal container) -->
 			<div
-				class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full flex items-center justify-center w-16 h-8 bg-surface-700 rounded-b-full"
+				class="absolute bottom-0 flex items-center justify-center w-16 h-8 -translate-x-1/2 translate-y-full rounded-b-full left-1/2 bg-surface-700"
 			>
 				<button
 					on:click={handleClose}
