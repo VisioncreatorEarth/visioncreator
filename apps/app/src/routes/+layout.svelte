@@ -9,6 +9,9 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import GlobalChat from '$lib/components/GlobalChat.svelte';
+	import { chatStore, toggleChat, closeChat } from '$lib/stores/chatStore';
+	import Icon from '@iconify/svelte';
 
 	export let data: LayoutData;
 	let { supabase, session, queryClient } = data;
@@ -104,6 +107,40 @@
 	</div>
 
 	<ActionModal {session} {supabase} on:signout={handleSignOut} />
+
+	<!-- Navigation Pill -->
+	<div class="fixed z-40 -translate-x-1/2 bottom-5 left-1/2">
+		<div
+			class="relative flex items-center border rounded-full shadow-xl bg-surface-300/10 border-surface-200/20 backdrop-blur-sm"
+		>
+			<!-- Chat Button -->
+			<button
+				on:click={toggleChat}
+				class="flex items-center justify-center px-4 transition-all rounded-full h-11 text-surface-200 hover:bg-surface-200/30 hover:text-white"
+			>
+				<Icon icon="mingcute:chat-2-fill" class="w-7 h-7" />
+			</button>
+
+			<!-- Logo Button (Taller) -->
+			<button
+				class="relative z-10 flex items-center justify-center w-12 h-12 text-white transition-all rounded-full shadow-xl bg-primary-500 hover:bg-primary-600 hover:scale-105 ring-2 ring-surface-200/30"
+				style="margin-top: -1.5rem; margin-bottom: -1.5rem;"
+			>
+				<Icon icon="mdi:plus" class="w-7 h-7" />
+			</button>
+
+			<!-- Home Button -->
+			<button
+				on:click={() => goto('/')}
+				class="flex items-center justify-center px-4 transition-all rounded-full h-11 text-surface-200 hover:bg-surface-200/30 hover:text-white"
+			>
+				<Icon icon="material-symbols:family-home-rounded" class="w-7 h-7" />
+			</button>
+		</div>
+	</div>
+
+	<!-- Global Chat Modal -->
+	<GlobalChat show={$chatStore} onClose={closeChat} />
 </QueryClientProvider>
 
 <footer class="fixed bottom-0 left-0 py-2 @sm:py-2 text-white z-40">
@@ -128,7 +165,7 @@
 	</div>
 </footer>
 
-<div class="fixed right-0 bottom-0 left-0 z-30 h-24 pointer-events-none">
+<div class="fixed bottom-0 left-0 right-0 z-30 h-24 pointer-events-none">
 	<div
 		class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
 	/>
