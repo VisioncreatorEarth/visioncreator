@@ -53,7 +53,7 @@ HOW THIS SYSTEM WORKS:
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
-	let detailTab: 'chat' | 'details' | 'todos' = 'chat';
+	let detailTab: 'details' | 'chat' | 'todos' = 'details';
 
 	// Handle URL parameters for proposal selection
 	$: if ($page.url.searchParams.get('id')) {
@@ -431,18 +431,6 @@ HOW THIS SYSTEM WORKS:
 											<div class="flex gap-2">
 												<button
 													class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-													'chat'
-														? 'bg-tertiary-500/20 text-tertiary-100'
-														: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-													on:click={() => (detailTab = 'chat')}
-												>
-													<div class="flex items-center gap-2">
-														<Icon icon="mdi:chat" class="w-4 h-4" />
-														Chat
-													</div>
-												</button>
-												<button
-													class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
 													'details'
 														? 'bg-tertiary-500/20 text-tertiary-100'
 														: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
@@ -451,6 +439,18 @@ HOW THIS SYSTEM WORKS:
 													<div class="flex items-center gap-2">
 														<Icon icon="mdi:information" class="w-4 h-4" />
 														Details
+													</div>
+												</button>
+												<button
+													class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
+													'chat'
+														? 'bg-tertiary-500/20 text-tertiary-100'
+														: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
+													on:click={() => (detailTab = 'chat')}
+												>
+													<div class="flex items-center gap-2">
+														<Icon icon="mdi:chat" class="w-4 h-4" />
+														Chat
 													</div>
 												</button>
 												{#if proposal.state !== 'idea'}
