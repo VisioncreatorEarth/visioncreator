@@ -113,7 +113,7 @@ import { writable, derived, get } from 'svelte/store';
 import { activityStore } from './activityStore';
 
 // Types
-export type ProposalState = 'idea' | 'draft' | 'offer' | 'active' | 'completed' | 'rejected';
+export type ProposalState = 'idea' | 'draft' | 'offer' | 'pending' | 'in_progress' | 'review' | 'active' | 'completed' | 'rejected';
 
 export interface ProposalTask {
     id: string;
@@ -593,7 +593,8 @@ function getNextState(currentState: ProposalState): ProposalState {
         in_progress: 'review',
         review: 'completed',
         completed: 'completed',
-        rejected: 'rejected'
+        rejected: 'rejected',
+        active: 'completed'
     };
     return stateFlow[currentState];
 }
@@ -849,7 +850,43 @@ export function createProposal(proposal: Omit<Proposal, 'id' | 'state' | 'votes'
     return newProposal.id;
 }
 
+// Mock user data for development
+const MOCK_USER = {
+    name: 'Demo User',
+    id: 'demo-user-1',
+    email: 'demo@example.com'
+};
+
 // Export a function to add a new proposal
-export function addProposal(proposal: Proposal) {
-    proposals.update(existingProposals => [...existingProposals, proposal]);
-} 
+export const addProposal = (proposalData: Partial<Proposal>) => {
+    console.log('Adding new proposal with data:', proposalData);
+
+    try {
+        const newProposal: Proposal = {
+            id: `proposal-${Date.now()}`,
+            title: proposalData.title || '',
+            description: proposalData.description || '',
+            expectedResults: proposalData.expectedResults || '',
+            state: 'idea',
+            author: MOCK_USER.name,
+            votes: 0,
+            budgetRequested: 0,
+            commitment: proposalData.commitment || '',
+            estimatedDelivery: proposalData.estimatedDelivery || ''
+        };
+        console.log('Created new proposal object:', newProposal);
+
+        proposals.update(currentProposals => {
+            console.log('Current proposals count:', currentProposals.length);
+            const updatedProposals = [...currentProposals, newProposal];
+            console.log('New proposals count:', updatedProposals.length);
+            return updatedProposals;
+        });
+
+        console.log('Successfully added proposal:', newProposal.id);
+        return newProposal;
+    } catch (error) {
+        console.error('Error adding proposal:', error);
+        throw error;
+    }
+}; 

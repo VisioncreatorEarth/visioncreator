@@ -308,82 +308,35 @@ function createToolStore() {
         },
 
         // Add new tool for creating proposals
-        createProposal: async (parameters: { proposal: { title: string; description: string; expectedResults: string } }): Promise<ToolResponse> => {
+        createProposal: async (parameters: { proposal: { title: string; description: string; expectedResults: string } }) => {
+            console.log('Starting proposal creation with parameters:', parameters);
+
             try {
-                // Validate input
-                const { title, description, expectedResults } = parameters.proposal;
-                if (!title || !description || !expectedResults) {
-                    return {
-                        status: 'error',
-                        message: 'Please provide a title, description, and expected results for the proposal.'
-                    };
+                const { proposal } = parameters;
+                console.log('Extracted proposal data:', proposal);
+
+                // Create the proposal
+                const result = await addProposal({
+                    title: proposal.title,
+                    description: proposal.description,
+                    expectedResults: proposal.expectedResults,
+                    state: 'idea'
+                });
+                console.log('Proposal creation result:', result);
+
+                // Navigate to the proposal detail view
+                if (browser) {
+                    goto(`/me?view=Proposals&id=${result.id}`, { replaceState: true });
                 }
 
-                const proposalData: ProposalCreationData = {
-                    title,
-                    description,
-                    expectedResults,
-                    state: 'idea'
-                };
-
-                // Update store state with pending proposal
-                update(state => ({
-                    ...state,
-                    pendingProposal: proposalData,
-                    pendingConfirmation: {
-                        title: 'Create New Proposal',
-                        message: `I'll create a new proposal titled "${proposalData.title}". Would you like to review and confirm?`,
-                        action: async (): Promise<ActionResult> => {
-                            try {
-                                const newProposal: Proposal = {
-                                    id: `proposal-${Date.now()}`,
-                                    title: proposalData.title,
-                                    description: proposalData.description,
-                                    expectedResults: proposalData.expectedResults,
-                                    state: 'idea',
-                                    author: MOCK_USER.name,
-                                    votes: 0,
-                                    budgetRequested: 0,
-                                    commitment: '',
-                                    estimatedDelivery: ''
-                                };
-
-                                // Add to proposals store using the new function
-                                addProposal(newProposal);
-
-                                // Emit event for proposal creation
-                                eventBus.emit('proposal:created', newProposal);
-
-                                if (browser) {
-                                    goto('/me?view=Proposals', { replaceState: true });
-                                }
-
-                                return {
-                                    success: true,
-                                    message: `Great! I've created your new proposal "${proposalData.title}". You can now find it in the Ideas section.`,
-                                    data: { proposal: newProposal }
-                                };
-                            } catch (error) {
-                                return {
-                                    success: false,
-                                    message: 'Failed to create proposal'
-                                };
-                            }
-                        },
-                        data: { proposal: proposalData }
-                    }
-                }));
-
+                // Return success response in the format expected by UltravoxSession
                 return {
                     status: 'awaiting_confirmation',
-                    message: `I've prepared a new proposal based on our conversation. Would you like to review and confirm it?`
+                    message: "I've created your proposal and opened it for you. Would you like to create another proposal?"
                 };
             } catch (error) {
                 console.error('Error creating proposal:', error);
-                return {
-                    status: 'error',
-                    message: 'Failed to create proposal'
-                };
+                throw error;
             }
         }
     };

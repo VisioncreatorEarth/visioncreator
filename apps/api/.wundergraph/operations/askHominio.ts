@@ -201,7 +201,7 @@ const CALL_CONFIG = {
               properties: {
                 title: { type: 'string', description: 'A clear, concise title for the proposal' },
                 description: { type: 'string', description: 'Detailed explanation of what the proposal aims to achieve and how it will be implemented' },
-                expectedResults: { type: 'string', description: 'Specific, measurable outcomes and success metrics for the proposal' }
+                expectedResults: { type: 'string', description: 'Specific, measurable outcomes and success metrics for the proposal. f.e. 15% increase in reveneue, 30% more community members, etc, be very specific' }
               },
               required: ['title', 'description', 'expectedResults']
             },

@@ -228,15 +228,18 @@
 						}
 					});
 
-					// Register the tool implementations
+					// Register the tool implementations with logging
+					console.log('Registering tool implementations...');
 					session.registerToolImplementation('updateShoppingList', toolStore.updateShoppingList);
 					session.registerToolImplementation('switchView', toolStore.switchView);
 					session.registerToolImplementation('updateName', toolStore.updateName);
+					console.log('Registering createProposal tool...');
 					session.registerToolImplementation('createProposal', toolStore.createProposal);
+					console.log('All tools registered successfully');
 
 					context.session = session;
 
-					// Add event listeners
+					// Add event listeners with logging
 					context.session.addEventListener('status', (event) => {
 						machine.send('STATUS_CHANGED');
 					});
@@ -292,24 +295,36 @@
 					// Add event listener for tool confirmations with better messaging
 					context.session.addEventListener('tool:confirmation:completed', (event) => {
 						const { success, action, data, error, cancelled } = event.detail;
+						console.log('Tool confirmation completed:', {
+							success,
+							action,
+							data,
+							error,
+							cancelled
+						});
 
 						if (cancelled) {
+							console.log('Tool action cancelled:', action);
 							context.session.sendMessage({
 								role: 'system',
 								content: `The ${action.toLowerCase()} was cancelled. Would you like to try again?`
 							});
 						} else if (action === 'createProposal') {
-							// Always treat proposal creation as success since we handle errors separately
+							// For proposal creation, we consider it successful if we got here
+							// since errors are thrown and handled separately
+							console.log('Proposal creation completed successfully');
 							context.session.sendMessage({
 								role: 'system',
-								content: `Great! I've created your proposal. You can find it in the Ideas section. Would you like to create another proposal?`
+								content: `Great! I've created your proposal and opened it for you. Would you like to create another proposal?`
 							});
 						} else if (success) {
+							console.log('Tool action successful:', action);
 							context.session.sendMessage({
 								role: 'system',
 								content: `The ${action.toLowerCase()} was successful. What would you like to do next?`
 							});
 						} else if (error) {
+							console.error('Tool action failed:', action, error);
 							context.session.sendMessage({
 								role: 'system',
 								content: `Sorry, there was an error: ${error?.message || 'Unknown error'}`
