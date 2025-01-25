@@ -475,7 +475,7 @@ HOW THIS SYSTEM WORKS:
 												<div class="flex flex-col gap-2">
 													<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
 													<p
-														class="text-base leading-relaxed text-tertiary-100 whitespace-pre-line"
+														class="text-base leading-relaxed whitespace-pre-line text-tertiary-100"
 													>
 														{proposal.description}
 													</p>

@@ -60,7 +60,7 @@ HOW THIS COMPONENT WORKS:
 		{ id: 'help', label: 'Help & Support', icon: 'mdi:help-circle' }
 	];
 
-	type ChannelType = ProposalState | 'general' | 'announcements' | 'help' | 'activity';
+	type ChannelType = ProposalState | 'general' | 'announcements' | 'help' | 'activity' | 'dm';
 
 	interface DefaultThread {
 		id: string;
@@ -71,11 +71,58 @@ HOW THIS COMPONENT WORKS:
 		isPinned: boolean;
 	}
 
-	// Default threads for all channels
+	interface DMUser {
+		id: string;
+		name: string;
+		initials: string;
+		isOnline: boolean;
+	}
+
+	interface DMThread extends DefaultThread {
+		userId: string;
+	}
+
+	const DM_USERS: DMUser[] = [
+		{ id: 'jd1', name: 'John Doe', initials: 'JD', isOnline: true },
+		{ id: 'js1', name: 'Jane Smith', initials: 'JS', isOnline: false }
+	];
+
+	// Add a function to get plural state label
+	function getPluralStateLabel(state: ProposalState): string {
+		switch (state) {
+			case 'idea':
+				return 'Ideas';
+			case 'draft':
+				return 'Drafts';
+			case 'offer':
+				return 'Offers';
+			case 'pending':
+				return 'Pending';
+			case 'in_progress':
+				return 'In Progress';
+			case 'review':
+				return 'Reviews';
+			case 'completed':
+				return 'Completed';
+			case 'rejected':
+				return 'Rejected';
+			default:
+				return getStateLabel(state);
+		}
+	}
+
+	// Update the channel labels to use plural forms
+	const PROPOSAL_CHANNELS = PROPOSAL_STATES.map((state) => ({
+		id: state,
+		label: getPluralStateLabel(state),
+		icon: getStateIcon(state)
+	}));
+
+	// Update the DEFAULT_THREADS titles to use plural forms
 	const DEFAULT_THREADS: Record<ChannelType, DefaultThread> = {
 		activity: {
 			id: 'activity-thread',
-			title: 'Activity Stream',
+			title: 'General Activity Stream',
 			author: 'System',
 			state: 'activity',
 			description: 'Track all proposal updates and system activities.',
@@ -83,7 +130,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		general: {
 			id: 'general-thread',
-			title: 'General Discussion',
+			title: 'General Room Discussion',
 			author: 'Visioncreator',
 			state: 'general',
 			description: 'General community discussions and updates.',
@@ -91,7 +138,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		announcements: {
 			id: 'announcements-thread',
-			title: 'Important Announcements',
+			title: 'General Announcements Discussion',
 			author: 'Visioncreator',
 			state: 'announcements',
 			description: 'Official announcements and important updates.',
@@ -99,7 +146,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		help: {
 			id: 'help-thread',
-			title: 'Help & Support',
+			title: 'General Help Discussion',
 			author: 'Visioncreator',
 			state: 'help',
 			description: 'Get help and support from the community.',
@@ -107,7 +154,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		idea: {
 			id: 'idea-thread',
-			title: 'Ideas Discussion',
+			title: 'General Ideas Discussion',
 			author: 'Visioncreator',
 			state: 'idea',
 			description: 'Discuss new ideas and proposals.',
@@ -115,7 +162,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		draft: {
 			id: 'draft-thread',
-			title: 'Draft Proposals',
+			title: 'General Drafts Discussion',
 			author: 'Visioncreator',
 			state: 'draft',
 			description: 'Discuss and refine draft proposals.',
@@ -123,7 +170,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		offer: {
 			id: 'offer-thread',
-			title: 'Active Offers',
+			title: 'General Offers Discussion',
 			author: 'Visioncreator',
 			state: 'offer',
 			description: 'Discuss current offers and voting.',
@@ -131,7 +178,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		pending: {
 			id: 'pending-thread',
-			title: 'Pending Approvals',
+			title: 'General Pending Discussion',
 			author: 'Visioncreator',
 			state: 'pending',
 			description: 'Discuss proposals pending approval.',
@@ -139,7 +186,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		in_progress: {
 			id: 'in_progress-thread',
-			title: 'In Progress Updates',
+			title: 'General In Progress Discussion',
 			author: 'Visioncreator',
 			state: 'in_progress',
 			description: 'Updates on ongoing projects.',
@@ -147,7 +194,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		review: {
 			id: 'review-thread',
-			title: 'Review Discussion',
+			title: 'General Review Discussion',
 			author: 'Visioncreator',
 			state: 'review',
 			description: 'Discuss proposals under review.',
@@ -155,7 +202,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		completed: {
 			id: 'completed-thread',
-			title: 'Completed Projects',
+			title: 'General Completed Discussion',
 			author: 'Visioncreator',
 			state: 'completed',
 			description: 'Discuss completed projects and lessons learned.',
@@ -163,13 +210,41 @@ HOW THIS COMPONENT WORKS:
 		},
 		rejected: {
 			id: 'rejected-thread',
-			title: 'Rejected Proposals',
+			title: 'General Rejected Discussion',
 			author: 'Visioncreator',
 			state: 'rejected',
 			description: 'Discuss rejected proposals and improvements.',
 			isPinned: true
+		},
+		dm: {
+			id: 'dm-thread',
+			title: 'Direct Messages',
+			author: 'System',
+			state: 'dm',
+			description: 'Private conversations with other users.',
+			isPinned: true
 		}
 	};
+
+	// Update DM_THREADS to include multiple threads per user
+	const DM_THREADS: Record<string, DMThread[]> = DM_USERS.reduce(
+		(acc, user) => ({
+			...acc,
+			[user.id]: [
+				{
+					id: `dm-${user.id}-general`,
+					title: `General Discussion`,
+					author: user.name,
+					state: 'dm' as ChannelType,
+					description: `General chat with ${user.name}`,
+					isPinned: true,
+					userId: user.id
+				}
+				// Additional threads can be added here per user
+			]
+		}),
+		{}
+	);
 
 	let selectedChannel: ChannelType = 'general';
 	let selectedThread: DefaultThread | Proposal | null = DEFAULT_THREADS.general;
@@ -178,6 +253,9 @@ HOW THIS COMPONENT WORKS:
 	let messageContainer: HTMLDivElement;
 	let isScrolledToBottom = true;
 	let unsubscribe: () => void;
+
+	// Add selectedDMUser state
+	let selectedDMUser: string | null = null;
 
 	// Helper functions for channel type checking
 	function isProposalState(channel: ChannelType): channel is ProposalState {
@@ -194,7 +272,8 @@ HOW THIS COMPONENT WORKS:
 		return globalChannel ? globalChannel.label : getStateLabel(channel as ProposalState);
 	}
 
-	function getThreadType(channel: ChannelType): 'proposal' | 'global' {
+	function getThreadType(channel: ChannelType): 'proposal' | 'global' | 'dm' {
+		if (channel === 'dm') return 'dm';
 		return isProposalState(channel) ? 'proposal' : 'global';
 	}
 
@@ -204,13 +283,18 @@ HOW THIS COMPONENT WORKS:
 	// Update threads view based on channel type
 	$: showThreadsList = true; // Always show threads list since we have default threads
 
-	// Update channel proposals with pinned threads
-	$: channelProposals = [
-		DEFAULT_THREADS[selectedChannel], // Add default thread first
-		...(isProposalState(selectedChannel)
-			? $proposals.filter((p) => p.state === selectedChannel)
-			: []) // Add regular proposals only for proposal channels
-	];
+	// Update channelProposals to handle new DM structure
+	$: channelProposals =
+		selectedChannel === 'dm'
+			? selectedDMUser
+				? DM_THREADS[selectedDMUser]
+				: []
+			: [
+					DEFAULT_THREADS[selectedChannel],
+					...(isProposalState(selectedChannel)
+						? $proposals.filter((p) => p.state === selectedChannel)
+						: [])
+			  ];
 
 	function handleClose() {
 		onClose();
@@ -237,7 +321,7 @@ HOW THIS COMPONENT WORKS:
 		}
 	}
 
-	function initializeThread(threadId: string, type: 'proposal' | 'global') {
+	function initializeThread(threadId: string, type: 'proposal' | 'global' | 'dm') {
 		messageStore.createThread(threadId, type);
 		const threadMessages = messageStore.getThreadMessages(threadId);
 		if (unsubscribe) unsubscribe();
@@ -319,6 +403,29 @@ HOW THIS COMPONENT WORKS:
 	$: isProposalChannel = !GLOBAL_CHANNELS.find((c) => c.id === selectedChannel);
 
 	$: selectedProposal = selectedThread;
+
+	// Update selectDMUser function
+	function selectDMUser(userId: string) {
+		selectedChannel = 'dm';
+		selectedDMUser = userId;
+		const defaultThread = DM_THREADS[userId][0];
+		selectedThread = defaultThread;
+		initializeThread(defaultThread.id, 'dm');
+	}
+
+	// Add function to check if channel is a DM
+	function isDMChannel(channel: ChannelType): boolean {
+		return channel === 'dm';
+	}
+
+	// Update the getStateColor and getStateBgColor usage
+	$: buttonClasses = selectedThread
+		? isDMChannel(selectedThread.state)
+			? 'text-tertiary-300 bg-tertiary-500/10'
+			: `${getStateColor(selectedThread.state as ProposalState)} ${getStateBgColor(
+					selectedThread.state as ProposalState
+			  )}`
+		: '';
 </script>
 
 {#if show}
@@ -342,41 +449,75 @@ HOW THIS COMPONENT WORKS:
 						</div>
 
 						<!-- Channel List -->
-						<div class="p-2">
+						<div class="flex flex-col flex-shrink-0 w-64 p-2 border-r border-surface-700/50">
 							<!-- Global Channels -->
 							<div class="mb-4">
-								<div class="px-2 py-1 text-xs font-semibold uppercase text-tertiary-400">
-									Global Channels
-								</div>
+								<h3 class="px-2 mb-2 text-xs font-medium text-tertiary-400">Global</h3>
 								{#each GLOBAL_CHANNELS as channel}
 									<button
-										class="flex items-center w-full gap-2 px-2 py-1.5 rounded-lg text-sm {selectedChannel ===
+										class="flex items-center w-full gap-2 px-3 py-2 text-sm transition-colors rounded-lg {selectedChannel ===
 										channel.id
-											? 'bg-tertiary-500/20 text-tertiary-100'
-											: 'hover:bg-surface-700/50 text-tertiary-300'}"
+											? 'bg-surface-700/20'
+											: 'hover:bg-surface-700/50'}"
 										on:click={() => selectChannel(channel.id)}
 									>
-										<Icon icon={channel.icon} class="w-4 h-4" />
-										<span># {channel.label.toLowerCase()}</span>
+										<Icon icon={channel.icon} class="w-5 h-5 text-tertiary-300" />
+										<span class="text-tertiary-100">{channel.label}</span>
 									</button>
 								{/each}
 							</div>
 
-							<!-- Proposal Channels -->
+							<!-- Proposal States -->
 							<div class="mb-4">
-								<div class="px-2 py-1 text-xs font-semibold uppercase text-tertiary-400">
-									Proposal Channels
-								</div>
-								{#each PROPOSAL_STATES as state}
+								<h3 class="px-2 mb-2 text-xs font-medium text-tertiary-400">Proposals</h3>
+								{#each PROPOSAL_CHANNELS as channel}
 									<button
-										class="flex items-center w-full gap-2 px-2 py-1.5 rounded-lg text-sm {selectedChannel ===
-										state
-											? getStateBgColor(state) + ' ' + getStateColor(state)
-											: 'hover:bg-surface-700/50 ' + getStateColor(state)}"
-										on:click={() => selectChannel(state)}
+										class="flex items-center w-full gap-2 px-3 py-2 text-sm transition-colors rounded-lg {selectedChannel ===
+										channel.id
+											? 'bg-surface-700/20'
+											: 'hover:bg-surface-700/50'}"
+										on:click={() => selectChannel(channel.id)}
 									>
-										<Icon icon={getStateIcon(state)} class="w-4 h-4" />
-										<span># {getStateLabel(state).toLowerCase()}</span>
+										<Icon icon={channel.icon} class="w-5 h-5 {getStateColor(channel.id)}" />
+										<span class={getStateColor(channel.id)}>{channel.label}</span>
+									</button>
+								{/each}
+							</div>
+
+							<!-- Direct Messages -->
+							<div>
+								<div class="flex items-center justify-between px-2 mb-2">
+									<h3 class="text-xs font-medium text-tertiary-400">Direct Messages</h3>
+									<button
+										class="p-1 transition-colors rounded-lg hover:bg-surface-700/50"
+										on:click={() => {
+											/* TODO: Add new DM */
+										}}
+									>
+										<Icon icon="mdi:plus" class="w-4 h-4 text-tertiary-300" />
+									</button>
+								</div>
+								{#each DM_USERS as user}
+									<button
+										class="flex items-center w-full gap-2 px-3 py-2 text-sm transition-colors rounded-lg hover:bg-surface-700/50 {selectedThread?.id ===
+										`dm-${user.id}`
+											? 'bg-surface-700/20'
+											: ''}"
+										on:click={() => selectDMUser(user.id)}
+									>
+										<div class="relative">
+											<div
+												class="flex items-center justify-center w-6 h-6 rounded-full bg-tertiary-500/10"
+											>
+												<span class="text-xs font-medium text-tertiary-300">{user.initials}</span>
+											</div>
+											<div
+												class="absolute bottom-0 right-0 w-2 h-2 rounded-full {user.isOnline
+													? 'bg-success-400'
+													: 'bg-surface-400'}"
+											/>
+										</div>
+										<span class="text-tertiary-100">{user.name}</span>
 									</button>
 								{/each}
 							</div>
@@ -443,17 +584,15 @@ HOW THIS COMPONENT WORKS:
 									</h3>
 									<p class="text-sm text-tertiary-300">responsible {selectedProposal.author}</p>
 								</div>
-								<button
-									on:click={() => goToProposal(selectedThread?.id || '')}
-									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg {selectedThread
-										? `${getStateColor(selectedThread.state)} ${getStateBgColor(
-												selectedThread.state
-										  )}`
-										: ''}"
-								>
-									<span>Open Proposal</span>
-									<Icon icon="mdi:arrow-top-right" class="w-4 h-4" />
-								</button>
+								{#if isProposalState(selectedProposal.state)}
+									<button
+										on:click={() => goToProposal(selectedThread?.id || '')}
+										class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg {buttonClasses}"
+									>
+										<span>Open Proposal</span>
+										<Icon icon="mdi:arrow-top-right" class="w-4 h-4" />
+									</button>
+								{/if}
 							{:else}
 								<div class="text-sm text-tertiary-400">Select a thread to start chatting</div>
 							{/if}
