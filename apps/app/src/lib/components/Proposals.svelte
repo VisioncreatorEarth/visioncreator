@@ -670,18 +670,6 @@ HOW THIS SYSTEM WORKS:
 											</div>
 										{/if}
 										<div class="p-6 space-y-4">
-											<!-- Summary Section -->
-											<div>
-												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-													Summary
-												</h4>
-												<p class="text-xs text-right text-tertiary-300">
-													{proposal.description.length > 120
-														? proposal.description.slice(0, 120) + '...'
-														: proposal.description}
-												</p>
-											</div>
-
 											{#if proposal.state === 'idea'}
 												<div>
 													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
