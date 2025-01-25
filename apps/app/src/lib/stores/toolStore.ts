@@ -3,6 +3,14 @@ import { client } from '$lib/wundergraph';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
 import { eventBus } from '$lib/composables/eventBus';
+import { proposals, addProposal, type Proposal } from './proposalStore';
+
+// Mock data and types
+const MOCK_USER = {
+    name: 'Demo User',
+    id: 'demo-user-1',
+    email: 'demo@example.com'
+};
 
 // Types
 interface ShoppingItem {
@@ -13,13 +21,26 @@ interface ShoppingItem {
     icon?: string;
 }
 
+type ActionResult = {
+    success: boolean;
+    message: string;
+    data?: Record<string, unknown>;
+};
+
 interface ConfirmationData {
     title: string;
     message: string;
-    action: () => Promise<any>;
-    data?: any;
+    action: () => Promise<ActionResult>;
+    data?: Record<string, unknown>;
     pendingResponse?: boolean;
-    updateParams?: (newParams: any) => void;
+    updateParams?: (newParams: Record<string, unknown>) => void;
+}
+
+interface ProposalCreationData {
+    title: string;
+    description: string;
+    expectedResults: string;
+    state: 'idea';
 }
 
 interface ToolState {
@@ -27,9 +48,37 @@ interface ToolState {
     addedItems: ShoppingItem[];
     removedItems: ShoppingItem[];
     pendingConfirmation: ConfirmationData | null;
+    pendingProposal: ProposalCreationData | null;
 }
 
-async function performOperation(operation: string, input: Record<string, unknown>) {
+interface OperationResult {
+    success: boolean;
+    message: string;
+    data?: Record<string, unknown>;
+    error?: Error;
+}
+
+type ToolResponse = {
+    status: 'awaiting_confirmation' | 'pending_update' | 'error';
+    message: string;
+};
+
+interface UpdateNameParams {
+    name: string;
+}
+
+interface ShoppingListParams {
+    items: ShoppingItem[];
+}
+
+type OperationName = 'updateMe' | 'createShoppingList' | 'addItemsToShoppingList';
+
+interface UpdateParams {
+    name?: string;
+    [key: string]: unknown;
+}
+
+async function performOperation(operation: OperationName, input: UpdateParams): Promise<OperationResult> {
     try {
         const result = await client.mutate({
             operationName: operation,
@@ -41,7 +90,7 @@ async function performOperation(operation: string, input: Record<string, unknown
             return {
                 success: true,
                 data: result.data,
-                message: result.data.message || `Operation ${operation} completed successfully!`
+                message: 'Operation completed successfully!'
             };
         } else {
             throw new Error(result.error?.message || `Operation ${operation} failed`);
@@ -61,7 +110,8 @@ function createToolStore() {
         currentItems: [],
         addedItems: [],
         removedItems: [],
-        pendingConfirmation: null
+        pendingConfirmation: null,
+        pendingProposal: null
     });
 
     return {
@@ -70,7 +120,8 @@ function createToolStore() {
             currentItems: [],
             addedItems: [],
             removedItems: [],
-            pendingConfirmation: null
+            pendingConfirmation: null,
+            pendingProposal: null
         }),
 
         setPendingConfirmation: (confirmation: ConfirmationData | null) => {
@@ -120,7 +171,7 @@ function createToolStore() {
         },
 
         // Tool implementations
-        updateShoppingList: async (parameters: any) => {
+        updateShoppingList: async (parameters: ShoppingListParams) => {
             try {
                 // Handle double-stringified JSON
                 let itemsArray;
@@ -203,12 +254,12 @@ function createToolStore() {
             }
         },
 
-        updateName: async (parameters: any) => {
+        updateName: async (parameters: UpdateNameParams) => {
             const store = get({ subscribe });
             if (!store.pendingConfirmation ||
                 (store.pendingConfirmation.data?.name !== parameters.name)) {
 
-                const createNameAction = (name: string) => async () => {
+                const createNameAction = (name: string) => async (): Promise<ActionResult> => {
                     const result = await performOperation('updateMe', {
                         name: name
                     });
@@ -217,7 +268,11 @@ function createToolStore() {
                         throw new Error(result.message);
                     }
 
-                    return `Name successfully updated to ${name}`;
+                    return {
+                        success: true,
+                        message: `Name successfully updated to ${name}`,
+                        data: { name }
+                    };
                 };
 
                 update(state => ({
@@ -228,13 +283,13 @@ function createToolStore() {
                         action: createNameAction(parameters.name),
                         data: { name: parameters.name },
                         pendingResponse: true,
-                        updateParams: (newParams: any) => {
+                        updateParams: (newParams: UpdateParams) => {
                             update(state => ({
                                 ...state,
                                 pendingConfirmation: {
                                     ...state.pendingConfirmation!,
                                     message: `Are you sure you want to change your name to "${newParams.name}"?`,
-                                    action: createNameAction(newParams.name),
+                                    action: createNameAction(newParams.name as string),
                                     data: { name: newParams.name }
                                 }
                             }));
@@ -250,6 +305,86 @@ function createToolStore() {
                 status: 'pending_update',
                 message: 'Would you like to update the name to something else?'
             };
+        },
+
+        // Add new tool for creating proposals
+        createProposal: async (parameters: { proposal: { title: string; description: string; expectedResults: string } }): Promise<ToolResponse> => {
+            try {
+                // Validate input
+                const { title, description, expectedResults } = parameters.proposal;
+                if (!title || !description || !expectedResults) {
+                    return {
+                        status: 'error',
+                        message: 'Please provide a title, description, and expected results for the proposal.'
+                    };
+                }
+
+                const proposalData: ProposalCreationData = {
+                    title,
+                    description,
+                    expectedResults,
+                    state: 'idea'
+                };
+
+                // Update store state with pending proposal
+                update(state => ({
+                    ...state,
+                    pendingProposal: proposalData,
+                    pendingConfirmation: {
+                        title: 'Create New Proposal',
+                        message: `I'll create a new proposal titled "${proposalData.title}". Would you like to review and confirm?`,
+                        action: async (): Promise<ActionResult> => {
+                            try {
+                                const newProposal: Proposal = {
+                                    id: `proposal-${Date.now()}`,
+                                    title: proposalData.title,
+                                    description: proposalData.description,
+                                    expectedResults: proposalData.expectedResults,
+                                    state: 'idea',
+                                    author: MOCK_USER.name,
+                                    votes: 0,
+                                    budgetRequested: 0,
+                                    commitment: '',
+                                    estimatedDelivery: ''
+                                };
+
+                                // Add to proposals store using the new function
+                                addProposal(newProposal);
+
+                                // Emit event for proposal creation
+                                eventBus.emit('proposal:created', newProposal);
+
+                                if (browser) {
+                                    goto('/me?view=Proposals', { replaceState: true });
+                                }
+
+                                return {
+                                    success: true,
+                                    message: `Great! I've created your new proposal "${proposalData.title}". You can now find it in the Ideas section.`,
+                                    data: { proposal: newProposal }
+                                };
+                            } catch (error) {
+                                return {
+                                    success: false,
+                                    message: 'Failed to create proposal'
+                                };
+                            }
+                        },
+                        data: { proposal: proposalData }
+                    }
+                }));
+
+                return {
+                    status: 'awaiting_confirmation',
+                    message: `I've prepared a new proposal based on our conversation. Would you like to review and confirm it?`
+                };
+            } catch (error) {
+                console.error('Error creating proposal:', error);
+                return {
+                    status: 'error',
+                    message: 'Failed to create proposal'
+                };
+            }
         }
     };
 }

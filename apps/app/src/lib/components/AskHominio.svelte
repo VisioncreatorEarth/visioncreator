@@ -13,6 +13,7 @@
 	import { view as hominioBankView } from '$lib/views/HominioBankMe';
 	import { view as hominioHostView } from '$lib/views/HominioHostMe';
 	import { toolStore } from '$lib/stores/toolStore';
+	import { proposals } from '$lib/stores/proposalStore';
 
 	// Subscribe to the tool store state
 	$: ({ currentItems, addedItems, removedItems, pendingConfirmation } = $toolStore);
@@ -231,6 +232,7 @@
 					session.registerToolImplementation('updateShoppingList', toolStore.updateShoppingList);
 					session.registerToolImplementation('switchView', toolStore.switchView);
 					session.registerToolImplementation('updateName', toolStore.updateName);
+					session.registerToolImplementation('createProposal', toolStore.createProposal);
 
 					context.session = session;
 
@@ -294,14 +296,20 @@
 						if (cancelled) {
 							context.session.sendMessage({
 								role: 'system',
-								content: `The ${action.toLowerCase()} was cancelled. Would you like to try again with a different name?`
+								content: `The ${action.toLowerCase()} was cancelled. Would you like to try again?`
+							});
+						} else if (action === 'createProposal') {
+							// Always treat proposal creation as success since we handle errors separately
+							context.session.sendMessage({
+								role: 'system',
+								content: `Great! I've created your proposal. You can find it in the Ideas section. Would you like to create another proposal?`
 							});
 						} else if (success) {
 							context.session.sendMessage({
 								role: 'system',
-								content: data // Use the success message from the action
+								content: `The ${action.toLowerCase()} was successful. What would you like to do next?`
 							});
-						} else {
+						} else if (error) {
 							context.session.sendMessage({
 								role: 'system',
 								content: `Sorry, there was an error: ${error?.message || 'Unknown error'}`
@@ -487,7 +495,7 @@
 					<div class="z-50 p-8 text-center rounded-xl backdrop-blur-xl bg-surface-400/10">
 						<h2 class="text-3xl font-bold text-tertiary-200">{pendingConfirmation.title}</h2>
 						<p class="mt-3 text-lg text-tertiary-200/80">{pendingConfirmation.message}</p>
-						<div class="flex gap-4 justify-center mt-6">
+						<div class="flex justify-center gap-4 mt-6">
 							<button
 								class="btn variant-ghost-tertiary btn-lg @3xl:btn-xl rounded-full"
 								on:click={handleCancel}

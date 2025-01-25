@@ -49,6 +49,7 @@ HOW THIS SYSTEM WORKS:
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { toolStore } from '$lib/stores/toolStore';
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;

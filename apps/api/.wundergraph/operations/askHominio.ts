@@ -10,14 +10,39 @@ const CALL_CONFIG = {
   - you have a Shoppinglist Skill -> tool name: updateShoppingList
   - you can update the users name -> tool name: updateName
   - you can switch interface views / apps / services -> tool name: switchView 
+  - you can create new proposals -> tool name: createProposal
   - answer any kind of question that the user asks you.
 
-  Always use and exectue the right tools given to you.
+  When creating proposals:
+  - Always ask clarifying questions to gather all necessary information
+  - Help structure the user's ideas into clear proposals
+  - Make sure to capture:
+    * A clear, concise title
+    * A detailed description of the idea
+    * Expected results and success metrics
+  - After gathering all information, use the createProposal tool to create the proposal
+  - Guide the user through the confirmation process
+  - When the user confirms, the proposal will be created in the "idea" state
+  - After creation, inform the user they can find their proposal in the Ideas section
+
+  Tool Usage for createProposal:
+  - Required parameters:
+    * title: A clear, concise title for the proposal
+    * description: Detailed explanation of the proposal
+    * expectedResults: Clear metrics for success
+  - Example usage:
+    User: "I want to propose a community hackathon"
+    You: "That sounds interesting! Let me help you create a proposal. What specific goals do you have in mind for this hackathon?"
+    [Gather information through conversation]
+    [Use createProposal tool with gathered information]
+    [Guide through confirmation]
+
+  Always use and execute the right tools given to you.
 
   If the user has questions, please always interact in a friendly conversation. 
 
-  If the user asks you todo something, that oyu dont have a skill for, please respond in a friendly manner:
-  Exmaples for requests you don't have the skill yet:
+  If the user asks you todo something, that you dont have a skill for, please respond in a friendly manner:
+  Examples for requests you don't have the skill yet:
   - whats the weather like today?
   - can you book a taxi for me?
   - how many days until the next holiday? 
@@ -28,7 +53,7 @@ const CALL_CONFIG = {
 
   If the user talks to you in another language, talk back in that language.
   
-  Always respond instantly and make short smalltalk, while exuting the tool use in the background. 
+  Always respond instantly and make short smalltalk, while executing the tool use in the background.
 
   Available Categories:
   - Vegetables
@@ -158,6 +183,29 @@ const CALL_CONFIG = {
               description: 'The new name to be updated'
             },
             required: true,
+          }
+        ],
+        client: {}
+      }
+    },
+    {
+      temporaryTool: {
+        modelToolName: 'createProposal',
+        description: 'Create a new proposal. ALWAYS use this tool when the user wants to create a new proposal or idea. You must NEVER emit text when doing a tool call or using any tool.',
+        dynamicParameters: [
+          {
+            name: 'proposal',
+            location: 'PARAMETER_LOCATION_BODY',
+            schema: {
+              type: 'object',
+              properties: {
+                title: { type: 'string', description: 'A clear, concise title for the proposal' },
+                description: { type: 'string', description: 'Detailed explanation of what the proposal aims to achieve and how it will be implemented' },
+                expectedResults: { type: 'string', description: 'Specific, measurable outcomes and success metrics for the proposal' }
+              },
+              required: ['title', 'description', 'expectedResults']
+            },
+            required: true
           }
         ],
         client: {}

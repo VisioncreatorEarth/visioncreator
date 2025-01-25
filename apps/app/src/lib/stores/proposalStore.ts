@@ -113,15 +113,7 @@ import { writable, derived, get } from 'svelte/store';
 import { activityStore } from './activityStore';
 
 // Types
-export type ProposalState =
-    | 'idea'
-    | 'draft'
-    | 'offer'
-    | 'pending'
-    | 'in_progress'
-    | 'review'
-    | 'completed'
-    | 'rejected';
+export type ProposalState = 'idea' | 'draft' | 'offer' | 'active' | 'completed' | 'rejected';
 
 export interface ProposalTask {
     id: string;
@@ -329,66 +321,7 @@ const initialProposals: Proposal[] = [
         estimatedDelivery: '2 weeks',
         budgetRequested: 900
     },
-    {
-        id: '10',
-        title: 'Community Newsletter System',
-        author: 'Rachel Kim',
-        votes: 1,
-        expectedResults: 'Increased community engagement and awareness',
-        commitment: 'Weekly newsletter delivery with community highlights',
-        description:
-            'Weekly newsletter system to keep the community informed.\n\n' +
-            'Features:\n' +
-            '• Automated content aggregation\n' +
-            '• Community contribution highlights\n' +
-            '• Project updates and milestones\n' +
-            '• Upcoming events calendar\n' +
-            '• Member spotlights\n\n' +
-            'Focus on celebrating community achievements and fostering engagement.',
-        state: 'idea',
-        estimatedDelivery: '1 week',
-        budgetRequested: 400
-    },
-    {
-        id: '11',
-        title: 'Community Mentorship Program',
-        author: 'David Park',
-        votes: 0,
-        expectedResults: 'Knowledge sharing and skill development within community',
-        commitment: 'Monthly mentorship sessions and progress tracking',
-        description:
-            'Structured mentorship program connecting experienced members with newcomers.\n\n' +
-            'Program Components:\n' +
-            '• Mentor-mentee matching system\n' +
-            '• Goal setting framework\n' +
-            '• Progress tracking tools\n' +
-            '• Resource sharing platform\n' +
-            '• Success story showcase\n\n' +
-            'Building stronger connections through knowledge sharing.',
-        state: 'idea',
-        estimatedDelivery: '2 weeks',
-        budgetRequested: 600
-    },
-    {
-        id: '12',
-        title: 'Community Hackathon Event',
-        author: 'Lisa Wang',
-        votes: 1,
-        expectedResults: 'Innovation boost and new project initiatives',
-        commitment: 'Weekend-long event with prizes and showcases',
-        description:
-            '48-hour hackathon focused on community improvements.\n\n' +
-            'Event Structure:\n' +
-            '• Team formation support\n' +
-            '• Project idea workshops\n' +
-            '• Mentorship sessions\n' +
-            '• Demo presentations\n' +
-            '• Prize categories\n\n' +
-            'Fostering innovation and collaboration within the community.',
-        state: 'idea',
-        estimatedDelivery: '3 weeks',
-        budgetRequested: 1200
-    },
+
     {
         id: '13',
         title: 'Community Podcast Series',
@@ -914,4 +847,9 @@ export function createProposal(proposal: Omit<Proposal, 'id' | 'state' | 'votes'
 
     proposals.update((proposals) => [...proposals, newProposal]);
     return newProposal.id;
+}
+
+// Export a function to add a new proposal
+export function addProposal(proposal: Proposal) {
+    proposals.update(existingProposals => [...existingProposals, proposal]);
 } 
