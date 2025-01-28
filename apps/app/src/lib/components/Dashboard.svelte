@@ -5,7 +5,7 @@
 
 	const FIBONACCI_MILESTONES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
 	const TOTAL_FOUNDERS = 144;
-	const CURRENT_FOUNDERS = 16;
+	const CURRENT_FOUNDERS = 21;
 
 	// Calculate all milestone values
 	$: currentCircle = FIBONACCI_MILESTONES.findIndex((n) => n > CURRENT_FOUNDERS) + 1;
