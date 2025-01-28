@@ -5,7 +5,7 @@
 	export let me: {
 		data: { seed: string };
 		design: { highlight: boolean };
-		size: 'sm' | 'md' | 'lg' | 'xl';
+		size: '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 	};
 
 	function generateAvatar(seed: string): string {
@@ -42,7 +42,15 @@
 			? 'w-40 h-40 border-4 rounded-full'
 			: me.size === 'lg'
 			? 'w-24 h-24 mb-2 border-4 rounded-full'
-			: 'w-12 h-12 @3xl:h-14 @3xl:w-14 rounded-full';
+			: me.size === 'md'
+			? 'w-16 h-16 rounded-full'
+			: me.size === 'sm'
+			? 'w-12 h-12 rounded-full'
+			: me.size === 'xs'
+			? 'w-10 h-10 rounded-full'
+			: me.size === '2xs'
+			? 'w-8 h-8 rounded-full'
+			: 'w-12 h-12 rounded-full';
 </script>
 
 <img src={avatar} alt="Profile" class={`${sizeClass} ${bgColorClass} border-tertiary-200`} />

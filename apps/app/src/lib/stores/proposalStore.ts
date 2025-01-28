@@ -113,7 +113,7 @@ import { writable, derived, get } from 'svelte/store';
 import { activityStore } from './activityStore';
 
 // Types
-export type ProposalState = 'idea' | 'draft' | 'offer' | 'pending' | 'in_progress' | 'review' | 'active' | 'completed' | 'rejected';
+export type ProposalState = 'idea' | 'draft' | 'offer' | 'decision' | 'in_progress' | 'review' | 'active' | 'completed' | 'rejected';
 
 export interface ProposalTask {
     id: string;
@@ -133,6 +133,7 @@ export interface Proposal {
     state: ProposalState;
     estimatedDelivery: string;
     budgetRequested: number;
+    responsible?: string;
     tasks?: ProposalTask[];
     draftDetails?: {
         timeToRealization: string;
@@ -404,7 +405,7 @@ export const PROPOSAL_TABS: ProposalState[] = [
     'idea',
     'draft',
     'offer',
-    'pending',
+    'decision',
     'in_progress',
     'review',
     'completed',
@@ -436,7 +437,7 @@ export const poolMetrics = derived([dashboardMetrics, proposals], ([$dashboardMe
     const total = Math.max(0, Math.round($dashboardMetrics.visionCreators * 365 * 0.75) - delivered);
 
     const locked = $proposals
-        .filter((p) => p.state === 'in_progress' || p.state === 'review' || p.state === 'pending')
+        .filter((p) => p.state === 'in_progress' || p.state === 'review' || p.state === 'decision')
         .reduce((sum, p) => sum + p.budgetRequested, 0);
 
     const voting = Math.max(0, total - locked);
@@ -588,8 +589,8 @@ function getNextState(currentState: ProposalState): ProposalState {
     const stateFlow: Record<ProposalState, ProposalState> = {
         idea: 'draft',
         draft: 'offer',
-        offer: 'pending',
-        pending: 'in_progress',
+        offer: 'decision',
+        decision: 'in_progress',
         in_progress: 'review',
         review: 'completed',
         completed: 'completed',
@@ -643,7 +644,7 @@ export function getStateColor(state: ProposalState): string {
             return 'text-blue-300';
         case 'offer':
             return 'text-surface-200';
-        case 'pending':
+        case 'decision':
             return 'text-tertiary-500';
         case 'in_progress':
             return 'text-primary-400';
@@ -666,8 +667,8 @@ export function getStateIcon(state: ProposalState): string {
             return 'mdi:file-document-edit';
         case 'offer':
             return 'mdi:handshake';
-        case 'pending':
-            return 'mdi:timer-sand';
+        case 'decision':
+            return 'mdi:gavel';
         case 'in_progress':
             return 'mdi:progress-wrench';
         case 'review':
@@ -689,8 +690,8 @@ export function getStateLabel(state: ProposalState): string {
             return 'Drafts';
         case 'offer':
             return 'Offers';
-        case 'pending':
-            return 'Pending';
+        case 'decision':
+            return 'Decision';
         case 'in_progress':
             return 'In Progress';
         case 'review':
@@ -710,7 +711,7 @@ export function getStateBgColor(state: ProposalState): string {
             return 'bg-blue-900/20';
         case 'offer':
             return 'bg-surface-600/20';
-        case 'pending':
+        case 'decision':
             return 'bg-tertiary-300/10';
         case 'in_progress':
             return 'bg-primary-900/20';
@@ -758,7 +759,7 @@ export function checkProposalStateTransitions($proposals: Proposal[], voteThresh
         } else if (p.state === 'offer') {
             const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
             if (proposalValue >= p.budgetRequested) {
-                return { ...p, state: 'pending' as ProposalState };
+                return { ...p, state: 'decision' as ProposalState };
             }
         }
         return p;

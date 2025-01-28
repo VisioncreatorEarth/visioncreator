@@ -50,6 +50,7 @@ HOW THIS SYSTEM WORKS:
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toolStore } from '$lib/stores/toolStore';
+	import Avatar from './Avatar.svelte';
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
@@ -154,6 +155,26 @@ HOW THIS SYSTEM WORKS:
 
 	function getStateTextClasses(proposal: Proposal): string {
 		return `flex items-center gap-2 ${getStateColor(proposal.state)}`;
+	}
+
+	// Add mock contributors data (we'll use this for demonstration)
+	const mockContributors = [
+		{ data: { seed: 'user1' }, design: { highlight: false }, size: 'xs' as const },
+		{ data: { seed: 'user2' }, design: { highlight: true }, size: 'xs' as const },
+		{ data: { seed: 'user3' }, design: { highlight: false }, size: 'xs' as const },
+		{ data: { seed: 'user4' }, design: { highlight: true }, size: 'xs' as const }
+	];
+
+	// Function to get random number of contributors for each proposal
+	function getRandomContributors() {
+		const numContributors = Math.floor(Math.random() * 3) + 2; // 2-4 contributors
+		return Array(numContributors)
+			.fill(null)
+			.map((_, i) => ({
+				data: { seed: `contributor${i}` },
+				design: { highlight: false },
+				size: '2xs' as const
+			}));
 	}
 </script>
 
@@ -337,15 +358,12 @@ HOW THIS SYSTEM WORKS:
 									<div
 										class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
 									>
-										<div class="flex items-center gap-4">
-											<div
-												class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
-											>
-												<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
-											</div>
-											<div>
-												<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-												<p class="text-sm text-tertiary-300">responsible {proposal.author}</p>
+										<div class="flex flex-col gap-2">
+											<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+											<div class="flex items-center -space-x-1">
+												{#each getRandomContributors() as contributor}
+													<Avatar me={contributor} />
+												{/each}
 											</div>
 										</div>
 									</div>
@@ -635,7 +653,7 @@ HOW THIS SYSTEM WORKS:
 																<Icon icon="mdi:account" class="w-5 h-5 text-tertiary-400" />
 															</div>
 															<span class="text-xs text-tertiary-300"
-																>responsible {proposal.author}</span
+																>created by {proposal.author}</span
 															>
 														</div>
 														<span
@@ -673,6 +691,14 @@ HOW THIS SYSTEM WORKS:
 											{#if proposal.state === 'idea'}
 												<div>
 													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+														Responsible
+													</h4>
+													<p class="text-xs text-right text-tertiary-300">
+														{proposal.responsible || 'Not assigned'}
+													</p>
+												</div>
+												<div>
+													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
 														Expected Results
 													</h4>
 													<p class="text-xs text-right text-tertiary-300">
@@ -682,18 +708,18 @@ HOW THIS SYSTEM WORKS:
 											{:else}
 												<div>
 													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Expected Results
+														Responsible
 													</h4>
 													<p class="text-xs text-right text-tertiary-300">
-														{proposal.expectedResults}
+														{proposal.responsible || 'Not assigned'}
 													</p>
 												</div>
 												<div>
 													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Commitment
+														Expected Results
 													</h4>
 													<p class="text-xs text-right text-tertiary-300">
-														{proposal.commitment}
+														{proposal.expectedResults}
 													</p>
 												</div>
 												<div>
@@ -779,15 +805,12 @@ HOW THIS SYSTEM WORKS:
 									<div
 										class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
 									>
-										<div class="flex items-center gap-4">
-											<div
-												class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-full bg-surface-700/50"
-											>
-												<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
-											</div>
-											<div>
-												<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
-												<p class="text-sm text-tertiary-300">responsible {proposal.author}</p>
+										<div class="flex flex-col gap-2">
+											<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+											<div class="flex items-center -space-x-1">
+												{#each getRandomContributors() as contributor}
+													<Avatar me={contributor} />
+												{/each}
 											</div>
 										</div>
 									</div>

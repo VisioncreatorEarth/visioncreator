@@ -25,6 +25,7 @@ HOW THIS COMPONENT WORKS:
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
 	import Icon from '@iconify/svelte';
+	import Avatar from './Avatar.svelte';
 	import {
 		getStateIcon,
 		getStateLabel,
@@ -46,7 +47,7 @@ HOW THIS COMPONENT WORKS:
 		'idea',
 		'draft',
 		'offer',
-		'pending',
+		'decision',
 		'in_progress',
 		'review',
 		'completed',
@@ -96,8 +97,8 @@ HOW THIS COMPONENT WORKS:
 				return 'Drafts';
 			case 'offer':
 				return 'Offers';
-			case 'pending':
-				return 'Pending';
+			case 'decision':
+				return 'Decisions';
 			case 'in_progress':
 				return 'In Progress';
 			case 'review':
@@ -176,12 +177,12 @@ HOW THIS COMPONENT WORKS:
 			description: 'Discuss current offers and voting.',
 			isPinned: true
 		},
-		pending: {
-			id: 'pending-thread',
-			title: 'General Pending Discussion',
+		decision: {
+			id: 'decision-thread',
+			title: 'General Decision Discussion',
 			author: 'Visioncreator',
-			state: 'pending',
-			description: 'Discuss proposals pending approval.',
+			state: 'decision',
+			description: 'Discuss proposals awaiting decision.',
 			isPinned: true
 		},
 		in_progress: {
@@ -426,6 +427,19 @@ HOW THIS COMPONENT WORKS:
 					selectedThread.state as ProposalState
 			  )}`
 		: '';
+
+	// Add helper function to generate avatar props
+	function getAvatarProps(
+		seed: string,
+		highlight = false,
+		size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' = 'xs'
+	) {
+		return {
+			data: { seed },
+			design: { highlight },
+			size
+		};
+	}
 </script>
 
 {#if show}
@@ -506,11 +520,7 @@ HOW THIS COMPONENT WORKS:
 										on:click={() => selectDMUser(user.id)}
 									>
 										<div class="relative">
-											<div
-												class="flex items-center justify-center w-6 h-6 rounded-full bg-tertiary-500/10"
-											>
-												<span class="text-xs font-medium text-tertiary-300">{user.initials}</span>
-											</div>
+											<Avatar me={getAvatarProps(user.id)} />
 											<div
 												class="absolute bottom-0 right-0 w-2 h-2 rounded-full {user.isOnline
 													? 'bg-success-400'
@@ -556,8 +566,15 @@ HOW THIS COMPONENT WORKS:
 													<span>Pinned Thread</span>
 												</div>
 											{/if}
-											<div class="text-sm font-medium text-tertiary-100">{proposal.title}</div>
-											<div class="text-xs text-tertiary-300">responsible {proposal.author}</div>
+											<div class="flex items-center justify-between">
+												<div class="flex items-center gap-2">
+													<Avatar me={getAvatarProps(proposal.author)} />
+													<div>
+														<h3 class="text-sm font-medium text-tertiary-100">{proposal.title}</h3>
+														<p class="text-xs text-tertiary-300">created by {proposal.author}</p>
+													</div>
+												</div>
+											</div>
 										</button>
 									</div>
 								{/each}
@@ -582,7 +599,7 @@ HOW THIS COMPONENT WORKS:
 									<h3 class="text-lg font-semibold text-tertiary-100">
 										{selectedProposal.title}
 									</h3>
-									<p class="text-sm text-tertiary-300">responsible {selectedProposal.author}</p>
+									<p class="text-sm text-tertiary-300">created by {selectedProposal.author}</p>
 								</div>
 								{#if isProposalState(selectedProposal.state)}
 									<button
@@ -610,11 +627,7 @@ HOW THIS COMPONENT WORKS:
 								{:else}
 									{#each $activityStore as activity}
 										<div class="flex items-start gap-2 p-2 rounded-lg hover:bg-surface-700/20">
-											<div
-												class="flex items-center justify-center w-8 h-8 rounded-full bg-tertiary-500/10"
-											>
-												<Icon icon="mdi:timeline-clock" class="w-5 h-5 text-tertiary-300" />
-											</div>
+											<Avatar me={getAvatarProps('activity', false)} />
 											<div class="flex-grow">
 												<p class="text-sm text-tertiary-200">
 													{activityStore.formatActivity(activity)}
@@ -649,9 +662,7 @@ HOW THIS COMPONENT WORKS:
 
 										<div class="flex gap-2 {own ? 'flex-row-reverse' : ''}">
 											{#if !grouped}
-												<div class="flex-shrink-0 w-6 h-6 rounded-full bg-surface-700/50">
-													<Icon icon="mdi:account" class="w-6 h-6 p-1 text-tertiary-300" />
-												</div>
+												<Avatar me={getAvatarProps(message.sender.id, own)} />
 											{:else}
 												<div class="w-6" />
 											{/if}

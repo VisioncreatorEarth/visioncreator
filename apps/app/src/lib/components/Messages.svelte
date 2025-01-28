@@ -30,6 +30,7 @@ HOW THIS COMPONENT WORKS:
 	import Icon from '@iconify/svelte';
 	import { messageStore, type Message } from '$lib/stores/messageStore';
 	import { currentUser } from '$lib/stores/proposalStore';
+	import Avatar from './Avatar.svelte';
 
 	// Props
 	export let contextId: string;
@@ -145,6 +146,15 @@ HOW THIS COMPONENT WORKS:
 			message.timestamp.getTime() - prevMessage.timestamp.getTime() < 5 * 60 * 1000
 		);
 	}
+
+	// Helper function to get avatar props
+	function getAvatarProps(seed: string, highlight = false) {
+		return {
+			data: { seed },
+			design: { highlight },
+			size: '2xs' as const
+		};
+	}
 </script>
 
 <div class="flex flex-col {className}" style="height: {height}">
@@ -160,16 +170,14 @@ HOW THIS COMPONENT WORKS:
 
 			<div class="flex gap-2 {own ? 'flex-row-reverse' : ''}">
 				{#if !grouped}
-					<div class="flex-shrink-0 w-6 h-6 rounded-full bg-surface-700/50">
-						<Icon icon="mdi:account" class="w-6 h-6 p-1 text-tertiary-300" />
-					</div>
+					<Avatar me={getAvatarProps(message.sender.id, own)} />
 				{:else}
 					<div class="w-6" />
 				{/if}
 
 				<div class="flex-grow {own ? 'items-end' : ''} max-w-[80%]">
 					{#if !grouped}
-						<div class="flex items-center gap-2 mb-0.5 {own ? 'flex-row-reverse' : ''}">
+						<div class="flex items-center gap-1.5 mb-0.5 {own ? 'flex-row-reverse' : ''}">
 							<span class="text-xs font-medium text-tertiary-200">
 								{message.sender.name}
 							</span>
@@ -179,16 +187,16 @@ HOW THIS COMPONENT WORKS:
 					<div class="flex flex-col {own ? 'items-end' : ''}">
 						<div
 							class="relative px-3 py-1 text-sm rounded-lg {own
-								? 'bg-blue-900/20'
-								: 'bg-surface-600/80'} {grouped ? 'mt-0.5' : 'mt-0'}"
+								? 'bg-blue-900/20 text-blue-300'
+								: 'bg-surface-600/80 text-tertiary-50'} {grouped ? 'mt-0.5' : 'mt-0'}"
 						>
-							<p class="text-tertiary-50">
+							<p>
 								{message.content}
 							</p>
 							<span
-								class="block text-[9px] opacity-50 text-tertiary-200 -mb-0.5 mt-[1px] {own
+								class="block text-[9px] opacity-50 {own
 									? 'text-right mr-[1px] text-blue-300'
-									: 'text-left ml-[1px]'}"
+									: 'text-left ml-[1px] text-tertiary-200'} -mb-0.5 mt-[1px]"
 							>
 								{formatTime(message.timestamp)}
 							</span>
