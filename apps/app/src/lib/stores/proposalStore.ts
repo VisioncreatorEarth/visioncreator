@@ -127,20 +127,14 @@ export interface Proposal {
     title: string;
     author: string;
     votes: number;
-    description: string;
-    expectedResults: string;
-    commitment: string;
+    details: string;  // Markdown-enabled document containing all proposal information
+    benefits?: string;  // Required after idea stage
+    pain?: string;      // Required after idea stage
     state: ProposalState;
     estimatedDelivery: string;
     budgetRequested: number;
     responsible?: string;
     tasks?: ProposalTask[];
-    draftDetails?: {
-        timeToRealization: string;
-        definitionOfDone: string;
-        risks: string;
-        dependencies: string[];
-    };
     isPinned?: boolean;
 }
 
@@ -170,17 +164,30 @@ const initialProposals: Proposal[] = [
         title: 'Modern Landing Page Development',
         author: 'David Chen',
         votes: 2,
-        expectedResults: '+500 new signups/month, 40% conversion rate improvement',
-        commitment: 'Payment released upon successful deployment with A/B test showing >35% conversion improvement',
-        description:
-            'High-converting landing page development using SvelteKit and Tailwind.\n\n' +
-            'Key Features:\n' +
-            '• Interactive components and dynamic content loading\n' +
-            '• Mobile-first responsive design\n' +
-            '• Personalized user journey flows\n' +
-            '• Real-time conversion tracking\n' +
-            '• A/B testing infrastructure\n\n' +
-            'Following atomic design principles for consistent branding and maximum component reusability.',
+        benefits: '+500 new signups/month, 40% conversion rate improvement',
+        pain: 'Current landing page has poor conversion and is not mobile-friendly',
+        details: `## Key Features
+- Interactive components and dynamic content loading
+- Mobile-first responsive design
+- Personalized user journey flows
+- Real-time conversion tracking
+- A/B testing infrastructure
+
+Following atomic design principles for consistent branding and maximum component reusability.
+
+## Time to Realization
+3-4 weeks
+
+## Definition of Done
+- [ ] All features implemented and tested
+- [ ] Mobile responsiveness verified
+- [ ] A/B testing setup complete
+- [ ] Performance metrics baseline established
+
+## Dependencies
+- Design system completion
+- Analytics integration
+- Content management system`,
         state: 'in_progress',
         estimatedDelivery: '3 weeks',
         budgetRequested: 700
@@ -190,16 +197,29 @@ const initialProposals: Proposal[] = [
         title: 'Visioncreator Launch Event',
         author: 'Maria Garcia',
         votes: 3,
-        expectedResults: '100+ attendees, 20 new active pioneers, 5 potential partnerships',
-        commitment: 'Payment released after successful event completion with minimum 80 verified attendees',
-        description:
-            'Premium startup networking event to showcase Visioncreator.\n\n' +
-            'Event Components:\n' +
-            '• Interactive workshops and keynote presentations\n' +
-            '• Live platform demonstrations\n' +
-            '• Professional video coverage\n' +
-            '• Dedicated networking sessions\n\n' +
-            'Post-event: Follow-up networking, resource sharing, and community building initiatives.',
+        benefits: '100+ attendees, 20 new active pioneers, 5 potential partnerships',
+        pain: 'Need for stronger community engagement and real-world connections',
+        details: `## Event Components
+- Interactive workshops and keynote presentations
+- Live platform demonstrations
+- Professional video coverage
+- Dedicated networking sessions
+
+Post-event: Follow-up networking, resource sharing, and community building initiatives.
+
+## Time to Realization
+2-3 weeks
+
+## Definition of Done
+- [ ] Minimum 80 verified attendees
+- [ ] At least 3 keynote speakers confirmed
+- [ ] Venue and catering arranged
+- [ ] Recording and streaming setup ready
+
+## Dependencies
+- Venue availability
+- Speaker confirmations
+- Marketing materials`,
         state: 'offer',
         estimatedDelivery: '2 weeks',
         budgetRequested: 1200
@@ -209,16 +229,28 @@ const initialProposals: Proposal[] = [
         title: 'Community Task Board Development',
         author: 'Alex Kumar',
         votes: 1,
-        expectedResults: '30% improved task completion rate, 50% faster project initialization',
-        commitment: 'Payment released upon deployment with all features tested and documented',
-        description:
-            'Interactive task board development using SvelteKit and Tailwind.\n\n' +
-            'Core Features:\n' +
-            '• Real-time collaboration with websockets\n' +
-            '• Drag-and-drop task management\n' +
-            '• Integrated commenting system\n' +
-            '• Advanced filtering and priority management\n' +
-            '• Mobile responsiveness and offline support',
+        benefits: '30% improved task completion rate, 50% faster project initialization',
+        pain: 'Lack of centralized task management and progress tracking',
+        details: `## Core Features
+- Real-time collaboration with websockets
+- Drag-and-drop task management
+- Integrated commenting system
+- Advanced filtering and priority management
+- Mobile responsiveness and offline support
+
+## Time to Realization
+4-5 weeks
+
+## Definition of Done
+- [ ] All features implemented and tested
+- [ ] Real-time updates working
+- [ ] Mobile responsiveness verified
+- [ ] Performance benchmarks met
+
+## Dependencies
+- Authentication system
+- WebSocket infrastructure
+- Storage solution`,
         state: 'review',
         estimatedDelivery: '4 weeks',
         budgetRequested: 900
@@ -228,16 +260,29 @@ const initialProposals: Proposal[] = [
         title: 'Vision Pitch Video Production',
         author: 'Sarah Miller',
         votes: 2,
-        expectedResults: '40% better conversion rate, 2x faster onboarding understanding',
-        commitment: 'Payment released upon delivery of final video with positive community feedback',
-        description:
-            'Professional pitch video production for Visioncreator.\n\n' +
-            'Deliverables:\n' +
-            '• Custom animations and motion graphics\n' +
-            '• Professional voice-over recording\n' +
-            '• Platform demonstrations and user testimonials\n' +
-            '• Multiple platform-optimized versions\n\n' +
-            'Including multiple revision rounds and professional sound design.',
+        benefits: '40% better conversion rate, 2x faster onboarding understanding',
+        pain: 'Complex platform features are hard to explain through text alone',
+        details: `## Deliverables
+- Custom animations and motion graphics
+- Professional voice-over recording
+- Platform demonstrations and user testimonials
+- Multiple platform-optimized versions
+
+Including multiple revision rounds and professional sound design.
+
+## Time to Realization
+1-2 weeks
+
+## Definition of Done
+- [ ] Final video approved by community
+- [ ] All platform versions delivered
+- [ ] Source files archived
+- [ ] Usage guidelines documented
+
+## Dependencies
+- Brand guidelines
+- Platform feature list
+- User testimonials`,
         state: 'completed',
         estimatedDelivery: '1 week',
         budgetRequested: 1000
@@ -247,17 +292,30 @@ const initialProposals: Proposal[] = [
         title: 'Social Media Brand Update',
         author: 'Sophie Anderson',
         votes: 3,
-        expectedResults: '40% increase in profile visits, 25% higher engagement rate',
-        commitment: 'Payment released upon completion of all platform updates with community approval',
-        description:
-            'Comprehensive social media brand refresh across all major platforms.\n\n' +
-            'Deliverables:\n' +
-            '• Custom banner designs for each platform\n' +
-            '• Optimized bio and intro texts\n' +
-            '• Brand style guide for social content\n' +
-            '• Platform-specific content templates\n' +
-            '• Analytics baseline and tracking setup\n\n' +
-            'Including A/B testing of different messaging approaches.',
+        benefits: '40% increase in profile visits, 25% higher engagement rate',
+        pain: 'Inconsistent brand presence across social media platforms',
+        details: `## Deliverables
+- Custom banner designs for each platform
+- Optimized bio and intro texts
+- Brand style guide for social content
+- Platform-specific content templates
+- Analytics baseline and tracking setup
+
+Including A/B testing of different messaging approaches.
+
+## Time to Realization
+1-2 weeks
+
+## Definition of Done
+- [ ] All platform profiles updated
+- [ ] Style guide approved
+- [ ] Templates tested
+- [ ] Analytics tracking live
+
+## Dependencies
+- Brand guidelines
+- Platform access
+- Content strategy`,
         state: 'offer',
         estimatedDelivery: '1 week',
         budgetRequested: 600
@@ -267,17 +325,30 @@ const initialProposals: Proposal[] = [
         title: 'Community Invite System Development',
         author: 'Marcus Chen',
         votes: 2,
-        expectedResults: '200% increase in referrals, 40% higher retention of referred users',
-        commitment: 'Payment released upon successful deployment and first month of operation',
-        description:
-            'Gamified invite system with incentive mechanics.\n\n' +
-            'Core Features:\n' +
-            '• Multi-tier reward structure\n' +
-            '• Automated tracking and distribution\n' +
-            '• Custom invite links and QR codes\n' +
-            '• Referral analytics dashboard\n' +
-            '• Integration with existing user system\n\n' +
-            'Focus on sustainable growth and quality referrals.',
+        benefits: '200% increase in referrals, 40% higher retention of referred users',
+        pain: 'Current referral process is manual and lacks incentives',
+        details: `## Core Features
+- Multi-tier reward structure
+- Automated tracking and distribution
+- Custom invite links and QR codes
+- Referral analytics dashboard
+- Integration with existing user system
+
+Focus on sustainable growth and quality referrals.
+
+## Time to Realization
+3-4 weeks
+
+## Definition of Done
+- [ ] Reward system implemented
+- [ ] Tracking system tested
+- [ ] Analytics dashboard live
+- [ ] Integration complete
+
+## Dependencies
+- User authentication
+- Payment system
+- Analytics setup`,
         state: 'offer',
         estimatedDelivery: '3 weeks',
         budgetRequested: 1400
@@ -287,17 +358,30 @@ const initialProposals: Proposal[] = [
         title: 'Governance Model Update',
         author: 'Elena Rodriguez',
         votes: 2,
-        expectedResults: '50% faster decision making, 30% higher community participation',
-        commitment: 'Payment released after successful implementation and first governance cycle',
-        description:
-            'Modernized governance system with enhanced participation mechanics.\n\n' +
-            'Key Components:\n' +
-            '• Streamlined proposal process\n' +
-            '• Weighted voting mechanisms\n' +
-            '• Automated execution of approved proposals\n' +
-            '• Transparent tracking system\n' +
-            '• Community feedback loops\n\n' +
-            'Including comprehensive documentation and onboarding materials.',
+        benefits: '50% faster decision making, 30% higher community participation',
+        pain: 'Current governance process is slow and has low participation',
+        details: `## Key Components
+- Streamlined proposal process
+- Weighted voting mechanisms
+- Automated execution of approved proposals
+- Transparent tracking system
+- Community feedback loops
+
+Including comprehensive documentation and onboarding materials.
+
+## Time to Realization
+4-5 weeks
+
+## Definition of Done
+- [ ] All mechanisms implemented
+- [ ] Documentation complete
+- [ ] Community tested
+- [ ] First governance cycle run
+
+## Dependencies
+- Community consensus
+- Technical infrastructure
+- Documentation system`,
         state: 'offer',
         estimatedDelivery: '4 weeks',
         budgetRequested: 500
@@ -307,38 +391,63 @@ const initialProposals: Proposal[] = [
         title: 'Proposal Video Requirement System',
         author: 'Chris Taylor',
         votes: 2,
-        expectedResults: '60% better proposal understanding, 45% higher engagement on proposals',
-        commitment: 'Payment released upon system implementation and first 5 successful submissions',
-        description:
-            'Integrated video submission and distribution system for proposals.\n\n' +
-            'System Features:\n' +
-            '• Video upload and processing pipeline\n' +
-            '• Automated social media distribution\n' +
-            '• Engagement tracking and analytics\n' +
-            '• Video guidelines and templates\n' +
-            '• Quality control mechanisms\n\n' +
-            'Including creator guidelines and best practices documentation.',
+        benefits: '60% better proposal understanding, 45% higher engagement on proposals',
+        pain: 'Text-only proposals are hard to understand and engage with',
+        details: `## System Features
+- Video upload and processing pipeline
+- Automated social media distribution
+- Engagement tracking and analytics
+- Video guidelines and templates
+- Quality control mechanisms
+
+Including creator guidelines and best practices documentation.
+
+## Time to Realization
+2-3 weeks
+
+## Definition of Done
+- [ ] Upload system working
+- [ ] Distribution automated
+- [ ] Analytics implemented
+- [ ] Guidelines published
+
+## Dependencies
+- Storage solution
+- Processing service
+- Social media APIs`,
         state: 'offer',
         estimatedDelivery: '2 weeks',
         budgetRequested: 900
     },
-
     {
         id: '13',
         title: 'Community Podcast Series',
         author: 'Michael Chen',
         votes: 0,
-        expectedResults: 'Broader reach and deeper community insights',
-        commitment: 'Bi-weekly episodes featuring community members',
-        description:
-            'Regular podcast highlighting community stories and insights.\n\n' +
-            'Content Focus:\n' +
-            '• Member success stories\n' +
-            '• Project deep dives\n' +
-            '• Industry trends\n' +
-            '• Community updates\n' +
-            '• Guest interviews\n\n' +
-            'Sharing our community story with the world.',
+        benefits: 'Broader reach and deeper community insights',
+        pain: 'Limited channels for sharing community stories and knowledge',
+        details: `## Content Focus
+- Member success stories
+- Project deep dives
+- Industry trends
+- Community updates
+- Guest interviews
+
+Sharing our community story with the world.
+
+## Time to Realization
+2-3 weeks
+
+## Definition of Done
+- [ ] Recording setup complete
+- [ ] First 3 episodes recorded
+- [ ] Distribution channels set up
+- [ ] Show format finalized
+
+## Dependencies
+- Recording equipment
+- Hosting platform
+- Guest commitments`,
         state: 'idea',
         estimatedDelivery: '2 weeks',
         budgetRequested: 800
@@ -348,17 +457,30 @@ const initialProposals: Proposal[] = [
         title: 'Community Learning Hub',
         author: 'Sarah Johnson',
         votes: 1,
-        expectedResults: 'Centralized knowledge sharing and skill development',
-        commitment: 'Launch with 10 initial courses and weekly updates',
-        description:
-            'Online learning platform for community skill sharing.\n\n' +
-            'Platform Features:\n' +
-            '• Course creation tools\n' +
-            '• Interactive workshops\n' +
-            '• Resource library\n' +
-            '• Progress tracking\n' +
-            '• Certification system\n\n' +
-            'Empowering community growth through education.',
+        benefits: 'Centralized knowledge sharing and skill development',
+        pain: 'Scattered learning resources and lack of structured education path',
+        details: `## Platform Features
+- Course creation tools
+- Interactive workshops
+- Resource library
+- Progress tracking
+- Certification system
+
+Empowering community growth through education.
+
+## Time to Realization
+4-5 weeks
+
+## Definition of Done
+- [ ] Platform launched with 10 courses
+- [ ] Course creation tools tested
+- [ ] Certification system working
+- [ ] Analytics dashboard ready
+
+## Dependencies
+- Course creators
+- Content guidelines
+- Storage solution`,
         state: 'idea',
         estimatedDelivery: '4 weeks',
         budgetRequested: 1500
@@ -368,17 +490,30 @@ const initialProposals: Proposal[] = [
         title: 'AI Content Generation System',
         author: 'James Wilson',
         votes: 0,
-        expectedResults: 'Automated content creation and distribution',
-        commitment: 'Delivery of working AI content generation system with API',
-        description:
-            'AI-powered content generation system for community posts.\n\n' +
-            'System Features:\n' +
-            '• GPT-4 integration for text generation\n' +
-            '• Image generation capabilities\n' +
-            '• Content quality filters\n' +
-            '• Automated posting schedule\n' +
-            '• Performance analytics\n\n' +
-            'Rejected due to concerns about AI-generated content quality and authenticity.',
+        benefits: 'Automated content creation and distribution',
+        pain: 'Manual content creation is time-consuming and inconsistent',
+        details: `## System Features
+- GPT-4 integration for text generation
+- Image generation capabilities
+- Content quality filters
+- Automated posting schedule
+- Performance analytics
+
+Rejected due to concerns about AI-generated content quality and authenticity.
+
+## Time to Realization
+6-8 weeks
+
+## Definition of Done
+- [ ] API integration complete
+- [ ] Quality filters tested
+- [ ] Posting system automated
+- [ ] Analytics dashboard ready
+
+## Dependencies
+- GPT-4 API access
+- Content guidelines
+- Moderation system`,
         state: 'rejected',
         estimatedDelivery: '6 weeks',
         budgetRequested: 2500
@@ -749,12 +884,7 @@ export function checkProposalStateTransitions($proposals: Proposal[], voteThresh
                 ...p,
                 state: 'draft' as ProposalState,
                 tasks: [],
-                draftDetails: {
-                    timeToRealization: '',
-                    definitionOfDone: '',
-                    risks: '',
-                    dependencies: []
-                }
+                details: ''
             };
         } else if (p.state === 'offer') {
             const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
@@ -800,12 +930,7 @@ export function moveProposalToDraft(proposalId: string): void {
                     ...p,
                     state: 'draft',
                     tasks: [],
-                    draftDetails: {
-                        timeToRealization: '',
-                        definitionOfDone: '',
-                        risks: '',
-                        dependencies: []
-                    }
+                    details: ''
                 };
             }
             return p;
@@ -836,7 +961,10 @@ export function createProposal(proposal: Omit<Proposal, 'id' | 'state' | 'votes'
         ...proposal,
         id: crypto.randomUUID(),
         state: 'idea' as const,
-        votes: 0
+        votes: 0,
+        benefits: proposal.benefits || '',  // Optional in idea stage
+        pain: proposal.pain || '',          // Optional in idea stage
+        details: proposal.details || ''
     };
 
     // Track new proposal in activity
@@ -866,13 +994,13 @@ export const addProposal = (proposalData: Partial<Proposal>) => {
         const newProposal: Proposal = {
             id: `proposal-${Date.now()}`,
             title: proposalData.title || '',
-            description: proposalData.description || '',
-            expectedResults: proposalData.expectedResults || '',
+            details: proposalData.details || '',
+            benefits: proposalData.benefits || '',
+            pain: proposalData.pain || '',
             state: 'idea',
             author: MOCK_USER.name,
             votes: 0,
             budgetRequested: 0,
-            commitment: proposalData.commitment || '',
             estimatedDelivery: proposalData.estimatedDelivery || ''
         };
         console.log('Created new proposal object:', newProposal);
@@ -890,4 +1018,41 @@ export const addProposal = (proposalData: Partial<Proposal>) => {
         console.error('Error adding proposal:', error);
         throw error;
     }
+};
+
+// Helper function to validate proposal for state transition
+export function validateProposalForState(proposal: Proposal, targetState: ProposalState): boolean {
+    if (targetState === 'draft' && (!proposal.pain || !proposal.benefits)) {
+        return false; // Pain and Benefits are required for draft stage
+    }
+    return true;
+}
+
+export const defaultProposal: Proposal = {
+    id: '',
+    title: '',
+    author: '',
+    votes: 0,
+    pain: '',
+    benefits: '',
+    details: `## Features & Deliverables
+- Feature 1
+- Feature 2
+- Feature 3
+
+## Time to Realization
+[Estimated timeline]
+
+## Definition of Done
+- [ ] Milestone 1
+- [ ] Milestone 2
+- [ ] Milestone 3
+
+## Dependencies
+- Dependency 1
+- Dependency 2
+- Dependency 3`,
+    state: 'idea',
+    estimatedDelivery: '',
+    budgetRequested: 0
 }; 

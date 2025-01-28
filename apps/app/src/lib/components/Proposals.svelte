@@ -51,6 +51,7 @@ HOW THIS SYSTEM WORKS:
 	import { goto } from '$app/navigation';
 	import { toolStore } from '$lib/stores/toolStore';
 	import Avatar from './Avatar.svelte';
+	import { marked } from 'marked';
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
@@ -324,11 +325,11 @@ HOW THIS SYSTEM WORKS:
 														<span>votes</span>
 													</div>
 												</div>
-												<div class="flex flex-col gap-1">
+												<div class="flex flex-col gap-2">
 													<button
-														on:click|stopPropagation={() => vote(proposal.id, true)}
 														disabled={$currentUser.tokens <
 															getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
+														on:click|stopPropagation={() => vote(proposal.id, true)}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
 														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -336,8 +337,8 @@ HOW THIS SYSTEM WORKS:
 														</svg>
 													</button>
 													<button
+														disabled={!$currentUser.proposalsVoted.get(proposal.id)}
 														on:click|stopPropagation={() => vote(proposal.id, false)}
-														disabled={($currentUser.proposalsVoted.get(proposal.id) || 0) === 0}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
 														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -493,90 +494,24 @@ HOW THIS SYSTEM WORKS:
 											<div class="flex flex-col gap-6">
 												<div class="flex flex-col gap-2">
 													<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-													<p
-														class="text-base leading-relaxed whitespace-pre-line text-tertiary-100"
-													>
-														{proposal.description}
-													</p>
+													<div class="prose prose-invert max-w-none">
+														{@html marked(proposal.details)}
+													</div>
 												</div>
 
 												<div class="flex flex-col gap-2">
-													<h3 class="text-sm font-medium text-tertiary-300">
-														Expected Results & Success Metrics
-													</h3>
+													<h3 class="text-sm font-medium text-tertiary-300">Pain Point</h3>
 													<p class="text-base leading-relaxed text-tertiary-100">
-														{proposal.expectedResults}
+														{proposal.pain || 'Not defined yet'}
 													</p>
 												</div>
 
 												<div class="flex flex-col gap-2">
-													<h3 class="text-sm font-medium text-tertiary-300">
-														Commitment & Deliverables
-													</h3>
+													<h3 class="text-sm font-medium text-tertiary-300">Expected Benefits</h3>
 													<p class="text-base leading-relaxed text-tertiary-100">
-														{proposal.commitment}
+														{proposal.benefits || 'Not defined yet'}
 													</p>
 												</div>
-
-												<div class="flex flex-col gap-2">
-													<h3 class="text-sm font-medium text-tertiary-300">
-														Timeline & Milestones
-													</h3>
-													<div
-														class="flex items-center gap-2 px-4 py-3 rounded-lg bg-surface-800/50"
-													>
-														<Icon icon="mdi:calendar" class="w-5 h-5 text-tertiary-300" />
-														<p class="text-base text-tertiary-100">
-															Estimated delivery: {proposal.estimatedDelivery}
-														</p>
-													</div>
-												</div>
-
-												{#if proposal.draftDetails}
-													<div class="flex flex-col gap-2">
-														<h3 class="text-sm font-medium text-tertiary-300">
-															Technical Implementation
-														</h3>
-														<p class="text-base leading-relaxed text-tertiary-100">
-															{proposal.draftDetails.timeToRealization}
-														</p>
-													</div>
-
-													<div class="flex flex-col gap-2">
-														<h3 class="text-sm font-medium text-tertiary-300">
-															Definition of Done
-														</h3>
-														<p class="text-base leading-relaxed text-tertiary-100">
-															{proposal.draftDetails.definitionOfDone}
-														</p>
-													</div>
-
-													<div class="flex flex-col gap-2">
-														<h3 class="text-sm font-medium text-tertiary-300">
-															Risks & Mitigation
-														</h3>
-														<p class="text-base leading-relaxed text-tertiary-100">
-															{proposal.draftDetails.risks}
-														</p>
-													</div>
-
-													{#if proposal.draftDetails.dependencies.length > 0}
-														<div class="flex flex-col gap-2">
-															<h3 class="text-sm font-medium text-tertiary-300">Dependencies</h3>
-															<ul class="space-y-2">
-																{#each proposal.draftDetails.dependencies as dependency}
-																	<li class="flex items-center gap-2 text-base text-tertiary-100">
-																		<Icon
-																			icon="mdi:link-variant"
-																			class="w-5 h-5 text-tertiary-300"
-																		/>
-																		{dependency}
-																	</li>
-																{/each}
-															</ul>
-														</div>
-													{/if}
-												{/if}
 											</div>
 										{:else if detailTab === 'chat'}
 											<Messages contextId={proposal.id} contextType="proposal" height="400px" />
@@ -688,49 +623,38 @@ HOW THIS SYSTEM WORKS:
 											</div>
 										{/if}
 										<div class="p-6 space-y-4">
-											{#if proposal.state === 'idea'}
-												<div>
-													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Responsible
-													</h4>
-													<p class="text-xs text-right text-tertiary-300">
-														{proposal.responsible || 'Not assigned'}
-													</p>
-												</div>
-												<div>
-													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Expected Results
-													</h4>
-													<p class="text-xs text-right text-tertiary-300">
-														{proposal.expectedResults}
-													</p>
-												</div>
-											{:else}
-												<div>
-													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Responsible
-													</h4>
-													<p class="text-xs text-right text-tertiary-300">
-														{proposal.responsible || 'Not assigned'}
-													</p>
-												</div>
-												<div>
-													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Expected Results
-													</h4>
-													<p class="text-xs text-right text-tertiary-300">
-														{proposal.expectedResults}
-													</p>
-												</div>
-												<div>
-													<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-														Estimated Delivery
-													</h4>
-													<p class="text-xs text-right text-tertiary-300">
-														{proposal.estimatedDelivery}
-													</p>
-												</div>
-											{/if}
+											<div>
+												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+													Responsible
+												</h4>
+												<p class="text-xs text-right text-tertiary-300">
+													{proposal.responsible || 'Not assigned'}
+												</p>
+											</div>
+											<div>
+												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+													Pain Point
+												</h4>
+												<p class="text-xs text-right text-tertiary-300">
+													{proposal.pain || 'Not defined yet'}
+												</p>
+											</div>
+											<div>
+												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+													Expected Benefits
+												</h4>
+												<p class="text-xs text-right text-tertiary-300">
+													{proposal.benefits || 'Not defined yet'}
+												</p>
+											</div>
+											<div>
+												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+													Estimated Delivery
+												</h4>
+												<p class="text-xs text-right text-tertiary-300">
+													{proposal.estimatedDelivery}
+												</p>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -771,11 +695,11 @@ HOW THIS SYSTEM WORKS:
 														<span>votes</span>
 													</div>
 												</div>
-												<div class="flex flex-col gap-1">
+												<div class="flex flex-col gap-2">
 													<button
-														on:click|stopPropagation={() => vote(proposal.id, true)}
 														disabled={$currentUser.tokens <
 															getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
+														on:click|stopPropagation={() => vote(proposal.id, true)}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
 														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -783,8 +707,8 @@ HOW THIS SYSTEM WORKS:
 														</svg>
 													</button>
 													<button
+														disabled={!$currentUser.proposalsVoted.get(proposal.id)}
 														on:click|stopPropagation={() => vote(proposal.id, false)}
-														disabled={($currentUser.proposalsVoted.get(proposal.id) || 0) === 0}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
 														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -974,10 +898,7 @@ HOW THIS SYSTEM WORKS:
 </div>
 
 <style>
-	.card {
-		transition: transform 0.2s;
-	}
-	.card:hover {
-		transform: translateY(-2px);
+	:global(.proposal-card) {
+		@apply overflow-hidden rounded-xl bg-surface-900/50 border border-surface-700/50;
 	}
 </style>
