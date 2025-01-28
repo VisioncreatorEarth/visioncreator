@@ -61,7 +61,14 @@ HOW THIS COMPONENT WORKS:
 		{ id: 'help', label: 'Help & Support', icon: 'mdi:help-circle' }
 	];
 
-	type ChannelType = ProposalState | 'general' | 'announcements' | 'help' | 'activity' | 'dm';
+	type ChannelType =
+		| ProposalState
+		| 'general'
+		| 'announcements'
+		| 'help'
+		| 'activity'
+		| 'dm'
+		| 'active';
 
 	interface DefaultThread {
 		id: string;
@@ -123,10 +130,18 @@ HOW THIS COMPONENT WORKS:
 	const DEFAULT_THREADS: Record<ChannelType, DefaultThread> = {
 		activity: {
 			id: 'activity-thread',
-			title: 'General Activity Stream',
+			title: 'Activity Stream',
 			author: 'System',
 			state: 'activity',
 			description: 'Track all proposal updates and system activities.',
+			isPinned: true
+		},
+		active: {
+			id: 'active-thread',
+			title: 'Active Discussions',
+			author: 'System',
+			state: 'active',
+			description: 'Currently active discussions and updates.',
 			isPinned: true
 		},
 		general: {
@@ -139,7 +154,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		announcements: {
 			id: 'announcements-thread',
-			title: 'General Announcements Discussion',
+			title: 'Announcements',
 			author: 'Visioncreator',
 			state: 'announcements',
 			description: 'Official announcements and important updates.',
@@ -147,7 +162,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		help: {
 			id: 'help-thread',
-			title: 'General Help Discussion',
+			title: 'Help & Support',
 			author: 'Visioncreator',
 			state: 'help',
 			description: 'Get help and support from the community.',
@@ -155,7 +170,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		idea: {
 			id: 'idea-thread',
-			title: 'General Ideas Discussion',
+			title: 'Ideas Discussion',
 			author: 'Visioncreator',
 			state: 'idea',
 			description: 'Discuss new ideas and proposals.',
@@ -163,7 +178,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		draft: {
 			id: 'draft-thread',
-			title: 'General Drafts Discussion',
+			title: 'Drafts Discussion',
 			author: 'Visioncreator',
 			state: 'draft',
 			description: 'Discuss and refine draft proposals.',
@@ -171,7 +186,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		offer: {
 			id: 'offer-thread',
-			title: 'General Offers Discussion',
+			title: 'Offers Discussion',
 			author: 'Visioncreator',
 			state: 'offer',
 			description: 'Discuss current offers and voting.',
@@ -179,7 +194,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		decision: {
 			id: 'decision-thread',
-			title: 'General Decision Discussion',
+			title: 'Decisions Discussion',
 			author: 'Visioncreator',
 			state: 'decision',
 			description: 'Discuss proposals awaiting decision.',
@@ -187,7 +202,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		in_progress: {
 			id: 'in_progress-thread',
-			title: 'General In Progress Discussion',
+			title: 'In Progress Discussion',
 			author: 'Visioncreator',
 			state: 'in_progress',
 			description: 'Updates on ongoing projects.',
@@ -195,7 +210,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		review: {
 			id: 'review-thread',
-			title: 'General Review Discussion',
+			title: 'Reviews Discussion',
 			author: 'Visioncreator',
 			state: 'review',
 			description: 'Discuss proposals under review.',
@@ -203,7 +218,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		completed: {
 			id: 'completed-thread',
-			title: 'General Completed Discussion',
+			title: 'Completed Discussion',
 			author: 'Visioncreator',
 			state: 'completed',
 			description: 'Discuss completed projects and lessons learned.',
@@ -211,7 +226,7 @@ HOW THIS COMPONENT WORKS:
 		},
 		rejected: {
 			id: 'rejected-thread',
-			title: 'General Rejected Discussion',
+			title: 'Rejected Discussion',
 			author: 'Visioncreator',
 			state: 'rejected',
 			description: 'Discuss rejected proposals and improvements.',
@@ -257,6 +272,11 @@ HOW THIS COMPONENT WORKS:
 
 	// Add selectedDMUser state
 	let selectedDMUser: string | null = null;
+
+	// Add filteredProposals computed property
+	$: filteredProposals = isProposalState(selectedChannel)
+		? $proposals.filter((p) => p.state === selectedChannel)
+		: [];
 
 	// Helper functions for channel type checking
 	function isProposalState(channel: ChannelType): channel is ProposalState {
@@ -309,12 +329,18 @@ HOW THIS COMPONENT WORKS:
 		initializeThread(DEFAULT_THREADS[channel].id, getThreadType(channel));
 	}
 
-	function selectThread(threadId: string) {
-		const defaultThread = DEFAULT_THREADS[selectedChannel];
-		if (threadId === defaultThread.id) {
-			selectedThread = defaultThread;
+	function selectThread(thread: DefaultThread | string) {
+		if (typeof thread === 'string') {
+			// Handle thread ID
+			const defaultThread = DEFAULT_THREADS[selectedChannel];
+			if (thread === defaultThread.id) {
+				selectedThread = defaultThread;
+			} else {
+				selectedThread = $proposals.find((p) => p.id === thread) || null;
+			}
 		} else {
-			selectedThread = $proposals.find((p) => p.id === threadId) || null;
+			// Handle thread object
+			selectedThread = thread;
 		}
 
 		if (selectedThread) {
@@ -440,6 +466,24 @@ HOW THIS COMPONENT WORKS:
 			size
 		};
 	}
+
+	// Add helper function to get channel title
+	function getChannelTitle(channel: ChannelType): string {
+		switch (channel) {
+			case 'dm':
+				return 'Direct Messages';
+			case 'activity':
+				return 'Activity Stream';
+			case 'general':
+				return 'General Discussion';
+			case 'announcements':
+				return 'Announcements';
+			case 'help':
+				return 'Help & Support';
+			default:
+				return getPluralStateLabel(channel as ProposalState);
+		}
+	}
 </script>
 
 {#if show}
@@ -513,21 +557,22 @@ HOW THIS COMPONENT WORKS:
 								</div>
 								{#each DM_USERS as user}
 									<button
-										class="flex items-center w-full gap-2 px-3 py-2 text-sm transition-colors rounded-lg hover:bg-surface-700/50 {selectedThread?.id ===
-										`dm-${user.id}`
-											? 'bg-surface-700/20'
-											: ''}"
+										class="flex items-center w-full gap-2 p-2 text-left transition-colors rounded-lg hover:bg-surface-700/50"
 										on:click={() => selectDMUser(user.id)}
 									>
-										<div class="relative">
-											<Avatar me={getAvatarProps(user.id)} />
-											<div
-												class="absolute bottom-0 right-0 w-2 h-2 rounded-full {user.isOnline
-													? 'bg-success-400'
-													: 'bg-surface-400'}"
-											/>
+										<Avatar
+											me={{
+												data: { seed: user.id },
+												design: { highlight: user.isOnline },
+												size: 'sm'
+											}}
+										/>
+										<div>
+											<div class="font-medium">{user.name}</div>
+											<div class="text-sm text-surface-400">
+												{user.isOnline ? 'Online' : 'Offline'}
+											</div>
 										</div>
-										<span class="text-tertiary-100">{user.name}</span>
 									</button>
 								{/each}
 							</div>
@@ -540,52 +585,67 @@ HOW THIS COMPONENT WORKS:
 						<div class="flex items-center h-16 px-4 border-b border-surface-700/50">
 							<div class="flex items-center gap-2">
 								<Icon icon={getChannelIcon(selectedChannel)} class="w-5 h-5 text-tertiary-300" />
-								<h3 class="text-lg font-semibold text-tertiary-100">
-									{channelHeader}
-								</h3>
+								<h3 class="text-lg font-semibold text-tertiary-100">{channelHeader}</h3>
 							</div>
 						</div>
 
-						<!-- Threads List or Global Chat -->
-						{#if showThreadsList}
-							<div class="p-2">
-								{#each channelProposals as proposal}
-									<div
-										class="flex items-center w-full gap-2 p-3 text-left transition-colors rounded-lg {selectedThread &&
-										selectedThread.id === proposal.id
-											? 'bg-surface-700/20'
-											: 'hover:bg-surface-700/50'}"
-									>
-										<button
-											class="flex flex-col flex-grow gap-1"
-											on:click={() => selectThread(proposal.id)}
-										>
-											{#if proposal?.isPinned}
-												<div class="flex items-center gap-1 text-xs text-tertiary-400">
-													<Icon icon="mdi:pin" class="w-3 h-3" />
-													<span>Pinned Thread</span>
-												</div>
-											{/if}
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-2">
-													<Avatar me={getAvatarProps(proposal.author)} />
-													<div>
-														<h3 class="text-sm font-medium text-tertiary-100">{proposal.title}</h3>
-														<p class="text-xs text-tertiary-300">created by {proposal.author}</p>
-													</div>
-												</div>
-											</div>
-										</button>
+						<!-- Threads Content -->
+						<div class="p-2">
+							<!-- Pinned Thread -->
+							{#if DEFAULT_THREADS[selectedChannel]}
+								<div class="mb-4">
+									<div class="flex items-center gap-1 mb-1 text-xs text-tertiary-400">
+										<Icon icon="mdi:pin" class="w-3 h-3" />
+										<span>Pinned Thread</span>
 									</div>
-								{/each}
-							</div>
-						{:else}
-							<div class="p-4">
-								<div class="text-sm text-center text-tertiary-400">
-									Welcome to {getChannelLabel(selectedChannel)}
+									<button
+										class="flex flex-col w-full gap-1 p-3 text-left transition-colors rounded-lg hover:bg-surface-700/50"
+										on:click={() => selectThread(DEFAULT_THREADS[selectedChannel])}
+									>
+										<div class="text-sm font-medium text-tertiary-100">
+											{DEFAULT_THREADS[selectedChannel].title}
+										</div>
+										<p class="text-xs text-tertiary-300">
+											{DEFAULT_THREADS[selectedChannel].description}
+										</p>
+									</button>
 								</div>
-							</div>
-						{/if}
+							{/if}
+
+							<!-- Thread List -->
+							{#if selectedChannel === 'dm'}
+								{#each DM_USERS as user}
+									<button
+										class="flex items-center w-full gap-2 p-2 text-left transition-colors rounded-lg hover:bg-surface-700/50"
+										on:click={() => selectDMUser(user.id)}
+									>
+										<Avatar
+											me={{
+												data: { seed: user.id },
+												design: { highlight: user.isOnline },
+												size: 'xs'
+											}}
+										/>
+										<div>
+											<div class="text-sm font-medium text-tertiary-100">{user.name}</div>
+											<div class="text-xs text-tertiary-300">
+												{user.isOnline ? 'Online' : 'Offline'}
+											</div>
+										</div>
+									</button>
+								{/each}
+							{:else if selectedChannel !== 'activity'}
+								{#each filteredProposals as proposal}
+									<button
+										class="flex flex-col w-full gap-1 p-3 text-left transition-colors rounded-lg hover:bg-surface-700/50"
+										on:click={() => selectThread(proposal.id)}
+									>
+										<div class="text-sm font-medium text-tertiary-100">{proposal.title}</div>
+										<p class="text-xs text-tertiary-300">created by {proposal.author}</p>
+									</button>
+								{/each}
+							{/if}
+						</div>
 					</div>
 
 					<!-- Main Chat Area -->
@@ -622,34 +682,41 @@ HOW THIS COMPONENT WORKS:
 							class="flex-grow p-4 space-y-2 overflow-y-auto"
 						>
 							{#if selectedChannel === 'activity'}
-								{#if $activityStore.length === 0}
-									<div class="text-sm text-center text-tertiary-400">No activities yet</div>
-								{:else}
-									{#each $activityStore as activity}
-										<div class="flex items-start gap-2 p-2 rounded-lg hover:bg-surface-700/20">
-											<Avatar me={getAvatarProps('activity', false)} />
-											<div class="flex-grow">
-												<p class="text-sm text-tertiary-200">
-													{activityStore.formatActivity(activity)}
-												</p>
-												<p class="text-xs text-tertiary-400">
-													{new Date(activity.timestamp).toLocaleString()}
-												</p>
+								<div class="flex flex-col gap-2">
+									{#if $activityStore.length === 0}
+										<div class="text-sm text-center text-surface-500">No activities yet</div>
+									{:else}
+										{#each $activityStore as activity (activity.id)}
+											<div
+												class="flex items-start gap-3 p-3 rounded-lg bg-surface-800/50 dark:bg-surface-900/50 hover:bg-surface-700/50"
+											>
+												<div class="flex-shrink-0">
+													<Icon
+														icon={activityStore.getActivityIcon(activity.type)}
+														class="w-5 h-5 text-tertiary-300"
+													/>
+												</div>
+												<div class="flex-grow text-left">
+													<p class="text-sm">{activityStore.formatActivity(activity)}</p>
+													<p class="text-xs text-surface-500">
+														{new Date(activity.timestamp).toLocaleString()}
+													</p>
+												</div>
+												{#if activity.proposalId}
+													<button
+														class="px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
+														on:click={() => {
+															onClose();
+															goto(`/me?view=Proposals&id=${activity.proposalId}`);
+														}}
+													>
+														View Proposal
+													</button>
+												{/if}
 											</div>
-											{#if activity.proposalId}
-												<button
-													class="px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
-													on:click={() => {
-														onClose();
-														goto(`/me?view=Proposals&id=${activity.proposalId}`);
-													}}
-												>
-													View Proposal
-												</button>
-											{/if}
-										</div>
-									{/each}
-								{/if}
+										{/each}
+									{/if}
+								</div>
 							{:else if selectedProposal}
 								{#if messages.length === 0}
 									<div class="text-sm text-center text-tertiary-400">

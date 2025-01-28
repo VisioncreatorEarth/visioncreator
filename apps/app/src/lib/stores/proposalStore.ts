@@ -114,6 +114,30 @@ import { activityStore } from './activityStore';
 
 // Types
 export type ProposalState = 'idea' | 'draft' | 'offer' | 'decision' | 'in_progress' | 'review' | 'active' | 'completed' | 'rejected';
+export type VoteEventType = 'vote_added' | 'vote_removed';
+
+// Activity types
+export type ActivityType = 'proposal_created' | 'state_change' | 'proposal_updated' | 'proposal_rejected' | 'proposal_reset' | 'vote_added' | 'vote_removed';
+
+export interface VoteEvent {
+    id: string;
+    type: VoteEventType;
+    proposalId: string;
+    userId: string;
+    timestamp: number;
+    tokensUsed: number;
+}
+
+export interface ProposalActivity {
+    id: string;
+    type: ActivityType;
+    proposalId: string;
+    proposalTitle: string;
+    actor: string;
+    previousState?: ProposalState;
+    newState?: ProposalState;
+    timestamp: number;
+}
 
 export interface ProposalTask {
     id: string;
@@ -126,7 +150,7 @@ export interface Proposal {
     id: string;
     title: string;
     author: string;
-    votes: number;
+    votes: number; // Summary of vote events, updated automatically
     details: string;  // Markdown-enabled document containing all proposal information
     benefits?: string;  // Required after idea stage
     pain?: string;      // Required after idea stage
@@ -659,6 +683,102 @@ export const proposalValues = derived([proposals, poolMetrics], ([$proposals, $p
                 ? votingValues.get(proposal.id) || 0
                 : getFixedStateValue(proposal.state, proposal.budgetRequested)
     }));
+});
+
+// Store for vote events
+export const voteEvents = writable<VoteEvent[]>([]);
+
+// Function to add a vote
+export function addVote(proposalId: string, userId: string, tokensUsed: number) {
+    const voteEvent: VoteEvent = {
+        id: crypto.randomUUID(),
+        type: 'vote_added',
+        proposalId,
+        userId,
+        timestamp: Date.now(),
+        tokensUsed
+    };
+
+    voteEvents.update($events => [...$events, voteEvent]);
+
+    // Update proposal votes count
+    proposals.update($proposals => {
+        return $proposals.map(p => {
+            if (p.id === proposalId) {
+                return { ...p, votes: p.votes + tokensUsed };
+            }
+            return p;
+        });
+    });
+
+    // Track in activity stream
+    const proposal = get(proposals).find(p => p.id === proposalId);
+    if (proposal) {
+        activityStore.addActivity({
+            type: 'vote_added',
+            proposalId,
+            proposalTitle: proposal.title,
+            actor: userId,
+            details: `Added ${tokensUsed} tokens`
+        });
+    }
+}
+
+// Function to remove a vote
+export function removeVote(proposalId: string, userId: string, tokensToRemove: number) {
+    const proposal = get(proposals).find(p => p.id === proposalId);
+    if (!proposal) return;
+
+    // Don't allow votes to go below 0
+    const actualTokensToRemove = Math.min(tokensToRemove, proposal.votes);
+
+    if (actualTokensToRemove > 0) {
+        const voteEvent: VoteEvent = {
+            id: crypto.randomUUID(),
+            type: 'vote_removed',
+            proposalId,
+            userId,
+            timestamp: Date.now(),
+            tokensUsed: actualTokensToRemove
+        };
+
+        voteEvents.update($events => [...$events, voteEvent]);
+
+        // Update proposal votes count
+        proposals.update($proposals => {
+            return $proposals.map(p => {
+                if (p.id === proposalId) {
+                    return { ...p, votes: Math.max(0, p.votes - actualTokensToRemove) };
+                }
+                return p;
+            });
+        });
+
+        // Track in activity stream
+        activityStore.addActivity({
+            type: 'vote_removed',
+            proposalId,
+            proposalTitle: proposal.title,
+            actor: userId,
+            details: `Removed ${actualTokensToRemove} tokens`
+        });
+    }
+}
+
+// Derived store to get total votes per proposal from events
+export const proposalVotesFromEvents = derived(voteEvents, ($events) => {
+    const voteCounts = new Map<string, number>();
+
+    $events.forEach(event => {
+        const currentVotes = voteCounts.get(event.proposalId) || 0;
+        if (event.type === 'vote_added') {
+            voteCounts.set(event.proposalId, currentVotes + event.tokensUsed);
+        } else {
+            voteCounts.set(event.proposalId, Math.max(0, currentVotes - event.tokensUsed));
+        }
+    });
+
+    return voteCounts;
 });
 
 // Store Actions
