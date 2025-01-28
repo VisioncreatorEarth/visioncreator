@@ -4,18 +4,17 @@ HOW THIS SYSTEM WORKS:
 1. Overview:
    This is a community-driven proposal and voting system where members can:
    - Submit and vote on ideas (initial stage)
-   - Convert ideas to proposals once they reach 10% vote threshold
-   - Vote on proposals using tokens
    - Track proposal progress
-   - Move proposals through different states
    - Manage budget allocations
 
 2. State Management:
    All state is managed in the proposalStore.ts file, including:
-   - Proposals data and their states
+   - Proposals data and their states (currently only showing 'idea' state)
    - User voting and token management
    - Budget calculations and pool metrics
    - Dashboard metrics
+
+Note: Currently only showing 'idea' state while keeping all state definitions for future use.
 -->
 
 <script lang="ts">
@@ -52,6 +51,8 @@ HOW THIS SYSTEM WORKS:
 	import { toolStore } from '$lib/stores/toolStore';
 	import Avatar from './Avatar.svelte';
 	import { marked } from 'marked';
+	import LeftAsideProposals from './LeftAsideProposals.svelte';
+	import RightAsideProposals from './RightAsideProposals.svelte';
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
@@ -96,14 +97,15 @@ HOW THIS SYSTEM WORKS:
 		expandedProposalId = null;
 	}
 
-	// Calculate vote threshold (10%)
-	$: voteThreshold = Math.ceil($poolMetrics.totalActiveVotes * IDEA_VOTE_THRESHOLD_PERCENTAGE);
+	// Fixed vote threshold (10 votes)
+	const MINIMUM_VOTES_REQUIRED = 10;
+	$: voteThreshold = MINIMUM_VOTES_REQUIRED;
 
-	// Watch for state transitions including idea threshold
+	// Watch for state transitions with fixed vote threshold
 	$: {
 		const updatedProposals = checkProposalStateTransitions(
 			$proposals,
-			voteThreshold,
+			MINIMUM_VOTES_REQUIRED,
 			$proposalValues
 		);
 		if (JSON.stringify(updatedProposals) !== JSON.stringify($proposals)) {
@@ -177,88 +179,31 @@ HOW THIS SYSTEM WORKS:
 				size: '2xs' as const
 			}));
 	}
+
+	// Handle proposal selection
+	function handleProposalSelect(state: ProposalState, proposalId: string) {
+		setActiveTab(state);
+		setTimeout(() => {
+			expandedProposalId = proposalId;
+			requestAnimationFrame(() => {
+				centerProposalInView(proposalId);
+			});
+		}, 0);
+	}
 </script>
 
-<div class="flex w-screen h-screen overflow-hidden">
-	<!-- Company Stats Sidebar -->
-	<div
-		class="fixed top-0 left-0 h-screen p-6 border-r w-80 border-surface-700/50 bg-surface-800/30"
-	>
-		<div class="space-y-6">
-			<div class="flex items-center gap-4">
-				<img src="/logo.png" alt="Visioncreator Logo" class="w-16 h-16 rounded-full" />
-				<h1 class="text-2xl font-bold text-tertiary-100">Visioncreator GmbH</h1>
-			</div>
+<div class="relative flex flex-col w-full h-full overflow-hidden">
+	<!-- Left Aside -->
+	<LeftAsideProposals
+		selectedState={$activeTab}
+		onStateSelect={setActiveTab}
+		states={PROPOSAL_TABS}
+	/>
 
-			<div class="space-y-4">
-				<div class="p-4 border rounded-lg border-surface-700/50">
-					<div class="space-y-4">
-						<div>
-							<p class="text-3xl font-bold text-tertiary-100">
-								{$poolMetrics.totalContributionPool}€
-							</p>
-							<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
-						</div>
-						<div>
-							<p class="text-lg font-bold text-tertiary-100">
-								{$poolMetrics.votingPool}€
-							</p>
-							<p class="text-sm text-tertiary-300">Available in Voting Pool</p>
-						</div>
-						<div>
-							<p class="text-lg font-bold text-tertiary-100">
-								{$poolMetrics.lockedPool}€
-							</p>
-							<p class="text-sm text-tertiary-300">Locked Pool</p>
-						</div>
-						<div>
-							<p class="text-lg font-bold text-tertiary-100">
-								{$poolMetrics.deliveredPool}€
-							</p>
-							<p class="text-sm text-tertiary-300">Delivered</p>
-						</div>
-						<div>
-							<p class="text-lg font-bold text-tertiary-100">
-								{$poolMetrics.totalActiveVotes}
-							</p>
-							<p class="text-sm text-tertiary-300">Total Active Votes</p>
-						</div>
-						<div class="flex items-center justify-between">
-							<div>
-								<p class="text-lg font-bold text-tertiary-100">
-									{$dashboardMetrics.visionCreators}
-								</p>
-								<p class="text-sm text-tertiary-300">Visioncreators Invested</p>
-							</div>
-							<div class="flex flex-col gap-2">
-								<button
-									on:click={() => adjustVisionCreators(true)}
-									class="flex items-center justify-center w-8 h-8 transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-								>
-									<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-										<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-									</svg>
-								</button>
-								<button
-									on:click={() => adjustVisionCreators(false)}
-									class="flex items-center justify-center w-8 h-8 transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-								>
-									<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-										<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-									</svg>
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Main Content -->
-	<div class="flex-grow w-full overflow-y-auto">
-		<div class="w-full">
-			<div class="relative max-w-5xl px-6 mx-auto">
+	<!-- Main Content Area -->
+	<main class="flex-grow h-full overflow-hidden md:ml-64 md:mr-80">
+		<div class="h-full overflow-y-auto">
+			<div class="max-w-5xl px-4 py-6 mx-auto">
 				<!-- Tabs Bar -->
 				<div
 					id="proposal-tabs"
@@ -290,7 +235,6 @@ HOW THIS SYSTEM WORKS:
 								<button
 									on:click={() => {
 										expandedProposalId = null;
-										// Update URL to remove the id parameter
 										goto(`/me?view=Proposals`, { replaceState: true });
 									}}
 									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
@@ -303,53 +247,71 @@ HOW THIS SYSTEM WORKS:
 								<!-- Proposal Header -->
 								<div class="flex items-center">
 									<!-- Left side: Votes -->
-									<div class="flex flex-col items-center w-40 p-6">
+									<div
+										class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
+									>
 										{#if proposal.state === 'idea' || proposal.state === 'offer' || proposal.state === 'draft'}
-											<div class="flex items-center justify-center gap-4">
-												<div class="text-center">
-													<div
-														class="flex items-center {$currentUser.proposalsVoted.get(proposal.id)
-															? 'gap-2'
-															: 'justify-center'}"
-													>
-														<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
-														{#if $currentUser.proposalsVoted.get(proposal.id)}
-															<p class="text-2xl font-bold text-tertiary-400">
-																{$currentUser.proposalsVoted.get(proposal.id)}
+											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
+												<div class="flex items-center gap-4">
+													<div class="text-center">
+														<div
+															class="flex items-center {$currentUser.proposalsVoted.get(proposal.id)
+																? 'gap-2'
+																: 'justify-center'}"
+														>
+															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+																{proposal.votes}
 															</p>
-														{/if}
+															{#if $currentUser.proposalsVoted.get(proposal.id)}
+																<p class="text-xl font-bold md:text-2xl text-tertiary-400">
+																	{$currentUser.proposalsVoted.get(proposal.id)}
+																</p>
+															{/if}
+														</div>
+														<div
+															class="flex items-center justify-center gap-1 text-sm text-tertiary-300"
+														>
+															<span>votes</span>
+														</div>
 													</div>
-													<div
-														class="flex items-center justify-center gap-1 text-sm text-tertiary-300"
-													>
-														<span>votes</span>
+													<div class="flex flex-col gap-2">
+														<button
+															disabled={$currentUser.tokens <
+																getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
+															on:click|stopPropagation={() => vote(proposal.id, true)}
+															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+														>
+															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+																<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+															</svg>
+														</button>
+														<button
+															disabled={!$currentUser.proposalsVoted.get(proposal.id)}
+															on:click|stopPropagation={() => vote(proposal.id, false)}
+															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+														>
+															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+																<path fill="currentColor" d="M19 13H5v-2h14v2z" />
+															</svg>
+														</button>
 													</div>
 												</div>
-												<div class="flex flex-col gap-2">
-													<button
-														disabled={$currentUser.tokens <
-															getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
-														on:click|stopPropagation={() => vote(proposal.id, true)}
-														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-													>
-														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-															<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-														</svg>
-													</button>
-													<button
-														disabled={!$currentUser.proposalsVoted.get(proposal.id)}
-														on:click|stopPropagation={() => vote(proposal.id, false)}
-														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-													>
-														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-															<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-														</svg>
-													</button>
+												<div class="flex flex-col items-end flex-1 min-w-0 gap-2 md:hidden">
+													<h3 class="text-lg font-semibold text-right truncate text-tertiary-100">
+														{proposal.title}
+													</h3>
+													<div class="flex items-center justify-end -space-x-1">
+														{#each getRandomContributors() as contributor}
+															<Avatar me={contributor} />
+														{/each}
+													</div>
 												</div>
 											</div>
 										{:else}
-											<div class="text-center">
-												<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
+											<div class="w-full text-center">
+												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+													{proposal.votes}
+												</p>
 												<p class="text-sm text-tertiary-300">votes</p>
 											</div>
 										{/if}
@@ -357,10 +319,12 @@ HOW THIS SYSTEM WORKS:
 
 									<!-- Middle: Basic Info -->
 									<div
-										class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+										class="items-center flex-grow hidden gap-4 p-4 border-b md:flex md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
-										<div class="flex flex-col gap-2">
-											<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+										<div class="flex flex-col w-full gap-2">
+											<h3 class="text-lg font-semibold md:text-xl text-tertiary-100">
+												{proposal.title}
+											</h3>
 											<div class="flex items-center -space-x-1">
 												{#each getRandomContributors() as contributor}
 													<Avatar me={contributor} />
@@ -664,7 +628,7 @@ HOW THIS SYSTEM WORKS:
 						{#each filteredAndSortedProposals as proposal}
 							<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
 								<div
-									class="flex items-center cursor-pointer hover:bg-surface-800/50"
+									class="flex flex-col items-start cursor-pointer md:flex-row md:items-center hover:bg-surface-800/50"
 									on:click={() => {
 										expandedProposalId = proposal.id;
 										requestAnimationFrame(() => {
@@ -673,53 +637,71 @@ HOW THIS SYSTEM WORKS:
 									}}
 								>
 									<!-- Left side: Votes -->
-									<div class="flex flex-col items-center w-40 p-6">
+									<div
+										class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
+									>
 										{#if proposal.state === 'idea' || proposal.state === 'offer' || proposal.state === 'draft'}
-											<div class="flex items-center justify-center gap-4">
-												<div class="text-center">
-													<div
-														class="flex items-center {$currentUser.proposalsVoted.get(proposal.id)
-															? 'gap-2'
-															: 'justify-center'}"
-													>
-														<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
-														{#if $currentUser.proposalsVoted.get(proposal.id)}
-															<p class="text-2xl font-bold text-tertiary-400">
-																{$currentUser.proposalsVoted.get(proposal.id)}
+											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
+												<div class="flex items-center gap-4">
+													<div class="text-center">
+														<div
+															class="flex items-center {$currentUser.proposalsVoted.get(proposal.id)
+																? 'gap-2'
+																: 'justify-center'}"
+														>
+															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+																{proposal.votes}
 															</p>
-														{/if}
+															{#if $currentUser.proposalsVoted.get(proposal.id)}
+																<p class="text-xl font-bold md:text-2xl text-tertiary-400">
+																	{$currentUser.proposalsVoted.get(proposal.id)}
+																</p>
+															{/if}
+														</div>
+														<div
+															class="flex items-center justify-center gap-1 text-sm text-tertiary-300"
+														>
+															<span>votes</span>
+														</div>
 													</div>
-													<div
-														class="flex items-center justify-center gap-1 text-sm text-tertiary-300"
-													>
-														<span>votes</span>
+													<div class="flex flex-col gap-2">
+														<button
+															disabled={$currentUser.tokens <
+																getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
+															on:click|stopPropagation={() => vote(proposal.id, true)}
+															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+														>
+															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+																<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+															</svg>
+														</button>
+														<button
+															disabled={!$currentUser.proposalsVoted.get(proposal.id)}
+															on:click|stopPropagation={() => vote(proposal.id, false)}
+															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+														>
+															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+																<path fill="currentColor" d="M19 13H5v-2h14v2z" />
+															</svg>
+														</button>
 													</div>
 												</div>
-												<div class="flex flex-col gap-2">
-													<button
-														disabled={$currentUser.tokens <
-															getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
-														on:click|stopPropagation={() => vote(proposal.id, true)}
-														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-													>
-														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-															<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-														</svg>
-													</button>
-													<button
-														disabled={!$currentUser.proposalsVoted.get(proposal.id)}
-														on:click|stopPropagation={() => vote(proposal.id, false)}
-														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-													>
-														<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-															<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-														</svg>
-													</button>
+												<div class="flex flex-col items-end flex-1 min-w-0 gap-2 md:hidden">
+													<h3 class="text-lg font-semibold text-right truncate text-tertiary-100">
+														{proposal.title}
+													</h3>
+													<div class="flex items-center justify-end -space-x-1">
+														{#each getRandomContributors() as contributor}
+															<Avatar me={contributor} />
+														{/each}
+													</div>
 												</div>
 											</div>
 										{:else}
-											<div class="text-center">
-												<p class="text-4xl font-bold text-tertiary-100">{proposal.votes}</p>
+											<div class="w-full text-center">
+												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+													{proposal.votes}
+												</p>
 												<p class="text-sm text-tertiary-300">votes</p>
 											</div>
 										{/if}
@@ -727,10 +709,12 @@ HOW THIS SYSTEM WORKS:
 
 									<!-- Middle: Basic Info -->
 									<div
-										class="flex items-center flex-grow gap-4 p-6 border-l border-r border-surface-700/50"
+										class="items-center flex-grow hidden gap-4 p-4 border-b md:flex md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
-										<div class="flex flex-col gap-2">
-											<h3 class="text-xl font-semibold text-tertiary-100">{proposal.title}</h3>
+										<div class="flex flex-col w-full gap-2">
+											<h3 class="text-lg font-semibold md:text-xl text-tertiary-100">
+												{proposal.title}
+											</h3>
 											<div class="flex items-center -space-x-1">
 												{#each getRandomContributors() as contributor}
 													<Avatar me={contributor} />
@@ -740,7 +724,11 @@ HOW THIS SYSTEM WORKS:
 									</div>
 
 									<!-- Right side: Value -->
-									<div class={getProposalValueClasses(proposal)}>
+									<div
+										class="w-full md:w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(
+											proposal.state
+										)}"
+									>
 										<div class="flex items-center justify-between mb-2">
 											<button
 												on:click|stopPropagation={() => resetProposal(proposal.id)}
@@ -816,85 +804,10 @@ HOW THIS SYSTEM WORKS:
 				</div>
 			</div>
 		</div>
-	</div>
+	</main>
 
-	<!-- User Sidebar -->
-	<div
-		class="fixed top-0 right-0 h-screen p-6 border-l w-80 border-surface-700/50 bg-surface-800/30"
-	>
-		<div class="space-y-6">
-			<div class="flex items-center gap-4">
-				<div class="flex items-center justify-center w-16 h-16 rounded-full bg-surface-700/50">
-					<Icon icon="mdi:account" class="w-8 h-8 text-tertiary-300" />
-				</div>
-				<div>
-					<h3 class="text-xl font-semibold text-tertiary-100">{$currentUser.name}</h3>
-					<p class="text-sm text-tertiary-300">Visioncreator</p>
-				</div>
-			</div>
-
-			<div class="space-y-4">
-				<div class="p-4 border rounded-lg border-surface-700/50">
-					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Voting Power</h4>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.tokens}</p>
-							<p class="text-xs text-tertiary-300">Tokens Available</p>
-						</div>
-					</div>
-				</div>
-
-				{#if $currentUser.proposalsVoted.size > 0}
-					<div class="p-4 border rounded-lg border-surface-700/50">
-						<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Voted Proposals</h4>
-						<div class="space-y-2">
-							{#each Array.from($currentUser.proposalsVoted.entries()) as [proposalId, votes]}
-								{#if votes > 0}
-									{@const proposal = $proposals.find((p) => p.id === proposalId)}
-									{#if proposal}
-										<div
-											class="flex items-center justify-between gap-2 p-2 rounded-lg cursor-pointer hover:bg-surface-800/50 {getStateBgColor(
-												proposal.state
-											)}"
-											on:click={() => {
-												setActiveTab(proposal.state);
-												// Ensure we set expandedProposalId after the tab change
-												setTimeout(() => {
-													expandedProposalId = proposal.id;
-													requestAnimationFrame(() => {
-														centerProposalInView(proposal.id);
-													});
-												}, 0);
-											}}
-										>
-											<div class="flex items-center gap-2">
-												<Icon
-													icon={getStateIcon(proposal.state)}
-													class="w-4 h-4 {getStateColor(proposal.state)}"
-												/>
-												<p class="text-sm text-tertiary-300">{proposal.title}</p>
-											</div>
-											<span class="text-sm font-medium {getStateColor(proposal.state)}">
-												{#if proposal.state === 'offer'}
-													{Math.round(
-														(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-															proposal.budgetRequested) *
-															100
-													)}%
-												{:else if proposal.state === 'idea'}
-													{Math.round((proposal.votes / voteThreshold) * 100)}%
-												{/if}
-											</span>
-										</div>
-									{/if}
-								{/if}
-							{/each}
-						</div>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
+	<!-- Right Aside -->
+	<RightAsideProposals onProposalSelect={handleProposalSelect} {voteThreshold} />
 </div>
 
 <style>
