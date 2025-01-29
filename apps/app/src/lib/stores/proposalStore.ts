@@ -113,7 +113,7 @@ import { writable, derived, get } from 'svelte/store';
 import { activityStore } from './activityStore';
 
 // Types
-export type ProposalState = 'idea' | 'draft' | 'offer' | 'decision' | 'in_progress' | 'review' | 'active' | 'completed' | 'rejected';
+export type ProposalState = 'idea' | 'draft';
 export type VoteEventType = 'vote_added' | 'vote_removed';
 
 // Activity types
@@ -150,16 +150,12 @@ export interface Proposal {
     id: string;
     title: string;
     author: string;
-    votes: number; // Summary of vote events, updated automatically
-    details: string;  // Markdown-enabled document containing all proposal information
-    benefits?: string;  // Required after idea stage
-    pain?: string;      // Required after idea stage
+    votes: number;
+    details: string;
+    benefits?: string;
+    pain?: string;
     state: ProposalState;
-    estimatedDelivery: string;
     budgetRequested: number;
-    responsible?: string;
-    tasks?: ProposalTask[];
-    isPinned?: boolean;
 }
 
 export interface UserProfile {
@@ -175,10 +171,6 @@ export interface DashboardMetrics {
 
 export interface PoolMetrics {
     totalContributionPool: number;
-    votingPool: number;
-    lockedPool: number;
-    deliveredPool: number;
-    totalActiveVotes: number;
 }
 
 // Initial Data
@@ -187,7 +179,7 @@ const initialProposals: Proposal[] = [
         id: '13',
         title: 'Community Podcast Series',
         author: 'Michael Chen',
-        votes: 0,
+        votes: 3,
         benefits: 'Broader reach and deeper community insights',
         pain: 'Limited channels for sharing community stories and knowledge',
         details: `## Content Focus
@@ -213,14 +205,13 @@ Sharing our community story with the world.
 - Hosting platform
 - Guest commitments`,
         state: 'idea',
-        estimatedDelivery: '2 weeks',
         budgetRequested: 800
     },
     {
         id: '14',
         title: 'Community Learning Hub',
         author: 'Sarah Johnson',
-        votes: 1,
+        votes: 8,
         benefits: 'Centralized knowledge sharing and skill development',
         pain: 'Scattered learning resources and lack of structured education path',
         details: `## Platform Features
@@ -246,7 +237,6 @@ Empowering community growth through education.
 - Content guidelines
 - Storage solution`,
         state: 'idea',
-        estimatedDelivery: '4 weeks',
         budgetRequested: 1500
     }
 ];
@@ -267,7 +257,7 @@ export const dashboardMetrics = writable<DashboardMetrics>({
 export const activeTab = writable<ProposalState>('idea');
 
 // Update the tab order to only show idea state for now
-export const PROPOSAL_TABS: ProposalState[] = ['idea'];
+export const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft'];
 
 // Function to change active tab
 export function setActiveTab(state: ProposalState): void {
@@ -481,7 +471,7 @@ export const proposalVotesFromEvents = derived(voteEvents, ($events) => {
 
 // Store Actions
 export function getNextVoteCost(currentVotes: number): number {
-    return (currentVotes + 1) * (currentVotes + 1) - currentVotes * currentVotes;
+    return Math.pow(currentVotes + 1, 2) - Math.pow(currentVotes, 2);
 }
 
 export function vote(proposalId: string, isIncrease: boolean): void {
@@ -592,24 +582,7 @@ export function adjustVisionCreators(increment: boolean): void {
 
 // UI Helper Functions
 export function getStateColor(state: ProposalState): string {
-    switch (state) {
-        case 'idea':
-            return 'text-blue-300';
-        case 'offer':
-            return 'text-surface-200';
-        case 'decision':
-            return 'text-tertiary-500';
-        case 'in_progress':
-            return 'text-primary-400';
-        case 'review':
-            return 'text-secondary-400';
-        case 'completed':
-            return 'text-success-400';
-        case 'rejected':
-            return 'text-error-400';
-        default:
-            return 'text-tertiary-300';
-    }
+    return 'text-tertiary-100';
 }
 
 export function getStateIcon(state: ProposalState): string {
@@ -617,100 +590,38 @@ export function getStateIcon(state: ProposalState): string {
         case 'idea':
             return 'mdi:lightbulb';
         case 'draft':
-            return 'mdi:file-document-edit';
-        case 'offer':
-            return 'mdi:handshake';
-        case 'decision':
-            return 'mdi:gavel';
-        case 'in_progress':
-            return 'mdi:progress-wrench';
-        case 'review':
-            return 'mdi:clipboard-check';
-        case 'completed':
-            return 'mdi:check-circle';
-        case 'rejected':
-            return 'mdi:close-circle';
+            return 'mdi:file-document-outline';
         default:
-            return 'mdi:help-circle';
+            return 'mdi:help-circle-outline';
     }
 }
 
 export function getStateLabel(state: ProposalState): string {
     switch (state) {
         case 'idea':
-            return 'Ideas';
+            return 'Idea';
         case 'draft':
-            return 'Drafts';
-        case 'offer':
-            return 'Offers';
-        case 'decision':
-            return 'Decision';
-        case 'in_progress':
-            return 'In Progress';
-        case 'review':
-            return 'Reviews';
-        case 'completed':
-            return 'Completed';
-        case 'rejected':
-            return 'Rejected';
+            return 'Draft';
         default:
             return 'Unknown';
     }
 }
 
 export function getStateBgColor(state: ProposalState): string {
-    switch (state) {
-        case 'idea':
-            return 'bg-blue-900/20';
-        case 'offer':
-            return 'bg-surface-600/20';
-        case 'decision':
-            return 'bg-tertiary-300/10';
-        case 'in_progress':
-            return 'bg-primary-900/20';
-        case 'review':
-            return 'bg-secondary-900/20';
-        case 'completed':
-            return 'bg-success-900/20';
-        case 'rejected':
-            return 'bg-error-900/20';
-        default:
-            return 'bg-tertiary-500/10';
-    }
+    return 'bg-surface-800/50';
 }
 
 // Update state transition logic
-export function checkProposalStateTransitions($proposals: Proposal[], voteThreshold: number, $proposalValues: { id: string; value: number }[]): Proposal[] {
-    const totalVotes = $proposals
-        .filter((p) => isActiveState(p.state))
-        .reduce((sum, p) => sum + p.votes, 0);
-
-    return $proposals.map((p) => {
-        if (p.state === 'idea' && p.votes >= voteThreshold && totalVotes >= MIN_TOTAL_VOTES_FOR_PROPOSAL) {
-            // Track state change in activity stream
-            activityStore.addActivity({
-                type: 'state_change',
-                proposalId: p.id,
-                proposalTitle: p.title,
-                actor: 'System',
-                previousState: 'idea',
-                newState: 'draft'
-            });
-
-            // Move to draft state first when vote threshold is reached
+export function checkProposalStateTransitions($proposals: Proposal[], voteThreshold: number): Proposal[] {
+    return $proposals.map(proposal => {
+        // Only transition from idea to draft when vote threshold is reached
+        if (proposal.state === 'idea' && proposal.votes >= voteThreshold) {
             return {
-                ...p,
-                state: 'draft' as ProposalState,
-                tasks: [],
-                details: ''
+                ...proposal,
+                state: 'draft'
             };
-        } else if (p.state === 'offer') {
-            const proposalValue = $proposalValues.find((v) => v.id === p.id)?.value || 0;
-            if (proposalValue >= p.budgetRequested) {
-                return { ...p, state: 'decision' as ProposalState };
-            }
         }
-        return p;
+        return proposal;
     });
 }
 
@@ -747,7 +658,6 @@ export function moveProposalToDraft(proposalId: string): void {
                 return {
                     ...p,
                     state: 'draft',
-                    tasks: [],
                     details: ''
                 };
             }
@@ -818,8 +728,7 @@ export const addProposal = (proposalData: Partial<Proposal>) => {
             state: 'idea',
             author: MOCK_USER.name,
             votes: 0,
-            budgetRequested: 0,
-            estimatedDelivery: proposalData.estimatedDelivery || ''
+            budgetRequested: 0
         };
         console.log('Created new proposal object:', newProposal);
 
@@ -871,6 +780,5 @@ export const defaultProposal: Proposal = {
 - Dependency 2
 - Dependency 3`,
     state: 'idea',
-    estimatedDelivery: '',
     budgetRequested: 0
 }; 

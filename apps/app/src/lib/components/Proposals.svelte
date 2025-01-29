@@ -31,18 +31,14 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 		type Proposal,
 		vote,
 		resetProposal,
-		cycleProposalState,
-		adjustVisionCreators,
 		getStateColor,
 		getStateIcon,
 		getStateLabel,
 		getStateBgColor,
 		getNextVoteCost,
 		MIN_TOTAL_VOTES_FOR_PROPOSAL,
-		IDEA_VOTE_THRESHOLD_PERCENTAGE,
 		checkProposalStateTransitions,
-		PROPOSAL_TABS,
-		rejectProposal
+		PROPOSAL_TABS
 	} from '$lib/stores/proposalStore';
 	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
@@ -56,7 +52,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 
 	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
-	let detailTab: 'details' | 'chat' | 'todos' = 'details';
+	let detailTab: 'details' | 'chat' = 'details';
 
 	// Handle URL parameters for proposal selection
 	$: if ($page.url.searchParams.get('id')) {
@@ -209,21 +205,32 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 					id="proposal-tabs"
 					class="sticky top-0 z-10 flex w-full gap-2 py-4 bg-surface-900/95 backdrop-blur-sm"
 				>
-					{#each PROPOSAL_TABS as state}
-						<button
-							class={getTabClasses(state)}
-							on:click={() => {
-								expandedProposalId = null;
-								setActiveTab(state);
-							}}
-							aria-selected={$activeTab === state}
-						>
-							<div class="flex items-center gap-2">
-								<Icon icon={getStateIcon(state)} class="w-4 h-4" />
-								{getStateLabel(state)}
-							</div>
-						</button>
-					{/each}
+					<button
+						class={getTabClasses('idea')}
+						on:click={() => {
+							expandedProposalId = null;
+							setActiveTab('idea');
+						}}
+						aria-selected={$activeTab === 'idea'}
+					>
+						<div class="flex items-center gap-2">
+							<Icon icon={getStateIcon('idea')} class="w-4 h-4" />
+							{getStateLabel('idea')}
+						</div>
+					</button>
+					<button
+						class={getTabClasses('draft')}
+						on:click={() => {
+							expandedProposalId = null;
+							setActiveTab('draft');
+						}}
+						aria-selected={$activeTab === 'draft'}
+					>
+						<div class="flex items-center gap-2">
+							<Icon icon={getStateIcon('draft')} class="w-4 h-4" />
+							{getStateLabel('draft')}
+						</div>
+					</button>
 				</div>
 
 				<!-- Proposals List -->
@@ -243,14 +250,17 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 									Back to List
 								</button>
 							</div>
-							<div id="proposal-{proposal.id}" class={getProposalCardClasses(proposal)}>
+							<div
+								id="proposal-{proposal.id}"
+								class="{getProposalCardClasses(proposal)} max-h-[calc(100vh-12rem)]"
+							>
 								<!-- Proposal Header -->
-								<div class="flex items-center">
+								<div class="flex items-center sticky top-0 z-10 bg-surface-900/95 backdrop-blur-sm">
 									<!-- Left side: Votes -->
 									<div
 										class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
-										{#if proposal.state === 'idea' || proposal.state === 'offer' || proposal.state === 'draft'}
+										{#if proposal.state === 'idea' || proposal.state === 'draft'}
 											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
 												<div class="flex items-center gap-4">
 													<div class="text-center">
@@ -294,16 +304,6 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 																<path fill="currentColor" d="M19 13H5v-2h14v2z" />
 															</svg>
 														</button>
-													</div>
-												</div>
-												<div class="flex flex-col items-end flex-1 min-w-0 gap-2 md:hidden">
-													<h3 class="text-lg font-semibold text-right truncate text-tertiary-100">
-														{proposal.title}
-													</h3>
-													<div class="flex items-center justify-end -space-x-1">
-														{#each getRandomContributors() as contributor}
-															<Avatar me={contributor} />
-														{/each}
 													</div>
 												</div>
 											</div>
@@ -349,33 +349,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 											</div>
 										</div>
 										<div class="text-right">
-											{#if proposal.state === 'offer'}
-												<div class="flex flex-col items-end gap-1">
-													<p class="text-2xl font-bold text-tertiary-100">
-														{Math.round(
-															(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-																proposal.budgetRequested) *
-																100
-														)}%
-													</p>
-													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-														<div
-															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: {Math.min(
-																100,
-																Math.round(
-																	(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-																		proposal.budgetRequested) *
-																		100
-																)
-															)}%"
-														/>
-													</div>
-													<p class="text-sm text-tertiary-300">
-														{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
-													</p>
-												</div>
-											{:else if proposal.state === 'idea'}
+											{#if proposal.state === 'idea'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
 														{Math.round((proposal.votes / voteThreshold) * 100)}%
@@ -397,9 +371,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 												<p class="text-2xl font-bold text-tertiary-100">
 													{proposal.budgetRequested}€
 												</p>
-												<p class="text-sm text-tertiary-300">
-													{proposal.state === 'draft' ? 'requested budget' : 'locked value'}
-												</p>
+												<p class="text-sm text-tertiary-300">requested budget</p>
 											{/if}
 										</div>
 									</div>
@@ -408,7 +380,9 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 								<!-- Expanded Content -->
 								<div class="flex border-t border-surface-700/50">
 									<!-- Middle: Content -->
-									<div class="flex-grow p-6 border-r border-surface-700/50">
+									<div
+										class="flex-grow p-6 border-r border-surface-700/50 overflow-y-auto max-h-[calc(100vh-16rem)]"
+									>
 										<!-- Detail View Tabs -->
 										<div class="flex items-center justify-between mb-6">
 											<div class="flex gap-2">
@@ -436,20 +410,6 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 														Chat
 													</div>
 												</button>
-												{#if proposal.state !== 'idea'}
-													<button
-														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-														'todos'
-															? 'bg-tertiary-500/20 text-tertiary-100'
-															: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-														on:click={() => (detailTab = 'todos')}
-													>
-														<div class="flex items-center gap-2">
-															<Icon icon="mdi:checkbox-marked" class="w-4 h-4" />
-															Todos
-														</div>
-													</button>
-												{/if}
 											</div>
 										</div>
 
@@ -458,143 +418,31 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 											<div class="flex flex-col gap-6">
 												<div class="flex flex-col gap-2">
 													<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-													<div class="prose prose-invert max-w-none">
-														{@html marked(proposal.details)}
+													<div class="prose prose-invert max-w-none pb-20">
+														{#if proposal.details}
+															{@html marked(proposal.details)}
+														{:else}
+															<p class="text-tertiary-300">
+																No project overview available yet. Click to edit and add details.
+															</p>
+														{/if}
 													</div>
-												</div>
-
-												<div class="flex flex-col gap-2">
-													<h3 class="text-sm font-medium text-tertiary-300">Pain Point</h3>
-													<p class="text-base leading-relaxed text-tertiary-100">
-														{proposal.pain || 'Not defined yet'}
-													</p>
-												</div>
-
-												<div class="flex flex-col gap-2">
-													<h3 class="text-sm font-medium text-tertiary-300">Expected Benefits</h3>
-													<p class="text-base leading-relaxed text-tertiary-100">
-														{proposal.benefits || 'Not defined yet'}
-													</p>
 												</div>
 											</div>
 										{:else if detailTab === 'chat'}
-											<Messages contextId={proposal.id} contextType="proposal" height="400px" />
-										{:else if detailTab === 'todos'}
-											<div class="space-y-1">
-												<div
-													class="flex items-center gap-3 px-3 py-2 transition-colors rounded-lg bg-surface-800/50 hover:bg-surface-700/50"
-												>
-													<input
-														type="checkbox"
-														class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
-														checked
-													/>
-													<span class="flex-grow text-sm line-through text-tertiary-400"
-														>Set up project repository</span
-													>
-													<div class="flex items-center gap-3">
-														<div class="flex items-center gap-2">
-															<div
-																class="flex items-center justify-center w-6 h-6 rounded-full bg-tertiary-500/10"
-															>
-																<span class="text-xs font-medium text-tertiary-300">JD</span>
-															</div>
-															<span class="text-xs text-tertiary-400">2d ago</span>
-														</div>
-														<span
-															class="px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-300"
-															>Frontend</span
-														>
-													</div>
-												</div>
-
-												<div
-													class="flex items-center gap-3 px-3 py-2 transition-colors rounded-lg bg-surface-800/50 hover:bg-surface-700/50"
-												>
-													<input
-														type="checkbox"
-														class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
-													/>
-													<span class="flex-grow text-sm text-tertiary-200"
-														>Implement hero section</span
-													>
-													<div class="flex items-center gap-3">
-														<div class="flex items-center gap-2">
-															<div
-																class="flex items-center justify-center w-6 h-6 rounded-full bg-tertiary-500/10"
-															>
-																<span class="text-xs font-medium text-tertiary-300">JS</span>
-															</div>
-															<span class="text-xs text-tertiary-400">5d left</span>
-														</div>
-														<span
-															class="px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-300"
-															>Design</span
-														>
-													</div>
-												</div>
-
-												<div
-													class="flex items-center gap-3 px-3 py-2 transition-colors rounded-lg bg-surface-800/50 hover:bg-surface-700/50"
-												>
-													<input
-														type="checkbox"
-														class="w-5 h-5 rounded-md text-tertiary-500 bg-surface-700/50 border-surface-600"
-													/>
-													<span class="flex-grow text-sm text-tertiary-200"
-														>Add responsive design</span
-													>
-													<div class="flex items-center gap-3">
-														<div class="flex items-center gap-2">
-															<div
-																class="flex items-center justify-center w-6 h-6 rounded-full bg-surface-700/50"
-															>
-																<Icon icon="mdi:account" class="w-5 h-5 text-tertiary-400" />
-															</div>
-															<span class="text-xs text-tertiary-300"
-																>created by {proposal.author}</span
-															>
-														</div>
-														<span
-															class="px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-300"
-															>Frontend</span
-														>
-													</div>
-												</div>
+											<div class="pb-20">
+												<Messages contextId={proposal.id} contextType="proposal" height="400px" />
 											</div>
 										{/if}
 									</div>
 
 									<!-- Right side: Metrics -->
-									<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)}">
-										{#if proposal.state !== 'idea'}
-											<div class="p-4 border-b border-surface-700/50">
-												<div class="flex items-center justify-between gap-2">
-													<button
-														on:click|stopPropagation={() => cycleProposalState(proposal.id)}
-														class="flex items-center justify-center flex-grow gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-													>
-														<Icon icon="mdi:arrow-right-circle" class="w-5 h-5" />
-														Next State
-													</button>
-													<button
-														on:click|stopPropagation={() => rejectProposal(proposal.id)}
-														class="flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-error-500/20 bg-error-500/10"
-													>
-														<Icon icon="mdi:close-circle" class="w-5 h-5 text-error-400" />
-													</button>
-												</div>
-											</div>
-										{/if}
+									<div
+										class="w-[280px] shrink-0 {getStateBgColor(
+											proposal.state
+										)} overflow-y-auto max-h-[calc(100vh-16rem)]"
+									>
 										<div class="p-6 space-y-4">
-											<div>
-												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-													Responsible
-												</h4>
-												<p class="text-xs text-right text-tertiary-300">
-													{proposal.responsible || 'Not assigned'}
-												</p>
-											</div>
 											<div>
 												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
 													Pain Point
@@ -611,14 +459,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 													{proposal.benefits || 'Not defined yet'}
 												</p>
 											</div>
-											<div>
-												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
-													Estimated Delivery
-												</h4>
-												<p class="text-xs text-right text-tertiary-300">
-													{proposal.estimatedDelivery}
-												</p>
-											</div>
+											<div class="pb-20" />
 										</div>
 									</div>
 								</div>
@@ -640,7 +481,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 									<div
 										class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
-										{#if proposal.state === 'idea' || proposal.state === 'offer' || proposal.state === 'draft'}
+										{#if proposal.state === 'idea' || proposal.state === 'draft'}
 											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
 												<div class="flex items-center gap-4">
 													<div class="text-center">
@@ -684,16 +525,6 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 																<path fill="currentColor" d="M19 13H5v-2h14v2z" />
 															</svg>
 														</button>
-													</div>
-												</div>
-												<div class="flex flex-col items-end flex-1 min-w-0 gap-2 md:hidden">
-													<h3 class="text-lg font-semibold text-right truncate text-tertiary-100">
-														{proposal.title}
-													</h3>
-													<div class="flex items-center justify-end -space-x-1">
-														{#each getRandomContributors() as contributor}
-															<Avatar me={contributor} />
-														{/each}
 													</div>
 												</div>
 											</div>
@@ -743,33 +574,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 											</div>
 										</div>
 										<div class="text-right">
-											{#if proposal.state === 'offer'}
-												<div class="flex flex-col items-end gap-1">
-													<p class="text-2xl font-bold text-tertiary-100">
-														{Math.round(
-															(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-																proposal.budgetRequested) *
-																100
-														)}%
-													</p>
-													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-														<div
-															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: {Math.min(
-																100,
-																Math.round(
-																	(($proposalValues.find((p) => p.id === proposal.id)?.value || 0) /
-																		proposal.budgetRequested) *
-																		100
-																)
-															)}%"
-														/>
-													</div>
-													<p class="text-sm text-tertiary-300">
-														{$proposalValues.find((p) => p.id === proposal.id)?.value}€ / {proposal.budgetRequested}€
-													</p>
-												</div>
-											{:else if proposal.state === 'idea'}
+											{#if proposal.state === 'idea'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
 														{Math.round((proposal.votes / voteThreshold) * 100)}%
@@ -791,9 +596,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 												<p class="text-2xl font-bold text-tertiary-100">
 													{proposal.budgetRequested}€
 												</p>
-												<p class="text-sm text-tertiary-300">
-													{proposal.state === 'draft' ? 'requested budget' : 'locked value'}
-												</p>
+												<p class="text-sm text-tertiary-300">requested budget</p>
 											{/if}
 										</div>
 									</div>
