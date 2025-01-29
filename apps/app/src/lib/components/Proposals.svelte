@@ -21,7 +21,6 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 	import Icon from '@iconify/svelte';
 	import {
 		proposals,
-		currentUser,
 		activeTab,
 		setActiveTab,
 		type ProposalState,
@@ -44,6 +43,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 		checkProposalStateTransitions,
 		PROPOSAL_TABS
 	} from '$lib/stores/proposalStore';
+	import { createQuery } from '$lib/wundergraph';
 	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -51,6 +51,47 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 	import { marked } from 'marked';
 	import LeftAsideProposals from './LeftAsideProposals.svelte';
 	import RightAsideProposals from './RightAsideProposals.svelte';
+
+	// Add proper typing for user data
+	interface User {
+		id: string;
+		name: string;
+		onboarded: boolean;
+	}
+
+	interface TokenBalance {
+		balance: {
+			balance: number;
+			staked_balance: number;
+		};
+		transactions: Array<{
+			id: string;
+			amount: number;
+			transaction_type: string;
+			created_at: string;
+		}>;
+	}
+
+	// Add user data queries with proper typing
+	const userQuery = createQuery({
+		operationName: 'queryMe',
+		enabled: true
+	});
+
+	$: userTokensQuery = createQuery({
+		operationName: 'getUserTokens',
+		input: { userId: $userQuery.data?.id || '' },
+		enabled: !!$userQuery.data?.id
+	});
+
+	// Add new state for user votes
+	let userVotes = new Map<string, number>();
+	let userTokens = 0;
+
+	// Update user tokens when data changes
+	$: if ($userTokensQuery.data?.balance) {
+		userTokens = $userTokensQuery.data.balance.balance;
+	}
 
 	let expandedProposalId: string | null = null;
 	let detailTab: 'details' | 'chat' | 'budget' = 'details';
@@ -120,8 +161,13 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 		title: '',
 		deliverables: '',
 		budget: 0,
-		assignee: $currentUser.name
+		assignee: ''
 	};
+
+	// Update assignee when user data loads
+	$: if ($userQuery.data?.name) {
+		newWorkPackage.assignee = $userQuery.data.name;
+	}
 
 	// Add function to toggle form visibility
 	function toggleWorkPackageForm() {
@@ -132,25 +178,49 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 				title: '',
 				deliverables: '',
 				budget: 0,
-				assignee: $currentUser.name
+				assignee: $userQuery.data?.name || ''
 			};
 		}
 	}
 
 	function handleAddWorkPackage() {
-		if (expandedProposalId) {
+		if (expandedProposalId && $userQuery.data?.name) {
 			addWorkPackage({
 				...newWorkPackage,
-				proposalId: expandedProposalId
+				proposalId: expandedProposalId,
+				assignee: $userQuery.data.name
 			});
 			// Reset form and hide it
 			newWorkPackage = {
 				title: '',
 				deliverables: '',
 				budget: 0,
-				assignee: $currentUser.name
+				assignee: $userQuery.data.name
 			};
 			isWorkPackageFormVisible = false;
+		}
+	}
+
+	// Update voting functions to use real user data
+	function handleVote(proposalId: string, isIncrease: boolean) {
+		if (!$userQuery.data) return;
+
+		const currentVotes = userVotes.get(proposalId) || 0;
+		const nextVoteCost = getNextVoteCost(currentVotes);
+
+		if (isIncrease) {
+			if (userTokens >= nextVoteCost) {
+				userTokens -= nextVoteCost;
+				userVotes.set(proposalId, currentVotes + 1);
+				vote(proposalId, true);
+			}
+		} else {
+			if (currentVotes > 0) {
+				const refundAmount = getNextVoteCost(currentVotes - 1);
+				userTokens += refundAmount;
+				userVotes.set(proposalId, currentVotes - 1);
+				vote(proposalId, false);
+			}
 		}
 	}
 
@@ -334,16 +404,17 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 												<div class="flex items-center gap-4">
 													<div class="text-center">
 														<div
-															class="flex items-center {$currentUser.proposalsVoted.get(proposal.id)
+															class="flex items-center {$userQuery.data &&
+															userVotes.get(proposal.id)
 																? 'gap-2'
 																: 'justify-center'}"
 														>
 															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
 																{proposal.votes}
 															</p>
-															{#if $currentUser.proposalsVoted.get(proposal.id)}
+															{#if $userQuery.data && userVotes.get(proposal.id)}
 																<p class="text-xl font-bold md:text-2xl text-tertiary-400">
-																	{$currentUser.proposalsVoted.get(proposal.id)}
+																	{userVotes.get(proposal.id)}
 																</p>
 															{/if}
 														</div>
@@ -355,9 +426,9 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 													</div>
 													<div class="flex flex-col gap-2">
 														<button
-															disabled={$currentUser.tokens <
-																getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
-															on:click|stopPropagation={() => vote(proposal.id, true)}
+															disabled={$userQuery.data &&
+																userTokens < getNextVoteCost(userVotes.get(proposal.id) || 0)}
+															on:click|stopPropagation={() => handleVote(proposal.id, true)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
 															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -365,8 +436,8 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 															</svg>
 														</button>
 														<button
-															disabled={!$currentUser.proposalsVoted.get(proposal.id)}
-															on:click|stopPropagation={() => vote(proposal.id, false)}
+															disabled={!$userQuery.data || !userVotes.get(proposal.id)}
+															on:click|stopPropagation={() => handleVote(proposal.id, false)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
 															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -750,16 +821,17 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 												<div class="flex items-center gap-4">
 													<div class="text-center">
 														<div
-															class="flex items-center {$currentUser.proposalsVoted.get(proposal.id)
+															class="flex items-center {$userQuery.data &&
+															userVotes.get(proposal.id)
 																? 'gap-2'
 																: 'justify-center'}"
 														>
 															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
 																{proposal.votes}
 															</p>
-															{#if $currentUser.proposalsVoted.get(proposal.id)}
+															{#if $userQuery.data && userVotes.get(proposal.id)}
 																<p class="text-xl font-bold md:text-2xl text-tertiary-400">
-																	{$currentUser.proposalsVoted.get(proposal.id)}
+																	{userVotes.get(proposal.id)}
 																</p>
 															{/if}
 														</div>
@@ -771,9 +843,9 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 													</div>
 													<div class="flex flex-col gap-2">
 														<button
-															disabled={$currentUser.tokens <
-																getNextVoteCost($currentUser.proposalsVoted.get(proposal.id) || 0)}
-															on:click|stopPropagation={() => vote(proposal.id, true)}
+															disabled={$userQuery.data &&
+																userTokens < getNextVoteCost(userVotes.get(proposal.id) || 0)}
+															on:click|stopPropagation={() => handleVote(proposal.id, true)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
 															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
@@ -781,8 +853,8 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 															</svg>
 														</button>
 														<button
-															disabled={!$currentUser.proposalsVoted.get(proposal.id)}
-															on:click|stopPropagation={() => vote(proposal.id, false)}
+															disabled={!$userQuery.data || !userVotes.get(proposal.id)}
+															on:click|stopPropagation={() => handleVote(proposal.id, false)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
 															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">

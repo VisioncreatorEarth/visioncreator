@@ -29,7 +29,7 @@ HOW THIS COMPONENT WORKS:
 	import { onMount, onDestroy } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { messageStore, type Message } from '$lib/stores/messageStore';
-	import { currentUser } from '$lib/stores/proposalStore';
+	import { createQuery } from '$lib/wundergraph';
 	import Avatar from './Avatar.svelte';
 
 	// Props
@@ -37,6 +37,18 @@ HOW THIS COMPONENT WORKS:
 	export let contextType: string;
 	export let height = '400px';
 	export let className = '';
+
+	// Add proper typing for user data
+	interface User {
+		id: string;
+		name: string;
+		onboarded: boolean;
+	}
+
+	const userQuery = createQuery({
+		operationName: 'queryMe',
+		enabled: true
+	});
 
 	// Local state
 	let messages: Message[] = [];
@@ -69,7 +81,9 @@ HOW THIS COMPONENT WORKS:
 		});
 
 		// Mark messages as read when component mounts
-		messageStore.markAsRead(contextId, $currentUser.id);
+		if ($userQuery.data?.id) {
+			messageStore.markAsRead(contextId, $userQuery.data.id);
+		}
 	});
 
 	onDestroy(() => {
@@ -92,15 +106,15 @@ HOW THIS COMPONENT WORKS:
 
 	// Message sending with simulated response
 	function handleSubmit() {
-		if (!newMessage.trim()) return;
+		if (!newMessage.trim() || !$userQuery.data) return;
 
 		messageStore.sendMessage({
 			contextId,
 			contextType,
 			content: newMessage.trim(),
 			sender: {
-				id: $currentUser.id,
-				name: $currentUser.name
+				id: $userQuery.data.id,
+				name: $userQuery.data.name
 			}
 		});
 
@@ -134,7 +148,7 @@ HOW THIS COMPONENT WORKS:
 
 	// Check if message is from current user
 	function isOwnMessage(message: Message): boolean {
-		return message.sender.id === $currentUser.id;
+		return message.sender.id === $userQuery.data?.id;
 	}
 
 	// Group messages by sender and time (within 5 minutes)
@@ -218,7 +232,7 @@ HOW THIS COMPONENT WORKS:
 		/>
 		<button
 			on:click={handleSubmit}
-			disabled={!newMessage.trim()}
+			disabled={!newMessage.trim() || !$userQuery.data}
 			class="px-3 py-1.5 text-sm font-medium transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600 text-tertiary-50 disabled:opacity-50 disabled:cursor-not-allowed"
 		>
 			Send

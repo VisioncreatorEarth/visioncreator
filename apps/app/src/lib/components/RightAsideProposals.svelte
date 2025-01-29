@@ -2,7 +2,7 @@
 HOW THIS COMPONENT WORKS:
 
 This is the right aside area of the proposals view that:
-- Shows user profile and voting information
+- Shows user profile and voting information using real user data from queryMe
 - Displays voted proposals list
 - Is collapsible on mobile with a toggle button
 - Uses Tailwind for responsive design
@@ -12,8 +12,8 @@ This is the right aside area of the proposals view that:
 	import Icon from '@iconify/svelte';
 	import { fly } from 'svelte/transition';
 	import Avatar from './Avatar.svelte';
+	import { createQuery } from '$lib/wundergraph';
 	import {
-		currentUser,
 		proposals,
 		getStateColor,
 		getStateIcon,
@@ -23,6 +23,47 @@ This is the right aside area of the proposals view that:
 
 	export let onProposalSelect: (state: ProposalState, proposalId: string) => void;
 	export let voteThreshold: number;
+
+	// Add proper typing for user data
+	interface User {
+		id: string;
+		name: string;
+		onboarded: boolean;
+	}
+
+	interface TokenBalance {
+		balance: {
+			balance: number;
+			staked_balance: number;
+		};
+		transactions: Array<{
+			id: string;
+			amount: number;
+			transaction_type: string;
+			created_at: string;
+		}>;
+	}
+
+	// Add user data queries with proper typing
+	const userQuery = createQuery({
+		operationName: 'queryMe',
+		enabled: true
+	});
+
+	$: userTokensQuery = createQuery({
+		operationName: 'getUserTokens',
+		input: { userId: ($userQuery.data as User)?.id || '' },
+		enabled: !!$userQuery.data?.id
+	});
+
+	// Add new state for user votes
+	let userVotes = new Map<string, number>();
+	let userTokens = 0;
+
+	// Update user tokens when data changes
+	$: if ($userTokensQuery.data?.balance) {
+		userTokens = ($userTokensQuery.data.balance as { balance: number }).balance;
+	}
 
 	let isOpen = false;
 
@@ -55,33 +96,35 @@ This is the right aside area of the proposals view that:
 		>
 			<div class="space-y-6">
 				<!-- User Profile -->
-				<div class="flex items-center gap-4">
-					<div class="flex items-center justify-center w-16 h-16 rounded-full bg-surface-700/50">
-						<Icon icon="mdi:account" class="w-8 h-8 text-tertiary-300" />
+				{#if $userQuery.data}
+					<div class="flex items-center gap-4">
+						<div class="flex items-center justify-center w-16 h-16 rounded-full bg-surface-700/50">
+							<Icon icon="mdi:account" class="w-8 h-8 text-tertiary-300" />
+						</div>
+						<div>
+							<h3 class="text-xl font-semibold text-tertiary-100">{($userQuery.data as User).name}</h3>
+							<p class="text-sm text-tertiary-300">Visioncreator</p>
+						</div>
 					</div>
-					<div>
-						<h3 class="text-xl font-semibold text-tertiary-100">{$currentUser.name}</h3>
-						<p class="text-sm text-tertiary-300">Visioncreator</p>
-					</div>
-				</div>
+				{/if}
 
 				<!-- Voting Power -->
 				<div class="p-4 border rounded-lg border-surface-700/50">
 					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Voting Power</h4>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{$currentUser.tokens}</p>
+							<p class="text-2xl font-bold text-tertiary-100">{userTokens}</p>
 							<p class="text-xs text-tertiary-300">Tokens Available</p>
 						</div>
 					</div>
 				</div>
 
 				<!-- Voted Proposals -->
-				{#if $currentUser.proposalsVoted.size > 0}
+				{#if userVotes.size > 0}
 					<div class="p-4 border rounded-lg border-surface-700/50">
 						<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Voted Proposals</h4>
 						<div class="space-y-2">
-							{#each Array.from($currentUser.proposalsVoted.entries()) as [proposalId, votes]}
+							{#each Array.from(userVotes.entries()) as [proposalId, votes]}
 								{#if votes > 0}
 									{@const proposal = $proposals.find((p) => p.id === proposalId)}
 									{#if proposal}
