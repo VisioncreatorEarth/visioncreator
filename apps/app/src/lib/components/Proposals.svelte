@@ -545,58 +545,48 @@ HOW THIS SYSTEM WORKS:
 
 								<!-- Expanded Content -->
 								<div class="flex flex-1 overflow-hidden border-t border-surface-700/50">
+									<!-- Left: Vertical Navigation -->
+									<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-900">
+										<button
+											class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
+											'details'
+												? 'bg-surface-700/50 text-tertiary-100'
+												: 'text-tertiary-300 hover:bg-surface-800/50'}"
+											on:click={() => (detailTab = 'details')}
+										>
+											<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
+											<span class="mt-1 text-[10px]">Details</span>
+										</button>
+
+										{#if proposal.state === 'draft' || proposal.state === 'decision'}
+											<button
+												class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
+												'budget'
+													? 'bg-surface-700/50 text-tertiary-100'
+													: 'text-tertiary-300 hover:bg-surface-800/50'}"
+												on:click={() => (detailTab = 'budget')}
+											>
+												<Icon icon="mdi:currency-usd" class="w-6 h-6" />
+												<span class="mt-1 text-[10px]">Budget</span>
+											</button>
+										{/if}
+
+										<button
+											class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
+											'chat'
+												? 'bg-surface-700/50 text-tertiary-100'
+												: 'text-tertiary-300 hover:bg-surface-800/50'}"
+											on:click={() => (detailTab = 'chat')}
+										>
+											<Icon icon="mdi:chat-outline" class="w-6 h-6" />
+											<span class="mt-1 text-[10px]">Chat</span>
+										</button>
+									</div>
+
 									<!-- Middle: Content -->
 									<div
 										class="flex flex-col flex-grow overflow-hidden border-r border-surface-700/50"
 									>
-										<!-- Detail View Tabs - Sticky -->
-										<div
-											class="sticky top-0 z-20 border-b bg-surface-900/95 backdrop-blur-sm border-surface-700/50"
-										>
-											<div class="flex items-center justify-between p-6">
-												<div class="flex gap-2">
-													<button
-														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-														'details'
-															? 'bg-tertiary-500/20 text-tertiary-100'
-															: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-														on:click={() => (detailTab = 'details')}
-													>
-														<div class="flex items-center gap-2">
-															<Icon icon="mdi:information" class="w-4 h-4" />
-															Details
-														</div>
-													</button>
-													{#if proposal.state === 'draft' || proposal.state === 'decision'}
-														<button
-															class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-															'budget'
-																? 'bg-tertiary-500/20 text-tertiary-100'
-																: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-															on:click={() => (detailTab = 'budget')}
-														>
-															<div class="flex items-center gap-2">
-																<Icon icon="mdi:currency-eur" class="w-4 h-4" />
-																Budget
-															</div>
-														</button>
-													{/if}
-													<button
-														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-														'chat'
-															? 'bg-tertiary-500/20 text-tertiary-100'
-															: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-														on:click={() => (detailTab = 'chat')}
-													>
-														<div class="flex items-center gap-2">
-															<Icon icon="mdi:chat" class="w-4 h-4" />
-															Chat
-														</div>
-													</button>
-												</div>
-											</div>
-										</div>
-
 										<!-- Scrollable Content Area -->
 										<div class="flex-1 min-h-0 overflow-y-auto">
 											<!-- Tab Content -->
