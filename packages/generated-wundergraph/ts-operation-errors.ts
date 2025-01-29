@@ -36,6 +36,7 @@ export type OperationErrors = {
 	queryMe: QueryMeErrors;
 	queryMyCapabilities: QueryMyCapabilitiesErrors;
 	queryMyShoppingList: QueryMyShoppingListErrors;
+	queryProposals: QueryProposalsErrors;
 	queryUserStats: QueryUserStatsErrors;
 	sandboxFiles: SandboxFilesErrors;
 	sandboxFsRead: SandboxFsReadErrors;
@@ -98,6 +99,7 @@ export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
 export type QueryMyCapabilitiesErrors = ClientOperationErrors;
 export type QueryMyShoppingListErrors = ClientOperationErrors;
+export type QueryProposalsErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;
 export type SandboxFilesErrors = ClientOperationErrors;
 export type SandboxFsReadErrors = ClientOperationErrors;

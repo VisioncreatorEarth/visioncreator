@@ -50,10 +50,19 @@ This is the right aside area of the proposals view that:
 		enabled: true
 	});
 
+	// Add reactive statements for typed user data
+	$: userData = $userQuery.data
+		? {
+				id: $userQuery.data.id as string,
+				name: $userQuery.data.name as string,
+				onboarded: $userQuery.data.onboarded as boolean
+		  }
+		: null;
+
 	$: userTokensQuery = createQuery({
 		operationName: 'getUserTokens',
-		input: { userId: ($userQuery.data as User)?.id || '' },
-		enabled: !!$userQuery.data?.id
+		input: { userId: userData?.id || '' },
+		enabled: !!userData?.id
 	});
 
 	// Add new state for user votes
@@ -96,13 +105,13 @@ This is the right aside area of the proposals view that:
 		>
 			<div class="space-y-6">
 				<!-- User Profile -->
-				{#if $userQuery.data}
+				{#if userData}
 					<div class="flex items-center gap-4">
 						<div class="flex items-center justify-center w-16 h-16 rounded-full bg-surface-700/50">
 							<Icon icon="mdi:account" class="w-8 h-8 text-tertiary-300" />
 						</div>
 						<div>
-							<h3 class="text-xl font-semibold text-tertiary-100">{($userQuery.data as User).name}</h3>
+							<h3 class="text-xl font-semibold text-tertiary-100">{userData.name}</h3>
 							<p class="text-sm text-tertiary-300">Visioncreator</p>
 						</div>
 					</div>

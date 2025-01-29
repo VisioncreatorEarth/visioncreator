@@ -27,6 +27,7 @@ CREATE TABLE proposals (
     details TEXT,
     benefits TEXT,
     pain TEXT,
+    video_id TEXT,
     state proposal_state NOT NULL DEFAULT 'idea',
     votes_count INTEGER NOT NULL DEFAULT 0,
     total_tokens_staked BIGINT NOT NULL DEFAULT 0,
@@ -315,4 +316,37 @@ CREATE INDEX token_balances_user_id_idx ON token_balances(user_id);
 CREATE INDEX token_transactions_from_user_idx ON token_transactions(from_user_id);
 CREATE INDEX token_transactions_to_user_idx ON token_transactions(to_user_id);
 CREATE INDEX token_transactions_proposal_idx ON token_transactions(proposal_id);
-CREATE INDEX token_transactions_created_at_idx ON token_transactions(created_at DESC); 
+CREATE INDEX token_transactions_created_at_idx ON token_transactions(created_at DESC);
+
+-- Insert default proposals
+INSERT INTO proposals (
+    title,
+    author,
+    details,
+    benefits,
+    pain,
+    video_id,
+    state
+) VALUES (
+    'Hominio: Opensource Personal AI Voice Assistant',
+    '00000000-0000-0000-0000-000000000001', -- Admin user ID
+    '## Features & Skills
+- Shopping List Management
+  * Add/remove items via voice
+
+- Task Management
+  * Voice-controlled todo lists
+  * Priority setting
+  * Due date reminders
+
+## Definition of Done
+- [ ] Core voice calling system
+- [ ] Basic skills framework
+- [ ] Shopping list skill complete
+- [ ] Task management skill complete
+',
+    'Personal AI Voice assistant that respects privacy and works on your own data',
+    'Lack of open-source, privacy-focused voice assistants',
+    '8fee2d57-e3c3-4580-bd11-ae828d86978d',
+    'idea'
+); 
