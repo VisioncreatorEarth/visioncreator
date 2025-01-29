@@ -26,6 +26,11 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 		setActiveTab,
 		type ProposalState,
 		type Proposal,
+		type WorkPackage,
+		workPackages,
+		addWorkPackage,
+		removeWorkPackage,
+		calculateTotalBudget,
 		vote,
 		resetProposal,
 		getStateColor,
@@ -48,7 +53,10 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 	import RightAsideProposals from './RightAsideProposals.svelte';
 
 	let expandedProposalId: string | null = null;
-	let detailTab: 'details' | 'chat' = 'details';
+	let detailTab: 'details' | 'chat' | 'budget' = 'details';
+
+	// Add new state for form visibility
+	let isWorkPackageFormVisible = false;
 
 	// Handle URL parameters for proposal selection
 	$: if ($page.url.searchParams.get('id')) {
@@ -101,6 +109,48 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 		);
 		if (JSON.stringify(updatedProposals) !== JSON.stringify($proposals)) {
 			$proposals = updatedProposals;
+		}
+	}
+
+	// Add new reactive statement for work packages
+	$: proposalWorkPackages = $workPackages.filter((wp) => wp.proposalId === expandedProposalId);
+
+	// Add new form state
+	let newWorkPackage = {
+		title: '',
+		deliverables: '',
+		budget: 0,
+		assignee: $currentUser.name
+	};
+
+	// Add function to toggle form visibility
+	function toggleWorkPackageForm() {
+		isWorkPackageFormVisible = !isWorkPackageFormVisible;
+		if (!isWorkPackageFormVisible) {
+			// Reset form when hiding
+			newWorkPackage = {
+				title: '',
+				deliverables: '',
+				budget: 0,
+				assignee: $currentUser.name
+			};
+		}
+	}
+
+	function handleAddWorkPackage() {
+		if (expandedProposalId) {
+			addWorkPackage({
+				...newWorkPackage,
+				proposalId: expandedProposalId
+			});
+			// Reset form and hide it
+			newWorkPackage = {
+				title: '',
+				deliverables: '',
+				budget: 0,
+				assignee: $currentUser.name
+			};
+			isWorkPackageFormVisible = false;
 		}
 	}
 
@@ -271,7 +321,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 						{#if proposal}
 							<div
 								id="proposal-{proposal.id}"
-								class="{getProposalCardClasses(proposal)} max-h-[calc(100vh-12rem)]"
+								class="{getProposalCardClasses(proposal)} flex flex-col h-[calc(100vh-12rem)]"
 							>
 								<!-- Proposal Header -->
 								<div class="sticky top-0 z-10 flex items-center bg-surface-900/95 backdrop-blur-sm">
@@ -421,70 +471,215 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 								</div>
 
 								<!-- Expanded Content -->
-								<div class="flex border-t border-surface-700/50">
+								<div class="flex flex-1 overflow-hidden border-t border-surface-700/50">
 									<!-- Middle: Content -->
 									<div
-										class="flex-grow p-6 border-r border-surface-700/50 overflow-y-auto max-h-[calc(100vh-16rem)]"
+										class="flex flex-col flex-grow overflow-hidden border-r border-surface-700/50"
 									>
-										<!-- Detail View Tabs -->
-										<div class="flex items-center justify-between mb-6">
-											<div class="flex gap-2">
-												<button
-													class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-													'details'
-														? 'bg-tertiary-500/20 text-tertiary-100'
-														: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-													on:click={() => (detailTab = 'details')}
-												>
-													<div class="flex items-center gap-2">
-														<Icon icon="mdi:information" class="w-4 h-4" />
-														Details
-													</div>
-												</button>
-												<button
-													class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
-													'chat'
-														? 'bg-tertiary-500/20 text-tertiary-100'
-														: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
-													on:click={() => (detailTab = 'chat')}
-												>
-													<div class="flex items-center gap-2">
-														<Icon icon="mdi:chat" class="w-4 h-4" />
-														Chat
-													</div>
-												</button>
+										<!-- Detail View Tabs - Sticky -->
+										<div
+											class="sticky top-0 z-20 border-b bg-surface-900/95 backdrop-blur-sm border-surface-700/50"
+										>
+											<div class="flex items-center justify-between p-6">
+												<div class="flex gap-2">
+													<button
+														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
+														'details'
+															? 'bg-tertiary-500/20 text-tertiary-100'
+															: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
+														on:click={() => (detailTab = 'details')}
+													>
+														<div class="flex items-center gap-2">
+															<Icon icon="mdi:information" class="w-4 h-4" />
+															Details
+														</div>
+													</button>
+													{#if proposal.state === 'draft' || proposal.state === 'decision'}
+														<button
+															class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
+															'budget'
+																? 'bg-tertiary-500/20 text-tertiary-100'
+																: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
+															on:click={() => (detailTab = 'budget')}
+														>
+															<div class="flex items-center gap-2">
+																<Icon icon="mdi:currency-eur" class="w-4 h-4" />
+																Budget
+															</div>
+														</button>
+													{/if}
+													<button
+														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {detailTab ===
+														'chat'
+															? 'bg-tertiary-500/20 text-tertiary-100'
+															: 'hover:bg-tertiary-500/10 text-tertiary-300'}"
+														on:click={() => (detailTab = 'chat')}
+													>
+														<div class="flex items-center gap-2">
+															<Icon icon="mdi:chat" class="w-4 h-4" />
+															Chat
+														</div>
+													</button>
+												</div>
 											</div>
 										</div>
 
-										<!-- Tab Content -->
-										{#if detailTab === 'details'}
-											<div class="flex flex-col gap-6">
-												<div class="flex flex-col gap-2">
-													<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-													<div class="pb-20 prose prose-invert max-w-none">
-														{#if proposal.details}
-															{@html marked(proposal.details)}
-														{:else}
-															<p class="text-tertiary-300">
-																No project overview available yet. Click to edit and add details.
-															</p>
-														{/if}
+										<!-- Scrollable Content Area -->
+										<div class="flex-1 min-h-0 p-6 overflow-y-auto">
+											<!-- Tab Content -->
+											{#if detailTab === 'details'}
+												<div class="flex flex-col gap-6">
+													<div class="flex flex-col gap-2">
+														<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
+														<div class="pb-20 prose prose-invert max-w-none">
+															{#if proposal.details}
+																{@html marked(proposal.details)}
+															{:else}
+																<p class="text-tertiary-300">
+																	No project overview available yet. Click to edit and add details.
+																</p>
+															{/if}
+														</div>
 													</div>
 												</div>
-											</div>
-										{:else if detailTab === 'chat'}
-											<div class="pb-20">
-												<Messages contextId={proposal.id} contextType="proposal" height="400px" />
-											</div>
-										{/if}
+											{:else if detailTab === 'budget' && (proposal.state === 'draft' || proposal.state === 'decision')}
+												<div class="flex flex-col gap-4">
+													{#if !isWorkPackageFormVisible}
+														<div class="flex items-center justify-between mb-4">
+															<h3 class="text-sm font-medium text-tertiary-300">
+																Work Package Offers
+															</h3>
+															<button
+																on:click={toggleWorkPackageForm}
+																class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-tertiary-200 hover:bg-tertiary-500/10 border-tertiary-500/20 hover:text-tertiary-100 hover:border-tertiary-500/30"
+															>
+																<div class="flex items-center gap-2">
+																	<Icon icon="mdi:plus" class="w-4 h-4" />
+																	Create Offer
+																</div>
+															</button>
+														</div>
+
+														<!-- Work Packages List -->
+														<div class="space-y-2">
+															{#each proposalWorkPackages as workPackage (workPackage.id)}
+																<div
+																	class="relative p-3 transition-all duration-200 rounded-lg bg-surface-800/50 hover:bg-surface-800 group"
+																>
+																	<div class="flex items-start justify-between gap-4">
+																		<div class="flex-grow">
+																			<div class="flex items-center justify-between mb-2">
+																				<h4 class="text-lg font-medium text-tertiary-100">
+																					{workPackage.title}
+																				</h4>
+																				<span class="text-lg font-medium text-tertiary-100"
+																					>{workPackage.budget}€</span
+																				>
+																			</div>
+																			<p class="text-sm text-tertiary-200">
+																				{workPackage.deliverables}
+																			</p>
+																		</div>
+																		<div class="flex items-center gap-4">
+																			<div class="flex items-center gap-1.5">
+																				<Icon
+																					icon="mdi:account"
+																					class="w-4 h-4 text-tertiary-300"
+																				/>
+																				<span class="text-sm text-tertiary-200"
+																					>{workPackage.assignee}</span
+																				>
+																			</div>
+																			<button
+																				on:click={() =>
+																					removeWorkPackage(workPackage.id, proposal.id)}
+																				class="p-1.5 text-tertiary-300 transition-all rounded-lg hover:bg-tertiary-500/10 hover:text-tertiary-100"
+																			>
+																				<Icon icon="mdi:delete" class="w-4 h-4" />
+																			</button>
+																		</div>
+																	</div>
+																</div>
+															{/each}
+														</div>
+													{:else}
+														<!-- Add New Work Package Form -->
+														<div class="p-4 rounded-lg bg-surface-800/80">
+															<div class="flex items-center justify-between mb-4">
+																<h4 class="text-sm font-medium text-tertiary-200">
+																	New Work Package Offer
+																</h4>
+																<button
+																	type="button"
+																	on:click={toggleWorkPackageForm}
+																	class="p-2 transition-colors rounded-lg text-tertiary-300 hover:bg-tertiary-500/10 hover:text-tertiary-100"
+																>
+																	<Icon icon="mdi:close" class="w-5 h-5" />
+																</button>
+															</div>
+															<form
+																on:submit|preventDefault={handleAddWorkPackage}
+																class="flex flex-col gap-4"
+															>
+																<div class="flex flex-col gap-2">
+																	<label for="title" class="text-sm text-tertiary-300">Title</label>
+																	<input
+																		type="text"
+																		id="title"
+																		bind:value={newWorkPackage.title}
+																		class="px-3 py-2 border rounded-lg bg-surface-900 border-surface-700 text-tertiary-200"
+																		required
+																	/>
+																</div>
+																<div class="flex flex-col gap-2">
+																	<label for="deliverables" class="text-sm text-tertiary-300"
+																		>Deliverables</label
+																	>
+																	<textarea
+																		id="deliverables"
+																		bind:value={newWorkPackage.deliverables}
+																		class="px-3 py-2 border rounded-lg bg-surface-900 border-surface-700 text-tertiary-200"
+																		rows="3"
+																		required
+																	/>
+																</div>
+																<div class="flex flex-col gap-2">
+																	<label for="budget" class="text-sm text-tertiary-300"
+																		>Budget (€)</label
+																	>
+																	<input
+																		type="number"
+																		id="budget"
+																		bind:value={newWorkPackage.budget}
+																		min="0"
+																		class="px-3 py-2 border rounded-lg bg-surface-900 border-surface-700 text-tertiary-200"
+																		required
+																	/>
+																</div>
+																<div class="flex justify-end gap-2">
+																	<button
+																		type="submit"
+																		class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-tertiary-200 hover:bg-tertiary-500/10 border-tertiary-500/20 hover:text-tertiary-100 hover:border-tertiary-500/30"
+																	>
+																		Submit Offer
+																	</button>
+																</div>
+															</form>
+														</div>
+													{/if}
+													<!-- Bottom Spacing -->
+													<div class="h-24" />
+												</div>
+											{:else if detailTab === 'chat'}
+												<div class="pb-20">
+													<Messages contextId={proposal.id} contextType="proposal" height="400px" />
+												</div>
+											{/if}
+										</div>
 									</div>
 
 									<!-- Right side: Metrics -->
-									<div
-										class="w-[280px] shrink-0 {getStateBgColor(
-											proposal.state
-										)} overflow-y-auto max-h-[calc(100vh-16rem)]"
-									>
+									<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)} overflow-y-auto">
 										<div class="p-6 space-y-6">
 											<!-- Responsible Role - In Draft and Decision States -->
 											{#if proposal.state === 'draft' || proposal.state === 'decision'}
@@ -500,7 +695,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 												<!-- Budget -->
 												<div>
 													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														{proposal.state === 'draft' ? 'Estimated Budget' : 'Decision Budget'}
+														{proposal.state === 'draft' ? 'Requested Budget' : 'Decision Budget'}
 													</h4>
 													<p class="text-lg font-bold text-right text-tertiary-100">
 														{proposal.budgetRequested || 0}€

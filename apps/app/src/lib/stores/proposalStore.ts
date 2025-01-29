@@ -8,6 +8,46 @@ This store manages the proposal system's state, including:
 The store uses Svelte's writable and derived stores to handle reactivity.
 All state changes and calculations are centralized here for easier database integration.
 
+HOW THIS SYSTEM WORKS:
+
+1. Overview:
+   This is a community-driven proposal and voting system where members can:
+   - Submit ideas and gather initial support (idea state)
+   - Develop detailed proposals with work packages (draft state)
+   - Make final decisions on implementation (decision state)
+
+2. State Flow:
+   - Idea State: Initial proposals start here
+     * Requires 10 votes to progress to draft
+     * Focus on problem definition and benefits
+   - Draft State: Detailed planning phase
+     * Requires 20 votes to progress to decision
+     * Work package offers can be submitted
+     * Budget is calculated from work package offers
+   - Decision State: Final review and approval
+     * Shows total votes received
+     * Displays all work package commitments
+     * Final budget is locked
+
+3. Work Package Offers:
+   - Can be added in draft and decision states
+   - Each offer includes:
+     * Title and deliverables description
+     * Budget amount
+     * Assigned responsible person
+   - Total budget is calculated from all offers
+
+4. Voting Mechanics:
+   - Users have a limited number of tokens
+   - Each vote costs more than the previous
+   - Votes are tracked per proposal
+   - Progress is shown as percentage of required votes
+
+Note: The system encourages community participation while ensuring proper planning and resource allocation through the multi-stage process.
+
+The store uses Svelte's writable and derived stores to handle reactivity.
+All state changes and calculations are centralized here for easier database integration.
+
 HOW THE PROPOSAL SYSTEM WORKS:
 
 1. Voting Process:
@@ -146,6 +186,16 @@ export interface ProposalTask {
     completed: boolean;
 }
 
+export interface WorkPackage {
+    id: string;
+    proposalId: string;
+    title: string;
+    deliverables: string;
+    budget: number;
+    assignee: string;
+    createdAt: number;
+}
+
 export interface Proposal {
     id: string;
     title: string;
@@ -206,7 +256,7 @@ Sharing our community story with the world.
 - Hosting platform
 - Guest commitments`,
         state: 'idea',
-        budgetRequested: 800
+        budgetRequested: 0
     },
     {
         id: '14',
@@ -238,9 +288,12 @@ Empowering community growth through education.
 - Content guidelines
 - Storage solution`,
         state: 'idea',
-        budgetRequested: 1500
+        budgetRequested: 0
     }
 ];
+
+// Initial Data for work packages
+const initialWorkPackages: WorkPackage[] = [];
 
 // Store Creations
 export const proposals = writable<Proposal[]>(initialProposals);
@@ -251,8 +304,9 @@ export const currentUser = writable<UserProfile>({
     proposalsVoted: new Map()
 });
 export const dashboardMetrics = writable<DashboardMetrics>({
-    visionCreators: 17
+    visionCreators: 21
 });
+export const workPackages = writable<WorkPackage[]>(initialWorkPackages);
 
 // Default active tab is now 'idea'
 export const activeTab = writable<ProposalState>('idea');
@@ -821,4 +875,46 @@ export const defaultProposal: Proposal = {
 - Dependency 3`,
     state: 'idea',
     budgetRequested: 0
-}; 
+};
+
+// Calculate total budget for a proposal
+export function calculateTotalBudget(proposalId: string): number {
+    const allWorkPackages = get(workPackages);
+    return allWorkPackages
+        .filter(wp => wp.proposalId === proposalId)
+        .reduce((total, wp) => total + wp.budget, 0);
+}
+
+// Add new work package
+export function addWorkPackage(workPackage: Omit<WorkPackage, 'id' | 'createdAt'>): void {
+    const newWorkPackage: WorkPackage = {
+        ...workPackage,
+        id: crypto.randomUUID(),
+        createdAt: Date.now()
+    };
+
+    workPackages.update($workPackages => [...$workPackages, newWorkPackage]);
+
+    // Update proposal's budget
+    proposals.update($proposals =>
+        $proposals.map(proposal =>
+            proposal.id === workPackage.proposalId
+                ? { ...proposal, budgetRequested: calculateTotalBudget(proposal.id) }
+                : proposal
+        )
+    );
+}
+
+// Remove work package
+export function removeWorkPackage(workPackageId: string, proposalId: string): void {
+    workPackages.update($workPackages => $workPackages.filter(wp => wp.id !== workPackageId));
+
+    // Update proposal's budget
+    proposals.update($proposals =>
+        $proposals.map(proposal =>
+            proposal.id === proposalId
+                ? { ...proposal, budgetRequested: calculateTotalBudget(proposal.id) }
+                : proposal
+        )
+    );
+} 
