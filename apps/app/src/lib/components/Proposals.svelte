@@ -22,9 +22,6 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 	import {
 		proposals,
 		currentUser,
-		poolMetrics,
-		proposalValues,
-		dashboardMetrics,
 		activeTab,
 		setActiveTab,
 		type ProposalState,
@@ -34,23 +31,22 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 		getStateColor,
 		getStateIcon,
 		getStateLabel,
+		getTabLabel,
 		getStateBgColor,
 		getNextVoteCost,
 		MIN_TOTAL_VOTES_FOR_PROPOSAL,
+		DRAFT_VOTE_THRESHOLD,
 		checkProposalStateTransitions,
 		PROPOSAL_TABS
 	} from '$lib/stores/proposalStore';
 	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { toolStore } from '$lib/stores/toolStore';
 	import Avatar from './Avatar.svelte';
 	import { marked } from 'marked';
 	import LeftAsideProposals from './LeftAsideProposals.svelte';
 	import RightAsideProposals from './RightAsideProposals.svelte';
 
-	let showNewProposalModal = false;
 	let expandedProposalId: string | null = null;
 	let detailTab: 'details' | 'chat' = 'details';
 
@@ -101,8 +97,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 	$: {
 		const updatedProposals = checkProposalStateTransitions(
 			$proposals,
-			MINIMUM_VOTES_REQUIRED,
-			$proposalValues
+			MIN_TOTAL_VOTES_FOR_PROPOSAL
 		);
 		if (JSON.stringify(updatedProposals) !== JSON.stringify($proposals)) {
 			$proposals = updatedProposals;
@@ -203,59 +198,83 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 				<!-- Tabs Bar -->
 				<div
 					id="proposal-tabs"
-					class="sticky top-0 z-10 flex w-full gap-2 py-4 bg-surface-900/95 backdrop-blur-sm"
+					class="sticky top-0 z-10 flex items-center justify-between w-full py-4 bg-surface-900/95 backdrop-blur-sm"
 				>
-					<button
-						class={getTabClasses('idea')}
-						on:click={() => {
-							expandedProposalId = null;
-							setActiveTab('idea');
-						}}
-						aria-selected={$activeTab === 'idea'}
-					>
-						<div class="flex items-center gap-2">
-							<Icon icon={getStateIcon('idea')} class="w-4 h-4" />
-							{getStateLabel('idea')}
-						</div>
-					</button>
-					<button
-						class={getTabClasses('draft')}
-						on:click={() => {
-							expandedProposalId = null;
-							setActiveTab('draft');
-						}}
-						aria-selected={$activeTab === 'draft'}
-					>
-						<div class="flex items-center gap-2">
-							<Icon icon={getStateIcon('draft')} class="w-4 h-4" />
-							{getStateLabel('draft')}
-						</div>
-					</button>
+					<div class="flex items-center gap-2">
+						{#if expandedProposalId}
+							<button
+								on:click={() => {
+									expandedProposalId = null;
+									goto(`/me?view=Proposals`, { replaceState: true });
+								}}
+								class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+							>
+								<Icon icon="mdi:arrow-left" class="w-5 h-5" />
+								Back to List
+							</button>
+						{/if}
+						<button
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
+							'idea'
+								? 'bg-tertiary-900/20 text-tertiary-200'
+								: 'hover:bg-tertiary-900/10 text-tertiary-300'}"
+							on:click={() => {
+								expandedProposalId = null;
+								setActiveTab('idea');
+							}}
+							aria-selected={$activeTab === 'idea'}
+						>
+							<div class="flex items-center gap-2">
+								<Icon icon={getStateIcon('idea')} class="w-4 h-4" />
+								{getTabLabel('idea')}
+							</div>
+						</button>
+						<button
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
+							'draft'
+								? 'bg-blue-900/20 text-blue-200'
+								: 'hover:bg-blue-900/10 text-blue-300'}"
+							on:click={() => {
+								expandedProposalId = null;
+								setActiveTab('draft');
+							}}
+							aria-selected={$activeTab === 'draft'}
+						>
+							<div class="flex items-center gap-2">
+								<Icon icon={getStateIcon('draft')} class="w-4 h-4" />
+								{getTabLabel('draft')}
+							</div>
+						</button>
+						<button
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
+							'decision'
+								? 'bg-green-900/20 text-green-200'
+								: 'hover:bg-green-900/10 text-green-300'}"
+							on:click={() => {
+								expandedProposalId = null;
+								setActiveTab('decision');
+							}}
+							aria-selected={$activeTab === 'decision'}
+						>
+							<div class="flex items-center gap-2">
+								<Icon icon={getStateIcon('decision')} class="w-4 h-4" />
+								{getTabLabel('decision')}
+							</div>
+						</button>
+					</div>
 				</div>
 
 				<!-- Proposals List -->
-				<div class="grid gap-6 py-6">
+				<div class="grid gap-6 py-6 mb-16">
 					{#if expandedProposalId}
 						{@const proposal = $proposals.find((p) => p.id === expandedProposalId)}
 						{#if proposal}
-							<div class="mb-4">
-								<button
-									on:click={() => {
-										expandedProposalId = null;
-										goto(`/me?view=Proposals`, { replaceState: true });
-									}}
-									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-								>
-									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
-									Back to List
-								</button>
-							</div>
 							<div
 								id="proposal-{proposal.id}"
 								class="{getProposalCardClasses(proposal)} max-h-[calc(100vh-12rem)]"
 							>
 								<!-- Proposal Header -->
-								<div class="flex items-center sticky top-0 z-10 bg-surface-900/95 backdrop-blur-sm">
+								<div class="sticky top-0 z-10 flex items-center bg-surface-900/95 backdrop-blur-sm">
 									<!-- Left side: Votes -->
 									<div
 										class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
@@ -334,7 +353,11 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 									</div>
 
 									<!-- Right side: Value -->
-									<div class={getProposalValueClasses(proposal)}>
+									<div
+										class="w-full md:w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(
+											proposal.state
+										)}"
+									>
 										<div class="flex items-center justify-between mb-2">
 											<button
 												on:click|stopPropagation={() => resetProposal(proposal.id)}
@@ -367,11 +390,31 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 														{proposal.votes} / {voteThreshold} votes
 													</p>
 												</div>
-											{:else}
-												<p class="text-2xl font-bold text-tertiary-100">
-													{proposal.budgetRequested}€
-												</p>
-												<p class="text-sm text-tertiary-300">requested budget</p>
+											{:else if proposal.state === 'draft'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round((proposal.votes / DRAFT_VOTE_THRESHOLD) * 100)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																100,
+																Math.round((proposal.votes / DRAFT_VOTE_THRESHOLD) * 100)
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{proposal.votes} / {DRAFT_VOTE_THRESHOLD} votes
+													</p>
+												</div>
+											{:else if proposal.state === 'decision'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{proposal.votes}
+													</p>
+													<p class="text-sm text-tertiary-300">total votes</p>
+												</div>
 											{/if}
 										</div>
 									</div>
@@ -418,7 +461,7 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 											<div class="flex flex-col gap-6">
 												<div class="flex flex-col gap-2">
 													<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-													<div class="prose prose-invert max-w-none pb-20">
+													<div class="pb-20 prose prose-invert max-w-none">
 														{#if proposal.details}
 															{@html marked(proposal.details)}
 														{:else}
@@ -442,23 +485,49 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 											proposal.state
 										)} overflow-y-auto max-h-[calc(100vh-16rem)]"
 									>
-										<div class="p-6 space-y-4">
+										<div class="p-6 space-y-6">
+											<!-- Responsible Role - In Draft and Decision States -->
+											{#if proposal.state === 'draft' || proposal.state === 'decision'}
+												<div>
+													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+														Responsible Role
+													</h4>
+													<p class="text-xl font-bold text-right text-tertiary-100">
+														{proposal.responsible || 'Not assigned'}
+													</p>
+												</div>
+
+												<!-- Budget -->
+												<div>
+													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+														{proposal.state === 'draft' ? 'Estimated Budget' : 'Decision Budget'}
+													</h4>
+													<p class="text-lg font-bold text-right text-tertiary-100">
+														{proposal.budgetRequested || 0}€
+													</p>
+												</div>
+											{/if}
+
+											<!-- Pain Point -->
 											<div>
-												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+												<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
 													Pain Point
 												</h4>
-												<p class="text-xs text-right text-tertiary-300">
+												<p class="text-sm text-right text-tertiary-300">
 													{proposal.pain || 'Not defined yet'}
 												</p>
 											</div>
+
+											<!-- Expected Benefits -->
 											<div>
-												<h4 class="mb-1 text-xs font-medium text-right text-tertiary-200">
+												<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
 													Expected Benefits
 												</h4>
-												<p class="text-xs text-right text-tertiary-300">
+												<p class="text-sm text-right text-tertiary-300">
 													{proposal.benefits || 'Not defined yet'}
 												</p>
 											</div>
+
 											<div class="pb-20" />
 										</div>
 									</div>
@@ -592,11 +661,31 @@ Note: Currently only showing 'idea' state while keeping all state definitions fo
 														{proposal.votes} / {voteThreshold} votes
 													</p>
 												</div>
-											{:else}
-												<p class="text-2xl font-bold text-tertiary-100">
-													{proposal.budgetRequested}€
-												</p>
-												<p class="text-sm text-tertiary-300">requested budget</p>
+											{:else if proposal.state === 'draft'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round((proposal.votes / DRAFT_VOTE_THRESHOLD) * 100)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																100,
+																Math.round((proposal.votes / DRAFT_VOTE_THRESHOLD) * 100)
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{proposal.votes} / {DRAFT_VOTE_THRESHOLD} votes
+													</p>
+												</div>
+											{:else if proposal.state === 'decision'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{proposal.votes}
+													</p>
+													<p class="text-sm text-tertiary-300">total votes</p>
+												</div>
 											{/if}
 										</div>
 									</div>

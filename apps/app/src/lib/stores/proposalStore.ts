@@ -113,7 +113,7 @@ import { writable, derived, get } from 'svelte/store';
 import { activityStore } from './activityStore';
 
 // Types
-export type ProposalState = 'idea' | 'draft';
+export type ProposalState = 'idea' | 'draft' | 'decision';
 export type VoteEventType = 'vote_added' | 'vote_removed';
 
 // Activity types
@@ -156,6 +156,7 @@ export interface Proposal {
     pain?: string;
     state: ProposalState;
     budgetRequested: number;
+    responsible?: string;
 }
 
 export interface UserProfile {
@@ -179,7 +180,7 @@ const initialProposals: Proposal[] = [
         id: '13',
         title: 'Community Podcast Series',
         author: 'Michael Chen',
-        votes: 3,
+        votes: 16,
         benefits: 'Broader reach and deeper community insights',
         pain: 'Limited channels for sharing community stories and knowledge',
         details: `## Content Focus
@@ -257,7 +258,7 @@ export const dashboardMetrics = writable<DashboardMetrics>({
 export const activeTab = writable<ProposalState>('idea');
 
 // Update the tab order to only show idea state for now
-export const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft'];
+export const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'decision'];
 
 // Function to change active tab
 export function setActiveTab(state: ProposalState): void {
@@ -359,6 +360,7 @@ function calculateVotingValues(proposals: Proposal[], votingPool: number): Map<s
 // Constants
 export const MIN_TOTAL_VOTES_FOR_PROPOSAL = 10;
 export const IDEA_VOTE_THRESHOLD_PERCENTAGE = 0.1; // 10%
+export const DRAFT_VOTE_THRESHOLD = 20;  // For draft to decision
 
 // Derived Stores
 export const proposalValues = derived([proposals, poolMetrics], ([$proposals, $poolMetrics]) => {
@@ -531,8 +533,7 @@ export function resetProposal(proposalId: string): void {
 function getNextState(currentState: ProposalState): ProposalState {
     const stateFlow: Record<ProposalState, ProposalState> = {
         idea: 'draft',
-        draft: 'offer',
-        offer: 'decision',
+        draft: 'decision',
         decision: 'in_progress',
         in_progress: 'review',
         review: 'completed',
@@ -582,7 +583,16 @@ export function adjustVisionCreators(increment: boolean): void {
 
 // UI Helper Functions
 export function getStateColor(state: ProposalState): string {
-    return 'text-tertiary-100';
+    switch (state) {
+        case 'idea':
+            return 'text-tertiary-200';
+        case 'draft':
+            return 'text-blue-200';
+        case 'decision':
+            return 'text-green-200';
+        default:
+            return 'text-tertiary-200';
+    }
 }
 
 export function getStateIcon(state: ProposalState): string {
@@ -591,6 +601,8 @@ export function getStateIcon(state: ProposalState): string {
             return 'mdi:lightbulb';
         case 'draft':
             return 'mdi:file-document-outline';
+        case 'decision':
+            return 'mdi:gavel';
         default:
             return 'mdi:help-circle-outline';
     }
@@ -602,23 +614,51 @@ export function getStateLabel(state: ProposalState): string {
             return 'Idea';
         case 'draft':
             return 'Draft';
+        case 'decision':
+            return 'Decision';
+        default:
+            return 'Unknown';
+    }
+}
+
+export function getTabLabel(state: ProposalState): string {
+    switch (state) {
+        case 'idea':
+            return 'Ideas';
+        case 'draft':
+            return 'Drafts';
+        case 'decision':
+            return 'Decisions';
         default:
             return 'Unknown';
     }
 }
 
 export function getStateBgColor(state: ProposalState): string {
-    return 'bg-surface-800/50';
+    switch (state) {
+        case 'idea':
+            return 'bg-tertiary-900/20';
+        case 'draft':
+            return 'bg-blue-900/20';
+        case 'decision':
+            return 'bg-green-900/20';
+        default:
+            return 'bg-surface-800/20';
+    }
 }
 
 // Update state transition logic
 export function checkProposalStateTransitions($proposals: Proposal[], voteThreshold: number): Proposal[] {
     return $proposals.map(proposal => {
-        // Only transition from idea to draft when vote threshold is reached
         if (proposal.state === 'idea' && proposal.votes >= voteThreshold) {
             return {
                 ...proposal,
                 state: 'draft'
+            };
+        } else if (proposal.state === 'draft' && proposal.votes >= DRAFT_VOTE_THRESHOLD) {
+            return {
+                ...proposal,
+                state: 'decision'
             };
         }
         return proposal;
