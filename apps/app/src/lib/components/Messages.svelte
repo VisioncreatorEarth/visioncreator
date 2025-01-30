@@ -45,6 +45,19 @@ HOW THIS COMPONENT WORKS:
 		onboarded: boolean;
 	}
 
+	// Add proper typing for message sender
+	interface MessageSender {
+		id: string;
+		name: string;
+	}
+
+	interface Message {
+		id: string;
+		content: string;
+		timestamp: Date;
+		sender: MessageSender;
+	}
+
 	const userQuery = createQuery({
 		operationName: 'queryMe',
 		enabled: true
@@ -69,10 +82,19 @@ HOW THIS COMPONENT WORKS:
 		'This could have a significant impact. Let us explore it more.'
 	];
 
+	// Update the userQuery typing
+	$: userData = $userQuery.data
+		? {
+				id: $userQuery.data.id as string,
+				name: $userQuery.data.name as string,
+				onboarded: $userQuery.data.onboarded as boolean
+		  }
+		: null;
+
 	// Initialize message thread
 	onMount(() => {
-		messageStore.createThread(contextId, contextType);
-		const threadMessages = messageStore.getThreadMessages(contextId);
+		messageStore.createThread(contextId.toString(), contextType);
+		const threadMessages = messageStore.getThreadMessages(contextId.toString());
 		unsubscribe = threadMessages.subscribe((value) => {
 			messages = value;
 			if (isScrolledToBottom) {
@@ -81,8 +103,8 @@ HOW THIS COMPONENT WORKS:
 		});
 
 		// Mark messages as read when component mounts
-		if ($userQuery.data?.id) {
-			messageStore.markAsRead(contextId, $userQuery.data.id);
+		if (userData?.id) {
+			messageStore.markAsRead(contextId.toString(), userData.id);
 		}
 	});
 
@@ -106,15 +128,15 @@ HOW THIS COMPONENT WORKS:
 
 	// Message sending with simulated response
 	function handleSubmit() {
-		if (!newMessage.trim() || !$userQuery.data) return;
+		if (!newMessage.trim() || !userData) return;
 
 		messageStore.sendMessage({
 			contextId,
 			contextType,
 			content: newMessage.trim(),
 			sender: {
-				id: $userQuery.data.id,
-				name: $userQuery.data.name
+				id: userData.id,
+				name: userData.name
 			}
 		});
 
@@ -148,7 +170,7 @@ HOW THIS COMPONENT WORKS:
 
 	// Check if message is from current user
 	function isOwnMessage(message: Message): boolean {
-		return message.sender.id === $userQuery.data?.id;
+		return message.sender.id === userData?.id;
 	}
 
 	// Group messages by sender and time (within 5 minutes)
@@ -171,69 +193,75 @@ HOW THIS COMPONENT WORKS:
 	}
 </script>
 
-<div class="flex flex-col {className}" style="height: {height}">
+<div class="relative flex flex-col h-full {className}">
 	<!-- Messages Container -->
 	<div
 		bind:this={messageContainer}
 		on:scroll={handleScroll}
-		class="flex-grow p-4 space-y-2 overflow-y-auto rounded-lg"
+		class="absolute inset-0 overflow-y-auto"
 	>
-		{#each messages as message, i}
-			{@const grouped = shouldGroupWithPrevious(message, i)}
-			{@const own = isOwnMessage(message)}
+		<div class="p-4 space-y-2 pb-20">
+			{#each messages as message, i}
+				{@const grouped = shouldGroupWithPrevious(message, i)}
+				{@const own = isOwnMessage(message)}
 
-			<div class="flex gap-2 {own ? 'flex-row-reverse' : ''}">
-				{#if !grouped}
-					<Avatar me={getAvatarProps(message.sender.id, own)} />
-				{:else}
-					<div class="w-6" />
-				{/if}
-
-				<div class="flex-grow {own ? 'items-end' : ''} max-w-[80%]">
+				<div class="flex items-start gap-2 {own ? 'flex-row-reverse' : ''}">
 					{#if !grouped}
-						<div class="flex items-center gap-1.5 mb-0.5 {own ? 'flex-row-reverse' : ''}">
-							<span class="text-xs font-medium text-tertiary-200">
-								{message.sender.name}
-							</span>
+						<div class="flex-shrink-0 mt-1">
+							<Avatar me={getAvatarProps(message.sender.id, own)} />
 						</div>
+					{:else}
+						<div class="w-6" />
 					{/if}
 
-					<div class="flex flex-col {own ? 'items-end' : ''}">
-						<div
-							class="relative px-3 py-1 text-sm rounded-lg {own
-								? 'bg-blue-900/20 text-blue-300'
-								: 'bg-surface-600/80 text-tertiary-50'} {grouped ? 'mt-0.5' : 'mt-0'}"
-						>
-							<p>
-								{message.content}
-							</p>
-							<span
-								class="block text-[9px] opacity-50 {own
-									? 'text-right mr-[1px] text-blue-300'
-									: 'text-left ml-[1px] text-tertiary-200'} -mb-0.5 mt-[1px]"
+					<div class="flex-grow {own ? 'items-end' : ''} max-w-[80%]">
+						{#if !grouped}
+							<div class="flex items-center gap-1.5 mb-0.5 {own ? 'flex-row-reverse' : ''}">
+								<span class="text-xs font-medium text-tertiary-200">
+									{message.sender.name}
+								</span>
+							</div>
+						{/if}
+
+						<div class="flex flex-col {own ? 'items-end' : ''}">
+							<div
+								class="relative px-3 py-1.5 text-sm rounded-lg {own
+									? 'bg-secondary-900/20 text-secondary-300'
+									: 'bg-surface-600/80 text-tertiary-50'} {grouped ? 'mt-0.5' : 'mt-0'}"
 							>
-								{formatTime(message.timestamp)}
-							</span>
+								<p class="leading-relaxed">
+									{message.content}
+								</p>
+								<span
+									class="block text-[9px] opacity-50 {own
+										? 'text-right mr-[1px] text-secondary-300'
+										: 'text-left ml-[1px] text-tertiary-200'} -mb-0.5 mt-[1px]"
+								>
+									{formatTime(message.timestamp)}
+								</span>
+							</div>
 						</div>
 					</div>
 				</div>
-			</div>
-		{/each}
+			{/each}
+		</div>
 	</div>
 
 	<!-- Message Input -->
-	<div class="flex gap-2 p-3 border-t border-surface-700/50">
+	<div
+		class="absolute bottom-0 left-0 right-0 flex gap-2 p-3 border-t border-surface-700/50 bg-surface-900/95 backdrop-blur-sm"
+	>
 		<input
 			type="text"
 			bind:value={newMessage}
 			on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
 			placeholder="Type your message..."
-			class="flex-grow px-3 py-1.5 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-tertiary-500/50 focus:outline-none"
+			class="flex-grow px-3 py-1.5 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-secondary-500/50 focus:outline-none"
 		/>
 		<button
 			on:click={handleSubmit}
-			disabled={!newMessage.trim() || !$userQuery.data}
-			class="px-3 py-1.5 text-sm font-medium transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600 text-tertiary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+			disabled={!newMessage.trim() || !userData}
+			class="px-3 py-1.5 text-sm font-medium transition-colors rounded-lg bg-secondary-500 hover:bg-secondary-600 text-secondary-50 disabled:opacity-50 disabled:cursor-not-allowed"
 		>
 			Send
 		</button>

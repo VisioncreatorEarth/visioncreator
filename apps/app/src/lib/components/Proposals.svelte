@@ -152,7 +152,7 @@ HOW THIS SYSTEM WORKS:
 	function getStateColor(state: ProposalState): string {
 		switch (state) {
 			case 'idea':
-				return 'text-tertiary-400';
+				return 'text-secondary-300';
 			case 'draft':
 				return 'text-warning-400';
 			case 'decision':
@@ -165,7 +165,7 @@ HOW THIS SYSTEM WORKS:
 	function getStateBgColor(state: ProposalState): string {
 		switch (state) {
 			case 'idea':
-				return 'bg-tertiary-500/20';
+				return 'bg-secondary-500/20';
 			case 'draft':
 				return 'bg-warning-500/20';
 			case 'decision':
@@ -193,8 +193,7 @@ HOW THIS SYSTEM WORKS:
 	}
 
 	function getTabLabel(state: ProposalState): string {
-		const count = $proposalsQuery.data?.proposals.filter((p) => p.state === state).length || 0;
-		return `${getStateLabel(state)} (${count})`;
+		return getStateLabel(state);
 	}
 
 	function getStateTextClasses(proposal: Proposal): string {
@@ -283,12 +282,6 @@ HOW THIS SYSTEM WORKS:
 			{ data: { seed: 'user2' }, design: { highlight: true }, size: 'xs' as const },
 			{ data: { seed: 'user3' }, design: { highlight: false }, size: 'xs' as const }
 		];
-	}
-
-	// Temporary function until we implement proper reset
-	function resetProposal(id: string) {
-		userVotes.delete(id);
-		userVotes = new Map(userVotes); // Trigger reactivity
 	}
 
 	// Work package functions
@@ -481,14 +474,7 @@ HOW THIS SYSTEM WORKS:
 											proposal.state
 										)}"
 									>
-										<div class="flex items-center justify-between mb-2">
-											<button
-												on:click|stopPropagation={() => resetProposal(proposal.id)}
-												class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-											>
-												<Icon icon="mdi:refresh" class="w-4 h-4" />
-												Reset
-											</button>
+										<div class="flex items-center justify-end mb-2">
 											<div class={getStateTextClasses(proposal)}>
 												<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
 												<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>
@@ -546,12 +532,12 @@ HOW THIS SYSTEM WORKS:
 								<!-- Expanded Content -->
 								<div class="flex flex-1 overflow-hidden border-t border-surface-700/50">
 									<!-- Left: Vertical Navigation -->
-									<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-900">
+									<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800">
 										<button
 											class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
 											'details'
-												? 'bg-surface-700/50 text-tertiary-100'
-												: 'text-tertiary-300 hover:bg-surface-800/50'}"
+												? 'bg-surface-700 text-tertiary-100'
+												: 'text-tertiary-300 hover:bg-surface-700/50'}"
 											on:click={() => (detailTab = 'details')}
 										>
 											<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
@@ -562,8 +548,8 @@ HOW THIS SYSTEM WORKS:
 											<button
 												class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
 												'budget'
-													? 'bg-surface-700/50 text-tertiary-100'
-													: 'text-tertiary-300 hover:bg-surface-800/50'}"
+													? 'bg-surface-700 text-tertiary-100'
+													: 'text-tertiary-300 hover:bg-surface-700/50'}"
 												on:click={() => (detailTab = 'budget')}
 											>
 												<Icon icon="mdi:currency-usd" class="w-6 h-6" />
@@ -574,8 +560,8 @@ HOW THIS SYSTEM WORKS:
 										<button
 											class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
 											'chat'
-												? 'bg-surface-700/50 text-tertiary-100'
-												: 'text-tertiary-300 hover:bg-surface-800/50'}"
+												? 'bg-surface-700 text-tertiary-100'
+												: 'text-tertiary-300 hover:bg-surface-700/50'}"
 											on:click={() => (detailTab = 'chat')}
 										>
 											<Icon icon="mdi:chat-outline" class="w-6 h-6" />
@@ -590,9 +576,9 @@ HOW THIS SYSTEM WORKS:
 										<!-- Scrollable Content Area -->
 										<div class="flex-1 min-h-0 overflow-y-auto">
 											<!-- Tab Content -->
-											<div class="p-6">
+											<div class="h-full">
 												{#if detailTab === 'details'}
-													<div class="flex flex-col gap-6">
+													<div class="flex flex-col gap-6 p-6">
 														<!-- Video Player (if video_id exists) -->
 														{#if proposal.video_id}
 															<div class="w-full overflow-hidden rounded-lg bg-surface-800">
@@ -746,11 +732,11 @@ HOW THIS SYSTEM WORKS:
 														<div class="h-24" />
 													</div>
 												{:else if detailTab === 'chat'}
-													<div class="pb-20">
+													<div class="relative h-full">
 														<Messages
 															contextId={proposal.id}
 															contextType="proposal"
-															height="400px"
+															className="h-full"
 														/>
 													</div>
 												{/if}
@@ -905,14 +891,7 @@ HOW THIS SYSTEM WORKS:
 											proposal.state
 										)}"
 									>
-										<div class="flex items-center justify-between mb-2">
-											<button
-												on:click|stopPropagation={() => resetProposal(proposal.id)}
-												class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-											>
-												<Icon icon="mdi:refresh" class="w-4 h-4" />
-												Reset
-											</button>
+										<div class="flex items-center justify-end mb-2">
 											<div class={getStateTextClasses(proposal)}>
 												<Icon icon={getStateIcon(proposal.state)} class="w-5 h-5" />
 												<span class="text-sm font-medium">{getStateLabel(proposal.state)}</span>

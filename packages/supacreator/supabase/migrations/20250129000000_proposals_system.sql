@@ -330,23 +330,41 @@ INSERT INTO proposals (
 ) VALUES (
     'Hominio: Opensource Personal AI Voice Assistant',
     '00000000-0000-0000-0000-000000000001', -- Admin user ID
-    '## Features & Skills
-- Shopping List Management
-  * Add/remove items via voice
+    '## The Vision
+Hominio is more than just another AI assistant - it''s your personal companion that truly understands and respects your privacy. Built on open-source principles, Hominio works exclusively with your own data, ensuring your information stays yours.
 
-- Task Management
-  * Voice-controlled todo lists
-  * Priority setting
-  * Due date reminders
+## Current Status
+We already have a working proof of concept with our first skill: A smart shopping list management system. Want to try it out? Just write "let me test please" in the chat, and we''ll get you started!
 
-## Definition of Done
-- [ ] Core voice calling system
-- [ ] Basic skills framework
-- [ ] Shopping list skill complete
-- [ ] Task management skill complete
-',
-    'Personal AI Voice assistant that respects privacy and works on your own data',
-    'Lack of open-source, privacy-focused voice assistants',
+## Technical Foundation
+- Built on Ultravox AI - a custom fork of Llama 70B 3.3
+- Fully open-source architecture
+- Extensible skills framework for community contributions
+
+## Community-Driven Development
+What makes Hominio unique is that YOU decide what comes next. Through our democratic proposal system, the Visioncreator community votes on which skills should be developed next. Have an idea? Share it, and if the community agrees, we''ll make it happen!
+
+## Business Model
+- Monthly Subscription: 11.11$ (net) for 1h of voice-assisted interaction
+- Revenue Sharing: 3.33$ per month per subscribed user goes to Visioncreators, in the form of provisions. 
+- Sustainable open-source development through fair profit sharing
+
+## Next Steps
+1. Community Vote: Which skill should Hominio learn next?
+2. Skill Implementation: Develop the most-voted feature
+3. Landing Page Creation: Build a compelling user acquisition funnel
+4. AI Influencer Outreach: Connect with X (Twitter) AI multiplicators
+
+## Join the Revolution
+Together, we''re building more than just an AI assistant - we''re creating a community-driven platform where privacy meets innovation. Let''s shape the future of AI assistance together!
+
+Want to contribute? Here is how:
+- Vote on upcoming skills
+- Test new features
+- Spread the word
+- Contribute to the codebase',
+    'A community-driven, privacy-focused AI voice assistant that works on your terms. Revenue sharing opportunities for creators. Democratic feature development.',
+    'Current AI assistants either compromise privacy or lack customization. Users need a solution that respects their data while providing powerful, community-driven features.',
     '8fee2d57-e3c3-4580-bd11-ae828d86978d',
     'idea'
 ); 

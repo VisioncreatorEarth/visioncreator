@@ -107,9 +107,13 @@ This is the right aside area of the proposals view that:
 				<!-- User Profile -->
 				{#if userData}
 					<div class="flex items-center gap-4">
-						<div class="flex items-center justify-center w-16 h-16 rounded-full bg-surface-700/50">
-							<Icon icon="mdi:account" class="w-8 h-8 text-tertiary-300" />
-						</div>
+						<Avatar
+							me={{
+								data: { seed: userData.id },
+								design: { highlight: false },
+								size: 'md'
+							}}
+						/>
 						<div>
 							<h3 class="text-xl font-semibold text-tertiary-100">{userData.name}</h3>
 							<p class="text-sm text-tertiary-300">Visioncreator</p>
