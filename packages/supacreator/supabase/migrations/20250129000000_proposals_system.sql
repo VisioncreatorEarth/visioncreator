@@ -19,7 +19,7 @@ CREATE TABLE token_balances (
     UNIQUE(user_id)
 );
 
--- Create proposals table FIRST (moved up)
+-- Create proposals table
 CREATE TABLE proposals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE proposals (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Create token transactions table AFTER proposals table
+-- Create token transactions table
 CREATE TABLE token_transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_type token_transaction_type NOT NULL,
@@ -67,18 +67,6 @@ CREATE TABLE work_package_offers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Create votes table with staking information
-CREATE TABLE votes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES profiles(id),
-    tokens_staked BIGINT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(proposal_id, user_id),
-    CONSTRAINT positive_stake CHECK (tokens_staked >= 0)
-);
-
 -- Create messages table
 CREATE TABLE messages (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -97,48 +85,6 @@ RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create votes count trigger function
-CREATE OR REPLACE FUNCTION update_proposal_votes_count()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_OP = 'INSERT' THEN
-        UPDATE proposals 
-        SET votes_count = votes_count + NEW.tokens_used
-        WHERE id = NEW.proposal_id;
-    ELSIF TG_OP = 'DELETE' THEN
-        UPDATE proposals 
-        SET votes_count = votes_count - OLD.tokens_used
-        WHERE id = OLD.proposal_id;
-    END IF;
-    RETURN NULL;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create budget calculation trigger function
-CREATE OR REPLACE FUNCTION update_proposal_budget()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
-        UPDATE proposals 
-        SET budget_requested = (
-            SELECT COALESCE(SUM(budget), 0)
-            FROM work_package_offers
-            WHERE proposal_id = NEW.proposal_id
-        )
-        WHERE id = NEW.proposal_id;
-    ELSIF TG_OP = 'DELETE' THEN
-        UPDATE proposals 
-        SET budget_requested = (
-            SELECT COALESCE(SUM(budget), 0)
-            FROM work_package_offers
-            WHERE proposal_id = OLD.proposal_id
-        )
-        WHERE id = OLD.proposal_id;
-    END IF;
-    RETURN NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -224,9 +170,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Remove quadratic weight column from votes table since we're not using it
-ALTER TABLE votes DROP COLUMN IF EXISTS quadratic_weight;
-
 -- Apply updated_at triggers
 CREATE TRIGGER update_proposals_updated_at
     BEFORE UPDATE ON proposals
@@ -243,18 +186,6 @@ CREATE TRIGGER update_messages_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
 
--- Apply votes count trigger
-CREATE TRIGGER update_proposal_votes
-    AFTER INSERT OR DELETE ON votes
-    FOR EACH ROW
-    EXECUTE FUNCTION update_proposal_votes_count();
-
--- Apply budget calculation trigger
-CREATE TRIGGER update_proposal_budget
-    AFTER INSERT OR UPDATE OR DELETE ON work_package_offers
-    FOR EACH ROW
-    EXECUTE FUNCTION update_proposal_budget();
-
 -- Apply token transaction trigger
 CREATE TRIGGER on_token_transaction
     AFTER INSERT ON token_transactions
@@ -264,7 +195,6 @@ CREATE TRIGGER on_token_transaction
 -- Enable Row Level Security
 ALTER TABLE proposals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE work_package_offers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_balances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_transactions ENABLE ROW LEVEL SECURITY;
@@ -272,7 +202,6 @@ ALTER TABLE token_transactions ENABLE ROW LEVEL SECURITY;
 -- Grant access to service role only
 GRANT ALL ON TABLE proposals TO service_role;
 GRANT ALL ON TABLE work_package_offers TO service_role;
-GRANT ALL ON TABLE votes TO service_role;
 GRANT ALL ON TABLE messages TO service_role;
 GRANT ALL ON TABLE token_balances TO service_role;
 GRANT ALL ON TABLE token_transactions TO service_role;
@@ -285,12 +214,6 @@ CREATE POLICY "service_role_policy" ON proposals
     WITH CHECK (true);
 
 CREATE POLICY "service_role_policy" ON work_package_offers
-    FOR ALL
-    TO service_role
-    USING (true)
-    WITH CHECK (true);
-
-CREATE POLICY "service_role_policy" ON votes
     FOR ALL
     TO service_role
     USING (true)
@@ -318,10 +241,9 @@ CREATE POLICY "service_role_policy" ON token_transactions
 CREATE INDEX proposals_state_idx ON proposals(state);
 CREATE INDEX proposals_votes_count_idx ON proposals(votes_count DESC);
 CREATE INDEX work_package_offers_proposal_id_idx ON work_package_offers(proposal_id);
-CREATE INDEX votes_proposal_id_user_id_idx ON votes(proposal_id, user_id);
+CREATE INDEX messages_context_id_idx ON messages(context_id);
+CREATE INDEX messages_sender_id_idx ON messages(sender_id);
 CREATE INDEX messages_created_at_idx ON messages(created_at DESC);
-
--- Create indexes for token-related queries
 CREATE INDEX token_balances_user_id_idx ON token_balances(user_id);
 CREATE INDEX token_transactions_from_user_idx ON token_transactions(from_user_id);
 CREATE INDEX token_transactions_to_user_idx ON token_transactions(to_user_id);

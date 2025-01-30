@@ -6,6 +6,7 @@
 		data: { seed: string };
 		design: { highlight: boolean };
 		size: '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+		votes?: number;
 	};
 
 	function generateAvatar(seed: string): string {
@@ -53,4 +54,11 @@
 			: 'w-12 h-12 rounded-full';
 </script>
 
-<img src={avatar} alt="Profile" class={`${sizeClass} ${bgColorClass} border-tertiary-200`} />
+<div class="relative">
+	<img src={avatar} alt="Profile" class={`${sizeClass} ${bgColorClass} border-tertiary-200`} />
+	{#if me.votes !== undefined}
+		<div class="absolute inset-0 flex items-center justify-center rounded-full bg-surface-900/50">
+			<span class="text-xs font-bold text-tertiary-100">{me.votes}</span>
+		</div>
+	{/if}
+</div>

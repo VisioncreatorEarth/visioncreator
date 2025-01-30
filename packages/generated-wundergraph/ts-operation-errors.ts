@@ -13,6 +13,7 @@ export type OperationErrors = {
 	createInvite: CreateInviteErrors;
 	createMessage: CreateMessageErrors;
 	createShoppingList: CreateShoppingListErrors;
+	getProposalVoters: GetProposalVotersErrors;
 	getUserCapabilities: GetUserCapabilitiesErrors;
 	getUserStats: GetUserStatsErrors;
 	getUserTokens: GetUserTokensErrors;
@@ -79,6 +80,7 @@ export type CheckCapabilitiesErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateMessageErrors = ClientOperationErrors;
 export type CreateShoppingListErrors = ClientOperationErrors;
+export type GetProposalVotersErrors = ClientOperationErrors;
 export type GetUserCapabilitiesErrors = ClientOperationErrors;
 export type GetUserStatsErrors = ClientOperationErrors;
 export type GetUserTokensErrors = ClientOperationErrors;
