@@ -3,39 +3,34 @@ HOW THIS COMPONENT WORKS:
 
 1. Overview:
    This is a reusable message component that can be used anywhere in the app:
-   - Displays messages for a specific context (proposal, task, etc.)
-   - Handles message sending, editing, and deletion
+   - Displays messages from the database for a specific context (proposal, task, etc.)
+   - Handles real-time message sending and receiving via Svelte stores
    - Shows message status and timestamps
-   - Supports real-time updates
-   - Handles message formatting and layout
-   - Simulates automated responses for better UX
+   - Supports message formatting and layout
+   - Handles error states and loading states
 
 2. Props:
    - contextId: ID of the entity this chat belongs to
    - contextType: Type of entity (proposal, task, etc.)
-   - height: Optional custom height for the chat container
    - className: Optional additional CSS classes
 
 3. Features:
+   - Real-time message updates via stores
    - Message grouping by time
-   - Read receipts
-   - Message status indicators
    - Timestamp formatting
    - Input handling with validation
-   - Automated response simulation
+   - Error handling and loading states
 -->
 
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
-	import { messageStore, type Message } from '$lib/stores/messageStore';
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Avatar from './Avatar.svelte';
 
 	// Props
 	export let contextId: string;
 	export let contextType: string;
-	export let height = '400px';
 	export let className = '';
 
 	// Add proper typing for user data
@@ -45,44 +40,43 @@ HOW THIS COMPONENT WORKS:
 		onboarded: boolean;
 	}
 
-	// Add proper typing for message sender
-	interface MessageSender {
-		id: string;
-		name: string;
-	}
-
+	// Add proper typing for message data
 	interface Message {
 		id: string;
 		content: string;
-		timestamp: Date;
-		sender: MessageSender;
+		sender_id: string;
+		sender_name: string;
+		created_at: string;
+		updated_at: string;
 	}
 
+	// Queries and mutations
 	const userQuery = createQuery({
 		operationName: 'queryMe',
 		enabled: true
 	});
 
+	$: messagesQuery = createQuery({
+		operationName: 'queryMessages',
+		input: {
+			contextId,
+			contextType
+		},
+		enabled: true,
+		refetchInterval: 5000 // Poll every 5 seconds for new messages
+	});
+
+	const createMessageMutation = createMutation({
+		operationName: 'createMessage'
+	});
+
 	// Local state
-	let messages: Message[] = [];
 	let newMessage = '';
 	let messageContainer: HTMLDivElement;
 	let isScrolledToBottom = true;
-	let unsubscribe: () => void;
+	let error: string | null = null;
 
-	// Simulated responses for better UX
-	const simulatedResponses: string[] = [
-		'Thanks for your input! I will look into this.',
-		'That is an interesting perspective. Could you elaborate?',
-		'I agree with your point. Let us move forward with this.',
-		'Great suggestion! I will add this to our roadmap.',
-		'This aligns well with our goals. Let us discuss further.',
-		'I see what you mean. How about we approach it this way?',
-		'Thanks for bringing this up. It is definitely worth considering.',
-		'This could have a significant impact. Let us explore it more.'
-	];
-
-	// Update the userQuery typing
+	// Reactive declarations
 	$: userData = $userQuery.data
 		? {
 				id: $userQuery.data.id as string,
@@ -91,26 +85,8 @@ HOW THIS COMPONENT WORKS:
 		  }
 		: null;
 
-	// Initialize message thread
-	onMount(() => {
-		messageStore.createThread(contextId.toString(), contextType);
-		const threadMessages = messageStore.getThreadMessages(contextId.toString());
-		unsubscribe = threadMessages.subscribe((value) => {
-			messages = value;
-			if (isScrolledToBottom) {
-				scrollToBottom();
-			}
-		});
-
-		// Mark messages as read when component mounts
-		if (userData?.id) {
-			messageStore.markAsRead(contextId.toString(), userData.id);
-		}
-	});
-
-	onDestroy(() => {
-		if (unsubscribe) unsubscribe();
-	});
+	$: messages = ($messagesQuery.data?.messages || []) as Message[];
+	$: isLoading = $messagesQuery.isLoading;
 
 	// Scroll handling
 	function scrollToBottom() {
@@ -126,51 +102,43 @@ HOW THIS COMPONENT WORKS:
 		}
 	}
 
-	// Message sending with simulated response
-	function handleSubmit() {
+	// Message sending
+	async function handleSubmit() {
 		if (!newMessage.trim() || !userData) return;
 
-		messageStore.sendMessage({
-			contextId,
-			contextType,
-			content: newMessage.trim(),
-			sender: {
-				id: userData.id,
-				name: userData.name
-			}
-		});
-
-		// Simulate a response after a short delay
-		setTimeout(() => {
-			const randomResponse =
-				simulatedResponses[Math.floor(Math.random() * simulatedResponses.length)];
-			messageStore.sendMessage({
+		try {
+			const result = await $createMessageMutation.mutateAsync({
 				contextId,
 				contextType,
-				content: randomResponse,
-				sender: {
-					id: 'system',
-					name: 'Visioncreator AI'
-				}
+				content: newMessage.trim()
 			});
-		}, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
 
-		newMessage = '';
-		isScrolledToBottom = true;
+			if (!result?.success) {
+				error = result?.error || 'Failed to send message';
+				return;
+			}
+
+			newMessage = '';
+			error = null;
+			isScrolledToBottom = true;
+			await $messagesQuery.refetch();
+		} catch (err: any) {
+			error = err?.message || 'Failed to send message';
+		}
 	}
 
 	// Format timestamp
-	function formatTime(date: Date): string {
+	function formatTime(date: string): string {
 		return new Intl.DateTimeFormat('en', {
 			hour: '2-digit',
 			minute: '2-digit',
 			hour12: false
-		}).format(date);
+		}).format(new Date(date));
 	}
 
 	// Check if message is from current user
 	function isOwnMessage(message: Message): boolean {
-		return message.sender.id === userData?.id;
+		return message.sender_id === userData?.id;
 	}
 
 	// Group messages by sender and time (within 5 minutes)
@@ -178,8 +146,9 @@ HOW THIS COMPONENT WORKS:
 		if (index === 0) return false;
 		const prevMessage = messages[index - 1];
 		return (
-			prevMessage.sender.id === message.sender.id &&
-			message.timestamp.getTime() - prevMessage.timestamp.getTime() < 5 * 60 * 1000
+			prevMessage.sender_id === message.sender_id &&
+			new Date(message.created_at).getTime() - new Date(prevMessage.created_at).getTime() <
+				5 * 60 * 1000
 		);
 	}
 
@@ -191,6 +160,18 @@ HOW THIS COMPONENT WORKS:
 			size: '2xs' as const
 		};
 	}
+
+	// Scroll to bottom when new messages arrive
+	$: if (messages && isScrolledToBottom) {
+		scrollToBottom();
+	}
+
+	// Clear error after 5 seconds
+	$: if (error) {
+		setTimeout(() => {
+			error = null;
+		}, 5000);
+	}
 </script>
 
 <div class="relative flex flex-col h-full {className}">
@@ -201,49 +182,63 @@ HOW THIS COMPONENT WORKS:
 		class="absolute inset-0 overflow-y-auto"
 	>
 		<div class="p-4 space-y-2 pb-20">
-			{#each messages as message, i}
-				{@const grouped = shouldGroupWithPrevious(message, i)}
-				{@const own = isOwnMessage(message)}
+			{#if isLoading && !messages.length}
+				<div class="flex items-center justify-center h-32">
+					<div class="text-sm text-tertiary-300">Loading messages...</div>
+				</div>
+			{:else if error}
+				<div class="p-2 text-sm text-error-400 bg-error-500/10 rounded-lg">
+					{error}
+				</div>
+			{:else if !messages.length}
+				<div class="flex items-center justify-center h-32">
+					<div class="text-sm text-tertiary-300">No messages yet. Start the conversation!</div>
+				</div>
+			{:else}
+				{#each messages as message, i}
+					{@const grouped = shouldGroupWithPrevious(message, i)}
+					{@const own = isOwnMessage(message)}
 
-				<div class="flex items-start gap-2 {own ? 'flex-row-reverse' : ''}">
-					{#if !grouped}
-						<div class="flex-shrink-0 mt-1">
-							<Avatar me={getAvatarProps(message.sender.id, own)} />
-						</div>
-					{:else}
-						<div class="w-6" />
-					{/if}
-
-					<div class="flex-grow {own ? 'items-end' : ''} max-w-[80%]">
+					<div class="flex items-start gap-2 {own ? 'flex-row-reverse' : ''}">
 						{#if !grouped}
-							<div class="flex items-center gap-1.5 mb-0.5 {own ? 'flex-row-reverse' : ''}">
-								<span class="text-xs font-medium text-tertiary-200">
-									{message.sender.name}
-								</span>
+							<div class="flex-shrink-0 mt-1">
+								<Avatar me={getAvatarProps(message.sender_id, own)} />
 							</div>
+						{:else}
+							<div class="w-6" />
 						{/if}
 
-						<div class="flex flex-col {own ? 'items-end' : ''}">
-							<div
-								class="relative px-3 py-1.5 text-sm rounded-lg {own
-									? 'bg-secondary-900/20 text-secondary-300'
-									: 'bg-surface-600/80 text-tertiary-50'} {grouped ? 'mt-0.5' : 'mt-0'}"
-							>
-								<p class="leading-relaxed">
-									{message.content}
-								</p>
-								<span
-									class="block text-[9px] opacity-50 {own
-										? 'text-right mr-[1px] text-secondary-300'
-										: 'text-left ml-[1px] text-tertiary-200'} -mb-0.5 mt-[1px]"
+						<div class="flex-grow {own ? 'items-end' : ''} max-w-[80%]">
+							{#if !grouped}
+								<div class="flex items-center gap-1.5 mb-0.5 {own ? 'flex-row-reverse' : ''}">
+									<span class="text-xs font-medium text-tertiary-200">
+										{message.sender_name}
+									</span>
+								</div>
+							{/if}
+
+							<div class="flex flex-col {own ? 'items-end' : ''}">
+								<div
+									class="relative px-3 py-1.5 text-sm rounded-lg {own
+										? 'bg-secondary-900/20 text-secondary-300'
+										: 'bg-surface-600/80 text-tertiary-50'} {grouped ? 'mt-0.5' : 'mt-0'}"
 								>
-									{formatTime(message.timestamp)}
-								</span>
+									<p class="leading-relaxed">
+										{message.content}
+									</p>
+									<span
+										class="block text-[9px] opacity-50 {own
+											? 'text-right mr-[1px] text-secondary-300'
+											: 'text-left ml-[1px] text-tertiary-200'} -mb-0.5 mt-[1px]"
+									>
+										{formatTime(message.created_at)}
+									</span>
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			{/if}
 		</div>
 	</div>
 
@@ -257,13 +252,18 @@ HOW THIS COMPONENT WORKS:
 			on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
 			placeholder="Type your message..."
 			class="flex-grow px-3 py-1.5 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-secondary-500/50 focus:outline-none"
+			disabled={!userData || isLoading}
 		/>
 		<button
 			on:click={handleSubmit}
-			disabled={!newMessage.trim() || !userData}
+			disabled={!newMessage.trim() || !userData || isLoading}
 			class="px-3 py-1.5 text-sm font-medium transition-colors rounded-lg bg-secondary-500 hover:bg-secondary-600 text-secondary-50 disabled:opacity-50 disabled:cursor-not-allowed"
 		>
-			Send
+			{#if $createMessageMutation.isLoading}
+				<Icon icon="mdi:loading" class="w-4 h-4 animate-spin" />
+			{:else}
+				Send
+			{/if}
 		</button>
 	</div>
 </div>

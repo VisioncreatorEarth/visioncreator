@@ -11,6 +11,7 @@ export type OperationErrors = {
 	calculateCID: CalculateCIDErrors;
 	checkCapabilities: CheckCapabilitiesErrors;
 	createInvite: CreateInviteErrors;
+	createMessage: CreateMessageErrors;
 	createShoppingList: CreateShoppingListErrors;
 	getUserCapabilities: GetUserCapabilitiesErrors;
 	getUserStats: GetUserStatsErrors;
@@ -34,6 +35,7 @@ export type OperationErrors = {
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMails: QueryMailsErrors;
 	queryMe: QueryMeErrors;
+	queryMessages: QueryMessagesErrors;
 	queryMyCapabilities: QueryMyCapabilitiesErrors;
 	queryMyShoppingList: QueryMyShoppingListErrors;
 	queryProposals: QueryProposalsErrors;
@@ -74,6 +76,7 @@ export type AskHominioErrors =
 export type CalculateCIDErrors = ClientOperationErrors;
 export type CheckCapabilitiesErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
+export type CreateMessageErrors = ClientOperationErrors;
 export type CreateShoppingListErrors = ClientOperationErrors;
 export type GetUserCapabilitiesErrors = ClientOperationErrors;
 export type GetUserStatsErrors = ClientOperationErrors;
@@ -97,6 +100,7 @@ export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
+export type QueryMessagesErrors = ClientOperationErrors;
 export type QueryMyCapabilitiesErrors = ClientOperationErrors;
 export type QueryMyShoppingListErrors = ClientOperationErrors;
 export type QueryProposalsErrors = ClientOperationErrors;

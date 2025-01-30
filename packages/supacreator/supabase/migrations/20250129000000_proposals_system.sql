@@ -82,12 +82,14 @@ CREATE TABLE votes (
 
 -- Create messages table
 CREATE TABLE messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES profiles(id),
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    context_id UUID NOT NULL,
+    context_type TEXT NOT NULL,
     content TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    sender_id UUID NOT NULL REFERENCES profiles(id),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    is_deleted BOOLEAN DEFAULT false
 );
 
 -- Create updated_at trigger function
@@ -308,7 +310,6 @@ CREATE INDEX proposals_state_idx ON proposals(state);
 CREATE INDEX proposals_votes_count_idx ON proposals(votes_count DESC);
 CREATE INDEX work_package_offers_proposal_id_idx ON work_package_offers(proposal_id);
 CREATE INDEX votes_proposal_id_user_id_idx ON votes(proposal_id, user_id);
-CREATE INDEX messages_proposal_id_idx ON messages(proposal_id);
 CREATE INDEX messages_created_at_idx ON messages(created_at DESC);
 
 -- Create indexes for token-related queries
@@ -367,4 +368,43 @@ Want to contribute? Here is how:
     'Current AI assistants either compromise privacy or lack customization. Users need a solution that respects their data while providing powerful, community-driven features.',
     '8fee2d57-e3c3-4580-bd11-ae828d86978d',
     'idea'
-); 
+);
+
+-- Add indexes for better query performance
+CREATE INDEX idx_messages_context ON messages(context_id, context_type);
+CREATE INDEX idx_messages_sender ON messages(sender_id);
+CREATE INDEX idx_messages_created_at ON messages(created_at);
+
+-- Add RLS policies for messages
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Policy for reading messages (anyone can read)
+CREATE POLICY "Anyone can read messages"
+    ON messages FOR SELECT
+    USING (true);
+
+-- Policy for inserting messages (authenticated users only)
+CREATE POLICY "Authenticated users can insert messages"
+    ON messages FOR INSERT
+    WITH CHECK (auth.uid() = sender_id);
+
+-- Policy for updating messages (only message sender)
+CREATE POLICY "Users can update their own messages"
+    ON messages FOR UPDATE
+    USING (auth.uid() = sender_id)
+    WITH CHECK (auth.uid() = sender_id);
+
+-- Policy for soft deleting messages (only message sender)
+CREATE POLICY "Users can delete their own messages"
+    ON messages FOR UPDATE
+    USING (auth.uid() = sender_id AND is_deleted = false)
+    WITH CHECK (is_deleted = true);
+
+-- Add trigger for updated_at
+CREATE TRIGGER messages_updated_at
+    BEFORE UPDATE ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at();
+
+-- Remove old index if it exists
+DROP INDEX IF EXISTS messages_proposal_id_idx; 
