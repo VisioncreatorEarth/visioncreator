@@ -16,7 +16,7 @@ HOW THIS SYSTEM WORKS:
 
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -73,6 +73,23 @@ HOW THIS SYSTEM WORKS:
 			transaction_type: string;
 			created_at: string;
 		}>;
+	}
+
+	// Add transaction type
+	interface TokenTransaction {
+		id: string;
+		proposal_id: string | null;
+		transaction_type: 'stake' | 'unstake' | 'mint' | 'transfer';
+		amount: number;
+		created_at: string;
+		from_user_id: string;
+	}
+
+	// Add response type for updateVotes mutation
+	interface UpdateVotesResponse {
+		success: boolean;
+		message: string;
+		transaction: TokenTransaction;
 	}
 
 	// Queries with proper typing
@@ -137,9 +154,77 @@ HOW THIS SYSTEM WORKS:
 	const DRAFT_VOTE_THRESHOLD = 20;
 	const voteThreshold = MIN_TOTAL_VOTES_FOR_PROPOSAL;
 
+	// Add updateVotes mutation
+	const updateVotesMutation = createMutation({
+		operationName: 'updateVotes'
+	});
+
 	// Update user tokens when data changes
 	$: if ($userTokensQuery.data?.balance?.balance) {
 		userTokens = Number($userTokensQuery.data.balance.balance);
+	}
+
+	// Get user's staked tokens for each proposal
+	$: userStakedTokens = new Map<string, number>();
+	$: if ($userTokensQuery.data?.transactions && $userQuery.data?.id) {
+		const transactions = (
+			$userTokensQuery.data.transactions as unknown[] as TokenTransaction[]
+		).filter((tx): tx is TokenTransaction => {
+			return (
+				typeof tx === 'object' &&
+				tx !== null &&
+				'id' in tx &&
+				'proposal_id' in tx &&
+				'transaction_type' in tx &&
+				'amount' in tx &&
+				'created_at' in tx &&
+				'from_user_id' in tx
+			);
+		});
+		const userId = $userQuery.data.id as string;
+
+		console.log('=== Frontend Vote Calculation Debug Log ===');
+		console.log('Current User ID:', userId);
+		console.log('Raw Transactions:', transactions);
+
+		// Filter transactions for current user and valid proposal_id
+		const userTransactions = transactions.filter(
+			(tx) => tx.from_user_id === userId && tx.proposal_id !== null
+		);
+
+		console.log('Filtered User Transactions:', userTransactions);
+
+		// Create a temporary map to track running totals
+		const proposalTotals = new Map<string, number>();
+
+		// Process transactions in chronological order (oldest first)
+		userTransactions
+			.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+			.forEach((tx) => {
+				if (tx.proposal_id) {
+					const currentStaked = proposalTotals.get(tx.proposal_id) || 0;
+					const change = tx.transaction_type === 'stake' ? tx.amount : -tx.amount;
+					const newAmount = Math.max(0, currentStaked + change); // Prevent negative amounts
+
+					console.log(`Proposal ${tx.proposal_id} Transaction:`, {
+						type: tx.transaction_type,
+						amount: tx.amount,
+						currentStaked,
+						change,
+						newAmount,
+						timestamp: tx.created_at,
+						userId: tx.from_user_id
+					});
+
+					proposalTotals.set(tx.proposal_id, newAmount);
+				}
+			});
+
+		// Update the reactive store with final totals
+		userStakedTokens = new Map(proposalTotals);
+
+		console.log('Final User Staked Tokens:', Object.fromEntries(userStakedTokens));
+		console.log('=== End Frontend Vote Calculation Debug Log ===');
 	}
 
 	// Update assignee when user data loads
@@ -252,19 +337,58 @@ HOW THIS SYSTEM WORKS:
 		return `w-[280px] shrink-0 p-6 flex flex-col ${getStateBgColor(proposal.state)}`;
 	}
 
-	// Temporary hardcoded functions until we implement the full voting system
-	function handleVote(proposalId: string, isIncrease: boolean) {
-		const proposal = $proposalsQuery.data?.proposals.find((p) => p.id === proposalId);
-		if (!proposal) return;
+	// Update handleVote function to handle vote updates more reliably
+	async function handleVote(proposalId: string, isIncrease: boolean) {
+		if (!$userQuery.data?.id) return;
 
-		// For now, just increment/decrement the vote count locally
-		const currentVotes = userVotes.get(proposalId) || 0;
-		if (isIncrease) {
-			userVotes.set(proposalId, currentVotes + 1);
-		} else if (currentVotes > 0) {
-			userVotes.set(proposalId, currentVotes - 1);
+		const userId = $userQuery.data.id as string;
+		const currentStaked = userStakedTokens.get(proposalId) || 0;
+
+		// Validate the action
+		if (!isIncrease && currentStaked <= 0) {
+			console.log('Cannot unstake - no tokens staked');
+			return;
 		}
-		userVotes = new Map(userVotes); // Trigger reactivity
+
+		if (isIncrease && userTokens <= 0) {
+			console.log('Cannot stake - no tokens available');
+			return;
+		}
+
+		console.log('=== Vote Action Debug Log ===');
+		console.log('Action:', isIncrease ? 'stake' : 'unstake');
+		console.log('Proposal ID:', proposalId);
+		console.log('User ID:', userId);
+		console.log('Current User Staked:', currentStaked);
+		console.log('Available Tokens:', userTokens);
+
+		try {
+			const result = await $updateVotesMutation.mutateAsync({
+				proposalId,
+				userId,
+				action: isIncrease ? 'stake' : 'unstake',
+				amount: 1
+			});
+
+			console.log('Vote Update Result:', result);
+
+			if (result?.success) {
+				// Update local state immediately
+				const newStaked = isIncrease ? currentStaked + 1 : currentStaked - 1;
+				userStakedTokens.set(proposalId, Math.max(0, newStaked));
+				userStakedTokens = new Map(userStakedTokens); // Trigger reactivity
+
+				// Refresh queries to update UI
+				await Promise.all([$userTokensQuery.refetch(), $proposalsQuery.refetch()]);
+
+				console.log('Updated User Staked:', userStakedTokens.get(proposalId));
+				console.log('Updated Available Tokens:', userTokens);
+			}
+		} catch (error) {
+			console.error('Failed to update vote:', error);
+		}
+
+		console.log('=== End Vote Action Debug Log ===');
 	}
 
 	function handleProposalSelect(state: ProposalState, proposalId: string) {
@@ -398,31 +522,23 @@ HOW THIS SYSTEM WORKS:
 											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
 												<div class="flex items-center gap-4">
 													<div class="text-center">
-														<div
-															class="flex items-center {$userQuery.data &&
-															userVotes.get(proposal.id)
-																? 'gap-2'
-																: 'justify-center'}"
-														>
+														<div class="flex items-center gap-2">
 															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																{proposal.votes_count}
+																{proposal.votes_count || 0}
 															</p>
-															{#if $userQuery.data && userVotes.get(proposal.id)}
+															{#if userStakedTokens.get(proposal.id)}
 																<p class="text-xl font-bold md:text-2xl text-tertiary-400">
-																	{userVotes.get(proposal.id)}
+																	{userStakedTokens.get(proposal.id)}
 																</p>
 															{/if}
 														</div>
-														<div
-															class="flex items-center justify-center gap-1 text-sm text-tertiary-300"
-														>
+														<div class="text-sm text-tertiary-300">
 															<span>votes</span>
 														</div>
 													</div>
 													<div class="flex flex-col gap-2">
 														<button
-															disabled={$userQuery.data &&
-																userTokens < getNextVoteCost(userVotes.get(proposal.id) || 0)}
+															disabled={!$userQuery.data || userTokens < 1}
 															on:click|stopPropagation={() => handleVote(proposal.id, true)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
@@ -431,7 +547,8 @@ HOW THIS SYSTEM WORKS:
 															</svg>
 														</button>
 														<button
-															disabled={!$userQuery.data || !userVotes.get(proposal.id)}
+															disabled={!$userQuery.data ||
+																(userStakedTokens.get(proposal.id) || 0) <= 0}
 															on:click|stopPropagation={() => handleVote(proposal.id, false)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
@@ -445,7 +562,7 @@ HOW THIS SYSTEM WORKS:
 										{:else}
 											<div class="w-full text-center">
 												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-													{proposal.votes_count}
+													{proposal.votes_count || 0}
 												</p>
 												<p class="text-sm text-tertiary-300">votes</p>
 											</div>
@@ -815,31 +932,23 @@ HOW THIS SYSTEM WORKS:
 											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
 												<div class="flex items-center gap-4">
 													<div class="text-center">
-														<div
-															class="flex items-center {$userQuery.data &&
-															userVotes.get(proposal.id)
-																? 'gap-2'
-																: 'justify-center'}"
-														>
+														<div class="flex items-center gap-2">
 															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																{proposal.votes_count}
+																{proposal.votes_count || 0}
 															</p>
-															{#if $userQuery.data && userVotes.get(proposal.id)}
+															{#if userStakedTokens.get(proposal.id)}
 																<p class="text-xl font-bold md:text-2xl text-tertiary-400">
-																	{userVotes.get(proposal.id)}
+																	{userStakedTokens.get(proposal.id)}
 																</p>
 															{/if}
 														</div>
-														<div
-															class="flex items-center justify-center gap-1 text-sm text-tertiary-300"
-														>
+														<div class="text-sm text-tertiary-300">
 															<span>votes</span>
 														</div>
 													</div>
 													<div class="flex flex-col gap-2">
 														<button
-															disabled={$userQuery.data &&
-																userTokens < getNextVoteCost(userVotes.get(proposal.id) || 0)}
+															disabled={!$userQuery.data || userTokens < 1}
 															on:click|stopPropagation={() => handleVote(proposal.id, true)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
@@ -848,7 +957,8 @@ HOW THIS SYSTEM WORKS:
 															</svg>
 														</button>
 														<button
-															disabled={!$userQuery.data || !userVotes.get(proposal.id)}
+															disabled={!$userQuery.data ||
+																(userStakedTokens.get(proposal.id) || 0) <= 0}
 															on:click|stopPropagation={() => handleVote(proposal.id, false)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
@@ -862,7 +972,7 @@ HOW THIS SYSTEM WORKS:
 										{:else}
 											<div class="w-full text-center">
 												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-													{proposal.votes_count}
+													{proposal.votes_count || 0}
 												</p>
 												<p class="text-sm text-tertiary-300">votes</p>
 											</div>

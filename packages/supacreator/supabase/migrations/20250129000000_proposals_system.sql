@@ -73,7 +73,6 @@ CREATE TABLE votes (
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES profiles(id),
     tokens_staked BIGINT NOT NULL DEFAULT 0,
-    quadratic_weight INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(proposal_id, user_id),
@@ -143,7 +142,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Token balance update function
+-- Update token balance update function
 CREATE OR REPLACE FUNCTION update_token_balances()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -179,17 +178,21 @@ BEGIN
             WHERE user_id = NEW.from_user_id
             AND balance >= NEW.amount;
             
-            -- Update proposal's total staked amount
+            -- Update proposal's total staked amount and votes count
             UPDATE proposals
-            SET total_tokens_staked = total_tokens_staked + NEW.amount
+            SET total_tokens_staked = total_tokens_staked + NEW.amount,
+                votes_count = (
+                    SELECT COALESCE(SUM(amount), 0)
+                    FROM token_transactions
+                    WHERE proposal_id = NEW.proposal_id
+                    AND transaction_type = 'stake'
+                ) - (
+                    SELECT COALESCE(SUM(amount), 0)
+                    FROM token_transactions
+                    WHERE proposal_id = NEW.proposal_id
+                    AND transaction_type = 'unstake'
+                )
             WHERE id = NEW.proposal_id;
-            
-            -- Update or create vote record
-            INSERT INTO votes (proposal_id, user_id, tokens_staked)
-            VALUES (NEW.proposal_id, NEW.from_user_id, NEW.amount)
-            ON CONFLICT (proposal_id, user_id) DO UPDATE
-            SET tokens_staked = votes.tokens_staked + NEW.amount,
-                updated_at = NOW();
         
         WHEN 'unstake' THEN
             -- Move tokens from staked_balance back to balance
@@ -200,23 +203,29 @@ BEGIN
             WHERE user_id = NEW.from_user_id
             AND staked_balance >= NEW.amount;
             
-            -- Update proposal's total staked amount
+            -- Update proposal's total staked amount and votes count
             UPDATE proposals
-            SET total_tokens_staked = total_tokens_staked - NEW.amount
+            SET total_tokens_staked = total_tokens_staked - NEW.amount,
+                votes_count = (
+                    SELECT COALESCE(SUM(amount), 0)
+                    FROM token_transactions
+                    WHERE proposal_id = NEW.proposal_id
+                    AND transaction_type = 'stake'
+                ) - (
+                    SELECT COALESCE(SUM(amount), 0)
+                    FROM token_transactions
+                    WHERE proposal_id = NEW.proposal_id
+                    AND transaction_type = 'unstake'
+                )
             WHERE id = NEW.proposal_id;
-            
-            -- Update vote record
-            UPDATE votes
-            SET tokens_staked = tokens_staked - NEW.amount,
-                updated_at = NOW()
-            WHERE proposal_id = NEW.proposal_id
-            AND user_id = NEW.from_user_id
-            AND tokens_staked >= NEW.amount;
     END CASE;
     
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Remove quadratic weight column from votes table since we're not using it
+ALTER TABLE votes DROP COLUMN IF EXISTS quadratic_weight;
 
 -- Apply updated_at triggers
 CREATE TRIGGER update_proposals_updated_at

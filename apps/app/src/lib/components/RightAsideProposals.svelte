@@ -123,11 +123,17 @@ This is the right aside area of the proposals view that:
 
 				<!-- Voting Power -->
 				<div class="p-4 border rounded-lg border-surface-700/50">
-					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Voting Power</h4>
+					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Shares</h4>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
 							<p class="text-2xl font-bold text-tertiary-100">{userTokens}</p>
-							<p class="text-xs text-tertiary-300">Tokens Available</p>
+							<p class="text-xs text-tertiary-300">Free to use</p>
+						</div>
+						<div>
+							<p class="text-2xl font-bold text-tertiary-100">
+								{$userTokensQuery.data?.balance?.staked_balance || 0}
+							</p>
+							<p class="text-xs text-tertiary-300">Locked in votes</p>
 						</div>
 					</div>
 				</div>
