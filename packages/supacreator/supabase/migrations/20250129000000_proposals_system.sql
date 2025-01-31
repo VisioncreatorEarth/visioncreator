@@ -31,7 +31,6 @@ CREATE TABLE proposals (
     state proposal_state NOT NULL DEFAULT 'idea',
     votes_count INTEGER NOT NULL DEFAULT 0,
     total_tokens_staked BIGINT NOT NULL DEFAULT 0,
-    budget_requested INTEGER NOT NULL DEFAULT 0,
     responsible UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -53,18 +52,6 @@ CREATE TABLE token_transactions (
         (transaction_type = 'mint' AND from_user_id IS NULL AND to_user_id IS NOT NULL) OR
         ((transaction_type = 'stake' OR transaction_type = 'unstake') AND from_user_id IS NOT NULL AND proposal_id IS NOT NULL)
     )
-);
-
--- Create work package offers table
-CREATE TABLE work_package_offers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    deliverables TEXT NOT NULL,
-    budget INTEGER NOT NULL DEFAULT 0,
-    assignee UUID NOT NULL REFERENCES profiles(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Create messages table
@@ -176,11 +163,6 @@ CREATE TRIGGER update_proposals_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
 
-CREATE TRIGGER update_work_package_offers_updated_at
-    BEFORE UPDATE ON work_package_offers
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
-
 CREATE TRIGGER update_messages_updated_at
     BEFORE UPDATE ON messages
     FOR EACH ROW
@@ -194,26 +176,18 @@ CREATE TRIGGER on_token_transaction
 
 -- Enable Row Level Security
 ALTER TABLE proposals ENABLE ROW LEVEL SECURITY;
-ALTER TABLE work_package_offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_balances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE token_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Grant access to service role only
 GRANT ALL ON TABLE proposals TO service_role;
-GRANT ALL ON TABLE work_package_offers TO service_role;
 GRANT ALL ON TABLE messages TO service_role;
 GRANT ALL ON TABLE token_balances TO service_role;
 GRANT ALL ON TABLE token_transactions TO service_role;
 
 -- Create single service role policy for each table
 CREATE POLICY "service_role_policy" ON proposals
-    FOR ALL
-    TO service_role
-    USING (true)
-    WITH CHECK (true);
-
-CREATE POLICY "service_role_policy" ON work_package_offers
     FOR ALL
     TO service_role
     USING (true)
@@ -240,7 +214,6 @@ CREATE POLICY "service_role_policy" ON token_transactions
 -- Create indexes for better performance
 CREATE INDEX proposals_state_idx ON proposals(state);
 CREATE INDEX proposals_votes_count_idx ON proposals(votes_count DESC);
-CREATE INDEX work_package_offers_proposal_id_idx ON work_package_offers(proposal_id);
 CREATE INDEX messages_context_id_idx ON messages(context_id);
 CREATE INDEX messages_sender_id_idx ON messages(sender_id);
 CREATE INDEX messages_created_at_idx ON messages(created_at DESC);
@@ -260,43 +233,76 @@ INSERT INTO proposals (
     video_id,
     state
 ) VALUES (
-    'Hominio: Opensource Personal AI Voice Assistant',
+    'Hominio: The Shopify for Voice Agents',
     '00000000-0000-0000-0000-000000000001', -- Admin user ID
-    '## The Vision
-Hominio is more than just another AI assistant - it''s your personal companion that truly understands and respects your privacy. Built on open-source principles, Hominio works exclusively with your own data, ensuring your information stays yours.
+    '## Live Life at Your Own Terms, Everywhere in the World
 
-## Current Status
-We already have a working proof of concept with our first skill: A smart shopping list management system. Want to try it out? Just write "let me test please" in the chat, and we''ll get you started!
+Introducing Hominio - the Shopify of voice agents for indie-hackers, solopreneurs, and X-Creators. 
+Together, we''re building more than just AI assistants - we''re creating a platform for financial independence through your personal AI-Agent. We empower Visioncreators to build their own recurring revenue streams.
+
+## The Opportunity: Build Your Own AI Agent Business
+
+Create and monetize your own AI voice agent:
+- Zero technical skills required
+- Just 1 week from idea to launch
+- Full platform support
+- Weekly payouts
+
+## Your Revenue Model
+- Your customers pay €11/month to use your agent
+- You earn 60% revenue share (€6.60 per customer/month)
+- Scale your income with more customers
+- Example earnings:
+  * 100 customers = €660/month
+  * 500 customers = €3,300/month
+  * 1000 customers = €6,600/month
+- Infrastructure (30%) and platform fee (10%) included
+
+## Early Adopter Platform Pricing
+Get started with our Agent-as-a-Service platform (regular price: €500/month per agent).
+
+Early adopter discounts - be quick to get the best deal:
+- First 1 customer: 90% off - €50/month
+- Next 2 customers (4-5): 85% off - €75/month
+- Next 3 customers (6-8): 80% off - €100/month
+- Next 5 customers (9-13): 70% off - €150/month
+- Next 8 customers (14-21): 60% off - €200/month
+- Next 13 customers (22-34): 50% off - €250/month
+- Next 21 customers (35-55): 40% off - €300/month
+- Next 34 customers (56-89): 30% off - €350/month
+- Next 55 customers (90-144): 20% off - €400/month
+- All customers after: Regular price €500/month
+
+What you get for your monthly platform fee:
+- Customized agent landing page
+- Your own domain
+- 10h AI agent fine-tuning support
+- 1-week guided setup
+- Problem discovery workshop
+- Golden offer creation support
+- Access to our creator community
 
 ## Technical Foundation
-- Built on Ultravox AI - a custom fork of Llama 70B 3.3
 - Fully open-source architecture
-- Extensible skills framework for community contributions
+- Extensible skills framework
+- Privacy-focused design
+- Scalable infrastructure
+- 1h voice interaction per user/month included
 
-## Community-Driven Development
-What makes Hominio unique is that YOU decide what comes next. Through our democratic proposal system, the Visioncreator community votes on which skills should be developed next. Have an idea? Share it, and if the community agrees, we''ll make it happen!
+## Current Status
+We have a working proof of concept with our first skill: A smart shopping list management system. Want to try it out? Just write "let me test please" in the chat!
 
-## Business Model
-- Monthly Subscription: 11.11$ (net) for 1h of voice-assisted interaction
-- Revenue Sharing: 3.33$ per month per subscribed user goes to Visioncreators, in the form of provisions. 
-- Sustainable open-source development through fair profit sharing
+## Your Path to Success
+1. Book a discovery call
+2. Define your agent''s niche
+3. We help implement in 1 week
+4. Launch your agent shop
+5. Get your first customers
+6. Scale your monthly revenue
 
-## Next Steps
-1. Community Vote: Which skill should Hominio learn next?
-2. Skill Implementation: Develop the most-voted feature
-3. Landing Page Creation: Build a compelling user acquisition funnel
-4. AI Influencer Outreach: Connect with X (Twitter) AI multiplicators
-
-## Join the Revolution
-Together, we''re building more than just an AI assistant - we''re creating a community-driven platform where privacy meets innovation. Let''s shape the future of AI assistance together!
-
-Want to contribute? Here is how:
-- Vote on upcoming skills
-- Test new features
-- Spread the word
-- Contribute to the codebase',
-    'A community-driven, privacy-focused AI voice assistant that works on your terms. Revenue sharing opportunities for creators. Democratic feature development.',
-    'Current AI assistants either compromise privacy or lack customization. Users need a solution that respects their data while providing powerful, community-driven features.',
+,
+    'Transform your expertise into recurring revenue. Launch your own AI voice agent business in just one week, earning a consistent 60% revenue share (€6.60 per customer/month) with zero technical skills needed. Full platform and technical support included.',
+    'Creators struggle to monetize their expertise and build sustainable income streams. Traditional platforms are either too technical, too expensive to start, or don''t offer clear paths to recurring revenue. Building AI solutions requires technical expertise most creators don''t have.',
     '8fee2d57-e3c3-4580-bd11-ae828d86978d',
     'idea'
 );
@@ -326,7 +332,7 @@ CREATE POLICY "Users can update their own messages"
     WITH CHECK (auth.uid() = sender_id);
 
 -- Policy for soft deleting messages (only message sender)
-CREATE POLICY "Users can delete their own messages"
+CREATE POLICY "Users can soft delete their own messages"
     ON messages FOR UPDATE
     USING (auth.uid() = sender_id AND is_deleted = false)
     WITH CHECK (is_deleted = true);
