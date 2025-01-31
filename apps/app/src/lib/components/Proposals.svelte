@@ -180,9 +180,6 @@ HOW THIS SYSTEM WORKS:
 
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'decision'];
-	const MIN_TOTAL_VOTES_FOR_PROPOSAL = 10;
-	const DRAFT_VOTE_THRESHOLD = 20;
-	const voteThreshold = MIN_TOTAL_VOTES_FOR_PROPOSAL;
 
 	// Add updateVotes mutation
 	const updateVotesMutation = createMutation({
@@ -367,27 +364,21 @@ HOW THIS SYSTEM WORKS:
 		return `w-[280px] shrink-0 p-6 flex flex-col ${getStateBgColor(proposal.state)}`;
 	}
 
-	// Update handleVote function to handle vote updates more reliably
+	// Update the handleVote function to properly check staked tokens
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		if (!$userQuery.data?.id) return;
 
 		const userId = $userQuery.data.id as string;
 		const currentStaked = userStakedTokens.get(proposalId) || 0;
 
-		// Only validate for staking (not for unstaking)
+		// Only validate for staking
 		if (isIncrease && userTokens <= 0) {
 			console.log('Cannot stake - no tokens available');
 			return;
 		}
 
-		console.log('=== Vote Action Debug Log ===');
-		console.log('Action:', isIncrease ? 'stake' : 'unstake');
-		console.log('Proposal ID:', proposalId);
-		console.log('User ID:', userId);
-		console.log('Current User Staked:', currentStaked);
-		console.log('Available Tokens:', userTokens);
-
 		try {
+			// Make the API call first
 			const result = await $updateVotesMutation.mutateAsync({
 				proposalId,
 				userId,
@@ -395,26 +386,87 @@ HOW THIS SYSTEM WORKS:
 				amount: 1
 			});
 
-			console.log('Vote Update Result:', result);
+			if (!result?.success) {
+				console.error('Vote update failed');
+				return;
+			}
 
-			if (result?.success) {
-				// Update local state immediately
-				const newStaked = isIncrease ? currentStaked + 1 : currentStaked - 1;
-				userStakedTokens.set(proposalId, Math.max(0, newStaked));
-				userStakedTokens = new Map(userStakedTokens);
+			// Update local state after successful API call
+			const newStaked = isIncrease ? currentStaked + 1 : currentStaked - 1;
+			userStakedTokens.set(proposalId, Math.max(0, newStaked));
+			userStakedTokens = new Map(userStakedTokens);
 
-				// Refresh queries to update UI
-				await Promise.all([
-					$userTokensQuery.refetch(),
-					$proposalsQuery.refetch(),
-					$currentProposalVotersQuery.refetch()
-				]);
+			// Update voters store
+			votersStore.update((store) => {
+				const newStore = new Map(store);
+				const currentVoters = newStore.get(proposalId) || [];
+				const updatedVoters = currentVoters
+					.map((voter) => {
+						if (voter.id === userId) {
+							return { ...voter, votes: Math.max(0, voter.votes + (isIncrease ? 1 : -1)) };
+						}
+						return voter;
+					})
+					.filter((voter) => voter.votes > 0);
 
-				console.log('Updated User Staked:', userStakedTokens.get(proposalId));
-				console.log('Updated Available Tokens:', userTokens);
+				if (!currentVoters.some((v) => v.id === userId) && isIncrease) {
+					const userData = $userQuery.data;
+					if (userData && typeof userData.name === 'string') {
+						updatedVoters.push({
+							id: userId,
+							name: userData.name,
+							votes: 1
+						});
+					}
+				}
+
+				newStore.set(proposalId, updatedVoters);
+				return newStore;
+			});
+
+			// Refresh queries to ensure data consistency
+			await Promise.all([$userTokensQuery.refetch(), $proposalsQuery.refetch()]);
+
+			// Force refresh of voters query
+			const query = $votersQueriesStore.get(proposalId);
+			if (query) {
+				const newQuery = createQuery({
+					operationName: 'getProposalVoters',
+					input: { proposalId },
+					enabled: true,
+					refetchInterval: 1000
+				});
+
+				newQuery.subscribe((queryResult) => {
+					const voters = queryResult?.data?.voters;
+					if (voters && Array.isArray(voters)) {
+						votersStore.update((store) => {
+							const newStore = new Map(store);
+							newStore.set(proposalId, voters);
+							return newStore;
+						});
+					}
+				});
+
+				$votersQueriesStore.set(proposalId, newQuery);
 			}
 		} catch (error) {
 			console.error('Failed to update vote:', error);
+			// Revert optimistic updates on error
+			userStakedTokens.set(proposalId, currentStaked);
+			userStakedTokens = new Map(userStakedTokens);
+
+			// Force refresh of voters query on error
+			const query = $votersQueriesStore.get(proposalId);
+			if (query) {
+				const newQuery = createQuery({
+					operationName: 'getProposalVoters',
+					input: { proposalId },
+					enabled: true,
+					refetchInterval: 1000
+				});
+				$votersQueriesStore.set(proposalId, newQuery);
+			}
 		}
 	}
 
@@ -629,7 +681,8 @@ HOW THIS SYSTEM WORKS:
 														</button>
 														<button
 															disabled={!$userQuery.data ||
-																(userStakedTokens.get(proposal.id) || 0) <= 0}
+																!getVotersForProposal(proposal.id).find((v) => v.id === userId)
+																	?.votes}
 															on:click|stopPropagation={() => handleVote(proposal.id, false)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>
@@ -689,37 +742,31 @@ HOW THIS SYSTEM WORKS:
 											{#if proposal.state === 'idea'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
-														{Math.round((proposal.votes_count / voteThreshold) * 100)}%
+														{proposal.votes_count}
 													</p>
 													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 														<div
 															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: {Math.min(
-																100,
-																Math.round((proposal.votes_count / voteThreshold) * 100)
-															)}%"
+															style="width: 100%"
 														/>
 													</div>
 													<p class="text-sm text-tertiary-300">
-														{proposal.votes_count} / {voteThreshold} votes
+														{proposal.votes_count} votes
 													</p>
 												</div>
 											{:else if proposal.state === 'draft'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
-														{Math.round((proposal.votes_count / DRAFT_VOTE_THRESHOLD) * 100)}%
+														{proposal.votes_count}
 													</p>
 													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 														<div
 															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: {Math.min(
-																100,
-																Math.round((proposal.votes_count / DRAFT_VOTE_THRESHOLD) * 100)
-															)}%"
+															style="width: 100%"
 														/>
 													</div>
 													<p class="text-sm text-tertiary-300">
-														{proposal.votes_count} / {DRAFT_VOTE_THRESHOLD} votes
+														{proposal.votes_count} votes
 													</p>
 												</div>
 											{:else if proposal.state === 'decision'}
@@ -1039,7 +1086,8 @@ HOW THIS SYSTEM WORKS:
 													</button>
 													<button
 														disabled={!$userQuery.data ||
-															(userStakedTokens.get(proposal.id) || 0) <= 0}
+															!getVotersForProposal(proposal.id).find((v) => v.id === userId)
+																?.votes}
 														on:click|stopPropagation={() => handleVote(proposal.id, false)}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
@@ -1097,37 +1145,31 @@ HOW THIS SYSTEM WORKS:
 										{#if proposal.state === 'idea'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{Math.round((proposal.votes_count / voteThreshold) * 100)}%
+													{proposal.votes_count}
 												</p>
 												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 													<div
 														class="h-full transition-all duration-300 bg-tertiary-500"
-														style="width: {Math.min(
-															100,
-															Math.round((proposal.votes_count / voteThreshold) * 100)
-														)}%"
+														style="width: 100%"
 													/>
 												</div>
 												<p class="text-sm text-tertiary-300">
-													{proposal.votes_count} / {voteThreshold} votes
+													{proposal.votes_count} votes
 												</p>
 											</div>
 										{:else if proposal.state === 'draft'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{Math.round((proposal.votes_count / DRAFT_VOTE_THRESHOLD) * 100)}%
+													{proposal.votes_count}
 												</p>
 												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 													<div
 														class="h-full transition-all duration-300 bg-tertiary-500"
-														style="width: {Math.min(
-															100,
-															Math.round((proposal.votes_count / DRAFT_VOTE_THRESHOLD) * 100)
-														)}%"
+														style="width: 100%"
 													/>
 												</div>
 												<p class="text-sm text-tertiary-300">
-													{proposal.votes_count} / {DRAFT_VOTE_THRESHOLD} votes
+													{proposal.votes_count} votes
 												</p>
 											</div>
 										{:else if proposal.state === 'decision'}
@@ -1149,7 +1191,7 @@ HOW THIS SYSTEM WORKS:
 	</main>
 
 	<!-- Right Aside -->
-	<RightAsideProposals onProposalSelect={handleProposalSelect} {voteThreshold} />
+	<RightAsideProposals onProposalSelect={handleProposalSelect} voteThreshold={10} />
 </div>
 
 <style>
