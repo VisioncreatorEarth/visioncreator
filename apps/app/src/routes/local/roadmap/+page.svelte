@@ -2,39 +2,50 @@
 	import { writable } from 'svelte/store';
 	import type { Milestone, User } from '$lib/milestone';
 	import { fibonacciSequence, randomUsers } from '$lib/milestone';
+	import PersonalCampaign from '$lib/components/PersonalCampaign.svelte';
+	import MilestoneGrid from '$lib/components/MilestoneGrid.svelte';
+	import MilestoneTable from '$lib/components/MilestoneTable.svelte';
 
-	let gridColumns = 6;
+	// Adjust grid columns for better display of more milestones
+	let gridColumns = 5;
 	let visioncreators = writable(0);
 	let personalVCs = writable(0);
 	let personalEarnings = writable(0);
 	let currentView = writable('grid');
 
-	const startProvision = 70;
-	const endProvision = 20;
-	const platformFee = 20;
+	// Token per VC values from the spreadsheet
+	const tokenPerVCValues = [
+		1000, 1000, 1000, 25, 20, 18, 12.5, 9.62, 7.14, 5.88, 4.55, 3.57, 2.66, 1.94, 1.39, 0.98, 0.69,
+		0.48, 0.33, 0.23, 0.33, 0.24, 0.17, 0.12, 0.09, 0.06, 0.04, 0.03, 0.02, 0.02
+	];
+
+	// Total tokens for each milestone
+	const totalTokensValues = [
+		26300, 27600, 28900, 28965, 29043, 29160, 29290, 29453, 29648, 29908, 30233, 30645, 31143,
+		31730, 32411, 33190, 34075, 35072, 36189, 37435, 40341, 43702, 47594, 52104, 57340, 63430,
+		70530, 78828, 88553, 99984
+	];
+
+	// Token price for each milestone
+	const tokenPriceValues = [
+		1.0, 1.0, 1.0, 14.6, 18.25, 20.28, 29.2, 37.96, 51.1, 62.05, 80.3, 102.33, 137.21, 188.33,
+		262.83, 371.33, 529.47, 760.29, 1097.65, 1591.31, 1104.86, 1545.07, 2159.45, 3014.71, 4202.02,
+		5845.44, 8113.09, 11231.84, 15506.54, 21345.03
+	];
 
 	const fibonacciMilestones: Milestone[] = [];
 
 	fibonacciSequence.forEach((value, index) => {
-		const poolAmount = value * 30;
-
-		const provisionPercentage =
-			startProvision -
-			(startProvision - endProvision) *
-				(1 - Math.exp((-4 * index) / (fibonacciSequence.length - 1)));
-
-		const platformFeeAmount = (poolAmount * platformFee) / 100;
-		const remainingPool = poolAmount - platformFeeAmount;
-		const vcPool = (remainingPool * provisionPercentage) / 100;
-		const startupFund = remainingPool - vcPool;
-
 		fibonacciMilestones.push({
 			value,
-			poolAmount,
-			provisionPercentage,
-			startupFund,
-			platformFeeAmount,
-			vcPool
+			poolAmount: Math.round(value * 365), // Round to remove decimal places
+			tokenPerVC: tokenPerVCValues[index],
+			totalTokens: totalTokensValues[index],
+			tokenPrice: tokenPriceValues[index],
+			provisionPercentage: 0,
+			startupFund: 0,
+			platformFeeAmount: 0,
+			vcPool: 0
 		});
 	});
 
@@ -80,7 +91,7 @@
 		personalInspirationsCount = 0;
 	}
 
-	function handlePersonalSimulation({ detail }) {
+	function handlePersonalSimulation({ detail }: { detail: { amount: number } }) {
 		const { amount } = detail;
 		visioncreators.update((value) => value + amount);
 		personalVCs.update((value) => value + amount);
@@ -101,40 +112,36 @@
 
 	function updatePersonalEarnings() {
 		const currentMilestoneIndex = fibonacciMilestones.findIndex((m) => m.value > $visioncreators);
-		const currentMilestone =
-			fibonacciMilestones[currentMilestoneIndex - 1] || fibonacciMilestones[0];
-		const earnPerInvite = currentMilestone ? currentMilestone.vcPool / currentMilestone.value : 0;
-		personalEarnings.set(earnPerInvite * $personalVCs);
+		personalEarnings.set($personalVCs);
 	}
 
 	$: {
 		updatePersonalEarnings();
 	}
 
-	$: currentEarnPerInspiration = (() => {
-		const currentMilestoneIndex = fibonacciMilestones.findIndex((m) => m.value > $visioncreators);
-		const nextMilestone =
-			fibonacciMilestones[currentMilestoneIndex] || fibonacciMilestones[currentMilestoneIndex];
-		return nextMilestone ? nextMilestone.vcPool / nextMilestone.value : 0;
-	})();
+	$: currentEarnPerInspiration = 1; // Simplified to 1:1 ratio
 </script>
 
-<main class="flex w-screen h-screen bg-surface-900 text-surface-50 overflow-hidden">
-	<div class="flex-grow overflow-auto p-4">
-		<PersonalCampaign
-			personalVCs={$personalVCs}
-			personalEarnings={$personalEarnings}
-			{currentEarnPerInspiration}
-			on:simulate={handlePersonalSimulation}
-		/>
+<main class="flex w-screen h-screen overflow-hidden bg-surface-900 text-surface-50">
+	<div class="flex-grow p-4 overflow-auto">
+		<div id="pinme">
+			<PersonalCampaign
+				personalVCs={$personalVCs}
+				personalEarnings={$personalEarnings}
+				{currentEarnPerInspiration}
+				on:simulate={handlePersonalSimulation}
+				on:reset={resetGlobalVC}
+				on:random={handleGlobalVCChange}
+			/>
 
-		<div class="mb-4">
-			<button
-				class="btn btn-sm variant-ghost-secondary"
-				on:click={() => currentView.update((v) => (v === 'grid' ? 'table' : 'grid'))}
-			>
-				Switch to {$currentView === 'grid' ? 'Table' : 'Grid'} View
-			</button>
+			<div class="mb-4">
+				<button
+					class="btn btn-sm variant-ghost-secondary"
+					on:click={() => currentView.update((v) => (v === 'grid' ? 'table' : 'grid'))}
+				>
+					Switch to {$currentView === 'grid' ? 'Table' : 'Grid'} View
+				</button>
+			</div>
 		</div>
 
 		{#if $currentView === 'grid'}
@@ -148,15 +155,4 @@
 			<MilestoneTable milestones={fibonacciMilestones} {states} />
 		{/if}
 	</div>
-	<aside class="w-64 bg-surface-800 flex flex-col p-4">
-		<MilestoneRecentUsers {recentUsers} />
-		<div class="mt-4">
-			<div class="grid grid-cols-2 gap-2 w-full">
-				<button on:click={resetGlobalVC} class="btn btn-sm variant-ghost-error"> Reset </button>
-				<button on:click={handleGlobalVCChange} class="btn btn-sm variant-ghost-primary">
-					+Random
-				</button>
-			</div>
-		</div>
-	</aside>
 </main>

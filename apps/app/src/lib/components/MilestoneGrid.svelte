@@ -8,16 +8,20 @@
 	export let gridColumns: number;
 </script>
 
-<div
-	class="grid gap-4 w-full box-border"
-	style="grid-template-columns: repeat({gridColumns}, 1fr);"
->
-	{#each milestones as milestone, index (milestone.value)}
-		<MilestoneCard
-			{milestone}
-			state={states[index]}
-			{visioncreators}
-			previousValue={milestones[index - 1]?.value || 0}
-		/>
-	{/each}
+<div class="flex flex-col w-full">
+	<div
+		class="box-border grid w-full gap-4"
+		style="grid-template-columns: repeat({gridColumns}, 1fr);"
+	>
+		{#each milestones as milestone, index (milestone.value)}
+			<MilestoneCard
+				{milestone}
+				state={states[index]}
+				{visioncreators}
+				previousValue={milestones[index - 1]?.value || 0}
+			/>
+		{/each}
+	</div>
+	<!-- Spacer for better visibility of last items when scrolling -->
+	<div class="h-32" />
 </div>

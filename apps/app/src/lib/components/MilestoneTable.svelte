@@ -5,26 +5,17 @@
 
 	export let milestones: Milestone[];
 	export let states: string[];
-
-	function calculatePercentage(value: number, total: number): string {
-		return ((value / total) * 100).toFixed(2) + '%';
-	}
-
-	function calculateEarnPerInvite(vcPool: number, value: number): string {
-		return formatCurrency((vcPool || 0) / value) + '/m';
-	}
 </script>
 
 <div class="overflow-x-auto">
-	<table class="table table-compact w-full">
+	<table class="table w-full table-compact">
 		<thead>
 			<tr>
-				<th>Milestone</th>
+				<th>Visioncreators</th>
 				<th>Pool Amount</th>
-				<th>VC Pool</th>
-				<th>Startup Fund</th>
-				<th>Platform Fee</th>
-				<th>Earn Per Invite</th>
+				<th>Tokens per VC</th>
+				<th>Total Tokens</th>
+				<th>Token Price</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -32,92 +23,29 @@
 				{#if states[index] === 'completed'}
 					<tr class="variant-ghost-success">
 						<td class="font-bold">{milestone.value.toLocaleString()}</td>
-						<td>{formatCurrency(milestone.poolAmount)}</td>
-						<td>
-							{formatCurrency(milestone.vcPool || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.vcPool || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{formatCurrency(milestone.startupFund || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.startupFund || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{formatCurrency(milestone.platformFeeAmount || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.platformFeeAmount || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{calculateEarnPerInvite(milestone.vcPool || 0, milestone.value)}
-						</td>
+						<td>{formatCurrency(milestone.poolAmount).split('.')[0]}</td>
+						<td>{milestone.tokenPerVC}</td>
+						<td>{milestone.totalTokens.toLocaleString()}</td>
+						<td>{formatCurrency(milestone.tokenPrice)}</td>
 					</tr>
 				{:else if states[index] === 'in-progress'}
 					<tr class="variant-ghost-primary">
 						<td class="font-bold">{milestone.value.toLocaleString()}</td>
-						<td>{formatCurrency(milestone.poolAmount)}</td>
-						<td>
-							{formatCurrency(milestone.vcPool || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.vcPool || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{formatCurrency(milestone.startupFund || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.startupFund || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{formatCurrency(milestone.platformFeeAmount || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.platformFeeAmount || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{calculateEarnPerInvite(milestone.vcPool || 0, milestone.value)}
-						</td>
+						<td>{formatCurrency(milestone.poolAmount).split('.')[0]}</td>
+						<td>{milestone.tokenPerVC}</td>
+						<td>{milestone.totalTokens.toLocaleString()}</td>
+						<td>{formatCurrency(milestone.tokenPrice)}</td>
 					</tr>
 				{:else}
 					<tr class="variant-ghost-surface">
 						<td>
-							<Icon icon="mdi:lock" class="text-xl mr-2" />
+							<Icon icon="mdi:lock" class="mr-2 text-xl" />
 							{milestone.value.toLocaleString()}
 						</td>
-						<td>{formatCurrency(milestone.poolAmount)}</td>
-						<td>
-							{formatCurrency(milestone.vcPool || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.vcPool || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{formatCurrency(milestone.startupFund || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.startupFund || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{formatCurrency(milestone.platformFeeAmount || 0)}
-							<br />
-							<span class="text-xs">
-								({calculatePercentage(milestone.platformFeeAmount || 0, milestone.poolAmount)})
-							</span>
-						</td>
-						<td>
-							{calculateEarnPerInvite(milestone.vcPool || 0, milestone.value)}
-						</td>
+						<td>{formatCurrency(milestone.poolAmount).split('.')[0]}</td>
+						<td>{milestone.tokenPerVC}</td>
+						<td>{milestone.totalTokens.toLocaleString()}</td>
+						<td>{formatCurrency(milestone.tokenPrice)}</td>
 					</tr>
 				{/if}
 			{/each}

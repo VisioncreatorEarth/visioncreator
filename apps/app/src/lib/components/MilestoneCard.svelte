@@ -16,6 +16,10 @@
 		class="variant-ghost-success flex flex-col justify-center items-center p-4 transition-all duration-200 hover:scale-105 relative overflow-hidden min-h-[140px] rounded-lg shadow-lg"
 	>
 		<span class="text-3xl font-bold text-surface-50">{milestone.value.toLocaleString()}</span>
+		<span class="text-xs mt-2 text-surface-200">Tokens per VC: {milestone.tokenPerVC}</span>
+		<span class="text-xs mt-1 text-surface-200"
+			>Token Price: {formatCurrency(milestone.tokenPrice)}</span
+		>
 	</div>
 {:else if state === 'in-progress'}
 	<div
@@ -34,9 +38,10 @@
 				>{(milestone.value - visioncreators).toLocaleString()} left</span
 			>
 			<span class="text-xs text-center mt-1 text-surface-200">
-				earn <span class="text-success-500"
-					>+{formatCurrency((milestone.vcPool || 0) / milestone.value)}/m</span
-				> <br />per inspiration
+				Tokens per VC: {milestone.tokenPerVC}
+			</span>
+			<span class="text-xs text-center mt-1 text-surface-200">
+				Token Price: {formatCurrency(milestone.tokenPrice)}
 			</span>
 		</div>
 	</div>
@@ -58,25 +63,21 @@
 				<Icon icon="mdi:lock" class="text-4xl mb-2 text-surface-400" />
 				<span class="text-2xl font-bold text-surface-400">{milestone.value.toLocaleString()}</span>
 				<span class="text-xs text-center mt-1 text-surface-400">
-					earn {formatCurrency((milestone.vcPool || 0) / milestone.value)}/m <br />per inspiration
+					Tokens per VC: {milestone.tokenPerVC}
 				</span>
 			</div>
 		{:else}
 			<div class="flex flex-col items-center w-full">
+				<span class="text-xs mt-1 text-surface-400">VCs: {milestone.value.toLocaleString()}</span>
 				<span class="text-xs mt-1 text-surface-400"
-					>Total pool: {formatCurrency(milestone.poolAmount).split('.')[0]}</span
+					>Pool: {formatCurrency(milestone.poolAmount).split('.')[0]}</span
 				>
 				<span class="text-xs mt-1 text-surface-400"
-					>Platform fee: {formatCurrency(milestone.platformFeeAmount || 0).split('.')[0]}</span
+					>Total Tokens: {milestone.totalTokens.toLocaleString()}</span
 				>
+				<span class="text-xs mt-1 text-surface-400">Tokens per VC: {milestone.tokenPerVC}</span>
 				<span class="text-xs mt-1 text-surface-400"
-					>Startup fund: {formatCurrency(milestone.startupFund || 0).split('.')[0]}</span
-				>
-				<span class="text-xs mt-1 text-surface-400"
-					>VC pool: {formatCurrency(milestone.vcPool || 0).split('.')[0]}</span
-				>
-				<span class="text-xs mt-1 text-surface-400"
-					>VC percentage: {milestone.provisionPercentage.toFixed(2)}%</span
+					>Token Price: {formatCurrency(milestone.tokenPrice)}</span
 				>
 			</div>
 		{/if}
