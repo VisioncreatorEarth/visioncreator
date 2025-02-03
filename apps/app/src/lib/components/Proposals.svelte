@@ -97,9 +97,11 @@ HOW THIS SYSTEM WORKS:
 		transaction_type: 'stake' | 'unstake';
 	}
 
+	// Add interface for Profile
 	interface Profile {
 		id: string;
 		name: string | null;
+		onboarded: boolean;
 	}
 
 	interface VoterInfo {
@@ -600,6 +602,58 @@ HOW THIS SYSTEM WORKS:
 				onboarded: $userQuery.data.onboarded as boolean
 		  }
 		: null;
+
+	// Add author profile query store
+	$: authorProfileQuery = createQuery({
+		operationName: 'getProfile',
+		input: { userId: expandedProposal?.author || '' },
+		enabled: !!expandedProposal?.author
+	});
+
+	// Add expanded proposal reactive variable
+	$: expandedProposal = expandedProposalId
+		? $proposalsQuery.data?.proposals.find((p) => p.id === expandedProposalId)
+		: null;
+
+	// Add author profile reactive variable
+	$: authorProfile = $authorProfileQuery.data as Profile | undefined;
+
+	// Add new proposal form state
+	let showNewProposalForm = false;
+	let newProposal = {
+		title: '',
+		details: ''
+	};
+
+	// Add create proposal mutation
+	const createProposalMutation = createMutation({
+		operationName: 'createProposal'
+	});
+
+	// Add handleCreateProposal function
+	async function handleCreateProposal() {
+		if (!newProposal.title || !newProposal.details) return;
+
+		try {
+			const result = await $createProposalMutation.mutateAsync({
+				title: newProposal.title,
+				details: newProposal.details
+			});
+
+			if (result?.success) {
+				// Reset form
+				newProposal = {
+					title: '',
+					details: ''
+				};
+				showNewProposalForm = false;
+				// Refresh proposals
+				await $proposalsQuery.refetch();
+			}
+		} catch (error) {
+			console.error('Failed to create proposal:', error);
+		}
+	}
 </script>
 
 <div class="relative flex w-full h-full overflow-hidden">
@@ -651,6 +705,80 @@ HOW THIS SYSTEM WORKS:
 							</button>
 						{/each}
 					</div>
+				</div>
+			</div>
+
+			<!-- Add this right after the tabs bar, before the proposals list -->
+			<div class="max-w-5xl mx-auto">
+				<div class="px-4 py-4">
+					{#if !showNewProposalForm}
+						<button
+							on:click={() => (showNewProposalForm = true)}
+							class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
+						>
+							<Icon icon="mdi:plus" class="w-5 h-5" />
+							Add New Idea
+						</button>
+					{:else}
+						<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
+							<div class="flex items-center justify-between mb-4">
+								<h3 class="text-lg font-medium text-tertiary-100">Create New Idea</h3>
+								<button
+									on:click={() => (showNewProposalForm = false)}
+									class="p-2 rounded-lg hover:bg-surface-700/50"
+								>
+									<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
+								</button>
+							</div>
+							<form on:submit|preventDefault={handleCreateProposal} class="space-y-4">
+								<div>
+									<label for="title" class="block mb-2 text-sm font-medium text-tertiary-200">
+										Title
+									</label>
+									<input
+										type="text"
+										id="title"
+										bind:value={newProposal.title}
+										class="w-full px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
+										placeholder="Enter your idea title"
+										required
+									/>
+								</div>
+								<div>
+									<label for="details" class="block mb-2 text-sm font-medium text-tertiary-200">
+										Details
+									</label>
+									<textarea
+										id="details"
+										bind:value={newProposal.details}
+										class="w-full h-32 px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
+										placeholder="Describe your idea in detail (Markdown supported)"
+										required
+									/>
+								</div>
+								<div class="flex justify-end gap-3">
+									<button
+										type="button"
+										on:click={() => (showNewProposalForm = false)}
+										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-surface-700 text-tertiary-300"
+									>
+										Cancel
+									</button>
+									<button
+										type="submit"
+										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
+										disabled={$createProposalMutation.isLoading}
+									>
+										{#if $createProposalMutation.isLoading}
+											Creating...
+										{:else}
+											Create Proposal
+										{/if}
+									</button>
+								</div>
+							</form>
+						</div>
+					{/if}
 				</div>
 			</div>
 
@@ -917,22 +1045,16 @@ HOW THIS SYSTEM WORKS:
 														Author
 													</h4>
 													<div class="flex items-center justify-end gap-3">
-														<div class="text-right">
-															<p class="text-sm font-medium text-tertiary-100">
-																{proposal.author?.name || 'Not assigned'}
-															</p>
-															<p class="text-xs text-tertiary-300">Creator</p>
-														</div>
-														<div class="flex-shrink-0">
-															<Avatar
-																me={{
-																	data: { seed: proposal.author?.name || proposal.author },
-																	design: { highlight: false },
-																	size: 'sm'
-																}}
-																class="rounded-full"
-															/>
-														</div>
+														<p class="text-sm font-medium text-tertiary-100">
+															{authorProfile?.name || 'Not assigned'}
+														</p>
+														<Avatar
+															me={{
+																data: { seed: authorProfile?.name || proposal.author || '' },
+																design: { highlight: false },
+																size: 'sm'
+															}}
+														/>
 													</div>
 												</div>
 
@@ -1170,22 +1292,16 @@ HOW THIS SYSTEM WORKS:
 														Author
 													</h4>
 													<div class="flex items-center justify-end gap-3">
-														<div class="text-right">
-															<p class="text-sm font-medium text-tertiary-100">
-																{proposal.author?.name || 'Not assigned'}
-															</p>
-															<p class="text-xs text-tertiary-300">Creator</p>
-														</div>
-														<div class="flex-shrink-0">
-															<Avatar
-																me={{
-																	data: { seed: proposal.author?.name || proposal.author },
-																	design: { highlight: false },
-																	size: 'sm'
-																}}
-																class="rounded-full"
-															/>
-														</div>
+														<p class="text-sm font-medium text-tertiary-100">
+															{authorProfile?.name || 'Not assigned'}
+														</p>
+														<Avatar
+															me={{
+																data: { seed: authorProfile?.name || proposal.author || '' },
+																design: { highlight: false },
+																size: 'sm'
+															}}
+														/>
 													</div>
 												</div>
 
