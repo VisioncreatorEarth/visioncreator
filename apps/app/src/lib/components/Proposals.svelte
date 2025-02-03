@@ -654,6 +654,15 @@ HOW THIS SYSTEM WORKS:
 			console.error('Failed to create proposal:', error);
 		}
 	}
+
+	// Add this helper function after other utility functions
+	function canUnstakeVote(proposal: Proposal, voter?: VoterInfo): boolean {
+		if (!voter) return false;
+		// If user is the author and has only 1 vote left, prevent unstaking
+		if (proposal.author === voter.id && voter.votes <= 1) return false;
+		// Otherwise allow unstaking if they have votes
+		return voter.votes > 0;
+	}
 </script>
 
 <div class="relative flex w-full h-full overflow-hidden">
@@ -668,61 +677,66 @@ HOW THIS SYSTEM WORKS:
 	<main class="flex-grow h-full overflow-hidden md:ml-64 md:mr-80">
 		<div class="h-full">
 			<!-- Tabs Bar - Fixed to top -->
-			<div
-				id="proposal-tabs"
-				class="sticky top-0 z-10 w-full px-4 py-4 bg-surface-800/50 backdrop-blur-sm"
-			>
-				<div class="max-w-5xl mx-auto">
-					<div class="flex items-center gap-2">
-						{#if expandedProposalId}
+			<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
+				<div class="max-w-5xl mx-auto px-4 py-4">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							{#if expandedProposalId}
+								<button
+									on:click={() => {
+										expandedProposalId = null;
+										goto(`/me?view=Proposals`, { replaceState: true });
+									}}
+									class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+								>
+									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
+									Back to List
+								</button>
+							{/if}
+							{#each PROPOSAL_TABS as state}
+								<button
+									class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
+									state
+										? getStateBgColor(state) + ' ' + getStateColor(state)
+										: 'hover:bg-surface-700/20 text-surface-300'}"
+									on:click={() => {
+										expandedProposalId = null;
+										activeTab.set(state);
+									}}
+									aria-selected={$activeTab === state}
+								>
+									<div class="flex items-center gap-2">
+										<Icon icon={getStateIcon(state)} class="w-4 h-4" />
+										{getTabLabel(state)}
+									</div>
+								</button>
+							{/each}
+						</div>
+						{#if !expandedProposalId}
 							<button
-								on:click={() => {
-									expandedProposalId = null;
-									goto(`/me?view=Proposals`, { replaceState: true });
-								}}
-								class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+								on:click={() => (showNewProposalForm = true)}
+								class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
 							>
-								<Icon icon="mdi:arrow-left" class="w-5 h-5" />
-								Back to List
+								<Icon icon="mdi:plus" class="w-5 h-5" />
+								Add New Idea
 							</button>
 						{/if}
-						{#each PROPOSAL_TABS as state}
-							<button
-								class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
-								state
-									? getStateBgColor(state) + ' ' + getStateColor(state)
-									: 'hover:bg-surface-700/20 text-surface-300'}"
-								on:click={() => {
-									expandedProposalId = null;
-									activeTab.set(state);
-								}}
-								aria-selected={$activeTab === state}
-							>
-								<div class="flex items-center gap-2">
-									<Icon icon={getStateIcon(state)} class="w-4 h-4" />
-									{getTabLabel(state)}
-								</div>
-							</button>
-						{/each}
 					</div>
 				</div>
 			</div>
 
-			<!-- Add this right after the tabs bar, before the proposals list -->
-			<div class="max-w-5xl mx-auto">
-				<div class="px-4 py-4">
-					{#if !showNewProposalForm}
-						<button
-							on:click={() => (showNewProposalForm = true)}
-							class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
-						>
-							<Icon icon="mdi:plus" class="w-5 h-5" />
-							Add New Idea
-						</button>
-					{:else}
+			<!-- Update the form to show token requirement -->
+			{#if showNewProposalForm}
+				<div class="max-w-5xl mx-auto">
+					<div class="px-4 py-4">
 						<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
 							<div class="flex items-center justify-between mb-4">
-								<h3 class="text-lg font-medium text-tertiary-100">Create New Idea</h3>
+								<div>
+									<h3 class="text-lg font-medium text-tertiary-100">Create New Idea</h3>
+									<p class="mt-1 text-sm text-tertiary-300">
+										Creating a new idea requires 1 token for initial stake
+									</p>
+								</div>
 								<button
 									on:click={() => (showNewProposalForm = false)}
 									class="p-2 rounded-lg hover:bg-surface-700/50"
@@ -730,6 +744,23 @@ HOW THIS SYSTEM WORKS:
 									<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
 								</button>
 							</div>
+
+							<!-- Add token balance warning if insufficient -->
+							{#if $userTokensQuery.data?.balance?.balance < 1}
+								<div class="p-4 mb-4 border rounded-lg border-error-500/20 bg-error-500/10">
+									<div class="flex items-start gap-3">
+										<Icon icon="mdi:alert-circle" class="w-5 h-5 mt-0.5 text-error-400" />
+										<div>
+											<p class="font-medium text-error-400">Insufficient Tokens</p>
+											<p class="mt-1 text-sm text-error-300">
+												You need at least 1 token to create a new idea. Your current balance: {$userTokensQuery
+													.data?.balance?.balance || 0} tokens
+											</p>
+										</div>
+									</div>
+								</div>
+							{/if}
+
 							<form on:submit|preventDefault={handleCreateProposal} class="space-y-4">
 								<div>
 									<label for="title" class="block mb-2 text-sm font-medium text-tertiary-200">
@@ -767,20 +798,21 @@ HOW THIS SYSTEM WORKS:
 									<button
 										type="submit"
 										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
-										disabled={$createProposalMutation.isLoading}
+										disabled={$createProposalMutation.isLoading ||
+											($userTokensQuery.data?.balance?.balance || 0) < 1}
 									>
 										{#if $createProposalMutation.isLoading}
 											Creating...
 										{:else}
-											Create Proposal
+											Create Proposal (1 token)
 										{/if}
 									</button>
 								</div>
 							</form>
 						</div>
-					{/if}
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Scrollable Content Area -->
 			<div class="h-[calc(100vh-4rem)] overflow-y-auto">
@@ -852,9 +884,12 @@ HOW THIS SYSTEM WORKS:
 
 															<button
 																disabled={!$userQuery.data ||
-																	!getVotersForProposal(proposal.id).find(
-																		(v) => v.id === $userQuery.data?.id
-																	)?.votes}
+																	!canUnstakeVote(
+																		proposal,
+																		getVotersForProposal(proposal.id).find(
+																			(v) => v.id === $userQuery.data?.id
+																		)
+																	)}
 																on:click|stopPropagation={() => handleVote(proposal.id, false)}
 																class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 															>
@@ -1172,9 +1207,12 @@ HOW THIS SYSTEM WORKS:
 
 														<button
 															disabled={!$userQuery.data ||
-																!getVotersForProposal(proposal.id).find(
-																	(v) => v.id === $userQuery.data?.id
-																)?.votes}
+																!canUnstakeVote(
+																	proposal,
+																	getVotersForProposal(proposal.id).find(
+																		(v) => v.id === $userQuery.data?.id
+																	)
+																)}
 															on:click|stopPropagation={() => handleVote(proposal.id, false)}
 															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 														>

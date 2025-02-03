@@ -89,7 +89,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Update token balance update function
+-- Update token balance update function to prevent authors from removing their last vote
 CREATE OR REPLACE FUNCTION update_token_balances()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -143,6 +143,27 @@ BEGIN
             WHERE id = NEW.proposal_id;
         
         WHEN 'unstake' THEN
+            -- Check if this is an author trying to remove their last vote
+            DECLARE
+                v_is_author BOOLEAN;
+                v_current_votes INT;
+            BEGIN
+                SELECT 
+                    author = NEW.from_user_id,
+                    vote_count
+                INTO 
+                    v_is_author,
+                    v_current_votes
+                FROM user_proposal_votes
+                WHERE user_id = NEW.from_user_id
+                AND proposal_id = NEW.proposal_id;
+
+                -- Prevent author from removing their last vote
+                IF v_is_author AND v_current_votes <= 1 THEN
+                    RAISE EXCEPTION 'Authors cannot remove their last vote';
+                END IF;
+            END;
+
             -- Move tokens from staked_balance back to balance
             UPDATE token_balances
             SET balance = balance + NEW.amount,
@@ -299,4 +320,68 @@ CREATE TRIGGER messages_updated_at
     EXECUTE FUNCTION update_updated_at();
 
 -- Remove old index if it exists
-DROP INDEX IF EXISTS messages_proposal_id_idx; 
+DROP INDEX IF EXISTS messages_proposal_id_idx;
+
+-- Add after other function definitions
+CREATE OR REPLACE FUNCTION create_proposal_with_stake(
+    p_title TEXT,
+    p_details TEXT,
+    p_author UUID,
+    p_stake_amount BIGINT
+) RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_proposal proposals;
+    v_transaction token_transactions;
+    v_user_balance BIGINT;
+BEGIN
+    -- Check user balance
+    SELECT balance INTO v_user_balance
+    FROM token_balances
+    WHERE user_id = p_author;
+
+    IF v_user_balance < p_stake_amount THEN
+        RAISE EXCEPTION 'Insufficient tokens for initial stake';
+    END IF;
+
+    -- Create proposal
+    INSERT INTO proposals (
+        title,
+        details,
+        author,
+        state,
+        votes_count,
+        total_tokens_staked
+    ) VALUES (
+        p_title,
+        p_details,
+        p_author,
+        'idea',
+        1, -- Initial vote from author
+        p_stake_amount
+    )
+    RETURNING * INTO v_proposal;
+
+    -- Create stake transaction
+    INSERT INTO token_transactions (
+        transaction_type,
+        from_user_id,
+        amount,
+        proposal_id
+    ) VALUES (
+        'stake',
+        p_author,
+        p_stake_amount,
+        v_proposal.id
+    )
+    RETURNING * INTO v_transaction;
+
+    -- Return combined result
+    RETURN json_build_object(
+        'proposal', v_proposal,
+        'token_transaction', v_transaction
+    );
+END;
+$$; 
