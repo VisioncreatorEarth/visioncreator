@@ -181,13 +181,13 @@ HOW THIS COMPONENT WORKS:
 		on:scroll={handleScroll}
 		class="absolute inset-0 overflow-y-auto"
 	>
-		<div class="p-4 space-y-2 pb-20">
+		<div class="p-4 pb-20 space-y-2">
 			{#if isLoading && !messages.length}
 				<div class="flex items-center justify-center h-32">
 					<div class="text-sm text-tertiary-300">Loading messages...</div>
 				</div>
 			{:else if error}
-				<div class="p-2 text-sm text-error-400 bg-error-500/10 rounded-lg">
+				<div class="p-2 text-sm rounded-lg text-error-400 bg-error-500/10">
 					{error}
 				</div>
 			{:else if !messages.length}
@@ -244,7 +244,7 @@ HOW THIS COMPONENT WORKS:
 
 	<!-- Message Input -->
 	<div
-		class="absolute bottom-0 left-0 right-0 flex gap-2 p-3 border-t border-surface-700/50 bg-surface-900/95 backdrop-blur-sm"
+		class="absolute bottom-0 left-0 right-0 flex gap-2 p-3 border-t border-surface-700/50 bg-surface-800/50 backdrop-blur-sm"
 	>
 		<input
 			type="text"

@@ -672,7 +672,7 @@ HOW THIS SYSTEM WORKS:
 									<div class="sticky top-0 z-10 flex items-stretch bg-surface-800/50">
 										<!-- Left side: Votes -->
 										<div
-											class="flex items-center justify-between w-40 shrink-0 p-4 md:p-6 md:border-r border-surface-700/50"
+											class="flex items-center justify-between w-40 p-4 shrink-0 md:p-6 md:border-r border-surface-700/50"
 										>
 											{#if proposal.state === 'idea' || proposal.state === 'draft'}
 												<div class="flex items-center justify-center w-full gap-4">
@@ -911,6 +911,60 @@ HOW THIS SYSTEM WORKS:
 											class="w-[280px] shrink-0 {getStateBgColor(proposal.state)} overflow-y-auto"
 										>
 											<div class="p-6 space-y-6">
+												<!-- Author -->
+												<div>
+													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+														Author
+													</h4>
+													<div class="flex items-center justify-end gap-3">
+														<div class="text-right">
+															<p class="text-sm font-medium text-tertiary-100">
+																{proposal.author?.name || 'Not assigned'}
+															</p>
+															<p class="text-xs text-tertiary-300">Creator</p>
+														</div>
+														<div class="flex-shrink-0">
+															<Avatar
+																me={{
+																	data: { seed: proposal.author?.name || proposal.author },
+																	design: { highlight: false },
+																	size: 'sm'
+																}}
+																class="rounded-full"
+															/>
+														</div>
+													</div>
+												</div>
+
+												<!-- Responsible Person -->
+												{#if proposal.responsible}
+													<div>
+														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+															Responsible
+														</h4>
+														<div class="flex items-center justify-end gap-3">
+															<div class="text-right">
+																<p class="text-sm font-medium text-tertiary-100">
+																	{proposal.responsible?.name || 'Not assigned'}
+																</p>
+																<p class="text-xs text-tertiary-300">Lead</p>
+															</div>
+															<div class="flex-shrink-0">
+																<Avatar
+																	me={{
+																		data: {
+																			seed: proposal.responsible?.name || proposal.responsible
+																		},
+																		design: { highlight: false },
+																		size: 'sm'
+																	}}
+																	class="rounded-full"
+																/>
+															</div>
+														</div>
+													</div>
+												{/if}
+
 												<!-- Pain Point -->
 												<div>
 													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
@@ -947,7 +1001,7 @@ HOW THIS SYSTEM WORKS:
 								>
 									<!-- Left side: Votes -->
 									<div
-										class="flex items-center justify-between w-40 shrink-0 p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
+										class="flex items-center justify-between w-40 p-4 border-b shrink-0 md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
 										{#if proposal.state === 'idea' || proposal.state === 'draft'}
 											<div class="flex items-center justify-center w-full gap-4">
@@ -1110,6 +1164,60 @@ HOW THIS SYSTEM WORKS:
 											class="w-[280px] shrink-0 {getStateBgColor(proposal.state)} overflow-y-auto"
 										>
 											<div class="p-6 space-y-6">
+												<!-- Author -->
+												<div>
+													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+														Author
+													</h4>
+													<div class="flex items-center justify-end gap-3">
+														<div class="text-right">
+															<p class="text-sm font-medium text-tertiary-100">
+																{proposal.author?.name || 'Not assigned'}
+															</p>
+															<p class="text-xs text-tertiary-300">Creator</p>
+														</div>
+														<div class="flex-shrink-0">
+															<Avatar
+																me={{
+																	data: { seed: proposal.author?.name || proposal.author },
+																	design: { highlight: false },
+																	size: 'sm'
+																}}
+																class="rounded-full"
+															/>
+														</div>
+													</div>
+												</div>
+
+												<!-- Responsible Person -->
+												{#if proposal.responsible}
+													<div>
+														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+															Responsible
+														</h4>
+														<div class="flex items-center justify-end gap-3">
+															<div class="text-right">
+																<p class="text-sm font-medium text-tertiary-100">
+																	{proposal.responsible?.name || 'Not assigned'}
+																</p>
+																<p class="text-xs text-tertiary-300">Lead</p>
+															</div>
+															<div class="flex-shrink-0">
+																<Avatar
+																	me={{
+																		data: {
+																			seed: proposal.responsible?.name || proposal.responsible
+																		},
+																		design: { highlight: false },
+																		size: 'sm'
+																	}}
+																	class="rounded-full"
+																/>
+															</div>
+														</div>
+													</div>
+												{/if}
+
 												<!-- Pain Point -->
 												<div>
 													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
