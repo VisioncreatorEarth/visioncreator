@@ -3,7 +3,7 @@ HOW THIS COMPONENT WORKS:
 
 This is the right aside area of the proposals view that:
 - Shows user profile and voting information using real user data from queryMe
-- Displays voted proposals list
+- Displays voted proposals list with quadratic voting information
 - Is collapsible on mobile with a toggle button
 - Uses Tailwind for responsive design
 -->
@@ -44,6 +44,13 @@ This is the right aside area of the proposals view that:
 		}>;
 	}
 
+	interface VoterInfo {
+		id: string;
+		name: string | null;
+		votes: number;
+		tokens: number;
+	}
+
 	// Add user data queries with proper typing
 	const userQuery = createQuery({
 		operationName: 'queryMe',
@@ -66,7 +73,7 @@ This is the right aside area of the proposals view that:
 	});
 
 	// Add new state for user votes
-	let userVotes = new Map<string, number>();
+	let userVotes = new Map<string, VoterInfo>();
 	let userTokens = 0;
 
 	// Update user tokens when data changes
@@ -78,6 +85,16 @@ This is the right aside area of the proposals view that:
 
 	function toggleMenu() {
 		isOpen = !isOpen;
+	}
+
+	// Calculate quadratic cost for next vote
+	function getNextVoteCost(currentVotes: number): number {
+		return Math.pow(currentVotes + 1, 2) - Math.pow(currentVotes, 2);
+	}
+
+	// Format vote information for display
+	function formatVoteInfo(votes: number, tokens: number): string {
+		return `${votes} votes (${tokens} tokens)`;
 	}
 </script>
 
@@ -143,8 +160,8 @@ This is the right aside area of the proposals view that:
 					<div class="p-4 border rounded-lg border-surface-700/50">
 						<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Voted Proposals</h4>
 						<div class="space-y-2">
-							{#each Array.from(userVotes.entries()) as [proposalId, votes]}
-								{#if votes > 0}
+							{#each Array.from(userVotes.entries()) as [proposalId, voteInfo]}
+								{#if voteInfo.votes > 0}
 									{@const proposal = $proposals.find((p) => p.id === proposalId)}
 									{#if proposal}
 										<div
@@ -163,11 +180,18 @@ This is the right aside area of the proposals view that:
 													icon={getStateIcon(proposal.state)}
 													class="w-4 h-4 {getStateColor(proposal.state)}"
 												/>
-												<p class="text-sm text-tertiary-300">{proposal.title}</p>
+												<div class="flex flex-col">
+													<p class="text-sm text-tertiary-300">{proposal.title}</p>
+													<p class="text-xs text-tertiary-400">
+														{formatVoteInfo(voteInfo.votes, voteInfo.tokens)}
+													</p>
+												</div>
 											</div>
-											<span class="text-sm font-medium {getStateColor(proposal.state)}">
-												{Math.round((proposal.votes / voteThreshold) * 100)}%
-											</span>
+											<div class="text-right">
+												<span class="text-sm font-medium {getStateColor(proposal.state)}">
+													Next: {getNextVoteCost(voteInfo.votes)}
+												</span>
+											</div>
 										</div>
 									{/if}
 								{/if}
@@ -179,3 +203,9 @@ This is the right aside area of the proposals view that:
 		</div>
 	{/if}
 </aside>
+
+<style>
+	:global(.proposal-card) {
+		@apply overflow-hidden rounded-xl bg-surface-900/50 border border-surface-700/50;
+	}
+</style>

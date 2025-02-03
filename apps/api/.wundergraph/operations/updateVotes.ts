@@ -16,8 +16,18 @@ interface TokenBalance {
 
 interface Proposal {
     state: 'idea' | 'draft' | 'decision';
-    votes_count: number;
-    total_tokens_staked: number;
+    vote_count: number;
+    token_count: number;
+}
+
+interface UserProposalVotes {
+    vote_count: number;
+    tokens_staked: number;
+}
+
+// Calculate quadratic cost for next vote
+function getQuadraticCost(currentVotes: number): number {
+    return Math.pow(currentVotes + 1, 2) - Math.pow(currentVotes, 2);
 }
 
 export default createOperation.mutation({
@@ -39,26 +49,35 @@ export default createOperation.mutation({
             throw new Error("User ID mismatch.");
         }
 
-        // Log current state before transaction
-        console.log('=== Vote Update Debug Log ===');
+        console.log('=== Quadratic Vote Update Debug Log ===');
         console.log('Action:', input.action);
         console.log('User ID:', input.userId);
         console.log('Proposal ID:', input.proposalId);
-        console.log('Amount:', input.amount);
 
-        // Get current proposal state
-        const { data: currentProposal } = await context.supabase
-            .from('proposals')
-            .select('state, votes_count, total_tokens_staked')
-            .eq('id', input.proposalId)
+        // Get user's current votes and tokens for this proposal
+        const { data: userVotes } = await context.supabase
+            .from('user_proposal_votes')
+            .select('vote_count, tokens_staked')
+            .eq('proposal_id', input.proposalId)
+            .eq('user_id', input.userId)
             .single();
 
-        if (!currentProposal) {
-            throw new Error("Proposal not found.");
+        const currentVotes = (userVotes as UserProposalVotes)?.vote_count || 0;
+        const currentTokens = (userVotes as UserProposalVotes)?.tokens_staked || 0;
+
+        console.log('Current Votes:', currentVotes);
+        console.log('Current Tokens Staked:', currentTokens);
+
+        // Calculate token cost for this action
+        let tokenAmount: number;
+        if (input.action === 'stake') {
+            tokenAmount = getQuadraticCost(currentVotes);
+        } else {
+            // For unstaking, calculate the cost of the last vote
+            tokenAmount = getQuadraticCost(currentVotes - 1);
         }
 
-        const proposal = currentProposal as Proposal;
-        console.log('Current Proposal State:', proposal);
+        console.log('Token Amount for Action:', tokenAmount);
 
         // Get user's current token balance
         const { data: userBalance } = await context.supabase
@@ -73,34 +92,12 @@ export default createOperation.mutation({
 
         const balance = userBalance as TokenBalance;
 
-        // Get user's current staked amount for this proposal
-        const { data: userTransactions } = await context.supabase
-            .from('token_transactions')
-            .select('*')
-            .eq('proposal_id', input.proposalId)
-            .eq('from_user_id', input.userId);
-
-        const typedTransactions = ((userTransactions || []) as { [key: string]: any }[]).map(tx => ({
-            id: tx.id,
-            transaction_type: tx.transaction_type,
-            amount: tx.amount,
-            proposal_id: tx.proposal_id,
-            from_user_id: tx.from_user_id,
-            created_at: tx.created_at
-        } as TokenTransaction));
-
-        const userStakedAmount = typedTransactions.reduce((total, tx) => {
-            return total + (tx.transaction_type === 'stake' ? tx.amount : -tx.amount);
-        }, 0);
-
-        console.log('User Current Staked Amount:', userStakedAmount);
-
         // Validate the action
-        if (input.action === 'stake' && balance.balance < input.amount) {
+        if (input.action === 'stake' && balance.balance < tokenAmount) {
             throw new Error("Insufficient token balance.");
         }
-        if (input.action === 'unstake' && userStakedAmount < input.amount) {
-            throw new Error("Insufficient staked amount.");
+        if (input.action === 'unstake' && currentVotes === 0) {
+            throw new Error("No votes to unstake.");
         }
 
         // Create transaction
@@ -110,7 +107,7 @@ export default createOperation.mutation({
                 transaction_type: input.action,
                 from_user_id: input.userId,
                 proposal_id: input.proposalId,
-                amount: input.amount,
+                amount: tokenAmount,
             })
             .select()
             .single();
@@ -121,25 +118,30 @@ export default createOperation.mutation({
         }
 
         // Check if proposal should transition from idea to draft
-        if (proposal.state === 'idea') {
-            const totalVotes = proposal.votes_count + (input.action === 'stake' ? input.amount : -input.amount);
-            if (totalVotes >= 10) {
-                // Transition to draft state
-                const { error: stateUpdateError } = await context.supabase
-                    .from('proposals')
-                    .update({ state: 'draft' })
-                    .eq('id', input.proposalId);
+        const { data: currentProposal } = await context.supabase
+            .from('proposals')
+            .select('state, vote_count')
+            .eq('id', input.proposalId)
+            .single();
 
-                if (stateUpdateError) {
-                    console.error('State Transition Error:', stateUpdateError);
-                }
+        if (currentProposal &&
+            (currentProposal as Proposal).state === 'idea' &&
+            (currentProposal as Proposal).vote_count >= 10) {
+            // Transition to draft state
+            const { error: stateUpdateError } = await context.supabase
+                .from('proposals')
+                .update({ state: 'draft' })
+                .eq('id', input.proposalId);
+
+            if (stateUpdateError) {
+                console.error('State Transition Error:', stateUpdateError);
             }
         }
 
         // Get updated proposal state
         const { data: updatedProposal } = await context.supabase
             .from('proposals')
-            .select('state, votes_count, total_tokens_staked')
+            .select('state, vote_count, token_count')
             .eq('id', input.proposalId)
             .single();
 
@@ -147,43 +149,32 @@ export default createOperation.mutation({
             throw new Error("Failed to get updated proposal state.");
         }
 
-        console.log('Updated Proposal State:', updatedProposal);
-
-        // Get updated user staked amount
-        const { data: updatedTransactions } = await context.supabase
-            .from('token_transactions')
-            .select('*')
+        // Get updated user votes
+        const { data: updatedUserVotes } = await context.supabase
+            .from('user_proposal_votes')
+            .select('vote_count, tokens_staked')
             .eq('proposal_id', input.proposalId)
-            .eq('from_user_id', input.userId);
+            .eq('user_id', input.userId)
+            .single();
 
-        const typedUpdatedTransactions = ((updatedTransactions || []) as { [key: string]: any }[]).map(tx => ({
-            id: tx.id,
-            transaction_type: tx.transaction_type,
-            amount: tx.amount,
-            proposal_id: tx.proposal_id,
-            from_user_id: tx.from_user_id,
-            created_at: tx.created_at
-        } as TokenTransaction));
-
-        const updatedUserStakedAmount = typedUpdatedTransactions.reduce((total, tx) => {
-            return total + (tx.transaction_type === 'stake' ? tx.amount : -tx.amount);
-        }, 0);
-
-        console.log('User Updated Staked Amount:', updatedUserStakedAmount);
-        console.log('=== End Vote Update Debug Log ===');
+        console.log('Updated State:', {
+            proposal: updatedProposal,
+            userVotes: updatedUserVotes
+        });
+        console.log('=== End Quadratic Vote Update Debug Log ===');
 
         return {
             success: true,
-            message: `Successfully ${input.action}d ${input.amount} token(s)`,
+            message: `Successfully ${input.action}d vote with ${tokenAmount} token(s)`,
             transaction,
             debug: {
                 beforeState: {
-                    proposal,
-                    userStaked: userStakedAmount
+                    votes: currentVotes,
+                    tokensStaked: currentTokens
                 },
                 afterState: {
                     proposal: updatedProposal as Proposal,
-                    userStaked: updatedUserStakedAmount
+                    userVotes: updatedUserVotes as UserProposalVotes
                 }
             }
         };

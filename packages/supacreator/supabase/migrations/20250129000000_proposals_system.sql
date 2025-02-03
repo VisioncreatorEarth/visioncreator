@@ -33,7 +33,9 @@ CREATE TABLE proposals (
     total_tokens_staked BIGINT NOT NULL DEFAULT 0,
     responsible UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    vote_count INTEGER NOT NULL DEFAULT 0,
+    token_count BIGINT NOT NULL DEFAULT 0
 );
 
 -- Create token transactions table
@@ -64,6 +66,18 @@ CREATE TABLE messages (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now(),
     is_deleted BOOLEAN DEFAULT false
+);
+
+-- Create user votes tracking table
+CREATE TABLE IF NOT EXISTS user_proposal_votes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES profiles(id),
+    proposal_id UUID NOT NULL REFERENCES proposals(id),
+    vote_count INTEGER NOT NULL DEFAULT 0,
+    tokens_staked BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(user_id, proposal_id)
 );
 
 -- Create updated_at trigger function
@@ -111,19 +125,20 @@ BEGIN
             WHERE user_id = NEW.from_user_id
             AND balance >= NEW.amount;
             
-            -- Update proposal's total staked amount and votes count
+            -- Update user_proposal_votes
+            INSERT INTO user_proposal_votes (user_id, proposal_id, vote_count, tokens_staked)
+            VALUES (NEW.from_user_id, NEW.proposal_id, 1, NEW.amount)
+            ON CONFLICT (user_id, proposal_id) DO UPDATE
+            SET vote_count = user_proposal_votes.vote_count + 1,
+                tokens_staked = user_proposal_votes.tokens_staked + NEW.amount;
+            
+            -- Update proposal's total staked amount and vote count
             UPDATE proposals
-            SET total_tokens_staked = total_tokens_staked + NEW.amount,
-                votes_count = (
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM token_transactions
+            SET token_count = token_count + NEW.amount,
+                vote_count = (
+                    SELECT SUM(vote_count)
+                    FROM user_proposal_votes
                     WHERE proposal_id = NEW.proposal_id
-                    AND transaction_type = 'stake'
-                ) - (
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM token_transactions
-                    WHERE proposal_id = NEW.proposal_id
-                    AND transaction_type = 'unstake'
                 )
             WHERE id = NEW.proposal_id;
         
@@ -136,19 +151,20 @@ BEGIN
             WHERE user_id = NEW.from_user_id
             AND staked_balance >= NEW.amount;
             
-            -- Update proposal's total staked amount and votes count
+            -- Update user_proposal_votes
+            UPDATE user_proposal_votes
+            SET vote_count = vote_count - 1,
+                tokens_staked = tokens_staked - NEW.amount
+            WHERE user_id = NEW.from_user_id
+            AND proposal_id = NEW.proposal_id;
+            
+            -- Update proposal's total staked amount and vote count
             UPDATE proposals
-            SET total_tokens_staked = total_tokens_staked - NEW.amount,
-                votes_count = (
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM token_transactions
+            SET token_count = token_count - NEW.amount,
+                vote_count = (
+                    SELECT SUM(vote_count)
+                    FROM user_proposal_votes
                     WHERE proposal_id = NEW.proposal_id
-                    AND transaction_type = 'stake'
-                ) - (
-                    SELECT COALESCE(SUM(amount), 0)
-                    FROM token_transactions
-                    WHERE proposal_id = NEW.proposal_id
-                    AND transaction_type = 'unstake'
                 )
             WHERE id = NEW.proposal_id;
     END CASE;
@@ -222,6 +238,20 @@ CREATE INDEX token_transactions_from_user_idx ON token_transactions(from_user_id
 CREATE INDEX token_transactions_to_user_idx ON token_transactions(to_user_id);
 CREATE INDEX token_transactions_proposal_idx ON token_transactions(proposal_id);
 CREATE INDEX token_transactions_created_at_idx ON token_transactions(created_at DESC);
+
+-- Add indexes for user_proposal_votes
+CREATE INDEX IF NOT EXISTS idx_user_proposal_votes_user ON user_proposal_votes(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_proposal_votes_proposal ON user_proposal_votes(proposal_id);
+
+-- Grant access to service role
+GRANT ALL ON TABLE user_proposal_votes TO service_role;
+
+-- Create service role policy for user_proposal_votes
+CREATE POLICY "service_role_policy" ON user_proposal_votes
+    FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
 
 -- Insert default proposals
 INSERT INTO proposals (title, author, details, benefits, pain, state) VALUES

@@ -39,9 +39,8 @@ HOW THIS SYSTEM WORKS:
 		pain: string | null;
 		video_id: string | null;
 		state: ProposalState;
-		votes_count: number;
-		total_tokens_staked: number;
-		budget_requested: number;
+		vote_count: number;
+		token_count: number;
 		responsible: string | null;
 		created_at: string;
 		updated_at: string;
@@ -107,6 +106,7 @@ HOW THIS SYSTEM WORKS:
 		id: string;
 		name: string | null;
 		votes: number;
+		tokens: number;
 	}
 
 	interface VoterQueryResult {
@@ -117,7 +117,8 @@ HOW THIS SYSTEM WORKS:
 	// Queries with proper typing
 	const proposalsQuery = createQuery({
 		operationName: 'queryProposals',
-		enabled: true
+		enabled: true,
+		refetchInterval: 1000
 	});
 
 	const userQuery = createQuery({
@@ -128,8 +129,9 @@ HOW THIS SYSTEM WORKS:
 	$: userId = $userQuery.data?.id as string;
 	$: userTokensQuery = createQuery({
 		operationName: 'getUserTokens',
-		input: { userId },
-		enabled: !!userId
+		input: { userId: userData?.id || '' },
+		enabled: !!userData?.id,
+		refetchInterval: 500 // Faster refresh for token updates
 	});
 
 	// Create a single query for the current proposal's voters
@@ -344,41 +346,45 @@ HOW THIS SYSTEM WORKS:
 		expandedProposalId = null;
 	}
 
-	function getNextVoteCost(votes: number): number {
-		return Math.floor(Math.pow(votes + 1, 1.5)); // Cost increases exponentially
+	// Add quadratic voting helper function
+	function getNextVoteCost(currentVotes: number): number {
+		return Math.pow(currentVotes + 1, 2) - Math.pow(currentVotes, 2);
 	}
 
-	function centerProposalInView(proposalId: string) {
-		const element = document.getElementById(`proposal-${proposalId}`);
-		if (element) {
-			element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-		}
+	// Update the interface definitions
+	interface Proposal {
+		id: string;
+		title: string;
+		author: string;
+		details: string | null;
+		benefits: string | null;
+		pain: string | null;
+		video_id: string | null;
+		state: ProposalState;
+		vote_count: number;
+		token_count: number;
+		responsible: string | null;
+		created_at: string;
+		updated_at: string;
 	}
 
-	function getProposalCardClasses(proposal: Proposal): string {
-		const baseClasses = 'overflow-hidden transition-all duration-200 border card rounded-xl';
-		return `${baseClasses} border-surface-700/50 ${getStateBgColor(proposal.state)} bg-opacity-5`;
+	interface VoterInfo {
+		id: string;
+		name: string | null;
+		votes: number;
+		tokens: number;
 	}
 
-	function getProposalValueClasses(proposal: Proposal): string {
-		return `w-[280px] shrink-0 p-6 flex flex-col ${getStateBgColor(proposal.state)}`;
-	}
-
-	// Update the handleVote function to properly check staked tokens
+	// Update handleVote function
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		if (!$userQuery.data?.id) return;
 
 		const userId = $userQuery.data.id as string;
-		const currentStaked = userStakedTokens.get(proposalId) || 0;
-
-		// Only validate for staking
-		if (isIncrease && userTokens <= 0) {
-			console.log('Cannot stake - no tokens available');
-			return;
-		}
+		const voters = getVotersForProposal(proposalId);
+		const userVoteInfo = voters.find((v) => v.id === userId);
+		const currentVotes = userVoteInfo?.votes || 0;
 
 		try {
-			// Make the API call first
 			const result = await $updateVotesMutation.mutateAsync({
 				proposalId,
 				userId,
@@ -386,88 +392,73 @@ HOW THIS SYSTEM WORKS:
 				amount: 1
 			});
 
-			if (!result?.success) {
-				console.error('Vote update failed');
-				return;
-			}
-
-			// Update local state after successful API call
-			const newStaked = isIncrease ? currentStaked + 1 : currentStaked - 1;
-			userStakedTokens.set(proposalId, Math.max(0, newStaked));
-			userStakedTokens = new Map(userStakedTokens);
-
-			// Update voters store
-			votersStore.update((store) => {
-				const newStore = new Map(store);
-				const currentVoters = newStore.get(proposalId) || [];
-				const updatedVoters = currentVoters
-					.map((voter) => {
+			if (result?.success) {
+				// Immediately update local state
+				votersStore.update((store) => {
+					const newStore = new Map(store);
+					const currentVoters = newStore.get(proposalId) || [];
+					const updatedVoters = currentVoters.map((voter) => {
 						if (voter.id === userId) {
-							return { ...voter, votes: Math.max(0, voter.votes + (isIncrease ? 1 : -1)) };
+							const newVotes = isIncrease ? currentVotes + 1 : currentVotes - 1;
+							const newTokens = isIncrease
+								? voter.tokens + getQuadraticCost(currentVotes)
+								: voter.tokens - getQuadraticCost(currentVotes - 1);
+							return {
+								...voter,
+								votes: newVotes,
+								tokens: newTokens
+							};
 						}
 						return voter;
-					})
-					.filter((voter) => voter.votes > 0);
+					});
+					newStore.set(proposalId, updatedVoters);
+					return newStore;
+				});
 
-				if (!currentVoters.some((v) => v.id === userId) && isIncrease) {
-					const userData = $userQuery.data;
-					if (userData && typeof userData.name === 'string') {
-						updatedVoters.push({
-							id: userId,
-							name: userData.name,
-							votes: 1
-						});
-					}
+				// Immediately refetch all relevant data
+				await Promise.all([
+					$userTokensQuery.refetch(),
+					$proposalsQuery.refetch(),
+					$currentProposalVotersQuery.refetch(),
+					...[...($votersQueriesStore.values() || [])].map((query) => query.refetch())
+				]);
+
+				// Force refresh of specific proposal's voters
+				const query = $votersQueriesStore.get(proposalId);
+				if (query) {
+					const newQuery = createQuery({
+						operationName: 'getProposalVoters',
+						input: { proposalId },
+						enabled: true,
+						refetchInterval: 500
+					});
+					$votersQueriesStore.set(proposalId, newQuery);
 				}
-
-				newStore.set(proposalId, updatedVoters);
-				return newStore;
-			});
-
-			// Refresh queries to ensure data consistency
-			await Promise.all([$userTokensQuery.refetch(), $proposalsQuery.refetch()]);
-
-			// Force refresh of voters query
-			const query = $votersQueriesStore.get(proposalId);
-			if (query) {
-				const newQuery = createQuery({
-					operationName: 'getProposalVoters',
-					input: { proposalId },
-					enabled: true,
-					refetchInterval: 1000
-				});
-
-				newQuery.subscribe((queryResult) => {
-					const voters = queryResult?.data?.voters;
-					if (voters && Array.isArray(voters)) {
-						votersStore.update((store) => {
-							const newStore = new Map(store);
-							newStore.set(proposalId, voters);
-							return newStore;
-						});
-					}
-				});
-
-				$votersQueriesStore.set(proposalId, newQuery);
 			}
 		} catch (error) {
 			console.error('Failed to update vote:', error);
-			// Revert optimistic updates on error
-			userStakedTokens.set(proposalId, currentStaked);
-			userStakedTokens = new Map(userStakedTokens);
-
-			// Force refresh of voters query on error
-			const query = $votersQueriesStore.get(proposalId);
-			if (query) {
-				const newQuery = createQuery({
-					operationName: 'getProposalVoters',
-					input: { proposalId },
-					enabled: true,
-					refetchInterval: 1000
-				});
-				$votersQueriesStore.set(proposalId, newQuery);
-			}
 		}
+	}
+
+	// Update the proposal card display to show quadratic voting info
+	function getVoteDisplay(proposal: Proposal, voter?: VoterInfo) {
+		const currentVotes = voter?.votes || 0;
+		const currentTokens = voter?.tokens || 0;
+		const nextVoteCost = getNextVoteCost(currentVotes);
+		// Calculate tokens that would be returned on unstake
+		const unstakeReturn = currentVotes > 0 ? getQuadraticCost(currentVotes - 1) : 0;
+
+		return {
+			votes: currentVotes,
+			tokens: currentTokens,
+			nextCost: nextVoteCost,
+			unstakeReturn
+		};
+	}
+
+	// Helper function to calculate quadratic cost for a specific vote number
+	function getQuadraticCost(voteNumber: number): number {
+		return Math.pow(voteNumber + 1, 2) - Math.pow(voteNumber, 2);
 	}
 
 	function handleProposalSelect(state: ProposalState, proposalId: string) {
@@ -524,8 +515,7 @@ HOW THIS SYSTEM WORKS:
 		return {
 			data: { seed: voter.name || voter.id },
 			design: { highlight: voter.id === userId },
-			size: 'xs' as const,
-			votes: voter.votes
+			size: 'xs' as const
 		};
 	}
 
@@ -535,7 +525,7 @@ HOW THIS SYSTEM WORKS:
 	// Add this at the top level with other stores
 	const votersStore = writable(new Map<string, VoterInfo[]>());
 
-	// Update the votersQueriesStore subscription to update votersStore
+	// Update the votersQueriesStore subscription for better reactivity
 	$: if ($proposalsQuery.data?.proposals) {
 		$proposalsQuery.data.proposals.forEach((proposal) => {
 			if (!$votersQueriesStore.has(proposal.id)) {
@@ -546,13 +536,11 @@ HOW THIS SYSTEM WORKS:
 					refetchInterval: 1000
 				});
 
-				// Type-safe subscription
 				query.subscribe((queryResult) => {
-					const voters = queryResult?.data?.voters;
-					if (voters && Array.isArray(voters)) {
+					if (queryResult?.data?.voters) {
 						votersStore.update((store) => {
 							const newStore = new Map(store);
-							newStore.set(proposal.id, voters);
+							newStore.set(proposal.id, queryResult.data.voters);
 							return newStore;
 						});
 					}
@@ -584,8 +572,35 @@ HOW THIS SYSTEM WORKS:
 	function getVotersForProposal(proposalId: string): VoterInfo[] {
 		return $votersStore.get(proposalId) || [];
 	}
+
+	// Add back the missing utility functions
+	function centerProposalInView(proposalId: string) {
+		const element = document.getElementById(`proposal-${proposalId}`);
+		if (element) {
+			element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	}
+
+	function getProposalCardClasses(proposal: Proposal): string {
+		const baseClasses = 'overflow-hidden transition-all duration-200 border card rounded-xl';
+		return `${baseClasses} border-surface-700/50 ${getStateBgColor(proposal.state)} bg-opacity-5`;
+	}
+
+	function getProposalValueClasses(proposal: Proposal): string {
+		return `w-[280px] shrink-0 p-6 flex flex-col ${getStateBgColor(proposal.state)}`;
+	}
+
+	// Update the userQuery data access
+	$: userData = $userQuery.data
+		? {
+				id: $userQuery.data.id as string,
+				name: $userQuery.data.name as string,
+				onboarded: $userQuery.data.onboarded as boolean
+		  }
+		: null;
 </script>
 
+Next: 7 tokens
 <div class="relative flex flex-col w-full h-full overflow-hidden">
 	<!-- Left Aside -->
 	<LeftAsideProposals
@@ -597,11 +612,11 @@ HOW THIS SYSTEM WORKS:
 	<!-- Main Content Area -->
 	<main class="flex-grow h-full overflow-hidden md:ml-64 md:mr-80">
 		<div class="h-full overflow-y-auto">
-			<div class="max-w-5xl px-4 py-6 mx-auto">
+			<div class="max-w-5xl mx-auto">
 				<!-- Tabs Bar -->
 				<div
 					id="proposal-tabs"
-					class="sticky top-0 z-10 flex items-center justify-between w-full py-4 bg-surface-900/95 backdrop-blur-sm"
+					class="sticky top-0 z-10 flex items-center justify-between w-full py-4 px-4 bg-surface-900/95 backdrop-blur-sm"
 				>
 					<div class="flex items-center gap-2">
 						{#if expandedProposalId}
@@ -638,7 +653,7 @@ HOW THIS SYSTEM WORKS:
 				</div>
 
 				<!-- Proposals List -->
-				<div class="grid gap-6 py-6 mb-16">
+				<div class="grid gap-4 px-4 pt-4">
 					{#if expandedProposalId}
 						{@const proposal = $proposalsQuery.data?.proposals.find(
 							(p) => p.id === expandedProposalId
@@ -657,48 +672,79 @@ HOW THIS SYSTEM WORKS:
 										class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
 										{#if proposal.state === 'idea' || proposal.state === 'draft'}
-											<div class="flex items-center justify-between w-full gap-4 md:justify-center">
+											<div class="flex items-center justify-center w-full gap-4">
 												<div class="flex items-center gap-4">
-													<div class="text-center">
-														<div class="flex items-center gap-2">
+													<div class="text-center relative">
+														<div class="flex items-center justify-center">
 															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																{proposal.votes_count || 0}
+																{proposal.vote_count || 0}
 															</p>
+															{#if $userQuery.data}
+																{@const voteInfo = getVoteDisplay(
+																	proposal,
+																	getVotersForProposal(proposal.id).find(
+																		(v) => v.id === $userQuery.data.id
+																	)
+																)}
+																{#if voteInfo.tokens > 0}
+																	<div
+																		class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+																	>
+																		{voteInfo.tokens}
+																	</div>
+																{/if}
+															{/if}
 														</div>
 														<div class="text-sm text-tertiary-300">
 															<span>votes</span>
 														</div>
 													</div>
 													<div class="flex flex-col gap-2">
-														<button
-															disabled={!$userQuery.data || userTokens < 1}
-															on:click|stopPropagation={() => handleVote(proposal.id, true)}
-															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-														>
-															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-																<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-															</svg>
-														</button>
-														<button
-															disabled={!$userQuery.data ||
-																!getVotersForProposal(proposal.id).find((v) => v.id === userId)
-																	?.votes}
-															on:click|stopPropagation={() => handleVote(proposal.id, false)}
-															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-														>
-															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-																<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-															</svg>
-														</button>
+														<div class="flex flex-col gap-2">
+															<button
+																disabled={!$userQuery.data ||
+																	userTokens <
+																		getNextVoteCost(
+																			getVotersForProposal(proposal.id).find(
+																				(v) => v.id === $userQuery.data?.id
+																			)?.votes || 0
+																		)}
+																on:click|stopPropagation={() => handleVote(proposal.id, true)}
+																class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+															>
+																<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+																	<path
+																		fill="currentColor"
+																		d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
+																	/>
+																</svg>
+															</button>
+
+															<button
+																disabled={!$userQuery.data ||
+																	!getVotersForProposal(proposal.id).find(
+																		(v) => v.id === $userQuery.data?.id
+																	)?.votes}
+																on:click|stopPropagation={() => handleVote(proposal.id, false)}
+																class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+															>
+																<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
+																	<path fill="currentColor" d="M19 13H5v-2h14v2z" />
+																</svg>
+															</button>
+														</div>
 													</div>
 												</div>
 											</div>
 										{:else}
 											<div class="w-full text-center">
 												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-													{proposal.votes_count || 0}
+													{proposal.vote_count || 0}
 												</p>
 												<p class="text-sm text-tertiary-300">votes</p>
+												<p class="text-xs text-tertiary-400">
+													{proposal.token_count || 0} tokens
+												</p>
 											</div>
 										{/if}
 									</div>
@@ -709,16 +755,21 @@ HOW THIS SYSTEM WORKS:
 											<h3 class="text-lg font-semibold md:text-xl text-tertiary-100">
 												{proposal.title}
 											</h3>
-											<div class="flex flex-wrap items-center gap-2 mt-2">
+											<div class="flex flex-wrap items-center gap-4">
 												{#each getVotersForProposal(proposal.id) as voter (voter.id)}
 													<div class="relative">
 														<Avatar me={formatVoterForAvatar(voter)} />
-														<div class="absolute inset-0 flex items-center justify-center">
-															<span
-																class="text-lg font-bold text-tertiary-100 bg-surface-900/80 rounded-full px-2 py-0.5"
-															>
-																{voter.votes}
-															</span>
+														<!-- Vote count badge (top left) -->
+														<div
+															class="absolute -top-2 -left-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+														>
+															{voter.votes}
+														</div>
+														<!-- Token count badge (top right) -->
+														<div
+															class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+														>
+															{voter.tokens}
 														</div>
 													</div>
 												{/each}
@@ -742,7 +793,7 @@ HOW THIS SYSTEM WORKS:
 											{#if proposal.state === 'idea'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
-														{proposal.votes_count}
+														{proposal.vote_count}
 													</p>
 													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 														<div
@@ -751,13 +802,13 @@ HOW THIS SYSTEM WORKS:
 														/>
 													</div>
 													<p class="text-sm text-tertiary-300">
-														{proposal.votes_count} votes
+														{proposal.vote_count} votes
 													</p>
 												</div>
 											{:else if proposal.state === 'draft'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
-														{proposal.votes_count}
+														{proposal.vote_count}
 													</p>
 													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 														<div
@@ -766,13 +817,13 @@ HOW THIS SYSTEM WORKS:
 														/>
 													</div>
 													<p class="text-sm text-tertiary-300">
-														{proposal.votes_count} votes
+														{proposal.vote_count} votes
 													</p>
 												</div>
 											{:else if proposal.state === 'decision'}
 												<div class="flex flex-col items-end gap-1">
 													<p class="text-2xl font-bold text-tertiary-100">
-														{proposal.votes_count}
+														{proposal.vote_count}
 													</p>
 													<p class="text-sm text-tertiary-300">total votes</p>
 												</div>
@@ -898,13 +949,28 @@ HOW THIS SYSTEM WORKS:
 									class="flex items-center justify-between w-full p-4 border-b md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 								>
 									{#if proposal.state === 'idea' || proposal.state === 'draft'}
-										<div class="flex items-center justify-between w-full gap-4 md:justify-center">
+										<div class="flex items-center justify-center w-full gap-4">
 											<div class="flex items-center gap-4">
-												<div class="text-center">
-													<div class="flex items-center gap-2">
+												<div class="text-center relative">
+													<div class="flex items-center justify-center">
 														<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-															{proposal.votes_count || 0}
+															{proposal.vote_count || 0}
 														</p>
+														{#if $userQuery.data}
+															{@const voteInfo = getVoteDisplay(
+																proposal,
+																getVotersForProposal(proposal.id).find(
+																	(v) => v.id === $userQuery.data.id
+																)
+															)}
+															{#if voteInfo.tokens > 0}
+																<div
+																	class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+																>
+																	{voteInfo.tokens}
+																</div>
+															{/if}
+														{/if}
 													</div>
 													<div class="text-sm text-tertiary-300">
 														<span>votes</span>
@@ -912,7 +978,13 @@ HOW THIS SYSTEM WORKS:
 												</div>
 												<div class="flex flex-col gap-2">
 													<button
-														disabled={!$userQuery.data || userTokens < 1}
+														disabled={!$userQuery.data ||
+															userTokens <
+																getNextVoteCost(
+																	getVotersForProposal(proposal.id).find(
+																		(v) => v.id === $userQuery.data?.id
+																	)?.votes || 0
+																)}
 														on:click|stopPropagation={() => handleVote(proposal.id, true)}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
@@ -920,10 +992,12 @@ HOW THIS SYSTEM WORKS:
 															<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
 														</svg>
 													</button>
+
 													<button
 														disabled={!$userQuery.data ||
-															!getVotersForProposal(proposal.id).find((v) => v.id === userId)
-																?.votes}
+															!getVotersForProposal(proposal.id).find(
+																(v) => v.id === $userQuery.data?.id
+															)?.votes}
 														on:click|stopPropagation={() => handleVote(proposal.id, false)}
 														class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 													>
@@ -937,9 +1011,12 @@ HOW THIS SYSTEM WORKS:
 									{:else}
 										<div class="w-full text-center">
 											<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-												{proposal.votes_count || 0}
+												{proposal.vote_count || 0}
 											</p>
 											<p class="text-sm text-tertiary-300">votes</p>
+											<p class="text-xs text-tertiary-400">
+												{proposal.token_count || 0} tokens
+											</p>
 										</div>
 									{/if}
 								</div>
@@ -950,16 +1027,21 @@ HOW THIS SYSTEM WORKS:
 										<h3 class="mb-3 text-lg font-semibold md:text-xl text-tertiary-100">
 											{proposal.title}
 										</h3>
-										<div class="flex flex-wrap items-center gap-2">
+										<div class="flex flex-wrap items-center gap-4">
 											{#each getVotersForProposal(proposal.id) as voter (voter.id)}
 												<div class="relative">
 													<Avatar me={formatVoterForAvatar(voter)} />
-													<div class="absolute inset-0 flex items-center justify-center">
-														<span
-															class="text-lg font-bold text-tertiary-100 bg-surface-900/80 rounded-full px-2 py-0.5"
-														>
-															{voter.votes}
-														</span>
+													<!-- Vote count badge (top left) -->
+													<div
+														class="absolute -top-2 -left-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+													>
+														{voter.votes}
+													</div>
+													<!-- Token count badge (top right) -->
+													<div
+														class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+													>
+														{voter.tokens}
 													</div>
 												</div>
 											{/each}
@@ -981,7 +1063,7 @@ HOW THIS SYSTEM WORKS:
 										{#if proposal.state === 'idea'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{proposal.votes_count}
+													{proposal.vote_count}
 												</p>
 												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 													<div
@@ -990,13 +1072,13 @@ HOW THIS SYSTEM WORKS:
 													/>
 												</div>
 												<p class="text-sm text-tertiary-300">
-													{proposal.votes_count} votes
+													{proposal.vote_count} votes
 												</p>
 											</div>
 										{:else if proposal.state === 'draft'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{proposal.votes_count}
+													{proposal.vote_count}
 												</p>
 												<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 													<div
@@ -1005,13 +1087,13 @@ HOW THIS SYSTEM WORKS:
 													/>
 												</div>
 												<p class="text-sm text-tertiary-300">
-													{proposal.votes_count} votes
+													{proposal.vote_count} votes
 												</p>
 											</div>
 										{:else if proposal.state === 'decision'}
 											<div class="flex flex-col items-end gap-1">
 												<p class="text-2xl font-bold text-tertiary-100">
-													{proposal.votes_count}
+													{proposal.vote_count}
 												</p>
 												<p class="text-sm text-tertiary-300">total votes</p>
 											</div>
