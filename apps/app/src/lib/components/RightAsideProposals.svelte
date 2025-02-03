@@ -117,7 +117,7 @@ This is the right aside area of the proposals view that:
 >
 	{#if isOpen || (typeof window !== 'undefined' && window.innerWidth >= 768)}
 		<div
-			class="h-full p-6 overflow-y-auto border-l border-surface-700/50"
+			class="h-full p-6 overflow-y-auto border-l border-surface-800/50 bg-surface-800/50"
 			transition:fly={{ x: 100, duration: 200 }}
 		>
 			<div class="space-y-6">

@@ -64,7 +64,10 @@ This is the left aside area of the proposals view that:
 	class:lg:w-64={true}
 >
 	{#if isOpen || (typeof window !== 'undefined' && window.innerWidth >= 1024)}
-		<div class="h-full p-4 overflow-y-auto" transition:fly={{ x: -100, duration: 200 }}>
+		<div
+			class="h-full p-4 overflow-y-auto bg-surface-800/50"
+			transition:fly={{ x: -100, duration: 200 }}
+		>
 			<div class="space-y-6">
 				<!-- visioncreators Counter -->
 				<div class="p-4 border rounded-lg border-surface-700/50">
