@@ -15,6 +15,7 @@ interface Proposal {
     responsible: string | null;
     created_at: string;
     updated_at: string;
+    tags: string[];
 }
 
 export default createOperation.query({

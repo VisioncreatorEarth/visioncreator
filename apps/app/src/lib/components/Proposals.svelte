@@ -44,6 +44,7 @@ HOW THIS SYSTEM WORKS:
 		responsible: string | null;
 		created_at: string;
 		updated_at: string;
+		tags?: string[];
 	}
 
 	interface WorkPackage {
@@ -214,16 +215,10 @@ HOW THIS SYSTEM WORKS:
 		});
 		const userId = $userQuery.data.id as string;
 
-		console.log('=== Frontend Vote Calculation Debug Log ===');
-		console.log('Current User ID:', userId);
-		console.log('Raw Transactions:', transactions);
-
 		// Filter transactions for current user and valid proposal_id
 		const userTransactions = transactions.filter(
 			(tx) => tx.from_user_id === userId && tx.proposal_id !== null
 		);
-
-		console.log('Filtered User Transactions:', userTransactions);
 
 		// Create a temporary map to track running totals
 		const proposalTotals = new Map<string, number>();
@@ -235,27 +230,13 @@ HOW THIS SYSTEM WORKS:
 				if (tx.proposal_id) {
 					const currentStaked = proposalTotals.get(tx.proposal_id) || 0;
 					const change = tx.transaction_type === 'stake' ? tx.amount : -tx.amount;
-					const newAmount = Math.max(0, currentStaked + change); // Prevent negative amounts
-
-					console.log(`Proposal ${tx.proposal_id} Transaction:`, {
-						type: tx.transaction_type,
-						amount: tx.amount,
-						currentStaked,
-						change,
-						newAmount,
-						timestamp: tx.created_at,
-						userId: tx.from_user_id
-					});
-
+					const newAmount = Math.max(0, currentStaked + change);
 					proposalTotals.set(tx.proposal_id, newAmount);
 				}
 			});
 
 		// Update the reactive store with final totals
 		userStakedTokens = new Map(proposalTotals);
-
-		console.log('Final User Staked Tokens:', Object.fromEntries(userStakedTokens));
-		console.log('=== End Frontend Vote Calculation Debug Log ===');
 	}
 
 	// Update assignee when user data loads
@@ -370,6 +351,7 @@ HOW THIS SYSTEM WORKS:
 		responsible: string | null;
 		created_at: string;
 		updated_at: string;
+		tags?: string[];
 	}
 
 	interface VoterInfo {
@@ -942,7 +924,16 @@ HOW THIS SYSTEM WORKS:
 												proposal.state
 											)} relative"
 										>
-											<div class="absolute top-0 right-0">
+											<div class="absolute top-0 right-0 flex items-start gap-2">
+												{#if proposal.tags && proposal.tags.length > 0}
+													{#each proposal.tags as tag}
+														<div
+															class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
+														>
+															{tag}
+														</div>
+													{/each}
+												{/if}
 												<div
 													class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20"
 												>
@@ -1264,7 +1255,16 @@ HOW THIS SYSTEM WORKS:
 												proposal.state
 											)} relative"
 										>
-											<div class="absolute top-0 right-0">
+											<div class="absolute top-0 right-0 flex items-start gap-2">
+												{#if proposal.tags && proposal.tags.length > 0}
+													{#each proposal.tags as tag}
+														<div
+															class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
+														>
+															{tag}
+														</div>
+													{/each}
+												{/if}
 												<div
 													class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20"
 												>

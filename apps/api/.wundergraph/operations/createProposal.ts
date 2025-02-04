@@ -18,16 +18,14 @@ export default createOperation.mutation({
             throw new AuthorizationError({ message: "No authenticated user found." });
         }
 
-        // Start a transaction
         const { data: transaction, error: transactionError } = await context.supabase.rpc('create_proposal_with_stake', {
             p_title: input.title,
             p_details: input.details,
             p_author: user.customClaims.id,
-            p_stake_amount: 1 // Initial stake of 1 token
+            p_stake_amount: 1
         });
 
         if (transactionError) {
-            console.error("Error creating proposal with stake:", transactionError);
             throw new Error("Failed to create proposal: Insufficient tokens or transaction failed");
         }
 

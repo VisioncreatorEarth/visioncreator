@@ -35,7 +35,8 @@ CREATE TABLE proposals (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     vote_count INTEGER NOT NULL DEFAULT 0,
-    token_count BIGINT NOT NULL DEFAULT 0
+    token_count BIGINT NOT NULL DEFAULT 0,
+    tags TEXT[] DEFAULT '{}'
 );
 
 -- Create token transactions table
@@ -337,7 +338,6 @@ DECLARE
     v_transaction token_transactions;
     v_user_balance BIGINT;
 BEGIN
-    -- Check user balance
     SELECT balance INTO v_user_balance
     FROM token_balances
     WHERE user_id = p_author;
@@ -346,7 +346,6 @@ BEGIN
         RAISE EXCEPTION 'Insufficient tokens for initial stake';
     END IF;
 
-    -- Create proposal
     INSERT INTO proposals (
         title,
         details,
@@ -359,12 +358,11 @@ BEGIN
         p_details,
         p_author,
         'idea',
-        1, -- Initial vote from author
+        1,
         p_stake_amount
     )
     RETURNING * INTO v_proposal;
 
-    -- Create stake transaction
     INSERT INTO token_transactions (
         transaction_type,
         from_user_id,
@@ -378,10 +376,14 @@ BEGIN
     )
     RETURNING * INTO v_transaction;
 
-    -- Return combined result
     RETURN json_build_object(
         'proposal', v_proposal,
         'token_transaction', v_transaction
     );
 END;
-$$; 
+$$;
+
+-- Update hominio proposal with startup tag
+UPDATE proposals 
+SET tags = ARRAY['startup']
+WHERE title ILIKE '%hominio%'; 
