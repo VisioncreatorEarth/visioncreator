@@ -4,8 +4,9 @@ HOW THIS SYSTEM WORKS:
 1. Overview:
    This is a community-driven proposal and voting system where members can:
    - Submit and vote on ideas (initial stage)
-   - Track proposal progress
+   - Track proposal progress through states (idea -> draft -> pending -> decision)
    - Manage budget allocations
+   - Vote and unvote in any state (no hard limits)
 
 2. State Management:
    - Proposals are fetched from the database using the queryProposals endpoint
@@ -28,7 +29,7 @@ HOW THIS SYSTEM WORKS:
 	import { writable, derived } from 'svelte/store';
 
 	// Define types
-	type ProposalState = 'idea' | 'draft' | 'decision';
+	type ProposalState = 'idea' | 'draft' | 'pending' | 'decision';
 
 	interface Proposal {
 		id: string;
@@ -185,12 +186,13 @@ HOW THIS SYSTEM WORKS:
 	$: proposalWorkPackages = workPackages.filter((wp) => wp.proposalId === expandedProposalId);
 
 	// Constants
-	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'decision'];
+	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'decision'];
 
 	// Add state transition thresholds
 	const STATE_THRESHOLDS = {
 		idea: 10, // 10 votes to move from idea to draft
-		draft: 20 // 20 votes to move from draft to decision
+		draft: 20, // 20 votes to move from draft to decision
+		decision: 30 // 30 votes to move from decision to implementation
 	};
 
 	// Add updateVotes mutation
@@ -259,6 +261,8 @@ HOW THIS SYSTEM WORKS:
 				return 'text-secondary-300';
 			case 'draft':
 				return 'text-teal-300';
+			case 'pending':
+				return 'text-primary-300';
 			case 'decision':
 				return 'text-success-400';
 			default:
@@ -272,6 +276,8 @@ HOW THIS SYSTEM WORKS:
 				return 'bg-secondary-500/10';
 			case 'draft':
 				return 'bg-teal-500/10';
+			case 'pending':
+				return 'bg-primary-500/10';
 			case 'decision':
 				return 'bg-success-500/10';
 			default:
@@ -289,6 +295,8 @@ HOW THIS SYSTEM WORKS:
 				return 'heroicons:light-bulb';
 			case 'draft':
 				return 'heroicons:document-text';
+			case 'pending':
+				return 'heroicons:clock';
 			case 'decision':
 				return 'heroicons:check-circle';
 			default:
@@ -645,13 +653,36 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
-	// Add this helper function after other utility functions
+	// Update canUnstakeVote to allow voting in all states
 	function canUnstakeVote(proposal: Proposal, voter?: VoterInfo): boolean {
 		if (!voter) return false;
 		// If user is the author and has only 1 vote left, prevent unstaking
 		if (proposal.author === voter.id && voter.votes <= 1) return false;
 		// Otherwise allow unstaking if they have votes
 		return voter.votes > 0;
+	}
+
+	// Add this helper function for countdown display
+	function getCountdownDisplay(): string {
+		// Hardcoded 1 day countdown for now
+		return '23:59:59';
+	}
+
+	// Add this helper to check if voting is allowed
+	function canVote(proposal: Proposal, currentVotes: number): boolean {
+		if (proposal.state === 'pending') return false;
+		return currentVotes < 20;
+	}
+
+	// Add these helper functions at the top of the script section
+	function getVetoCount(): number {
+		// Hardcoded for now
+		return 0;
+	}
+
+	function getPassCount(): number {
+		// Hardcoded for now
+		return 2;
 	}
 </script>
 
@@ -824,7 +855,28 @@ HOW THIS SYSTEM WORKS:
 										<div
 											class="flex items-center justify-between w-40 p-4 shrink-0 md:p-6 md:border-r border-surface-700/50"
 										>
-											{#if proposal.state === 'idea' || proposal.state === 'draft'}
+											{#if proposal.state === 'pending'}
+												<div class="flex flex-col items-center w-full gap-4">
+													<div class="text-center">
+														<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+															{proposal.total_votes || 0}
+														</p>
+														<p class="text-sm text-tertiary-300">votes</p>
+													</div>
+													<div class="flex gap-2">
+														<button
+															class="px-3 py-1 text-sm font-medium text-red-300 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+														>
+															Veto
+														</button>
+														<button
+															class="px-3 py-1 text-sm font-medium text-green-300 transition-colors rounded-lg bg-green-500/10 hover:bg-green-500/20"
+														>
+															Pass
+														</button>
+													</div>
+												</div>
+											{:else}
 												<div class="flex items-center justify-center w-full gap-4">
 													<div class="flex items-center gap-4">
 														<div class="relative text-center">
@@ -855,6 +907,12 @@ HOW THIS SYSTEM WORKS:
 														<div class="flex flex-col gap-2">
 															<button
 																disabled={!$userQuery.data ||
+																	!canVote(
+																		proposal,
+																		getVotersForProposal(proposal.id).find(
+																			(v) => v.id === $userQuery.data?.id
+																		)?.votes || 0
+																	) ||
 																	userTokens <
 																		getNextVoteCost(
 																			getVotersForProposal(proposal.id).find(
@@ -889,16 +947,6 @@ HOW THIS SYSTEM WORKS:
 															</button>
 														</div>
 													</div>
-												</div>
-											{:else}
-												<div class="w-full text-center">
-													<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-														{proposal.total_votes || 0}
-													</p>
-													<p class="text-sm text-tertiary-300">votes</p>
-													<p class="text-xs text-tertiary-400">
-														{proposal.total_tokens_staked || 0} tokens
-													</p>
 												</div>
 											{/if}
 										</div>
@@ -955,7 +1003,20 @@ HOW THIS SYSTEM WORKS:
 												</div>
 											</div>
 											<div class="mt-8 text-right">
-												{#if proposal.state === 'idea'}
+												{#if proposal.state === 'pending'}
+													<div class="flex flex-col items-end gap-1">
+														<p class="text-2xl font-bold text-tertiary-100">
+															{getCountdownDisplay()}
+														</p>
+														<p class="text-sm text-tertiary-300">time till passing</p>
+														<div class="mt-2 text-sm text-tertiary-400">
+															<span>{getVetoCount()} veto(s)</span>
+															<span class="mx-1">/</span>
+															<span>{getPassCount()} pass(es)</span>
+														</div>
+														<p class="mt-1 text-xs text-tertiary-500">2/3 board required</p>
+													</div>
+												{:else}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
 															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
@@ -971,34 +1032,6 @@ HOW THIS SYSTEM WORKS:
 														</div>
 														<p class="text-sm text-tertiary-300">
 															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
-														</p>
-													</div>
-												{:else if proposal.state === 'draft'}
-													<div class="flex flex-col items-end gap-1">
-														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
-														</p>
-														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-															<div
-																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min(
-																	(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
-																	100
-																)}%"
-															/>
-														</div>
-														<p class="text-sm text-tertiary-300">
-															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
-														</p>
-													</div>
-												{:else if proposal.state === 'decision'}
-													<div class="flex flex-col items-end gap-1">
-														<p class="text-2xl font-bold text-tertiary-100">
-															{proposal.total_votes}
-														</p>
-														<p class="text-sm text-tertiary-300">total votes</p>
-														<p class="text-xs text-tertiary-400">
-															{proposal.total_tokens_staked} tokens
 														</p>
 													</div>
 												{/if}
@@ -1185,7 +1218,28 @@ HOW THIS SYSTEM WORKS:
 									<div
 										class="flex items-center justify-between w-40 p-4 border-b shrink-0 md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
 									>
-										{#if proposal.state === 'idea' || proposal.state === 'draft'}
+										{#if proposal.state === 'pending'}
+											<div class="flex flex-col items-center w-full gap-4">
+												<div class="text-center">
+													<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+														{proposal.total_votes || 0}
+													</p>
+													<p class="text-sm text-tertiary-300">votes</p>
+												</div>
+												<div class="flex gap-2">
+													<button
+														class="px-3 py-1 text-sm font-medium text-red-300 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+													>
+														Veto
+													</button>
+													<button
+														class="px-3 py-1 text-sm font-medium text-green-300 transition-colors rounded-lg bg-green-500/10 hover:bg-green-500/20"
+													>
+														Pass
+													</button>
+												</div>
+											</div>
+										{:else}
 											<div class="flex items-center justify-center w-full gap-4">
 												<div class="flex items-center gap-4">
 													<div class="relative text-center">
@@ -1216,6 +1270,12 @@ HOW THIS SYSTEM WORKS:
 													<div class="flex flex-col gap-2">
 														<button
 															disabled={!$userQuery.data ||
+																!canVote(
+																	proposal,
+																	getVotersForProposal(proposal.id).find(
+																		(v) => v.id === $userQuery.data?.id
+																	)?.votes || 0
+																) ||
 																userTokens <
 																	getNextVoteCost(
 																		getVotersForProposal(proposal.id).find(
@@ -1247,16 +1307,6 @@ HOW THIS SYSTEM WORKS:
 														</button>
 													</div>
 												</div>
-											</div>
-										{:else}
-											<div class="w-full text-center">
-												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-													{proposal.total_votes || 0}
-												</p>
-												<p class="text-sm text-tertiary-300">votes</p>
-												<p class="text-xs text-tertiary-400">
-													{proposal.total_tokens_staked || 0} tokens
-												</p>
 											</div>
 										{/if}
 									</div>
@@ -1348,7 +1398,7 @@ HOW THIS SYSTEM WORKS:
 															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
 														</p>
 													</div>
-												{:else if proposal.state === 'decision'}
+												{:else if proposal.state === 'pending'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
 															{proposal.total_votes}

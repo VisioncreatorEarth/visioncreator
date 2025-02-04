@@ -15,7 +15,7 @@ interface TokenBalance {
 }
 
 interface Proposal {
-    state: 'idea' | 'draft' | 'decision';
+    state: 'idea' | 'draft' | 'pending' | 'decision';
     total_votes: number;
     total_tokens_staked: number;
 }
@@ -115,27 +115,6 @@ export default createOperation.mutation({
         if (transactionError) {
             console.error('Transaction Error:', transactionError);
             throw new Error(`Failed to update votes: ${transactionError.message}`);
-        }
-
-        // Check if proposal should transition from idea to draft
-        const { data: currentProposal } = await context.supabase
-            .from('proposals')
-            .select('state, total_votes')
-            .eq('id', input.proposalId)
-            .single();
-
-        if (currentProposal &&
-            (currentProposal as Proposal).state === 'idea' &&
-            (currentProposal as Proposal).total_votes >= 10) {
-            // Transition to draft state
-            const { error: stateUpdateError } = await context.supabase
-                .from('proposals')
-                .update({ state: 'draft' })
-                .eq('id', input.proposalId);
-
-            if (stateUpdateError) {
-                console.error('State Transition Error:', stateUpdateError);
-            }
         }
 
         // Get updated proposal state

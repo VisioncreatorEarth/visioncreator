@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create enum for proposal states
-CREATE TYPE proposal_state AS ENUM ('idea', 'draft', 'decision');
+CREATE TYPE proposal_state AS ENUM ('idea', 'draft', 'pending', 'decision');
 
 -- Create enum for transaction types
 CREATE TYPE token_transaction_type AS ENUM ('mint', 'transfer', 'stake', 'unstake');
@@ -322,64 +322,15 @@ BEGIN
 END;
 $$;
 
--- Update the proposal state function to include auto-unstaking
+-- Update the proposal state function to remove auto-unstaking
 CREATE OR REPLACE FUNCTION update_proposal_state()
 RETURNS TRIGGER AS $$
-DECLARE
-    v_voter RECORD;
-    v_snapshot_data JSONB := '[]'::jsonb;
 BEGIN
-    -- Check if transitioning to decision state
-    IF NEW.total_votes = 20 AND OLD.state != 'decision'::proposal_state THEN
-        -- Create snapshot first
-        FOR v_voter IN (
-            SELECT 
-                user_id,
-                user_votes,
-                tokens_staked
-            FROM user_proposal_votes
-            WHERE proposal_id = NEW.id
-        ) LOOP
-            -- Build voter snapshots array
-            v_snapshot_data := v_snapshot_data || jsonb_build_object(
-                'user_id', v_voter.user_id,
-                'votes', v_voter.user_votes,
-                'tokens_staked', v_voter.tokens_staked
-            );
-
-            -- Create unstake transaction
-            INSERT INTO token_transactions (
-                transaction_type,
-                from_user_id,
-                amount,
-                proposal_id
-            ) VALUES (
-                'unstake',
-                v_voter.user_id,
-                v_voter.tokens_staked,
-                NEW.id
-            );
-        END LOOP;
-
-        -- Store the snapshot
-        INSERT INTO proposal_vote_snapshots (
-            proposal_id,
-            total_votes,
-            total_tokens_staked,
-            voter_snapshots
-        ) VALUES (
-            NEW.id,
-            NEW.total_votes,
-            NEW.total_tokens_staked,
-            v_snapshot_data
-        );
-    END IF;
-
     -- Update proposal state based on vote count thresholds
     UPDATE proposals
     SET state = 
         CASE 
-            WHEN NEW.total_votes >= 20 THEN 'decision'::proposal_state
+            WHEN NEW.total_votes >= 20 THEN 'pending'::proposal_state
             WHEN NEW.total_votes >= 10 THEN 'draft'::proposal_state
             ELSE 'idea'::proposal_state
         END
@@ -399,10 +350,10 @@ CREATE TRIGGER update_proposal_state_trigger
 
 -- Add comment explaining the trigger
 COMMENT ON TRIGGER update_proposal_state_trigger ON proposals IS 
-    'Automatically updates proposal state based on vote count and handles auto-unstaking:
+    'Automatically updates proposal state based on vote count:
      - Below 10 votes: idea
      - 10-19 votes: draft
-     - 20+ votes: decision (triggers snapshot and auto-unstaking)';
+     - 20+ votes: pending';
 
 -- Insert default proposals with metadata
 INSERT INTO proposals (title, author, details, metadata, state, tags) VALUES
