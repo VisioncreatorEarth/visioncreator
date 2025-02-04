@@ -7,7 +7,7 @@ interface Proposal {
     details: string | null;
     video_id: string | null;
     state: 'idea' | 'draft' | 'decision';
-    votes_count: number;
+    total_votes: number;
     total_tokens_staked: number;
     responsible: string | null;
     created_at: string;
@@ -22,11 +22,11 @@ interface Proposal {
 
 export default createOperation.query({
     handler: async ({ context }): Promise<{ proposals: Proposal[] }> => {
-        // Get all proposals ordered by votes
+        // Get all proposals ordered by total votes
         const { data: proposals, error } = await context.supabase
             .from('proposals')
             .select('*')
-            .order('votes_count', { ascending: false })
+            .order('total_votes', { ascending: false })
             .returns<Proposal[]>();
 
         if (error) {

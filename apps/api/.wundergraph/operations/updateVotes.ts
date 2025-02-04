@@ -16,12 +16,12 @@ interface TokenBalance {
 
 interface Proposal {
     state: 'idea' | 'draft' | 'decision';
-    vote_count: number;
-    token_count: number;
+    total_votes: number;
+    total_tokens_staked: number;
 }
 
 interface UserProposalVotes {
-    vote_count: number;
+    user_votes: number;
     tokens_staked: number;
 }
 
@@ -57,12 +57,12 @@ export default createOperation.mutation({
         // Get user's current votes and tokens for this proposal
         const { data: userVotes } = await context.supabase
             .from('user_proposal_votes')
-            .select('vote_count, tokens_staked')
+            .select('user_votes, tokens_staked')
             .eq('proposal_id', input.proposalId)
             .eq('user_id', input.userId)
             .single();
 
-        const currentVotes = (userVotes as UserProposalVotes)?.vote_count || 0;
+        const currentVotes = (userVotes as UserProposalVotes)?.user_votes || 0;
         const currentTokens = (userVotes as UserProposalVotes)?.tokens_staked || 0;
 
         console.log('Current Votes:', currentVotes);
@@ -120,13 +120,13 @@ export default createOperation.mutation({
         // Check if proposal should transition from idea to draft
         const { data: currentProposal } = await context.supabase
             .from('proposals')
-            .select('state, vote_count')
+            .select('state, total_votes')
             .eq('id', input.proposalId)
             .single();
 
         if (currentProposal &&
             (currentProposal as Proposal).state === 'idea' &&
-            (currentProposal as Proposal).vote_count >= 10) {
+            (currentProposal as Proposal).total_votes >= 10) {
             // Transition to draft state
             const { error: stateUpdateError } = await context.supabase
                 .from('proposals')
@@ -141,7 +141,7 @@ export default createOperation.mutation({
         // Get updated proposal state
         const { data: updatedProposal } = await context.supabase
             .from('proposals')
-            .select('state, vote_count, token_count')
+            .select('state, total_votes, total_tokens_staked')
             .eq('id', input.proposalId)
             .single();
 
@@ -152,7 +152,7 @@ export default createOperation.mutation({
         // Get updated user votes
         const { data: updatedUserVotes } = await context.supabase
             .from('user_proposal_votes')
-            .select('vote_count, tokens_staked')
+            .select('user_votes, tokens_staked')
             .eq('proposal_id', input.proposalId)
             .eq('user_id', input.userId)
             .single();

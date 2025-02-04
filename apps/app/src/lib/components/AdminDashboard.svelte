@@ -251,11 +251,11 @@
 		operationName: 'mintTokens'
 	});
 
-	async function handleMintTokens(userId: string) {
+	async function handleMintTokens(userId: string, amount: number) {
 		try {
 			const result = await $mintTokensMutation.mutateAsync({
 				userId,
-				amount: 25 // Hardcoded 25 VC tokens
+				amount
 			});
 
 			if (!result) {
@@ -377,12 +377,20 @@
 					<div class="p-6 rounded-lg bg-surface-800">
 						<div class="flex items-center justify-between mb-4">
 							<h3 class="text-lg font-semibold text-white">Token Balance</h3>
-							<button
-								class="px-4 py-2 text-sm font-medium text-white rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
-								on:click={() => selectedUserId && handleMintTokens(selectedUserId)}
-							>
-								Mint 25 VC Tokens
-							</button>
+							<div class="flex items-center gap-2">
+								<button
+									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
+									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 25)}
+								>
+									Mint 25 VC Tokens
+								</button>
+								<button
+									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
+									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 365)}
+								>
+									Mint 365 VC Tokens
+								</button>
+							</div>
 						</div>
 
 						{#if $getUserTokensQuery.isLoading}

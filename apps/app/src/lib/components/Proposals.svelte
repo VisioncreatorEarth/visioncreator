@@ -39,8 +39,8 @@ HOW THIS SYSTEM WORKS:
 		pain: string | null;
 		video_id: string | null;
 		state: ProposalState;
-		vote_count: number;
-		token_count: number;
+		total_votes: number;
+		total_tokens_staked: number;
 		responsible: string | null;
 		created_at: string;
 		updated_at: string;
@@ -317,7 +317,7 @@ HOW THIS SYSTEM WORKS:
 	$: filteredProposals =
 		$proposalsQuery.data?.proposals
 			.filter((p) => p.state === $activeTab)
-			.sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0)) || [];
+			.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0)) || [];
 
 	// Handle URL parameters for proposal selection
 	$: if ($page.url.searchParams.get('id')) {
@@ -353,8 +353,8 @@ HOW THIS SYSTEM WORKS:
 		pain: string | null;
 		video_id: string | null;
 		state: ProposalState;
-		vote_count: number;
-		token_count: number;
+		total_votes: number;
+		total_tokens_staked: number;
 		responsible: string | null;
 		created_at: string;
 		updated_at: string;
@@ -830,7 +830,7 @@ HOW THIS SYSTEM WORKS:
 														<div class="relative text-center">
 															<div class="flex items-center justify-center">
 																<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																	{proposal.vote_count || 0}
+																	{proposal.total_votes || 0}
 																</p>
 																{#if $userQuery.data}
 																	{@const voteInfo = getVoteDisplay(
@@ -893,11 +893,11 @@ HOW THIS SYSTEM WORKS:
 											{:else}
 												<div class="w-full text-center">
 													<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-														{proposal.vote_count || 0}
+														{proposal.total_votes || 0}
 													</p>
 													<p class="text-sm text-tertiary-300">votes</p>
 													<p class="text-xs text-tertiary-400">
-														{proposal.token_count || 0} tokens
+														{proposal.total_tokens_staked || 0} tokens
 													</p>
 												</div>
 											{/if}
@@ -958,45 +958,48 @@ HOW THIS SYSTEM WORKS:
 												{#if proposal.state === 'idea'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / STATE_THRESHOLDS.idea) * 100)}%
+															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
 																style="width: {Math.min(
-																	(proposal.vote_count / STATE_THRESHOLDS.idea) * 100,
+																	(proposal.total_votes / STATE_THRESHOLDS.idea) * 100,
 																	100
 																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} of {STATE_THRESHOLDS.idea} votes
+															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'draft'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / STATE_THRESHOLDS.draft) * 100)}%
+															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
 																style="width: {Math.min(
-																	(proposal.vote_count / STATE_THRESHOLDS.draft) * 100,
+																	(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
 																	100
 																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} of {STATE_THRESHOLDS.draft} votes
+															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'decision'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{proposal.vote_count}
+															{proposal.total_votes}
 														</p>
 														<p class="text-sm text-tertiary-300">total votes</p>
+														<p class="text-xs text-tertiary-400">
+															{proposal.total_tokens_staked} tokens
+														</p>
 													</div>
 												{/if}
 											</div>
@@ -1188,7 +1191,7 @@ HOW THIS SYSTEM WORKS:
 													<div class="relative text-center">
 														<div class="flex items-center justify-center">
 															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																{proposal.vote_count || 0}
+																{proposal.total_votes || 0}
 															</p>
 															{#if $userQuery.data}
 																{@const voteInfo = getVoteDisplay(
@@ -1248,11 +1251,11 @@ HOW THIS SYSTEM WORKS:
 										{:else}
 											<div class="w-full text-center">
 												<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-													{proposal.vote_count || 0}
+													{proposal.total_votes || 0}
 												</p>
 												<p class="text-sm text-tertiary-300">votes</p>
 												<p class="text-xs text-tertiary-400">
-													{proposal.token_count || 0} tokens
+													{proposal.total_tokens_staked || 0} tokens
 												</p>
 											</div>
 										{/if}
@@ -1312,45 +1315,48 @@ HOW THIS SYSTEM WORKS:
 												{#if proposal.state === 'idea'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / STATE_THRESHOLDS.idea) * 100)}%
+															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
 																style="width: {Math.min(
-																	(proposal.vote_count / STATE_THRESHOLDS.idea) * 100,
+																	(proposal.total_votes / STATE_THRESHOLDS.idea) * 100,
 																	100
 																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} of {STATE_THRESHOLDS.idea} votes
+															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'draft'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / STATE_THRESHOLDS.draft) * 100)}%
+															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
 																style="width: {Math.min(
-																	(proposal.vote_count / STATE_THRESHOLDS.draft) * 100,
+																	(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
 																	100
 																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} of {STATE_THRESHOLDS.draft} votes
+															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'decision'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{proposal.vote_count}
+															{proposal.total_votes}
 														</p>
 														<p class="text-sm text-tertiary-300">total votes</p>
+														<p class="text-xs text-tertiary-400">
+															{proposal.total_tokens_staked} tokens
+														</p>
 													</div>
 												{/if}
 											</div>

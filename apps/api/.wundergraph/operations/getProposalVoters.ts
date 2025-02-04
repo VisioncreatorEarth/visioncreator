@@ -2,7 +2,7 @@ import { createOperation, z } from '../generated/wundergraph.factory';
 
 interface UserVote {
     user_id: string;
-    vote_count: number;
+    user_votes: number;
     tokens_staked: number;
 }
 
@@ -26,10 +26,10 @@ export default createOperation.query({
         // Get all votes for the proposal from user_proposal_votes
         const { data: votes } = await context.supabase
             .from('user_proposal_votes')
-            .select('user_id, vote_count, tokens_staked')
+            .select('user_id, user_votes, tokens_staked')
             .eq('proposal_id', input.proposalId)
-            .gt('vote_count', 0)
-            .order('vote_count', { ascending: false });
+            .gt('user_votes', 0)
+            .order('user_votes', { ascending: false });
 
         if (!votes) return { voters: [] };
 
@@ -57,7 +57,7 @@ export default createOperation.query({
                 return {
                     id: profile.id,
                     name: profile.name,
-                    votes: vote.vote_count,
+                    votes: vote.user_votes,
                     tokens: vote.tokens_staked
                 };
             })
