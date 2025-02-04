@@ -385,3 +385,36 @@ BEGIN
     );
 END;
 $$;
+
+-- Create function to update proposal state based on vote count
+CREATE OR REPLACE FUNCTION update_proposal_state()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update proposal state based on vote count thresholds
+  UPDATE proposals
+  SET state = 
+    CASE 
+      WHEN NEW.vote_count >= 20 THEN 'decision'::proposal_state
+      WHEN NEW.vote_count >= 10 THEN 'draft'::proposal_state
+      ELSE 'idea'::proposal_state
+    END
+  WHERE id = NEW.id;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to run after proposal votes are updated
+DROP TRIGGER IF EXISTS update_proposal_state_trigger ON proposals;
+CREATE TRIGGER update_proposal_state_trigger
+  AFTER UPDATE OF vote_count ON proposals
+  FOR EACH ROW
+  WHEN (OLD.vote_count IS DISTINCT FROM NEW.vote_count)
+  EXECUTE FUNCTION update_proposal_state();
+
+-- Add comment explaining the trigger
+COMMENT ON TRIGGER update_proposal_state_trigger ON proposals IS 
+  'Automatically updates proposal state based on vote count:
+   - Below 10 votes: idea
+   - 10-19 votes: draft
+   - 20+ votes: decision';

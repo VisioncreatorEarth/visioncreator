@@ -187,6 +187,12 @@ HOW THIS SYSTEM WORKS:
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'decision'];
 
+	// Add state transition thresholds
+	const STATE_THRESHOLDS = {
+		idea: 10, // 10 votes to move from idea to draft
+		draft: 20 // 20 votes to move from draft to decision
+	};
+
 	// Add updateVotes mutation
 	const updateVotesMutation = createMutation({
 		operationName: 'updateVotes'
@@ -662,7 +668,7 @@ HOW THIS SYSTEM WORKS:
 		<div class="h-full">
 			<!-- Tabs Bar - Fixed to top -->
 			<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
-				<div class="max-w-5xl mx-auto px-4 py-4">
+				<div class="max-w-5xl px-4 py-4 mx-auto">
 					<div class="flex items-center justify-between">
 						<div class="flex items-center gap-2">
 							{#if expandedProposalId}
@@ -952,31 +958,37 @@ HOW THIS SYSTEM WORKS:
 												{#if proposal.state === 'idea'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / 10) * 100)}%
+															{Math.round((proposal.vote_count / STATE_THRESHOLDS.idea) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min((proposal.vote_count / 10) * 100, 100)}%"
+																style="width: {Math.min(
+																	(proposal.vote_count / STATE_THRESHOLDS.idea) * 100,
+																	100
+																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} votes
+															{proposal.vote_count} of {STATE_THRESHOLDS.idea} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'draft'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / 20) * 100)}%
+															{Math.round((proposal.vote_count / STATE_THRESHOLDS.draft) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min((proposal.vote_count / 20) * 100, 100)}%"
+																style="width: {Math.min(
+																	(proposal.vote_count / STATE_THRESHOLDS.draft) * 100,
+																	100
+																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} votes
+															{proposal.vote_count} of {STATE_THRESHOLDS.draft} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'decision'}
@@ -1300,31 +1312,37 @@ HOW THIS SYSTEM WORKS:
 												{#if proposal.state === 'idea'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / 10) * 100)}%
+															{Math.round((proposal.vote_count / STATE_THRESHOLDS.idea) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min((proposal.vote_count / 10) * 100, 100)}%"
+																style="width: {Math.min(
+																	(proposal.vote_count / STATE_THRESHOLDS.idea) * 100,
+																	100
+																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} votes
+															{proposal.vote_count} of {STATE_THRESHOLDS.idea} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'draft'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.vote_count / 20) * 100)}%
+															{Math.round((proposal.vote_count / STATE_THRESHOLDS.draft) * 100)}%
 														</p>
 														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 															<div
 																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min((proposal.vote_count / 20) * 100, 100)}%"
+																style="width: {Math.min(
+																	(proposal.vote_count / STATE_THRESHOLDS.draft) * 100,
+																	100
+																)}%"
 															/>
 														</div>
 														<p class="text-sm text-tertiary-300">
-															{proposal.vote_count} votes
+															{proposal.vote_count} of {STATE_THRESHOLDS.draft} votes
 														</p>
 													</div>
 												{:else if proposal.state === 'decision'}
