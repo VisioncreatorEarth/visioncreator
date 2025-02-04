@@ -45,6 +45,7 @@ HOW THIS SYSTEM WORKS:
 		created_at: string;
 		updated_at: string;
 		tags?: string[];
+		metadata?: Record<string, string | null>;
 	}
 
 	interface WorkPackage {
@@ -352,6 +353,7 @@ HOW THIS SYSTEM WORKS:
 		created_at: string;
 		updated_at: string;
 		tags?: string[];
+		metadata?: Record<string, string | null>;
 	}
 
 	interface VoterInfo {
@@ -1113,25 +1115,42 @@ HOW THIS SYSTEM WORKS:
 													</div>
 												{/if}
 
-												<!-- Pain Point -->
-												<div>
-													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														Pain Point
-													</h4>
-													<p class="text-sm text-right text-tertiary-300">
-														{proposal.pain || 'Not defined yet'}
-													</p>
-												</div>
+												<!-- Metadata fields - Only show for non-idea states -->
+												{#if proposal.state !== 'idea'}
+													<!-- Pain Point from metadata -->
+													<div>
+														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+															Pain Point
+														</h4>
+														<p class="text-sm text-right text-tertiary-300">
+															{proposal.metadata?.pain || 'Not defined yet'}
+														</p>
+													</div>
 
-												<!-- Expected Benefits -->
-												<div>
-													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														Expected Benefits
-													</h4>
-													<p class="text-sm text-right text-tertiary-300">
-														{proposal.benefits || 'Not defined yet'}
-													</p>
-												</div>
+													<!-- Expected Benefits from metadata -->
+													<div>
+														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+															Expected Benefits
+														</h4>
+														<p class="text-sm text-right text-tertiary-300">
+															{proposal.metadata?.benefits || 'Not defined yet'}
+														</p>
+													</div>
+
+													<!-- Additional metadata fields -->
+													{#each Object.entries(proposal.metadata || {}) as [key, value]}
+														{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
+															<div>
+																<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+																	{key.charAt(0).toUpperCase() + key.slice(1)}
+																</h4>
+																<p class="text-sm text-right text-tertiary-300">
+																	{value}
+																</p>
+															</div>
+														{/if}
+													{/each}
+												{/if}
 											</div>
 										</div>
 									</div>
@@ -1372,25 +1391,42 @@ HOW THIS SYSTEM WORKS:
 													</div>
 												{/if}
 
-												<!-- Pain Point -->
-												<div>
-													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														Pain Point
-													</h4>
-													<p class="text-sm text-right text-tertiary-300">
-														{proposal.pain || 'Not defined yet'}
-													</p>
-												</div>
+												<!-- Metadata fields - Only show for non-idea states -->
+												{#if proposal.state !== 'idea'}
+													<!-- Pain Point from metadata -->
+													<div>
+														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+															Pain Point
+														</h4>
+														<p class="text-sm text-right text-tertiary-300">
+															{proposal.metadata?.pain || 'Not defined yet'}
+														</p>
+													</div>
 
-												<!-- Expected Benefits -->
-												<div>
-													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														Expected Benefits
-													</h4>
-													<p class="text-sm text-right text-tertiary-300">
-														{proposal.benefits || 'Not defined yet'}
-													</p>
-												</div>
+													<!-- Expected Benefits from metadata -->
+													<div>
+														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+															Expected Benefits
+														</h4>
+														<p class="text-sm text-right text-tertiary-300">
+															{proposal.metadata?.benefits || 'Not defined yet'}
+														</p>
+													</div>
+
+													<!-- Additional metadata fields -->
+													{#each Object.entries(proposal.metadata || {}) as [key, value]}
+														{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
+															<div>
+																<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
+																	{key.charAt(0).toUpperCase() + key.slice(1)}
+																</h4>
+																<p class="text-sm text-right text-tertiary-300">
+																	{value}
+																</p>
+															</div>
+														{/if}
+													{/each}
+												{/if}
 											</div>
 										</div>
 									{/if}
