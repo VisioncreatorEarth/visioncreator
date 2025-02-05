@@ -47,6 +47,7 @@ HOW THIS SYSTEM WORKS:
 		updated_at: string;
 		tags?: string[];
 		metadata?: Record<string, string | null>;
+		decided_at?: string;
 	}
 
 	interface WorkPackage {
@@ -188,10 +189,10 @@ HOW THIS SYSTEM WORKS:
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'accepted', 'rejected'];
 
-	// Add state transition thresholds
+	// Update the state thresholds
 	const STATE_THRESHOLDS = {
 		idea: 10, // 10 votes to move from idea to draft
-		draft: 20, // 20 votes to move from draft to decision
+		draft: 20, // 20 votes (not 19) to move from draft to pending
 		decision: 30 // 30 votes to move from decision to implementation
 	};
 
@@ -374,6 +375,7 @@ HOW THIS SYSTEM WORKS:
 		updated_at: string;
 		tags?: string[];
 		metadata?: Record<string, string | null>;
+		decided_at?: string;
 	}
 
 	interface VoterInfo {
@@ -626,8 +628,21 @@ HOW THIS SYSTEM WORKS:
 	let showNewProposalForm = false;
 	let newProposal = {
 		title: '',
-		details: ''
+		details: '',
+		tags: [] as string[]
 	};
+
+	// Add tag selection helper
+	const VALID_TAGS = ['startup', 'distribution', 'product'] as const;
+	type ValidTag = (typeof VALID_TAGS)[number];
+
+	function toggleTag(tag: ValidTag) {
+		if (newProposal.tags.includes(tag)) {
+			newProposal.tags = newProposal.tags.filter((t) => t !== tag);
+		} else {
+			newProposal.tags = [...newProposal.tags, tag];
+		}
+	}
 
 	// Add create proposal mutation
 	const createProposalMutation = createMutation({
@@ -641,14 +656,16 @@ HOW THIS SYSTEM WORKS:
 		try {
 			const result = await $createProposalMutation.mutateAsync({
 				title: newProposal.title,
-				details: newProposal.details
+				details: newProposal.details,
+				tags: newProposal.tags
 			});
 
 			if (result?.success) {
 				// Reset form
 				newProposal = {
 					title: '',
-					details: ''
+					details: '',
+					tags: []
 				};
 				showNewProposalForm = false;
 				// Refresh proposals
@@ -728,6 +745,39 @@ HOW THIS SYSTEM WORKS:
 	// Add isAdmin helper function
 	function isAdmin(userId: string): boolean {
 		return userId === '00000000-0000-0000-0000-000000000001';
+	}
+
+	// Update the getTimeAgo function to be more concise
+	function getTimeAgo(date: string): string {
+		const now = new Date();
+		const past = new Date(date);
+		const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+		const intervals = {
+			y: 31536000,
+			m: 2592000,
+			w: 604800,
+			d: 86400,
+			h: 3600,
+			min: 60
+		};
+
+		for (const [unit, seconds] of Object.entries(intervals)) {
+			const interval = Math.floor(diffInSeconds / seconds);
+			if (interval >= 1) {
+				return `${interval}${unit} ago`;
+			}
+		}
+
+		return 'just now';
+	}
+
+	function formatDate(date: string): string {
+		return new Date(date).toLocaleDateString('en-US', {
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric'
+		});
 	}
 </script>
 
@@ -841,6 +891,29 @@ HOW THIS SYSTEM WORKS:
 										required
 									/>
 								</div>
+
+								<!-- Add tag selection -->
+								<div>
+									<label class="block mb-2 text-sm font-medium text-tertiary-200">
+										Tags (Optional)
+									</label>
+									<div class="flex flex-wrap gap-2">
+										{#each VALID_TAGS as tag}
+											<button
+												type="button"
+												class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {newProposal.tags.includes(
+													tag
+												)
+													? 'bg-tertiary-500/20 text-tertiary-300 border-tertiary-500'
+													: 'bg-surface-700/50 text-surface-300 hover:bg-surface-700 border-surface-600'} border"
+												on:click={() => toggleTag(tag)}
+											>
+												{tag}
+											</button>
+										{/each}
+									</div>
+								</div>
+
 								<div>
 									<label for="details" class="block mb-2 text-sm font-medium text-tertiary-200">
 										Details
@@ -898,7 +971,7 @@ HOW THIS SYSTEM WORKS:
 									<div class="sticky top-0 z-10 flex items-stretch bg-surface-800/50">
 										<!-- Left side: Votes -->
 										<div
-											class="flex items-center justify-between w-40 p-4 shrink-0 md:w-40 md:p-6 border-r border-surface-700/50"
+											class="flex items-center justify-between w-40 p-4 border-r shrink-0 md:w-40 md:p-6 border-surface-700/50"
 										>
 											<div class="flex items-center justify-center w-full gap-4">
 												<div class="flex items-center gap-4">
@@ -1050,7 +1123,14 @@ HOW THIS SYSTEM WORKS:
 															</div>
 														</button>
 													</div>
-												{:else}
+												{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
+													<div class="flex flex-col items-end gap-1">
+														<p class="text-2xl font-bold text-tertiary-100">
+															{getTimeAgo(proposal.decided_at)}
+														</p>
+														<p class="text-sm text-tertiary-300">Decision on February 5, 2025</p>
+													</div>
+												{:else if proposal.state === 'idea'}
 													<div class="flex flex-col items-end gap-1">
 														<p class="text-2xl font-bold text-tertiary-100">
 															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
@@ -1066,6 +1146,24 @@ HOW THIS SYSTEM WORKS:
 														</div>
 														<p class="text-sm text-tertiary-300">
 															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
+														</p>
+													</div>
+												{:else if proposal.state === 'draft'}
+													<div class="flex flex-col items-end gap-1">
+														<p class="text-2xl font-bold text-tertiary-100">
+															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
+														</p>
+														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+															<div
+																class="h-full transition-all duration-300 bg-tertiary-500"
+																style="width: {Math.min(
+																	(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
+																	100
+																)}%"
+															/>
+														</div>
+														<p class="text-sm text-tertiary-300">
+															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
 														</p>
 													</div>
 												{/if}
@@ -1250,7 +1348,7 @@ HOW THIS SYSTEM WORKS:
 								>
 									<!-- Left side: Votes -->
 									<div
-										class="flex items-center justify-between w-40 p-4 shrink-0 md:w-40 md:p-6 border-r border-surface-700/50"
+										class="flex items-center justify-between w-40 p-4 border-r shrink-0 md:w-40 md:p-6 border-surface-700/50"
 									>
 										<div class="flex items-center justify-center w-full gap-4">
 											<div class="flex items-center gap-4">
@@ -1395,49 +1493,48 @@ HOW THIS SYSTEM WORKS:
 														</div>
 													</button>
 												</div>
-											{:else}
+											{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
 												<div class="flex flex-col items-end gap-1">
-													{#if proposal.state === 'idea'}
-														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
-														</p>
-														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-															<div
-																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min(
-																	(proposal.total_votes / STATE_THRESHOLDS.idea) * 100,
-																	100
-																)}%"
-															/>
-														</div>
-														<p class="text-sm text-tertiary-300">
-															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
-														</p>
-													{:else if proposal.state === 'draft'}
-														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
-														</p>
-														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-															<div
-																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min(
-																	(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
-																	100
-																)}%"
-															/>
-														</div>
-														<p class="text-sm text-tertiary-300">
-															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
-														</p>
-													{:else}
-														<p class="text-2xl font-bold text-tertiary-100">
-															{proposal.total_votes}
-														</p>
-														<p class="text-sm text-tertiary-300">total votes</p>
-														<p class="text-xs text-tertiary-400">
-															{proposal.total_tokens_staked} tokens
-														</p>
-													{/if}
+													<p class="text-2xl font-bold text-tertiary-100">
+														{getTimeAgo(proposal.decided_at)}
+													</p>
+													<p class="text-sm text-tertiary-300">Decision on February 5, 2025</p>
+												</div>
+											{:else if proposal.state === 'idea'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																(proposal.total_votes / STATE_THRESHOLDS.idea) * 100,
+																100
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
+													</p>
+												</div>
+											{:else if proposal.state === 'draft'}
+												<div class="flex flex-col items-end gap-1">
+													<p class="text-2xl font-bold text-tertiary-100">
+														{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
+													</p>
+													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+														<div
+															class="h-full transition-all duration-300 bg-tertiary-500"
+															style="width: {Math.min(
+																(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
+																100
+															)}%"
+														/>
+													</div>
+													<p class="text-sm text-tertiary-300">
+														{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
+													</p>
 												</div>
 											{/if}
 										</div>

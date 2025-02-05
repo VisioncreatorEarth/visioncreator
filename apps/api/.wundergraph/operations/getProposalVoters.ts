@@ -22,6 +22,10 @@ export default createOperation.query({
     input: z.object({
         proposalId: z.string()
     }),
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated"],
+    },
     handler: async ({ input, context }) => {
         // Get all votes for the proposal from user_proposal_votes
         const { data: votes } = await context.supabase

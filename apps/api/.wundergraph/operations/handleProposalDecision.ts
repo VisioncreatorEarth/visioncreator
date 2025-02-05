@@ -5,6 +5,12 @@ interface Proposal {
     state: 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
     total_votes: number;
     total_tokens_staked: number;
+    decided_at?: string;
+}
+
+interface ProposalDecisionResponse {
+    success: boolean;
+    proposal: Proposal;
 }
 
 export default createOperation.mutation({
@@ -14,52 +20,39 @@ export default createOperation.mutation({
         adminId: z.string()
     }),
     requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated", "admin"],
+    },
     handler: async ({ input, context, user }) => {
         // Verify admin status (using a hardcoded admin ID for now)
         if (input.adminId !== '00000000-0000-0000-0000-000000000001') {
             throw new Error('Unauthorized: Only admin can make decisions');
         }
 
-        const newState = input.decision === 'pass' ? 'accepted' : 'rejected';
-
-        // Start a transaction
-        const { data: proposal, error: proposalError } = await context.supabase
-            .from('proposals')
-            .update({ state: newState })
-            .eq('id', input.proposalId)
-            .select()
-            .single();
-
-        if (proposalError) {
-            throw new Error(`Failed to update proposal: ${proposalError.message}`);
-        }
-
-        // Create a snapshot of the current votes
-        const { data: votes } = await context.supabase
-            .from('user_proposal_votes')
-            .select('user_id, user_votes, tokens_staked')
-            .eq('proposal_id', input.proposalId);
-
-        // Create the snapshot
-        const { error: snapshotError } = await context.supabase
-            .from('proposal_vote_snapshots')
-            .insert({
-                proposal_id: input.proposalId,
-                total_votes: proposal.total_votes,
-                total_tokens_staked: proposal.total_tokens_staked,
-                voter_snapshots: votes || [],
-                reached_decision_at: new Date().toISOString()
+        try {
+            // Call the function with exact parameter names matching the SQL function
+            const { data, error } = await context.supabase.rpc('handle_proposal_decision', {
+                p_proposal_id: input.proposalId,
+                p_decision: input.decision,
+                p_admin_id: input.adminId
             });
 
-        if (snapshotError) {
-            console.error('Failed to create snapshot:', snapshotError);
-            // Don't throw error here as the main action succeeded
-        }
+            if (error) {
+                throw new Error(`Failed to update proposal: ${error.message}`);
+            }
 
-        return {
-            success: true,
-            message: `Proposal ${input.decision === 'pass' ? 'accepted' : 'rejected'} successfully`,
-            proposal
-        };
+            const result = data as ProposalDecisionResponse;
+
+            return {
+                success: true,
+                message: `Proposal ${input.decision === 'pass' ? 'accepted' : 'rejected'} successfully`,
+                proposal: result.proposal
+            };
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to handle decision: ${error.message}`);
+            }
+            throw new Error('An unknown error occurred while handling the decision');
+        }
     }
 }); 

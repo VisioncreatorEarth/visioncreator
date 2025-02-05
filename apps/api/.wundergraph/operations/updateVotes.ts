@@ -1,14 +1,5 @@
 import { createOperation, z } from "../generated/wundergraph.factory";
 
-interface TokenTransaction {
-    id: string;
-    transaction_type: 'stake' | 'unstake';
-    amount: number;
-    proposal_id: string;
-    from_user_id: string;
-    created_at: string;
-}
-
 interface TokenBalance {
     balance: number;
     staked_balance: number;
@@ -38,6 +29,9 @@ export default createOperation.mutation({
         amount: z.number().int().positive()
     }),
     requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated"],
+    },
     handler: async ({ input, context, user }) => {
         // Check if user is authenticated and has valid ID
         if (!user?.customClaims?.id) {
@@ -48,11 +42,6 @@ export default createOperation.mutation({
         if (user.customClaims.id !== input.userId) {
             throw new Error("User ID mismatch.");
         }
-
-        console.log('=== Quadratic Vote Update Debug Log ===');
-        console.log('Action:', input.action);
-        console.log('User ID:', input.userId);
-        console.log('Proposal ID:', input.proposalId);
 
         // Get user's current votes and tokens for this proposal
         const { data: userVotes } = await context.supabase
@@ -65,8 +54,6 @@ export default createOperation.mutation({
         const currentVotes = (userVotes as UserProposalVotes)?.user_votes || 0;
         const currentTokens = (userVotes as UserProposalVotes)?.tokens_staked || 0;
 
-        console.log('Current Votes:', currentVotes);
-        console.log('Current Tokens Staked:', currentTokens);
 
         // Calculate token cost for this action
         let tokenAmount: number;
@@ -76,8 +63,6 @@ export default createOperation.mutation({
             // For unstaking, calculate the cost of the last vote
             tokenAmount = getQuadraticCost(currentVotes - 1);
         }
-
-        console.log('Token Amount for Action:', tokenAmount);
 
         // Get user's current token balance
         const { data: userBalance } = await context.supabase
@@ -136,11 +121,6 @@ export default createOperation.mutation({
             .eq('user_id', input.userId)
             .single();
 
-        console.log('Updated State:', {
-            proposal: updatedProposal,
-            userVotes: updatedUserVotes
-        });
-        console.log('=== End Quadratic Vote Update Debug Log ===');
 
         return {
             success: true,
