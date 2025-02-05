@@ -18,6 +18,8 @@ interface UserProposalVotes {
 
 // Calculate quadratic cost for next vote
 function getQuadraticCost(currentVotes: number): number {
+    // For voting: cost = (n+1)^2 - n^2
+    // For unstaking: cost = n^2 - (n-1)^2
     return Math.pow(currentVotes + 1, 2) - Math.pow(currentVotes, 2);
 }
 
@@ -54,14 +56,28 @@ export default createOperation.mutation({
         const currentVotes = (userVotes as UserProposalVotes)?.user_votes || 0;
         const currentTokens = (userVotes as UserProposalVotes)?.tokens_staked || 0;
 
+        // Get proposal details to check if user is author
+        const { data: proposal } = await context.supabase
+            .from('proposals')
+            .select('author')
+            .eq('id', input.proposalId)
+            .single();
+
+        const isAuthor = proposal?.author === input.userId;
 
         // Calculate token cost for this action
         let tokenAmount: number;
         if (input.action === 'stake') {
+            // For staking: cost = (n+1)^2 - n^2
             tokenAmount = getQuadraticCost(currentVotes);
         } else {
-            // For unstaking, calculate the cost of the last vote
-            tokenAmount = getQuadraticCost(currentVotes - 1);
+            // For unstaking: cost = n^2 - (n-1)^2
+            // If author is unstaking their last vote, use the initial stake amount
+            if (isAuthor && currentVotes <= 1) {
+                tokenAmount = 1; // Initial stake amount
+            } else {
+                tokenAmount = getQuadraticCost(currentVotes - 1);
+            }
         }
 
         // Get user's current token balance
@@ -120,7 +136,6 @@ export default createOperation.mutation({
             .eq('proposal_id', input.proposalId)
             .eq('user_id', input.userId)
             .single();
-
 
         return {
             success: true,

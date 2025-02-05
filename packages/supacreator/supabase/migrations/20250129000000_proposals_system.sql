@@ -429,7 +429,7 @@ BEGIN
         WHERE unnest = ANY(v_valid_tags)
     ) INTO v_filtered_tags;
 
-    -- Create proposal first
+    -- Create proposal first with initial vote count of 1
     INSERT INTO proposals (
         title,
         details,
@@ -443,13 +443,20 @@ BEGIN
         p_details,
         p_author,
         'idea',
-        1,  -- Start with 1 vote (author's vote)
+        1,  -- Initial author vote
         p_stake_amount,
         v_filtered_tags
     )
     RETURNING * INTO v_proposal;
 
-    -- Then create the stake transaction
+    -- Update user's token balance first
+    UPDATE token_balances
+    SET balance = balance - p_stake_amount,
+        staked_balance = staked_balance + p_stake_amount,
+        updated_at = NOW()
+    WHERE user_id = p_author;
+
+    -- Create the initial stake transaction
     INSERT INTO token_transactions (
         transaction_type,
         from_user_id,
@@ -463,7 +470,7 @@ BEGIN
     )
     RETURNING * INTO v_transaction;
 
-    -- Use UPSERT for vote record to handle both new and existing records
+    -- Create initial vote record with 1 vote and initial stake
     INSERT INTO user_proposal_votes (
         user_id,
         proposal_id,
@@ -475,10 +482,9 @@ BEGIN
         1,  -- Initial author vote
         p_stake_amount
     )
-    ON CONFLICT (user_id, proposal_id) 
-    DO UPDATE SET
-        user_votes = user_proposal_votes.user_votes + 1,
-        tokens_staked = user_proposal_votes.tokens_staked + EXCLUDED.tokens_staked;
+    ON CONFLICT (user_id, proposal_id) DO UPDATE
+    SET user_votes = 1,
+        tokens_staked = p_stake_amount;
 
     RETURN json_build_object(
         'proposal', v_proposal,
