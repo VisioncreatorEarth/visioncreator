@@ -20,6 +20,7 @@ This is the right aside area of the proposals view that:
 		getStateBgColor,
 		type ProposalState
 	} from '$lib/stores/proposalStore';
+	import { activeSidePanel } from '$lib/stores/sidePanelStore';
 
 	export let onProposalSelect: (state: ProposalState, proposalId: string) => void;
 	export let voteThreshold: number;
@@ -81,11 +82,15 @@ This is the right aside area of the proposals view that:
 		userTokens = ($userTokensQuery.data.balance as { balance: number }).balance;
 	}
 
-	let isOpen = false;
-
 	function toggleMenu() {
-		isOpen = !isOpen;
+		if ($activeSidePanel === 'right') {
+			activeSidePanel.close();
+		} else {
+			activeSidePanel.openRight();
+		}
 	}
+
+	$: isOpen = $activeSidePanel === 'right';
 
 	// Calculate quadratic cost for next vote
 	function getNextVoteCost(currentVotes: number): number {
@@ -98,32 +103,38 @@ This is the right aside area of the proposals view that:
 	}
 </script>
 
-<!-- Mobile Toggle Button (Bottom Right) -->
+<!-- Mobile Toggle Button -->
 <button
-	class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 right-4 bg-surface-800 hover:bg-surface-700 md:hidden"
+	class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 right-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
 	on:click={toggleMenu}
 >
-	<Icon icon="mdi:account" class="w-6 h-6 text-tertiary-300" />
+	<Icon icon={isOpen ? 'mdi:close' : 'mdi:account'} class="w-6 h-6 text-tertiary-300" />
 </button>
 
+<!-- Overlay when menu is open on mobile/tablet -->
+{#if isOpen && typeof window !== 'undefined' && window.innerWidth < 1024}
+	<div
+		class="fixed inset-0 z-40 bg-surface-800/50 backdrop-blur-sm"
+		on:click={() => activeSidePanel.close()}
+		transition:fly={{ duration: 200, opacity: 0 }}
+	/>
+{/if}
+
 <!-- Aside Container -->
-<aside
-	class="fixed top-0 right-0 z-40 h-screen transition-transform md:translate-x-0 bg-surface-900 {isOpen
+<div
+	class="aside-panel right-0 z-50 transition-transform duration-200 border-l {isOpen
 		? 'translate-x-0'
-		: 'translate-x-full'}"
-	class:w-80={isOpen}
-	class:w-0={!isOpen}
-	class:md:w-80={true}
+		: 'translate-x-full'} {typeof window !== 'undefined' && window.innerWidth >= 1024
+		? 'lg:translate-x-0 lg:w-80'
+		: 'w-[320px]'}"
 >
-	{#if isOpen || (typeof window !== 'undefined' && window.innerWidth >= 768)}
-		<div
-			class="h-full p-6 overflow-y-auto border-l border-surface-800/50 bg-surface-800/50"
-			transition:fly={{ x: 100, duration: 200 }}
-		>
-			<div class="space-y-6">
+	<div class="flex flex-col h-full overflow-hidden bg-surface-900/95 backdrop-blur-sm">
+		<!-- Main Content Area -->
+		<div class="flex-1 overflow-y-auto">
+			<div class="p-6 space-y-6">
 				<!-- User Profile -->
-				{#if userData}
-					<div class="flex items-center gap-4">
+				<div class="flex items-center gap-4">
+					{#if userData}
 						<Avatar
 							me={{
 								data: { seed: userData.id },
@@ -135,8 +146,8 @@ This is the right aside area of the proposals view that:
 							<h3 class="text-xl font-semibold text-tertiary-100">{userData.name}</h3>
 							<p class="text-sm text-tertiary-300">Visioncreator</p>
 						</div>
-					</div>
-				{/if}
+					{/if}
+				</div>
 
 				<!-- Voting Power -->
 				<div class="p-4 border rounded-lg border-surface-700/50">
@@ -171,7 +182,7 @@ This is the right aside area of the proposals view that:
 											on:click={() => {
 												onProposalSelect(proposal.state, proposal.id);
 												if (window.innerWidth < 768) {
-													isOpen = false;
+													activeSidePanel.close();
 												}
 											}}
 										>
@@ -201,8 +212,21 @@ This is the right aside area of the proposals view that:
 				{/if}
 			</div>
 		</div>
-	{/if}
-</aside>
+
+		<!-- Close Button at Bottom -->
+		{#if typeof window !== 'undefined' && window.innerWidth < 1024}
+			<div class="p-4 border-t border-surface-700/50">
+				<button
+					class="flex items-center justify-center w-full gap-2 px-4 py-2 transition-colors rounded-lg hover:bg-surface-800"
+					on:click={() => activeSidePanel.close()}
+				>
+					<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
+					<span class="text-sm font-medium text-tertiary-300">Close Menu</span>
+				</button>
+			</div>
+		{/if}
+	</div>
+</div>
 
 <style>
 	:global(.proposal-card) {

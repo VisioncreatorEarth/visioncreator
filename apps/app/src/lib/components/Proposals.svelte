@@ -26,7 +26,7 @@ HOW THIS SYSTEM WORKS:
 	import LeftAsideProposals from './LeftAsideProposals.svelte';
 	import RightAsideProposals from './RightAsideProposals.svelte';
 	import VideoPlayer from './VideoPlayer.svelte';
-	import { writable, derived } from 'svelte/store';
+	import { writable } from 'svelte/store';
 
 	// Define types
 	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
@@ -50,32 +50,10 @@ HOW THIS SYSTEM WORKS:
 		decided_at?: string;
 	}
 
-	interface WorkPackage {
-		id: string;
-		proposalId: string;
-		title: string;
-		deliverables: string;
-		budget: number;
-		assignee: string;
-	}
-
 	interface User {
 		id: string;
 		name: string;
 		onboarded: boolean;
-	}
-
-	interface TokenBalance {
-		balance: {
-			balance: number;
-			staked_balance: number;
-		};
-		transactions: Array<{
-			id: string;
-			amount: number;
-			transaction_type: string;
-			created_at: string;
-		}>;
 	}
 
 	// Add transaction type
@@ -86,19 +64,6 @@ HOW THIS SYSTEM WORKS:
 		amount: number;
 		created_at: string;
 		from_user_id: string;
-	}
-
-	// Add response type for updateVotes mutation
-	interface UpdateVotesResponse {
-		success: boolean;
-		message: string;
-		transaction: TokenTransaction;
-	}
-
-	interface Transaction {
-		from_user_id: string;
-		amount: number;
-		transaction_type: 'stake' | 'unstake';
 	}
 
 	// Add interface for Profile
@@ -113,11 +78,6 @@ HOW THIS SYSTEM WORKS:
 		name: string | null;
 		votes: number;
 		tokens: number;
-	}
-
-	interface VoterQueryResult {
-		id: string;
-		query: ReturnType<typeof createQuery>;
 	}
 
 	// Queries with proper typing
@@ -163,28 +123,6 @@ HOW THIS SYSTEM WORKS:
 		budget: 0,
 		assignee: ''
 	};
-
-	// Mock work packages (to be replaced with DB later)
-	let workPackages: WorkPackage[] = [
-		{
-			id: '1',
-			proposalId: '1',
-			title: 'Initial Development',
-			deliverables: 'Basic functionality implementation',
-			budget: 5000,
-			assignee: 'John Doe'
-		},
-		{
-			id: '2',
-			proposalId: '1',
-			title: 'UI/UX Design',
-			deliverables: 'Design system and components',
-			budget: 3000,
-			assignee: 'Jane Smith'
-		}
-	];
-
-	$: proposalWorkPackages = workPackages.filter((wp) => wp.proposalId === expandedProposalId);
 
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'accepted', 'rejected'];
@@ -479,47 +417,6 @@ HOW THIS SYSTEM WORKS:
 		}, 0);
 	}
 
-	// Work package functions
-	function toggleWorkPackageForm() {
-		isWorkPackageFormVisible = !isWorkPackageFormVisible;
-		if (!isWorkPackageFormVisible) {
-			const userData = $userQuery.data as User;
-			// Reset form when hiding
-			newWorkPackage = {
-				title: '',
-				deliverables: '',
-				budget: 0,
-				assignee: userData?.name || ''
-			};
-		}
-	}
-
-	function handleAddWorkPackage() {
-		if (expandedProposalId && $userQuery.data) {
-			const userData = $userQuery.data as User;
-			const newPackage: WorkPackage = {
-				id: crypto.randomUUID(),
-				proposalId: expandedProposalId,
-				...newWorkPackage,
-				assignee: userData.name
-			};
-			workPackages = [...workPackages, newPackage];
-
-			// Reset form and hide it
-			newWorkPackage = {
-				title: '',
-				deliverables: '',
-				budget: 0,
-				assignee: userData.name
-			};
-			isWorkPackageFormVisible = false;
-		}
-	}
-
-	function removeWorkPackage(packageId: string) {
-		workPackages = workPackages.filter((wp) => wp.id !== packageId);
-	}
-
 	// Format voter data for Avatar component
 	function formatVoterForAvatar(voter: VoterInfo) {
 		return {
@@ -697,17 +594,6 @@ HOW THIS SYSTEM WORKS:
 		return currentVotes < 20;
 	}
 
-	// Add these helper functions at the top of the script section
-	function getVetoCount(): number {
-		// Hardcoded for now
-		return 0;
-	}
-
-	function getPassCount(): number {
-		// Hardcoded for now
-		return 2;
-	}
-
 	// Add the decision mutation
 	const handleDecisionMutation = createMutation({
 		operationName: 'handleProposalDecision'
@@ -790,7 +676,7 @@ HOW THIS SYSTEM WORKS:
 	/>
 
 	<!-- Main Content Area -->
-	<main class="flex-grow h-full overflow-hidden md:ml-64 md:mr-80">
+	<main class="flex-grow h-full overflow-hidden">
 		<div class="h-full">
 			<!-- Tabs Bar - Fixed to top -->
 			<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
@@ -1549,17 +1435,19 @@ HOW THIS SYSTEM WORKS:
 	</main>
 
 	<!-- Right Aside -->
-	<aside
-		class="fixed top-0 bottom-0 right-0 overflow-y-auto border-l w-80 border-surface-700/50 bg-surface-800/50 {getStateBgColor(
-			'idea'
-		)}"
-	>
-		<RightAsideProposals onProposalSelect={handleProposalSelect} voteThreshold={10} />
-	</aside>
+	<RightAsideProposals onProposalSelect={handleProposalSelect} voteThreshold={10} />
 </div>
 
 <style>
 	:global(.proposal-card) {
 		@apply overflow-hidden rounded-xl bg-surface-900/50 border border-surface-700/50;
+	}
+
+	:global(.aside-overlay) {
+		@apply fixed inset-0 bg-surface-900/50 backdrop-blur-sm;
+	}
+
+	:global(.aside-panel) {
+		@apply fixed top-0 h-screen bg-surface-900 border-surface-700/50 shadow-2xl;
 	}
 </style>
