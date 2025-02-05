@@ -18,6 +18,9 @@ HOW THIS SYSTEM WORKS:
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { createQuery, createMutation } from '$lib/wundergraph';
+	import type { Operations } from '@wundergraph/sdk/client';
+	import type { QueryObserverResult } from '@tanstack/svelte-query';
+	import type { Readable } from 'svelte/store';
 	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -27,6 +30,17 @@ HOW THIS SYSTEM WORKS:
 	import RightAsideProposals from './RightAsideProposals.svelte';
 	import VideoPlayer from './VideoPlayer.svelte';
 	import { writable } from 'svelte/store';
+	import ProposalDetailView from './ProposalDetailView.svelte';
+	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
+	import type {
+		Proposal,
+		ProposalState,
+		VoterInfo,
+		User,
+		TokenTransaction,
+		Profile,
+		UserTokens
+	} from '$lib/types/proposals';
 
 	// Define types
 	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
@@ -56,7 +70,6 @@ HOW THIS SYSTEM WORKS:
 		onboarded: boolean;
 	}
 
-	// Add transaction type
 	interface TokenTransaction {
 		id: string;
 		proposal_id: string | null;
@@ -66,7 +79,6 @@ HOW THIS SYSTEM WORKS:
 		from_user_id: string;
 	}
 
-	// Add interface for Profile
 	interface Profile {
 		id: string;
 		name: string | null;
@@ -80,33 +92,48 @@ HOW THIS SYSTEM WORKS:
 		tokens: number;
 	}
 
+	interface UserTokens {
+		balance: {
+			balance: number;
+		};
+		transactions: TokenTransaction[];
+	}
+
+	type UserQueryResult = QueryObserverResult<User | undefined>;
+
+	// Update the queries to handle refetch
+	type WundergraphQuery<T> = {
+		data?: T;
+		refetch?: () => Promise<void>;
+	};
+
 	// Queries with proper typing
-	const proposalsQuery = createQuery({
+	const proposalsQuery = createQuery<Operations['queryProposals']>({
 		operationName: 'queryProposals',
 		enabled: true,
 		refetchInterval: 1000
-	});
+	}) as unknown as WundergraphQuery<Operations['queryProposals']>;
 
-	const userQuery = createQuery({
+	const userQuery = createQuery<Operations['queryMe']>({
 		operationName: 'queryMe',
 		enabled: true
-	});
+	}) as unknown as WundergraphQuery<Operations['queryMe']>;
 
-	$: userId = $userQuery.data?.id as string;
-	$: userTokensQuery = createQuery({
+	$: userId = $userQuery.data?.id;
+	$: userTokensQuery = createQuery<Operations['getUserTokens']>({
 		operationName: 'getUserTokens',
-		input: { userId: userData?.id || '' },
-		enabled: !!userData?.id,
-		refetchInterval: 500 // Faster refresh for token updates
-	});
+		input: { userId: userId || '' },
+		enabled: !!userId,
+		refetchInterval: 500
+	}) as unknown as WundergraphQuery<Operations['getUserTokens']>;
 
 	// Create a single query for the current proposal's voters
-	$: currentProposalVotersQuery = createQuery({
+	$: currentProposalVotersQuery = createQuery<Operations['getProposalVoters']>({
 		operationName: 'getProposalVoters',
 		input: { proposalId: expandedProposalId || '' },
 		enabled: !!expandedProposalId,
 		refetchInterval: 1000
-	});
+	}) as unknown as WundergraphQuery<Operations['getProposalVoters']>;
 
 	// State management
 	const activeTab = writable<ProposalState>('idea');
@@ -126,6 +153,8 @@ HOW THIS SYSTEM WORKS:
 
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'accepted', 'rejected'];
+	const VALID_TAGS = ['startup', 'distribution', 'product'] as const;
+	type ValidTag = (typeof VALID_TAGS)[number];
 
 	// Update the state thresholds
 	const STATE_THRESHOLDS = {
@@ -134,9 +163,17 @@ HOW THIS SYSTEM WORKS:
 		decision: 30 // 30 votes to move from decision to implementation
 	};
 
-	// Add updateVotes mutation
-	const updateVotesMutation = createMutation({
+	// Add mutations with proper typing
+	const updateVotesMutation = createMutation<Operations['updateVotes']>({
 		operationName: 'updateVotes'
+	});
+
+	const handleDecisionMutation = createMutation<Operations['handleProposalDecision']>({
+		operationName: 'handleProposalDecision'
+	});
+
+	const createProposalMutation = createMutation<Operations['createProposal']>({
+		operationName: 'createProposal'
 	});
 
 	// Update user tokens when data changes
@@ -161,7 +198,7 @@ HOW THIS SYSTEM WORKS:
 				'from_user_id' in tx
 			);
 		});
-		const userId = $userQuery.data.id as string;
+		const userId = $userQuery.data.id;
 
 		// Filter transactions for current user and valid proposal_id
 		const userTransactions = transactions.filter(
@@ -266,19 +303,20 @@ HOW THIS SYSTEM WORKS:
 		return `${baseClasses} ${stateColor} ${bgColor}`;
 	}
 
-	// Filter and sort proposals based on active tab
-	$: filteredProposals =
-		$proposalsQuery.data?.proposals
-			.filter((p) => p.state === $activeTab)
-			.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0)) || [];
+	// Update filteredProposals with proper typing
+	$: filteredProposals = (($proposalsQuery.data?.proposals as Proposal[]) || [])
+		.filter((p: Proposal) => p.state === $activeTab)
+		.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0));
 
-	// Handle URL parameters for proposal selection
+	// Update URL parameter handling with proper typing
 	$: if ($page.url.searchParams.get('id')) {
 		const proposalId = $page.url.searchParams.get('id');
 		if (proposalId) {
-			const proposal = $proposalsQuery.data?.proposals.find((p) => p.id === proposalId);
+			const proposal = $proposalsQuery.data?.proposals.find(
+				(p: { id: string }) => p.id === proposalId
+			);
 			if (proposal) {
-				activeTab.set(proposal.state);
+				activeTab.set(proposal.state as ProposalState);
 				setTimeout(() => {
 					expandedProposalId = proposalId;
 				}, 0);
@@ -526,13 +564,10 @@ HOW THIS SYSTEM WORKS:
 	let newProposal = {
 		title: '',
 		details: '',
-		tags: [] as string[]
+		tags: [] as ValidTag[]
 	};
 
 	// Add tag selection helper
-	const VALID_TAGS = ['startup', 'distribution', 'product'] as const;
-	type ValidTag = (typeof VALID_TAGS)[number];
-
 	function toggleTag(tag: ValidTag) {
 		if (newProposal.tags.includes(tag)) {
 			newProposal.tags = newProposal.tags.filter((t) => t !== tag);
@@ -541,12 +576,7 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
-	// Add create proposal mutation
-	const createProposalMutation = createMutation({
-		operationName: 'createProposal'
-	});
-
-	// Add handleCreateProposal function
+	// Update handleCreateProposal function to handle refetch properly
 	async function handleCreateProposal() {
 		if (!newProposal.title || !newProposal.details) return;
 
@@ -566,7 +596,7 @@ HOW THIS SYSTEM WORKS:
 				};
 				showNewProposalForm = false;
 				// Refresh proposals
-				await $proposalsQuery.refetch();
+				await proposalsQuery.refetch?.();
 			}
 		} catch (error) {
 			console.error('Failed to create proposal:', error);
@@ -582,24 +612,12 @@ HOW THIS SYSTEM WORKS:
 		return voter.votes > 0;
 	}
 
-	// Add this helper function for countdown display
-	function getCountdownDisplay(): string {
-		// Hardcoded 1 day countdown for now
-		return '23:59:59';
+	// Add isAdmin helper function
+	function isAdmin(userId: string): boolean {
+		return userId === '00000000-0000-0000-0000-000000000001';
 	}
 
-	// Add this helper to check if voting is allowed
-	function canVote(proposal: Proposal, currentVotes: number): boolean {
-		if (proposal.state === 'pending') return false;
-		return currentVotes < 20;
-	}
-
-	// Add the decision mutation
-	const handleDecisionMutation = createMutation({
-		operationName: 'handleProposalDecision'
-	});
-
-	// Add handleDecision function
+	// Update handleDecision function to handle refetch properly
 	async function handleDecision(proposalId: string, decision: 'veto' | 'pass') {
 		if (!$userQuery.data?.id) return;
 
@@ -612,11 +630,13 @@ HOW THIS SYSTEM WORKS:
 
 			if (result?.success) {
 				// Refresh all relevant data
-				await Promise.all([
-					$proposalsQuery.refetch?.(),
-					$currentProposalVotersQuery.refetch?.(),
-					$userTokensQuery.refetch?.()
-				]);
+				await Promise.all(
+					[
+						proposalsQuery.refetch?.(),
+						currentProposalVotersQuery.refetch?.(),
+						userTokensQuery.refetch?.()
+					].filter(Boolean)
+				);
 
 				// If the proposal was the expanded one, close it
 				if (expandedProposalId === proposalId) {
@@ -628,9 +648,16 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
-	// Add isAdmin helper function
-	function isAdmin(userId: string): boolean {
-		return userId === '00000000-0000-0000-0000-000000000001';
+	// Add this helper function for countdown display
+	function getCountdownDisplay(): string {
+		// Hardcoded 1 day countdown for now
+		return '23:59:59';
+	}
+
+	// Add this helper to check if voting is allowed
+	function canVote(proposal: Proposal, currentVotes: number): boolean {
+		if (proposal.state === 'pending') return false;
+		return currentVotes < 20;
 	}
 
 	// Update the getTimeAgo function to be more concise
@@ -849,582 +876,53 @@ HOW THIS SYSTEM WORKS:
 								(p) => p.id === expandedProposalId
 							)}
 							{#if proposal}
-								<div
-									id="proposal-{proposal.id}"
-									class="{getProposalCardClasses(proposal)} flex flex-col h-[calc(100vh-12rem)]"
-								>
-									<!-- Proposal Header -->
-									<div class="sticky top-0 z-10 flex items-stretch bg-surface-800/50">
-										<!-- Left side: Votes -->
-										<div
-											class="flex items-center justify-between w-40 p-4 border-r shrink-0 md:w-40 md:p-6 border-surface-700/50"
-										>
-											<div class="flex items-center justify-center w-full gap-4">
-												<div class="flex items-center gap-4">
-													<div class="relative text-center">
-														<div class="flex items-center justify-center">
-															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																{proposal.total_votes || 0}
-															</p>
-															{#if $userQuery.data}
-																{@const voteInfo = getVoteDisplay(
-																	proposal,
-																	getVotersForProposal(proposal.id).find(
-																		(v) => v.id === $userQuery.data.id
-																	)
-																)}
-																{#if voteInfo.tokens > 0}
-																	<div
-																		class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
-																	>
-																		{voteInfo.tokens}
-																	</div>
-																{/if}
-															{/if}
-														</div>
-														<div class="text-sm text-tertiary-300">
-															<span>votes</span>
-														</div>
-													</div>
-													{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
-														<div class="flex flex-col gap-2">
-															<button
-																disabled={!$userQuery.data ||
-																	!canVote(
-																		proposal,
-																		getVotersForProposal(proposal.id).find(
-																			(v) => v.id === $userQuery.data?.id
-																		)?.votes || 0
-																	) ||
-																	userTokens <
-																		getNextVoteCost(
-																			getVotersForProposal(proposal.id).find(
-																				(v) => v.id === $userQuery.data?.id
-																			)?.votes || 0
-																		)}
-																on:click|stopPropagation={() => handleVote(proposal.id, true)}
-																class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-															>
-																<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-																	<path
-																		fill="currentColor"
-																		d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
-																	/>
-																</svg>
-															</button>
-
-															<button
-																disabled={!$userQuery.data ||
-																	!canUnstakeVote(
-																		proposal,
-																		getVotersForProposal(proposal.id).find(
-																			(v) => v.id === $userQuery.data?.id
-																		)
-																	)}
-																on:click|stopPropagation={() => handleVote(proposal.id, false)}
-																class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-															>
-																<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-																	<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-																</svg>
-															</button>
-														</div>
-													{/if}
-												</div>
-											</div>
-										</div>
-
-										<!-- Middle: Basic Info -->
-										<div class="flex-grow min-w-0 p-4 border-r md:p-6 border-surface-700/50">
-											<div class="flex flex-col min-h-[80px] justify-center">
-												<h3
-													class="mb-4 text-lg font-semibold truncate md:text-xl text-tertiary-100"
-												>
-													{proposal.title}
-												</h3>
-												<div class="flex flex-wrap items-center gap-4">
-													{#each getVotersForProposal(proposal.id) as voter (voter.id)}
-														<div class="relative">
-															<Avatar me={formatVoterForAvatar(voter)} />
-															<div
-																class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
-															>
-																{voter.votes}
-															</div>
-														</div>
-													{/each}
-												</div>
-											</div>
-										</div>
-
-										<!-- Right side: Value -->
-										<div
-											class="w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(
-												proposal.state
-											)} relative"
-										>
-											<div class="absolute top-0 right-0 flex items-start gap-2">
-												{#if proposal.tags && proposal.tags.length > 0}
-													{#each proposal.tags as tag}
-														<div
-															class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
-														>
-															{tag}
-														</div>
-													{/each}
-												{/if}
-												<div
-													class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20"
-												>
-													<Icon
-														icon={getStateIcon(proposal.state)}
-														class="w-4 h-4 {getStateColor(proposal.state)}"
-													/>
-													<span class="text-sm font-medium {getStateColor(proposal.state)}"
-														>{getStateLabel(proposal.state)}</span
-													>
-												</div>
-											</div>
-											<div class="mt-8 text-right">
-												{#if proposal.state === 'pending' && $userQuery.data?.id && isAdmin($userQuery.data.id)}
-													<div class="flex justify-end gap-2">
-														<button
-															on:click|stopPropagation={() => handleDecision(proposal.id, 'veto')}
-															class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
-															disabled={$handleDecisionMutation.isLoading}
-														>
-															<div class="flex items-center gap-2">
-																<Icon icon="heroicons:x-mark" class="w-5 h-5" />
-																Veto
-															</div>
-														</button>
-														<button
-															on:click|stopPropagation={() => handleDecision(proposal.id, 'pass')}
-															class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
-															disabled={$handleDecisionMutation.isLoading}
-														>
-															<div class="flex items-center gap-2">
-																<Icon icon="heroicons:check" class="w-5 h-5" />
-																Pass
-															</div>
-														</button>
-													</div>
-												{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
-													<div class="flex flex-col items-end gap-1">
-														<p class="text-2xl font-bold text-tertiary-100">
-															{getTimeAgo(proposal.decided_at)}
-														</p>
-														<p class="text-sm text-tertiary-300">Decision on February 5, 2025</p>
-													</div>
-												{:else if proposal.state === 'idea'}
-													<div class="flex flex-col items-end gap-1">
-														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
-														</p>
-														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-															<div
-																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min(
-																	(proposal.total_votes / STATE_THRESHOLDS.idea) * 100,
-																	100
-																)}%"
-															/>
-														</div>
-														<p class="text-sm text-tertiary-300">
-															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
-														</p>
-													</div>
-												{:else if proposal.state === 'draft'}
-													<div class="flex flex-col items-end gap-1">
-														<p class="text-2xl font-bold text-tertiary-100">
-															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
-														</p>
-														<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-															<div
-																class="h-full transition-all duration-300 bg-tertiary-500"
-																style="width: {Math.min(
-																	(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
-																	100
-																)}%"
-															/>
-														</div>
-														<p class="text-sm text-tertiary-300">
-															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
-														</p>
-													</div>
-												{/if}
-											</div>
-										</div>
-									</div>
-
-									<!-- Expanded Content -->
-									<div class="flex flex-1 overflow-hidden border-t border-surface-700/50">
-										<!-- Left: Vertical Navigation -->
-										<div
-											class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800/50"
-										>
-											<button
-												class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
-												'details'
-													? 'bg-surface-700 text-tertiary-100'
-													: 'text-tertiary-300 hover:bg-surface-700/50'}"
-												on:click={() => (detailTab = 'details')}
-											>
-												<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
-												<span class="mt-1 text-[10px]">Details</span>
-											</button>
-
-											<button
-												class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
-												'chat'
-													? 'bg-surface-700 text-tertiary-100'
-													: 'text-tertiary-300 hover:bg-surface-700/50'}"
-												on:click={() => (detailTab = 'chat')}
-											>
-												<Icon icon="mdi:chat-outline" class="w-6 h-6" />
-												<span class="mt-1 text-[10px]">Chat</span>
-											</button>
-										</div>
-
-										<!-- Middle: Content -->
-										<div
-											class="flex flex-col flex-grow overflow-hidden border-r border-surface-700/50 bg-surface-800/50"
-										>
-											<div class="flex-1 overflow-y-auto">
-												{#if detailTab === 'details'}
-													<div class="flex flex-col gap-6 p-6">
-														<!-- Video Player (if video_id exists) -->
-														{#if proposal.video_id}
-															<div class="w-full overflow-hidden rounded-lg bg-surface-800">
-																<VideoPlayer videoId={proposal.video_id} />
-															</div>
-														{/if}
-
-														<div class="flex flex-col gap-2">
-															<h3 class="text-sm font-medium text-tertiary-300">
-																Project Overview
-															</h3>
-															<div class="pb-20 prose prose-invert max-w-none">
-																{#if proposal.details}
-																	{@html marked(proposal.details)}
-																{:else}
-																	<p class="text-tertiary-300">
-																		No project overview available yet. Click to edit and add
-																		details.
-																	</p>
-																{/if}
-															</div>
-														</div>
-													</div>
-												{:else if detailTab === 'chat'}
-													<div class="relative h-full">
-														<Messages
-															contextId={proposal.id}
-															contextType="proposal"
-															className="h-full"
-														/>
-													</div>
-												{/if}
-											</div>
-										</div>
-
-										<!-- Right side: Details -->
-										<div
-											class="w-[280px] shrink-0 {getStateBgColor(proposal.state)} overflow-y-auto"
-										>
-											<div class="p-6 space-y-6">
-												<!-- Author -->
-												<div>
-													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														Author
-													</h4>
-													<div class="flex items-center justify-end gap-3">
-														<p class="text-sm font-medium text-tertiary-100">
-															{authorProfile?.name || 'Not assigned'}
-														</p>
-														<Avatar
-															me={{
-																data: { seed: authorProfile?.name || proposal.author || '' },
-																design: { highlight: false },
-																size: 'sm'
-															}}
-														/>
-													</div>
-												</div>
-
-												<!-- Responsible Person -->
-												{#if proposal.responsible}
-													<div>
-														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-															Responsible
-														</h4>
-														<div class="flex items-center justify-end gap-3">
-															<div class="text-right">
-																<p class="text-sm font-medium text-tertiary-100">
-																	{proposal.responsible?.name || 'Not assigned'}
-																</p>
-																<p class="text-xs text-tertiary-300">Lead</p>
-															</div>
-															<div class="flex-shrink-0">
-																<Avatar
-																	me={{
-																		data: {
-																			seed: proposal.responsible?.name || proposal.responsible
-																		},
-																		design: { highlight: false },
-																		size: 'sm'
-																	}}
-																	class="rounded-full"
-																/>
-															</div>
-														</div>
-													</div>
-												{/if}
-
-												<!-- Metadata fields - Only show for non-idea states -->
-												{#if proposal.state !== 'idea'}
-													<!-- Pain Point from metadata -->
-													<div>
-														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-															Pain Point
-														</h4>
-														<p class="text-sm text-right text-tertiary-300">
-															{proposal.metadata?.pain || 'Not defined yet'}
-														</p>
-													</div>
-
-													<!-- Expected Benefits from metadata -->
-													<div>
-														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-															Expected Benefits
-														</h4>
-														<p class="text-sm text-right text-tertiary-300">
-															{proposal.metadata?.benefits || 'Not defined yet'}
-														</p>
-													</div>
-
-													<!-- Additional metadata fields -->
-													{#each Object.entries(proposal.metadata || {}) as [key, value]}
-														{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
-															<div>
-																<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-																	{key.charAt(0).toUpperCase() + key.slice(1)}
-																</h4>
-																<p class="text-sm text-right text-tertiary-300">
-																	{value}
-																</p>
-															</div>
-														{/if}
-													{/each}
-												{/if}
-											</div>
-										</div>
-									</div>
-								</div>
+								<ProposalDetailView
+									{proposal}
+									onClose={() => {
+										expandedProposalId = null;
+										goto(`/me?view=Proposals`, { replaceState: true });
+									}}
+									onVote={handleVote}
+									onDecision={handleDecision}
+									{userQuery}
+									{getVotersForProposal}
+									{canVote}
+									{canUnstakeVote}
+									{getVoteDisplay}
+									{isAdmin}
+									{getTimeAgo}
+									{getStateColor}
+									{getStateBgColor}
+									{getStateIcon}
+									{getStateLabel}
+									{userTokens}
+									{getNextVoteCost}
+								/>
 							{/if}
 						{:else}
 							{#each filteredProposals as proposal (proposal.id)}
 								<div
 									id="proposal-{proposal.id}"
-									class="{getProposalCardClasses(proposal)} flex"
+									class={getProposalCardClasses(proposal)}
 									on:click={() => {
 										handleProposalSelect(proposal.state, proposal.id);
 										centerProposalInView(proposal.id);
 									}}
 								>
-									<!-- Left side: Votes -->
-									<div
-										class="flex items-center justify-between w-40 p-4 border-r shrink-0 md:w-40 md:p-6 border-surface-700/50"
-									>
-										<div class="flex items-center justify-center w-full gap-4">
-											<div class="flex items-center gap-4">
-												<div class="relative text-center">
-													<div class="flex items-center justify-center">
-														<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-															{proposal.total_votes || 0}
-														</p>
-														{#if $userQuery.data}
-															{@const voteInfo = getVoteDisplay(
-																proposal,
-																getVotersForProposal(proposal.id).find(
-																	(v) => v.id === $userQuery.data.id
-																)
-															)}
-															{#if voteInfo.tokens > 0}
-																<div
-																	class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
-																>
-																	{voteInfo.tokens}
-																</div>
-															{/if}
-														{/if}
-													</div>
-													<div class="text-sm text-tertiary-300">
-														<span>votes</span>
-													</div>
-												</div>
-												{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
-													<div class="flex flex-col gap-2">
-														<button
-															disabled={!$userQuery.data ||
-																!canVote(
-																	proposal,
-																	getVotersForProposal(proposal.id).find(
-																		(v) => v.id === $userQuery.data?.id
-																	)?.votes || 0
-																) ||
-																userTokens <
-																	getNextVoteCost(
-																		getVotersForProposal(proposal.id).find(
-																			(v) => v.id === $userQuery.data?.id
-																		)?.votes || 0
-																	)}
-															on:click|stopPropagation={() => handleVote(proposal.id, true)}
-															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-														>
-															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-																<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-															</svg>
-														</button>
-
-														<button
-															disabled={!$userQuery.data ||
-																!canUnstakeVote(
-																	proposal,
-																	getVotersForProposal(proposal.id).find(
-																		(v) => v.id === $userQuery.data?.id
-																	)
-																)}
-															on:click|stopPropagation={() => handleVote(proposal.id, false)}
-															class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-														>
-															<svg class="w-5 h-5 text-tertiary-300" viewBox="0 0 24 24">
-																<path fill="currentColor" d="M19 13H5v-2h14v2z" />
-															</svg>
-														</button>
-													</div>
-												{/if}
-											</div>
-										</div>
-									</div>
-
-									<!-- Middle: Basic Info -->
-									<div class="flex-grow min-w-0 p-4 border-r md:p-6 border-surface-700/50">
-										<div class="flex flex-col min-h-[80px] justify-center">
-											<h3 class="mb-4 text-lg font-semibold truncate md:text-xl text-tertiary-100">
-												{proposal.title}
-											</h3>
-											<div class="flex flex-wrap items-center gap-4">
-												{#each getVotersForProposal(proposal.id) as voter (voter.id)}
-													<div class="relative">
-														<Avatar me={formatVoterForAvatar(voter)} />
-														<div
-															class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
-														>
-															{voter.votes}
-														</div>
-													</div>
-												{/each}
-											</div>
-										</div>
-									</div>
-
-									<!-- Right side: Value -->
-									<div
-										class="w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(proposal.state)} relative"
-									>
-										<div class="absolute top-0 right-0 flex items-start gap-2">
-											{#if proposal.tags && proposal.tags.length > 0}
-												{#each proposal.tags as tag}
-													<div
-														class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
-													>
-														{tag}
-													</div>
-												{/each}
-											{/if}
-											<div
-												class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20"
-											>
-												<Icon
-													icon={getStateIcon(proposal.state)}
-													class="w-4 h-4 {getStateColor(proposal.state)}"
-												/>
-												<span class="text-sm font-medium {getStateColor(proposal.state)}"
-													>{getStateLabel(proposal.state)}</span
-												>
-											</div>
-										</div>
-										<div class="mt-8 text-right">
-											{#if proposal.state === 'pending' && $userQuery.data?.id && isAdmin($userQuery.data.id)}
-												<div class="flex justify-end gap-2">
-													<button
-														on:click|stopPropagation={() => handleDecision(proposal.id, 'veto')}
-														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
-														disabled={$handleDecisionMutation.isLoading}
-													>
-														<div class="flex items-center gap-2">
-															<Icon icon="heroicons:x-mark" class="w-5 h-5" />
-															Veto
-														</div>
-													</button>
-													<button
-														on:click|stopPropagation={() => handleDecision(proposal.id, 'pass')}
-														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
-														disabled={$handleDecisionMutation.isLoading}
-													>
-														<div class="flex items-center gap-2">
-															<Icon icon="heroicons:check" class="w-5 h-5" />
-															Pass
-														</div>
-													</button>
-												</div>
-											{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
-												<div class="flex flex-col items-end gap-1">
-													<p class="text-2xl font-bold text-tertiary-100">
-														{getTimeAgo(proposal.decided_at)}
-													</p>
-													<p class="text-sm text-tertiary-300">Decision on February 5, 2025</p>
-												</div>
-											{:else if proposal.state === 'idea'}
-												<div class="flex flex-col items-end gap-1">
-													<p class="text-2xl font-bold text-tertiary-100">
-														{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
-													</p>
-													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-														<div
-															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: {Math.min(
-																(proposal.total_votes / STATE_THRESHOLDS.idea) * 100,
-																100
-															)}%"
-														/>
-													</div>
-													<p class="text-sm text-tertiary-300">
-														{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
-													</p>
-												</div>
-											{:else if proposal.state === 'draft'}
-												<div class="flex flex-col items-end gap-1">
-													<p class="text-2xl font-bold text-tertiary-100">
-														{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
-													</p>
-													<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
-														<div
-															class="h-full transition-all duration-300 bg-tertiary-500"
-															style="width: {Math.min(
-																(proposal.total_votes / STATE_THRESHOLDS.draft) * 100,
-																100
-															)}%"
-														/>
-													</div>
-													<p class="text-sm text-tertiary-300">
-														{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
-													</p>
-												</div>
-											{/if}
-										</div>
-									</div>
+									<ProposalHeaderItem
+										{proposal}
+										{userData}
+										{getVotersForProposal}
+										{canVote}
+										{canUnstakeVote}
+										{getVoteDisplay}
+										onVote={handleVote}
+										{userTokens}
+										{getNextVoteCost}
+										onDecision={handleDecision}
+										{isAdmin}
+										{getTimeAgo}
+									/>
 								</div>
 							{/each}
 						{/if}

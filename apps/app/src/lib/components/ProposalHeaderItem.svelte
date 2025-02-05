@@ -1,0 +1,283 @@
+<!--
+HOW THIS COMPONENT WORKS:
+
+1. Overview:
+   This component displays the header area for a single proposal:
+   - Left side: Vote count and voting buttons
+   - Middle: Title and voter avatars
+   - Right side: Tags and state indicator
+   - Used in both list view and detail view
+   - Maintains consistent styling across both views
+
+2. Props:
+   - proposal: The proposal data to display
+   - userData: Current user data for vote checks
+   - getVotersForProposal: Function to get voters
+   - canVote: Function to check if voting is allowed
+   - canUnstakeVote: Function to check if unstaking is allowed
+   - getVoteDisplay: Function to get vote display info
+   - onVote: Callback for vote actions
+   - userTokens: Current user's token balance
+   - getNextVoteCost: Function to calculate next vote cost
+   - onDecision: Callback for admin decisions
+   - isAdmin: Function to check if user is admin
+   - getTimeAgo: Function to format time
+-->
+
+<script lang="ts">
+	import Icon from '@iconify/svelte';
+	import Avatar from './Avatar.svelte';
+	import type { Proposal, VoterInfo } from '$lib/types/proposals';
+
+	// Props
+	export let proposal: Proposal;
+	export let userData: { id: string; name: string; onboarded: boolean } | null;
+	export let getVotersForProposal: (proposalId: string) => VoterInfo[];
+	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
+	export let canUnstakeVote: (proposal: Proposal, voter?: VoterInfo) => boolean;
+	export let getVoteDisplay: (proposal: Proposal, voter?: VoterInfo) => any;
+	export let onVote: (proposalId: string, isIncrease: boolean) => void;
+	export let userTokens: number;
+	export let getNextVoteCost: (currentVotes: number) => number;
+	export let onDecision: (proposalId: string, decision: 'veto' | 'pass') => void;
+	export let isAdmin: (userId: string) => boolean;
+	export let getTimeAgo: (date: string) => string;
+
+	// State thresholds for progress bars
+	const STATE_THRESHOLDS = {
+		idea: 10,
+		draft: 20,
+		decision: 30
+	};
+
+	// Helper functions
+	function getStateColor(state: Proposal['state']): string {
+		switch (state) {
+			case 'idea':
+				return 'text-secondary-300';
+			case 'draft':
+				return 'text-teal-300';
+			case 'pending':
+				return 'text-primary-300';
+			case 'accepted':
+				return 'text-success-400';
+			case 'rejected':
+				return 'text-error-400';
+			default:
+				return 'text-surface-400';
+		}
+	}
+
+	function getStateBgColor(state: Proposal['state']): string {
+		switch (state) {
+			case 'idea':
+				return 'bg-secondary-500/10';
+			case 'draft':
+				return 'bg-teal-500/10';
+			case 'pending':
+				return 'bg-primary-500/10';
+			case 'accepted':
+				return 'bg-success-500/10';
+			case 'rejected':
+				return 'bg-error-500/10';
+			default:
+				return 'bg-surface-700/10';
+		}
+	}
+
+	function getStateIcon(state: Proposal['state']): string {
+		switch (state) {
+			case 'idea':
+				return 'heroicons:light-bulb';
+			case 'draft':
+				return 'heroicons:document-text';
+			case 'pending':
+				return 'heroicons:clock';
+			case 'accepted':
+				return 'heroicons:check-circle';
+			case 'rejected':
+				return 'heroicons:x-circle';
+			default:
+				return 'heroicons:question-mark-circle';
+		}
+	}
+
+	function getStateLabel(state: Proposal['state']): string {
+		return state.charAt(0).toUpperCase() + state.slice(1);
+	}
+
+	function formatVoterForAvatar(voter: VoterInfo) {
+		return {
+			data: { seed: voter.name || voter.id },
+			design: { highlight: voter.id === userData?.id },
+			size: 'xs' as const
+		};
+	}
+</script>
+
+<div class="flex items-stretch">
+	<!-- Left side: Votes -->
+	<div
+		class="flex items-center justify-between w-32 p-4 border-r shrink-0 md:w-40 md:p-6 border-surface-700/50"
+	>
+		<div class="flex items-center justify-center w-full gap-4">
+			<div class="flex items-center gap-4">
+				<div class="relative text-center">
+					<div class="flex items-center justify-center">
+						<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+							{proposal.total_votes || 0}
+						</p>
+						{#if userData}
+							{@const voteInfo = getVoteDisplay(
+								proposal,
+								getVotersForProposal(proposal.id).find((v) => v.id === userData.id)
+							)}
+							{#if voteInfo.tokens > 0}
+								<div
+									class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+								>
+									{voteInfo.tokens}
+								</div>
+							{/if}
+						{/if}
+					</div>
+					<div class="text-sm text-tertiary-300">votes</div>
+				</div>
+				{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
+					<div class="flex flex-col gap-2">
+						<button
+							disabled={!userData ||
+								!canVote(
+									proposal,
+									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
+								) ||
+								userTokens <
+									getNextVoteCost(
+										getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
+									)}
+							on:click|stopPropagation={() => onVote(proposal.id, true)}
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+						>
+							<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
+						</button>
+						<button
+							disabled={!userData ||
+								!canUnstakeVote(
+									proposal,
+									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
+								)}
+							on:click|stopPropagation={() => onVote(proposal.id, false)}
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+						>
+							<Icon icon="mdi:minus" class="w-5 h-5 text-tertiary-300" />
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
+
+	<!-- Middle: Basic Info -->
+	<div class="flex-grow min-w-0 p-4 border-r md:p-6 border-surface-700/50">
+		<div class="flex flex-col min-h-[80px] justify-center">
+			<h3 class="mb-4 text-lg font-semibold truncate md:text-xl text-tertiary-100">
+				{proposal.title}
+			</h3>
+			<div class="flex flex-wrap items-center gap-4">
+				{#each getVotersForProposal(proposal.id) as voter (voter.id)}
+					<div class="relative">
+						<Avatar me={formatVoterForAvatar(voter)} />
+						<div
+							class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+						>
+							{voter.votes}
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+
+	<!-- Right side: State -->
+	<div class="w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(proposal.state)} relative">
+		<div class="absolute top-0 right-0 flex items-start gap-2">
+			{#if proposal.tags && proposal.tags.length > 0}
+				{#each proposal.tags as tag}
+					<div
+						class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
+					>
+						{tag}
+					</div>
+				{/each}
+			{/if}
+			<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20">
+				<Icon icon={getStateIcon(proposal.state)} class="w-4 h-4 {getStateColor(proposal.state)}" />
+				<span class="text-sm font-medium {getStateColor(proposal.state)}"
+					>{getStateLabel(proposal.state)}</span
+				>
+			</div>
+		</div>
+
+		<div class="mt-8 text-right">
+			{#if proposal.state === 'pending' && userData?.id && isAdmin(userData.id)}
+				<div class="flex justify-end gap-2">
+					<button
+						on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
+						class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+					>
+						<div class="flex items-center gap-2">
+							<Icon icon="heroicons:x-mark" class="w-5 h-5" />
+							Veto
+						</div>
+					</button>
+					<button
+						on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
+						class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+					>
+						<div class="flex items-center gap-2">
+							<Icon icon="heroicons:check" class="w-5 h-5" />
+							Pass
+						</div>
+					</button>
+				</div>
+			{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
+				<div class="flex flex-col items-end gap-1">
+					<p class="text-2xl font-bold text-tertiary-100">
+						{getTimeAgo(proposal.decided_at || '')}
+					</p>
+					<p class="text-sm text-tertiary-300">Decision on February 5, 2025</p>
+				</div>
+			{:else if proposal.state === 'idea'}
+				<div class="flex flex-col items-end gap-1">
+					<p class="text-2xl font-bold text-tertiary-100">
+						{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
+					</p>
+					<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+						<div
+							class="h-full transition-all duration-300 bg-tertiary-500"
+							style="width: {Math.min((proposal.total_votes / STATE_THRESHOLDS.idea) * 100, 100)}%"
+						/>
+					</div>
+					<p class="text-sm text-tertiary-300">
+						{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
+					</p>
+				</div>
+			{:else if proposal.state === 'draft'}
+				<div class="flex flex-col items-end gap-1">
+					<p class="text-2xl font-bold text-tertiary-100">
+						{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
+					</p>
+					<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
+						<div
+							class="h-full transition-all duration-300 bg-tertiary-500"
+							style="width: {Math.min((proposal.total_votes / STATE_THRESHOLDS.draft) * 100, 100)}%"
+						/>
+					</div>
+					<p class="text-sm text-tertiary-300">
+						{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
+					</p>
+				</div>
+			{/if}
+		</div>
+	</div>
+</div>
