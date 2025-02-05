@@ -86,6 +86,9 @@ CREATE OR REPLACE FUNCTION update_token_balances()
 RETURNS TRIGGER AS $$
 DECLARE
     v_is_nested BOOLEAN;
+    v_is_author BOOLEAN;
+    v_current_votes INT;
+    v_proposal_state proposal_state;
 BEGIN
     -- Check if this is a nested call by looking at the transaction context
     SELECT EXISTS (
@@ -104,14 +107,14 @@ BEGIN
     -- First check if this is a proposal-related transaction
     IF NEW.proposal_id IS NOT NULL THEN
         -- Check if the proposal is in a final state
-        IF EXISTS (
-            SELECT 1 
-            FROM proposals 
-            WHERE id = NEW.proposal_id 
-            AND state IN ('accepted', 'rejected')
-        ) THEN
+        SELECT state, author = NEW.from_user_id INTO v_proposal_state, v_is_author
+        FROM proposals 
+        WHERE id = NEW.proposal_id;
+
+        IF v_proposal_state IN ('accepted', 'rejected') THEN
             -- For final states, handle token balance changes
             IF NEW.transaction_type = 'unstake' THEN
+                -- Always allow unstaking in final states
                 UPDATE token_balances
                 SET balance = balance + NEW.amount,
                     staked_balance = staked_balance - NEW.amount,
@@ -173,31 +176,25 @@ BEGIN
         
         WHEN 'unstake' THEN
             -- Only check author restrictions for non-final states
-            DECLARE
-                v_is_author BOOLEAN;
-                v_current_votes INT;
-                v_proposal_state proposal_state;
-            BEGIN
-                IF NEW.proposal_id IS NOT NULL THEN
-                    SELECT 
-                        p.author = NEW.from_user_id,
-                        upv.user_votes,
-                        p.state
-                    INTO 
-                        v_is_author,
-                        v_current_votes,
-                        v_proposal_state
-                    FROM proposals p
-                    JOIN user_proposal_votes upv ON upv.proposal_id = p.id
-                    WHERE p.id = NEW.proposal_id
-                    AND upv.user_id = NEW.from_user_id;
+            IF NEW.proposal_id IS NOT NULL THEN
+                SELECT 
+                    p.author = NEW.from_user_id,
+                    upv.user_votes,
+                    p.state
+                INTO 
+                    v_is_author,
+                    v_current_votes,
+                    v_proposal_state
+                FROM proposals p
+                JOIN user_proposal_votes upv ON upv.proposal_id = p.id
+                WHERE p.id = NEW.proposal_id
+                AND upv.user_id = NEW.from_user_id;
 
-                    -- Only enforce author restriction for non-final states
-                    IF v_is_author AND v_current_votes <= 1 AND v_proposal_state NOT IN ('accepted', 'rejected') THEN
-                        RAISE EXCEPTION 'Authors cannot remove their last vote in non-final states';
-                    END IF;
+                -- Only enforce author restriction for non-final states
+                IF v_is_author AND v_current_votes <= 1 AND v_proposal_state NOT IN ('accepted', 'rejected') THEN
+                    RAISE EXCEPTION 'Authors cannot remove their last vote in non-final states';
                 END IF;
-            END;
+            END IF;
 
             -- Process unstaking
             UPDATE token_balances
@@ -255,6 +252,7 @@ DECLARE
     v_unstake_tx UUID;
     v_original_votes INTEGER;
     v_is_nested BOOLEAN;
+    v_author_initial_stake RECORD;
 BEGIN
     -- Check if this is a nested call
     SELECT EXISTS (
@@ -283,13 +281,20 @@ BEGIN
         SELECT user_id, user_votes, tokens_staked
         FROM user_proposal_votes
         WHERE proposal_id = NEW.id
+        AND tokens_staked > 0  -- Only get records with staked tokens
+        FOR UPDATE;
+
+        -- Get author's initial stake
+        SELECT user_id, tokens_staked INTO v_author_initial_stake
+        FROM user_proposal_votes
+        WHERE proposal_id = NEW.id
+        AND user_id = NEW.author
         FOR UPDATE;
         
         -- Process unstaking for each voter, including the author
         FOR v_voter IN (
             SELECT user_id, tokens_staked
             FROM temp_user_votes
-            WHERE tokens_staked > 0
         ) LOOP
             -- Create unstake transaction to return all tokens
             INSERT INTO token_transactions (
@@ -305,13 +310,36 @@ BEGIN
             )
             RETURNING id INTO v_unstake_tx;
 
-            -- Update user's token balance
+            -- Update user's token balance immediately
             UPDATE token_balances
             SET balance = balance + v_voter.tokens_staked,
                 staked_balance = staked_balance - v_voter.tokens_staked,
                 updated_at = NOW()
             WHERE user_id = v_voter.user_id;
         END LOOP;
+
+        -- Ensure author's initial stake is released if not already included
+        IF v_author_initial_stake.tokens_staked > 0 AND NOT EXISTS (
+            SELECT 1 FROM temp_user_votes WHERE user_id = NEW.author
+        ) THEN
+            INSERT INTO token_transactions (
+                transaction_type,
+                from_user_id,
+                proposal_id,
+                amount
+            ) VALUES (
+                'unstake',
+                NEW.author,
+                NEW.id,
+                v_author_initial_stake.tokens_staked
+            );
+
+            UPDATE token_balances
+            SET balance = balance + v_author_initial_stake.tokens_staked,
+                staked_balance = staked_balance - v_author_initial_stake.tokens_staked,
+                updated_at = NOW()
+            WHERE user_id = NEW.author;
+        END IF;
 
         -- Update all user votes in a single transaction
         UPDATE user_proposal_votes upv
