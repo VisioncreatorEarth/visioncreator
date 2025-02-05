@@ -6,7 +6,7 @@ interface Proposal {
     author: string;
     details: string | null;
     video_id: string | null;
-    state: 'idea' | 'draft' | 'pending' | 'decision';
+    state: 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
     total_votes: number;
     total_tokens_staked: number;
     responsible: string | null;

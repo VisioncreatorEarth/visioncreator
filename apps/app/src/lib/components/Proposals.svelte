@@ -29,7 +29,7 @@ HOW THIS SYSTEM WORKS:
 	import { writable, derived } from 'svelte/store';
 
 	// Define types
-	type ProposalState = 'idea' | 'draft' | 'pending' | 'decision';
+	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
 
 	interface Proposal {
 		id: string;
@@ -186,7 +186,7 @@ HOW THIS SYSTEM WORKS:
 	$: proposalWorkPackages = workPackages.filter((wp) => wp.proposalId === expandedProposalId);
 
 	// Constants
-	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'decision'];
+	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'accepted', 'rejected'];
 
 	// Add state transition thresholds
 	const STATE_THRESHOLDS = {
@@ -263,8 +263,10 @@ HOW THIS SYSTEM WORKS:
 				return 'text-teal-300';
 			case 'pending':
 				return 'text-primary-300';
-			case 'decision':
+			case 'accepted':
 				return 'text-success-400';
+			case 'rejected':
+				return 'text-error-400';
 			default:
 				return 'text-surface-400';
 		}
@@ -278,8 +280,10 @@ HOW THIS SYSTEM WORKS:
 				return 'bg-teal-500/10';
 			case 'pending':
 				return 'bg-primary-500/10';
-			case 'decision':
+			case 'accepted':
 				return 'bg-success-500/10';
+			case 'rejected':
+				return 'bg-error-500/10';
 			default:
 				return 'bg-surface-700/10';
 		}
@@ -297,8 +301,10 @@ HOW THIS SYSTEM WORKS:
 				return 'heroicons:document-text';
 			case 'pending':
 				return 'heroicons:clock';
-			case 'decision':
+			case 'accepted':
 				return 'heroicons:check-circle';
+			case 'rejected':
+				return 'heroicons:x-circle';
 			default:
 				return 'heroicons:question-mark-circle';
 		}
@@ -684,6 +690,45 @@ HOW THIS SYSTEM WORKS:
 		// Hardcoded for now
 		return 2;
 	}
+
+	// Add the decision mutation
+	const handleDecisionMutation = createMutation({
+		operationName: 'handleProposalDecision'
+	});
+
+	// Add handleDecision function
+	async function handleDecision(proposalId: string, decision: 'veto' | 'pass') {
+		if (!$userQuery.data?.id) return;
+
+		try {
+			const result = await $handleDecisionMutation.mutateAsync({
+				proposalId,
+				decision,
+				adminId: $userQuery.data.id
+			});
+
+			if (result?.success) {
+				// Refresh all relevant data
+				await Promise.all([
+					$proposalsQuery.refetch?.(),
+					$currentProposalVotersQuery.refetch?.(),
+					$userTokensQuery.refetch?.()
+				]);
+
+				// If the proposal was the expanded one, close it
+				if (expandedProposalId === proposalId) {
+					expandedProposalId = null;
+				}
+			}
+		} catch (error) {
+			console.error('Failed to handle decision:', error);
+		}
+	}
+
+	// Add isAdmin helper function
+	function isAdmin(userId: string): boolean {
+		return userId === '00000000-0000-0000-0000-000000000001';
+	}
 </script>
 
 <div class="relative flex w-full h-full overflow-hidden">
@@ -853,57 +898,36 @@ HOW THIS SYSTEM WORKS:
 									<div class="sticky top-0 z-10 flex items-stretch bg-surface-800/50">
 										<!-- Left side: Votes -->
 										<div
-											class="flex items-center justify-between w-40 p-4 shrink-0 md:p-6 md:border-r border-surface-700/50"
+											class="flex items-center justify-between w-40 p-4 shrink-0 md:w-40 md:p-6 border-r border-surface-700/50"
 										>
-											{#if proposal.state === 'pending'}
-												<div class="flex flex-col items-center w-full gap-4">
-													<div class="text-center">
-														<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-															{proposal.total_votes || 0}
-														</p>
-														<p class="text-sm text-tertiary-300">votes</p>
-													</div>
-													<div class="flex gap-2">
-														<button
-															class="px-3 py-1 text-sm font-medium text-red-300 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
-														>
-															Veto
-														</button>
-														<button
-															class="px-3 py-1 text-sm font-medium text-green-300 transition-colors rounded-lg bg-green-500/10 hover:bg-green-500/20"
-														>
-															Pass
-														</button>
-													</div>
-												</div>
-											{:else}
-												<div class="flex items-center justify-center w-full gap-4">
-													<div class="flex items-center gap-4">
-														<div class="relative text-center">
-															<div class="flex items-center justify-center">
-																<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																	{proposal.total_votes || 0}
-																</p>
-																{#if $userQuery.data}
-																	{@const voteInfo = getVoteDisplay(
-																		proposal,
-																		getVotersForProposal(proposal.id).find(
-																			(v) => v.id === $userQuery.data.id
-																		)
-																	)}
-																	{#if voteInfo.tokens > 0}
-																		<div
-																			class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
-																		>
-																			{voteInfo.tokens}
-																		</div>
-																	{/if}
+											<div class="flex items-center justify-center w-full gap-4">
+												<div class="flex items-center gap-4">
+													<div class="relative text-center">
+														<div class="flex items-center justify-center">
+															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+																{proposal.total_votes || 0}
+															</p>
+															{#if $userQuery.data}
+																{@const voteInfo = getVoteDisplay(
+																	proposal,
+																	getVotersForProposal(proposal.id).find(
+																		(v) => v.id === $userQuery.data.id
+																	)
+																)}
+																{#if voteInfo.tokens > 0}
+																	<div
+																		class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+																	>
+																		{voteInfo.tokens}
+																	</div>
 																{/if}
-															</div>
-															<div class="text-sm text-tertiary-300">
-																<span>votes</span>
-															</div>
+															{/if}
 														</div>
+														<div class="text-sm text-tertiary-300">
+															<span>votes</span>
+														</div>
+													</div>
+													{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
 														<div class="flex flex-col gap-2">
 															<button
 																disabled={!$userQuery.data ||
@@ -946,9 +970,9 @@ HOW THIS SYSTEM WORKS:
 																</svg>
 															</button>
 														</div>
-													</div>
+													{/if}
 												</div>
-											{/if}
+											</div>
 										</div>
 
 										<!-- Middle: Basic Info -->
@@ -976,7 +1000,7 @@ HOW THIS SYSTEM WORKS:
 
 										<!-- Right side: Value -->
 										<div
-											class="w-full md:w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(
+											class="w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(
 												proposal.state
 											)} relative"
 										>
@@ -1003,18 +1027,28 @@ HOW THIS SYSTEM WORKS:
 												</div>
 											</div>
 											<div class="mt-8 text-right">
-												{#if proposal.state === 'pending'}
-													<div class="flex flex-col items-end gap-1">
-														<p class="text-2xl font-bold text-tertiary-100">
-															{getCountdownDisplay()}
-														</p>
-														<p class="text-sm text-tertiary-300">time till passing</p>
-														<div class="mt-2 text-sm text-tertiary-400">
-															<span>{getVetoCount()} veto(s)</span>
-															<span class="mx-1">/</span>
-															<span>{getPassCount()} pass(es)</span>
-														</div>
-														<p class="mt-1 text-xs text-tertiary-500">2/3 board required</p>
+												{#if proposal.state === 'pending' && $userQuery.data?.id && isAdmin($userQuery.data.id)}
+													<div class="flex justify-end gap-2">
+														<button
+															on:click|stopPropagation={() => handleDecision(proposal.id, 'veto')}
+															class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+															disabled={$handleDecisionMutation.isLoading}
+														>
+															<div class="flex items-center gap-2">
+																<Icon icon="heroicons:x-mark" class="w-5 h-5" />
+																Veto
+															</div>
+														</button>
+														<button
+															on:click|stopPropagation={() => handleDecision(proposal.id, 'pass')}
+															class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+															disabled={$handleDecisionMutation.isLoading}
+														>
+															<div class="flex items-center gap-2">
+																<Icon icon="heroicons:check" class="w-5 h-5" />
+																Pass
+															</div>
+														</button>
 													</div>
 												{:else}
 													<div class="flex flex-col items-end gap-1">
@@ -1216,57 +1250,36 @@ HOW THIS SYSTEM WORKS:
 								>
 									<!-- Left side: Votes -->
 									<div
-										class="flex items-center justify-between w-40 p-4 border-b shrink-0 md:w-40 md:p-6 md:border-b-0 md:border-r border-surface-700/50"
+										class="flex items-center justify-between w-40 p-4 shrink-0 md:w-40 md:p-6 border-r border-surface-700/50"
 									>
-										{#if proposal.state === 'pending'}
-											<div class="flex flex-col items-center w-full gap-4">
-												<div class="text-center">
-													<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-														{proposal.total_votes || 0}
-													</p>
-													<p class="text-sm text-tertiary-300">votes</p>
-												</div>
-												<div class="flex gap-2">
-													<button
-														class="px-3 py-1 text-sm font-medium text-red-300 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
-													>
-														Veto
-													</button>
-													<button
-														class="px-3 py-1 text-sm font-medium text-green-300 transition-colors rounded-lg bg-green-500/10 hover:bg-green-500/20"
-													>
-														Pass
-													</button>
-												</div>
-											</div>
-										{:else}
-											<div class="flex items-center justify-center w-full gap-4">
-												<div class="flex items-center gap-4">
-													<div class="relative text-center">
-														<div class="flex items-center justify-center">
-															<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
-																{proposal.total_votes || 0}
-															</p>
-															{#if $userQuery.data}
-																{@const voteInfo = getVoteDisplay(
-																	proposal,
-																	getVotersForProposal(proposal.id).find(
-																		(v) => v.id === $userQuery.data.id
-																	)
-																)}
-																{#if voteInfo.tokens > 0}
-																	<div
-																		class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
-																	>
-																		{voteInfo.tokens}
-																	</div>
-																{/if}
+										<div class="flex items-center justify-center w-full gap-4">
+											<div class="flex items-center gap-4">
+												<div class="relative text-center">
+													<div class="flex items-center justify-center">
+														<p class="text-3xl font-bold md:text-4xl text-tertiary-100">
+															{proposal.total_votes || 0}
+														</p>
+														{#if $userQuery.data}
+															{@const voteInfo = getVoteDisplay(
+																proposal,
+																getVotersForProposal(proposal.id).find(
+																	(v) => v.id === $userQuery.data.id
+																)
+															)}
+															{#if voteInfo.tokens > 0}
+																<div
+																	class="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/20 text-tertiary-300 rounded-full"
+																>
+																	{voteInfo.tokens}
+																</div>
 															{/if}
-														</div>
-														<div class="text-sm text-tertiary-300">
-															<span>votes</span>
-														</div>
+														{/if}
 													</div>
+													<div class="text-sm text-tertiary-300">
+														<span>votes</span>
+													</div>
+												</div>
+												{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
 													<div class="flex flex-col gap-2">
 														<button
 															disabled={!$userQuery.data ||
@@ -1306,9 +1319,9 @@ HOW THIS SYSTEM WORKS:
 															</svg>
 														</button>
 													</div>
-												</div>
+												{/if}
 											</div>
-										{/if}
+										</div>
 									</div>
 
 									<!-- Middle: Basic Info -->
@@ -1333,37 +1346,58 @@ HOW THIS SYSTEM WORKS:
 									</div>
 
 									<!-- Right side: Value -->
-									{#if !expandedProposalId}
-										<div
-											class="w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(
-												proposal.state
-											)} relative"
-										>
-											<div class="absolute top-0 right-0 flex items-start gap-2">
-												{#if proposal.tags && proposal.tags.length > 0}
-													{#each proposal.tags as tag}
-														<div
-															class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
-														>
-															{tag}
-														</div>
-													{/each}
-												{/if}
-												<div
-													class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20"
-												>
-													<Icon
-														icon={getStateIcon(proposal.state)}
-														class="w-4 h-4 {getStateColor(proposal.state)}"
-													/>
-													<span class="text-sm font-medium {getStateColor(proposal.state)}"
-														>{getStateLabel(proposal.state)}</span
+									<div
+										class="w-[280px] shrink-0 p-4 md:p-6 {getStateBgColor(proposal.state)} relative"
+									>
+										<div class="absolute top-0 right-0 flex items-start gap-2">
+											{#if proposal.tags && proposal.tags.length > 0}
+												{#each proposal.tags as tag}
+													<div
+														class="px-2 py-1 text-xs font-medium rounded-b-lg bg-tertiary-500/10 text-tertiary-300"
 													>
-												</div>
+														{tag}
+													</div>
+												{/each}
+											{/if}
+											<div
+												class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20"
+											>
+												<Icon
+													icon={getStateIcon(proposal.state)}
+													class="w-4 h-4 {getStateColor(proposal.state)}"
+												/>
+												<span class="text-sm font-medium {getStateColor(proposal.state)}"
+													>{getStateLabel(proposal.state)}</span
+												>
 											</div>
-											<div class="mt-8 text-right">
-												{#if proposal.state === 'idea'}
-													<div class="flex flex-col items-end gap-1">
+										</div>
+										<div class="mt-8 text-right">
+											{#if proposal.state === 'pending' && $userQuery.data?.id && isAdmin($userQuery.data.id)}
+												<div class="flex justify-end gap-2">
+													<button
+														on:click|stopPropagation={() => handleDecision(proposal.id, 'veto')}
+														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+														disabled={$handleDecisionMutation.isLoading}
+													>
+														<div class="flex items-center gap-2">
+															<Icon icon="heroicons:x-mark" class="w-5 h-5" />
+															Veto
+														</div>
+													</button>
+													<button
+														on:click|stopPropagation={() => handleDecision(proposal.id, 'pass')}
+														class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+														disabled={$handleDecisionMutation.isLoading}
+													>
+														<div class="flex items-center gap-2">
+															<Icon icon="heroicons:check" class="w-5 h-5" />
+															Pass
+														</div>
+													</button>
+												</div>
+											{:else}
+												<div class="flex flex-col items-end gap-1">
+													{#if proposal.state === 'idea'}
 														<p class="text-2xl font-bold text-tertiary-100">
 															{Math.round((proposal.total_votes / STATE_THRESHOLDS.idea) * 100)}%
 														</p>
@@ -1379,9 +1413,7 @@ HOW THIS SYSTEM WORKS:
 														<p class="text-sm text-tertiary-300">
 															{proposal.total_votes} of {STATE_THRESHOLDS.idea} votes
 														</p>
-													</div>
-												{:else if proposal.state === 'draft'}
-													<div class="flex flex-col items-end gap-1">
+													{:else if proposal.state === 'draft'}
 														<p class="text-2xl font-bold text-tertiary-100">
 															{Math.round((proposal.total_votes / STATE_THRESHOLDS.draft) * 100)}%
 														</p>
@@ -1397,9 +1429,7 @@ HOW THIS SYSTEM WORKS:
 														<p class="text-sm text-tertiary-300">
 															{proposal.total_votes} of {STATE_THRESHOLDS.draft} votes
 														</p>
-													</div>
-												{:else if proposal.state === 'pending'}
-													<div class="flex flex-col items-end gap-1">
+													{:else}
 														<p class="text-2xl font-bold text-tertiary-100">
 															{proposal.total_votes}
 														</p>
@@ -1407,103 +1437,11 @@ HOW THIS SYSTEM WORKS:
 														<p class="text-xs text-tertiary-400">
 															{proposal.total_tokens_staked} tokens
 														</p>
-													</div>
-												{/if}
-											</div>
-										</div>
-									{:else}
-										<!-- Right side: Details -->
-										<div
-											class="w-[280px] shrink-0 {getStateBgColor(proposal.state)} overflow-y-auto"
-										>
-											<div class="p-6 space-y-6">
-												<!-- Author -->
-												<div>
-													<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-														Author
-													</h4>
-													<div class="flex items-center justify-end gap-3">
-														<p class="text-sm font-medium text-tertiary-100">
-															{authorProfile?.name || 'Not assigned'}
-														</p>
-														<Avatar
-															me={{
-																data: { seed: authorProfile?.name || proposal.author || '' },
-																design: { highlight: false },
-																size: 'sm'
-															}}
-														/>
-													</div>
+													{/if}
 												</div>
-
-												<!-- Responsible Person -->
-												{#if proposal.responsible}
-													<div>
-														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-															Responsible
-														</h4>
-														<div class="flex items-center justify-end gap-3">
-															<div class="text-right">
-																<p class="text-sm font-medium text-tertiary-100">
-																	{proposal.responsible?.name || 'Not assigned'}
-																</p>
-																<p class="text-xs text-tertiary-300">Lead</p>
-															</div>
-															<div class="flex-shrink-0">
-																<Avatar
-																	me={{
-																		data: {
-																			seed: proposal.responsible?.name || proposal.responsible
-																		},
-																		design: { highlight: false },
-																		size: 'sm'
-																	}}
-																	class="rounded-full"
-																/>
-															</div>
-														</div>
-													</div>
-												{/if}
-
-												<!-- Metadata fields - Only show for non-idea states -->
-												{#if proposal.state !== 'idea'}
-													<!-- Pain Point from metadata -->
-													<div>
-														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-															Pain Point
-														</h4>
-														<p class="text-sm text-right text-tertiary-300">
-															{proposal.metadata?.pain || 'Not defined yet'}
-														</p>
-													</div>
-
-													<!-- Expected Benefits from metadata -->
-													<div>
-														<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-															Expected Benefits
-														</h4>
-														<p class="text-sm text-right text-tertiary-300">
-															{proposal.metadata?.benefits || 'Not defined yet'}
-														</p>
-													</div>
-
-													<!-- Additional metadata fields -->
-													{#each Object.entries(proposal.metadata || {}) as [key, value]}
-														{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
-															<div>
-																<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-																	{key.charAt(0).toUpperCase() + key.slice(1)}
-																</h4>
-																<p class="text-sm text-right text-tertiary-300">
-																	{value}
-																</p>
-															</div>
-														{/if}
-													{/each}
-												{/if}
-											</div>
+											{/if}
 										</div>
-									{/if}
+									</div>
 								</div>
 							{/each}
 						{/if}

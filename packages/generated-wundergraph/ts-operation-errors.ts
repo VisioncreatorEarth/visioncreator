@@ -21,6 +21,7 @@ export type OperationErrors = {
 	getUserTokens: GetUserTokensErrors;
 	getUsers: GetUsersErrors;
 	getVoices: GetVoicesErrors;
+	handleProposalDecision: HandleProposalDecisionErrors;
 	insertDB: InsertDBErrors;
 	insertObject: InsertObjectErrors;
 	manageCapabilities: ManageCapabilitiesErrors;
@@ -90,6 +91,7 @@ export type GetUserStatsErrors = ClientOperationErrors;
 export type GetUserTokensErrors = ClientOperationErrors;
 export type GetUsersErrors = ClientOperationErrors;
 export type GetVoicesErrors = ClientOperationErrors;
+export type HandleProposalDecisionErrors = ClientOperationErrors;
 export type InsertDBErrors = ClientOperationErrors;
 export type InsertObjectErrors = ClientOperationErrors;
 export type ManageCapabilitiesErrors = ClientOperationErrors;

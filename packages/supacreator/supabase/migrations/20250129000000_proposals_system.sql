@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create enum for proposal states
-CREATE TYPE proposal_state AS ENUM ('idea', 'draft', 'pending', 'decision');
+CREATE TYPE proposal_state AS ENUM ('idea', 'draft', 'pending', 'accepted', 'rejected');
 
 -- Create enum for transaction types
 CREATE TYPE token_transaction_type AS ENUM ('mint', 'transfer', 'stake', 'unstake');
