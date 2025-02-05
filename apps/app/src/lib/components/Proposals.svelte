@@ -18,29 +18,14 @@ HOW THIS SYSTEM WORKS:
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { createQuery, createMutation } from '$lib/wundergraph';
-	import type { Operations } from '@wundergraph/sdk/client';
 	import type { QueryObserverResult } from '@tanstack/svelte-query';
-	import type { Readable } from 'svelte/store';
-	import Messages from './Messages.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import Avatar from './Avatar.svelte';
-	import { marked } from 'marked';
 	import LeftAsideProposals from './LeftAsideProposals.svelte';
 	import RightAsideProposals from './RightAsideProposals.svelte';
-	import VideoPlayer from './VideoPlayer.svelte';
 	import { writable } from 'svelte/store';
 	import ProposalDetailView from './ProposalDetailView.svelte';
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
-	import type {
-		Proposal,
-		ProposalState,
-		VoterInfo,
-		User,
-		TokenTransaction,
-		Profile,
-		UserTokens
-	} from '$lib/types/proposals';
 
 	// Define types
 	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
@@ -290,19 +275,6 @@ HOW THIS SYSTEM WORKS:
 		return getStateLabel(state);
 	}
 
-	function getStateTextClasses(proposal: Proposal): string {
-		return `flex items-center gap-2 ${getStateColor(proposal.state)}`;
-	}
-
-	// Make tab classes reactive to activeTab changes
-	function getTabClasses(state: ProposalState): string {
-		const baseClasses = 'px-4 py-2 text-sm font-medium transition-colors rounded-lg';
-		const stateColor = getStateColor(state);
-		const isActive = $activeTab === state;
-		const bgColor = isActive ? getStateBgColor(state) : 'hover:bg-surface-700/20';
-		return `${baseClasses} ${stateColor} ${bgColor}`;
-	}
-
 	// Update filteredProposals with proper typing
 	$: filteredProposals = (($proposalsQuery.data?.proposals as Proposal[]) || [])
 		.filter((p: Proposal) => p.state === $activeTab)
@@ -529,10 +501,6 @@ HOW THIS SYSTEM WORKS:
 	function getProposalCardClasses(proposal: Proposal): string {
 		const baseClasses = 'overflow-hidden transition-all duration-200 border card rounded-xl';
 		return `${baseClasses} border-surface-700/50 bg-surface-900/50`;
-	}
-
-	function getProposalValueClasses(proposal: Proposal): string {
-		return `w-[280px] shrink-0 p-6 flex flex-col ${getStateBgColor(proposal.state)}`;
 	}
 
 	// Update the userQuery data access

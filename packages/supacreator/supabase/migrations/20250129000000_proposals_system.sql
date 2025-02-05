@@ -110,7 +110,7 @@ BEGIN
             WHERE id = NEW.proposal_id 
             AND state IN ('accepted', 'rejected')
         ) THEN
-            -- For final states, only handle token balance changes
+            -- For final states, handle token balance changes
             IF NEW.transaction_type = 'unstake' THEN
                 UPDATE token_balances
                 SET balance = balance + NEW.amount,
@@ -172,25 +172,29 @@ BEGIN
             WHERE id = NEW.proposal_id;
         
         WHEN 'unstake' THEN
-            -- Check author restrictions
+            -- Only check author restrictions for non-final states
             DECLARE
                 v_is_author BOOLEAN;
                 v_current_votes INT;
+                v_proposal_state proposal_state;
             BEGIN
                 IF NEW.proposal_id IS NOT NULL THEN
-                SELECT 
-                    p.author = NEW.from_user_id,
-                    upv.user_votes
-                INTO 
-                    v_is_author,
-                    v_current_votes
-                FROM proposals p
-                JOIN user_proposal_votes upv ON upv.proposal_id = p.id
-                WHERE p.id = NEW.proposal_id
-                AND upv.user_id = NEW.from_user_id;
+                    SELECT 
+                        p.author = NEW.from_user_id,
+                        upv.user_votes,
+                        p.state
+                    INTO 
+                        v_is_author,
+                        v_current_votes,
+                        v_proposal_state
+                    FROM proposals p
+                    JOIN user_proposal_votes upv ON upv.proposal_id = p.id
+                    WHERE p.id = NEW.proposal_id
+                    AND upv.user_id = NEW.from_user_id;
 
-                IF v_is_author AND v_current_votes <= 1 THEN
-                    RAISE EXCEPTION 'Authors cannot remove their last vote';
+                    -- Only enforce author restriction for non-final states
+                    IF v_is_author AND v_current_votes <= 1 AND v_proposal_state NOT IN ('accepted', 'rejected') THEN
+                        RAISE EXCEPTION 'Authors cannot remove their last vote in non-final states';
                     END IF;
                 END IF;
             END;
@@ -205,21 +209,21 @@ BEGIN
             
             -- Update vote record if this is a proposal unstake
             IF NEW.proposal_id IS NOT NULL THEN
-            UPDATE user_proposal_votes
-            SET user_votes = user_votes - 1,
-                tokens_staked = tokens_staked - NEW.amount
-            WHERE user_id = NEW.from_user_id
-            AND proposal_id = NEW.proposal_id;
+                UPDATE user_proposal_votes
+                SET user_votes = user_votes - 1,
+                    tokens_staked = tokens_staked - NEW.amount
+                WHERE user_id = NEW.from_user_id
+                AND proposal_id = NEW.proposal_id;
             
                 -- Update proposal totals
-            UPDATE proposals
-            SET total_tokens_staked = total_tokens_staked - NEW.amount,
-                total_votes = (
-                    SELECT SUM(user_votes)
-                    FROM user_proposal_votes
-                    WHERE proposal_id = NEW.proposal_id
-                )
-            WHERE id = NEW.proposal_id;
+                UPDATE proposals
+                SET total_tokens_staked = total_tokens_staked - NEW.amount,
+                    total_votes = (
+                        SELECT SUM(user_votes)
+                        FROM user_proposal_votes
+                        WHERE proposal_id = NEW.proposal_id
+                    )
+                WHERE id = NEW.proposal_id;
             END IF;
     END CASE;
     
@@ -281,13 +285,13 @@ BEGIN
         WHERE proposal_id = NEW.id
         FOR UPDATE;
         
-        -- Process unstaking for each voter
+        -- Process unstaking for each voter, including the author
         FOR v_voter IN (
             SELECT user_id, tokens_staked
             FROM temp_user_votes
             WHERE tokens_staked > 0
         ) LOOP
-            -- Create unstake transaction
+            -- Create unstake transaction to return all tokens
             INSERT INTO token_transactions (
                 transaction_type,
                 from_user_id,
@@ -300,6 +304,13 @@ BEGIN
                 v_voter.tokens_staked
             )
             RETURNING id INTO v_unstake_tx;
+
+            -- Update user's token balance
+            UPDATE token_balances
+            SET balance = balance + v_voter.tokens_staked,
+                staked_balance = staked_balance - v_voter.tokens_staked,
+                updated_at = NOW()
+            WHERE user_id = v_voter.user_id;
         END LOOP;
 
         -- Update all user votes in a single transaction
@@ -307,7 +318,7 @@ BEGIN
         SET tokens_staked = 0
         WHERE proposal_id = NEW.id;
 
-        -- Preserve the original vote count
+        -- Preserve the original vote count but reset staked tokens
         NEW.total_tokens_staked = 0;
         NEW.total_votes = v_original_votes;
         
