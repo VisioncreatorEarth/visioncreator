@@ -178,19 +178,19 @@ BEGIN
                 v_current_votes INT;
             BEGIN
                 IF NEW.proposal_id IS NOT NULL THEN
-                    SELECT 
-                        p.author = NEW.from_user_id,
-                        upv.user_votes
-                    INTO 
-                        v_is_author,
-                        v_current_votes
-                    FROM proposals p
-                    JOIN user_proposal_votes upv ON upv.proposal_id = p.id
-                    WHERE p.id = NEW.proposal_id
-                    AND upv.user_id = NEW.from_user_id;
+                SELECT 
+                    p.author = NEW.from_user_id,
+                    upv.user_votes
+                INTO 
+                    v_is_author,
+                    v_current_votes
+                FROM proposals p
+                JOIN user_proposal_votes upv ON upv.proposal_id = p.id
+                WHERE p.id = NEW.proposal_id
+                AND upv.user_id = NEW.from_user_id;
 
-                    IF v_is_author AND v_current_votes <= 1 THEN
-                        RAISE EXCEPTION 'Authors cannot remove their last vote';
+                IF v_is_author AND v_current_votes <= 1 THEN
+                    RAISE EXCEPTION 'Authors cannot remove their last vote';
                     END IF;
                 END IF;
             END;
@@ -205,21 +205,21 @@ BEGIN
             
             -- Update vote record if this is a proposal unstake
             IF NEW.proposal_id IS NOT NULL THEN
-                UPDATE user_proposal_votes
-                SET user_votes = user_votes - 1,
-                    tokens_staked = tokens_staked - NEW.amount
-                WHERE user_id = NEW.from_user_id
-                AND proposal_id = NEW.proposal_id;
-                
+            UPDATE user_proposal_votes
+            SET user_votes = user_votes - 1,
+                tokens_staked = tokens_staked - NEW.amount
+            WHERE user_id = NEW.from_user_id
+            AND proposal_id = NEW.proposal_id;
+            
                 -- Update proposal totals
-                UPDATE proposals
-                SET total_tokens_staked = total_tokens_staked - NEW.amount,
-                    total_votes = (
-                        SELECT SUM(user_votes)
-                        FROM user_proposal_votes
-                        WHERE proposal_id = NEW.proposal_id
-                    )
-                WHERE id = NEW.proposal_id;
+            UPDATE proposals
+            SET total_tokens_staked = total_tokens_staked - NEW.amount,
+                total_votes = (
+                    SELECT SUM(user_votes)
+                    FROM user_proposal_votes
+                    WHERE proposal_id = NEW.proposal_id
+                )
+            WHERE id = NEW.proposal_id;
             END IF;
     END CASE;
     
@@ -393,6 +393,7 @@ CREATE OR REPLACE FUNCTION create_proposal_with_stake(
 ) RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_proposal proposals;
@@ -451,7 +452,7 @@ BEGIN
     )
     RETURNING * INTO v_transaction;
 
-    -- Initialize the author's vote record
+    -- Use UPSERT for vote record to handle both new and existing records
     INSERT INTO user_proposal_votes (
         user_id,
         proposal_id,
@@ -462,7 +463,11 @@ BEGIN
         v_proposal.id,
         1,  -- Initial author vote
         p_stake_amount
-    );
+    )
+    ON CONFLICT (user_id, proposal_id) 
+    DO UPDATE SET
+        user_votes = user_proposal_votes.user_votes + 1,
+        tokens_staked = user_proposal_votes.tokens_staked + EXCLUDED.tokens_staked;
 
     RETURN json_build_object(
         'proposal', v_proposal,
