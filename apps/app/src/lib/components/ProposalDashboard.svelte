@@ -38,13 +38,23 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 30000 // Refetch every 30 seconds
 	});
 
+	// Query admin's EURe balance
+	const adminTokensQuery = createQuery({
+		operationName: 'getUserTokens',
+		input: { userId: '00000000-0000-0000-0000-000000000001' },
+		enabled: true,
+		refetchInterval: 30000
+	});
+
 	// Reactive values from API
 	$: stats = $orgaStatsQuery.data || {
 		totalActiveVCs: 0,
-		ccpPool: 0,
 		totalTokens: 0,
 		currentTokenPrice: 1.0
 	};
+
+	// Get admin's EURe balance
+	$: adminEureBalance = $adminTokensQuery.data?.balances?.EURe?.balance || 0;
 
 	// Fixed values
 	const tokenPriceIncrease = 5.7;
@@ -107,7 +117,7 @@ This is the dashboard area of the proposals view that:
 						<h3 class="text-sm font-medium text-tertiary-200">CCP</h3>
 					</div>
 					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€{stats.ccpPool.toLocaleString()}<span class="text-sm font-medium" />
+						€{adminEureBalance.toLocaleString()}<span class="text-sm font-medium" />
 					</p>
 				</div>
 			</div>

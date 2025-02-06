@@ -262,6 +262,14 @@
 				throw new Error('Failed to mint tokens');
 			}
 
+			// Show success message with token details
+			const message =
+				amount === 365
+					? `Successfully minted ${amount} VCE and 273 EURe tokens`
+					: `Successfully minted ${amount} VCE tokens`;
+
+			console.log(message);
+
 			// Refresh token balance
 			await $getUserTokensQuery.refetch();
 		} catch (error) {
@@ -376,7 +384,7 @@
 					<!-- Token Management Section -->
 					<div class="p-6 rounded-lg bg-surface-800">
 						<div class="flex items-center justify-between mb-4">
-							<h3 class="text-lg font-semibold text-white">VCE Token Balance</h3>
+							<h3 class="text-lg font-semibold text-white">Token Management</h3>
 							<div class="flex items-center gap-2">
 								<button
 									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
@@ -388,7 +396,7 @@
 									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
 									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 365)}
 								>
-									Mint 365 VCE
+									Mint 365 VCE + 273 EURe
 								</button>
 							</div>
 						</div>
@@ -398,30 +406,41 @@
 								<div class="w-8 h-8 border-b-2 rounded-full animate-spin border-tertiary-500" />
 							</div>
 						{:else if $getUserTokensQuery.data}
-							<div class="grid grid-cols-2 gap-4">
-								<div class="p-4 rounded-lg bg-surface-700">
-									<p class="text-sm text-surface-200">Available Balance</p>
-									<p class="mt-1 text-2xl font-semibold text-white">
-										{$getUserTokensQuery.data.balances.VCE.balance || 0} VCE
-									</p>
-								</div>
-								<div class="p-4 rounded-lg bg-surface-700">
-									<p class="text-sm text-surface-200">Staked Balance</p>
-									<p class="mt-1 text-2xl font-semibold text-white">
-										{$getUserTokensQuery.data.balances.VCE.staked_balance || 0} VCE
-									</p>
-								</div>
+							<!-- VCE Balance -->
+							<div class="p-4 rounded-lg bg-surface-700">
+								<p class="text-sm text-surface-200">VCE Balance</p>
+								<p class="mt-1 text-2xl font-semibold text-white">
+									{$getUserTokensQuery.data.balances.VCE.balance || 0} VCE
+								</p>
+							</div>
+
+							<!-- EURe Balance -->
+							<div class="mt-4 p-4 rounded-lg bg-surface-700">
+								<p class="text-sm text-surface-200">EURe Balance</p>
+								<p class="mt-1 text-2xl font-semibold text-white">
+									{$getUserTokensQuery.data.balances.EURe.balance || 0} EURe
+								</p>
 							</div>
 
 							{#if $getUserTokensQuery.data.transactions?.length}
 								<div class="mt-6">
 									<h4 class="mb-4 text-sm font-medium text-surface-200">Recent Transactions</h4>
 									<div class="space-y-2">
-										{#each $getUserTokensQuery.data.transactions as tx}
+										{#each $getUserTokensQuery.data.transactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as tx}
 											<div class="p-3 text-sm rounded-lg bg-surface-700/50">
 												<div class="flex items-center justify-between">
-													<span class="font-medium capitalize">{tx.transaction_type}</span>
-													<span class="text-tertiary-400">{tx.amount} VCE</span>
+													<div class="flex items-center gap-2">
+														<span class="font-medium capitalize">{tx.transaction_type}</span>
+														<span
+															class="px-2 py-0.5 text-xs rounded-full bg-surface-600/50 text-surface-300"
+														>
+															{tx.token_type}
+														</span>
+													</div>
+													<span class="text-tertiary-400 font-medium">
+														{tx.amount}
+														{tx.token_type}
+													</span>
 												</div>
 												<p class="mt-1 text-xs text-surface-300">
 													{new Date(tx.created_at).toLocaleString()}

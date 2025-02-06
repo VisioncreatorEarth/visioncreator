@@ -150,8 +150,10 @@ This is the profile area of the proposals view that:
 		<!-- Main Content Area -->
 		<div class="flex-1 overflow-y-auto">
 			<div class="p-6 space-y-6">
-				<!-- User Profile -->
-				<div class="flex items-center gap-4">
+				<!-- User Profile Header -->
+				<div
+					class="flex items-center gap-4 p-4 border rounded-lg border-surface-700/50 bg-surface-800/50"
+				>
 					{#if userData}
 						<Avatar
 							me={{
@@ -168,44 +170,67 @@ This is the profile area of the proposals view that:
 				</div>
 
 				<!-- Total Assets Value -->
-				<div class="p-4 border rounded-lg border-surface-700/50">
-					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Total Assets Value</h4>
-					<div class="flex flex-col gap-2">
-						<div>
-							<p class="text-2xl font-bold text-tertiary-100">€{totalAssetsValue.toFixed(2)}</p>
-							<p class="text-xs text-tertiary-300">Total value of all shares</p>
+				<div class="p-4 border rounded-lg border-surface-700/50 bg-surface-800/50">
+					<div class="flex items-center justify-between mb-2">
+						<h4 class="text-xs font-medium uppercase tracking-wider text-tertiary-300">
+							Total Assets Value
+						</h4>
+						<div class="px-2 py-0.5 rounded-full bg-success-500/10">
+							<span class="text-xs font-medium text-success-400">+5.7%</span>
 						</div>
+					</div>
+					<div>
+						<p class="text-2xl font-bold text-tertiary-100">€{totalAssetsValue.toFixed(2)}</p>
 					</div>
 				</div>
 
-				<!-- Shares Distribution -->
-				<div class="p-4 border rounded-lg border-surface-700/50">
-					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Shares</h4>
-					<div class="grid grid-cols-2 gap-4">
-						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{userTokens.VCE}</p>
-							<p class="text-xs text-tertiary-300">Free VCE</p>
+				<!-- Token Balances Grid -->
+				<div class="grid gap-3">
+					<!-- VCE Tokens -->
+					<div class="p-4 border rounded-lg border-surface-700/50 bg-surface-800/50">
+						<h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-tertiary-300">
+							VCE Tokens
+						</h4>
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<p class="text-xl font-bold text-tertiary-100">{userTokens.VCE}</p>
+								<p class="mt-0.5 text-xs text-tertiary-300">Available</p>
+							</div>
+							<div>
+								<p class="text-xl font-bold text-tertiary-100">
+									{$userTokensQuery.data?.balances.VCE.staked_balance || 0}
+								</p>
+								<p class="mt-0.5 text-xs text-tertiary-300">Voted</p>
+							</div>
 						</div>
+					</div>
+
+					<!-- EURe Tokens -->
+					<div class="p-4 border rounded-lg border-surface-700/50 bg-surface-800/50">
+						<h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-tertiary-300">
+							EURe Balance
+						</h4>
 						<div>
-							<p class="text-2xl font-bold text-tertiary-100">
-								{$userTokensQuery.data?.balances.VCE.staked_balance || 0}
+							<p class="text-xl font-bold text-tertiary-100">
+								{$userTokensQuery.data?.balances.EURe.balance || 0}
 							</p>
-							<p class="text-xs text-tertiary-300">Locked VCE</p>
 						</div>
 					</div>
 				</div>
 
 				<!-- Voted Proposals -->
 				{#if userVotes.size > 0}
-					<div class="p-4 border rounded-lg border-surface-700/50">
-						<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Voted Proposals</h4>
-						<div class="space-y-2">
+					<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
+						<h4 class="mb-4 text-sm font-medium uppercase tracking-wider text-tertiary-300">
+							Active Votes
+						</h4>
+						<div class="space-y-3">
 							{#each Array.from(userVotes.entries()) as [proposalId, voteInfo]}
 								{#if voteInfo.votes > 0}
 									{@const proposal = $proposals.find((p) => p.id === proposalId)}
 									{#if proposal}
 										<div
-											class="flex items-center justify-between gap-2 p-2 rounded-lg cursor-pointer hover:bg-surface-800/50 {getStateBgColor(
+											class="flex items-center justify-between p-3 transition-colors rounded-lg cursor-pointer hover:bg-surface-700/50 {getStateBgColor(
 												proposal.state
 											)}"
 											on:click={() => {
@@ -215,14 +240,14 @@ This is the profile area of the proposals view that:
 												}
 											}}
 										>
-											<div class="flex items-center gap-2">
+											<div class="flex items-center gap-3">
 												<Icon
 													icon={getStateIcon(proposal.state)}
-													class="w-4 h-4 {getStateColor(proposal.state)}"
+													class="w-5 h-5 {getStateColor(proposal.state)}"
 												/>
-												<div class="flex flex-col">
-													<p class="text-sm text-tertiary-300">{proposal.title}</p>
-													<p class="text-xs text-tertiary-400">
+												<div>
+													<p class="font-medium text-tertiary-200">{proposal.title}</p>
+													<p class="text-sm text-tertiary-400">
 														{formatVoteInfo(voteInfo.votes, voteInfo.tokens)}
 													</p>
 												</div>
