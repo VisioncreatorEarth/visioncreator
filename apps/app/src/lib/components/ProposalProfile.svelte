@@ -4,6 +4,7 @@ HOW THIS COMPONENT WORKS:
 This is the profile area of the proposals view that:
 - Shows user profile and voting information using real user data from queryMe
 - Displays voted proposals list with quadratic voting information
+- Calculates total asset value using dynamic token price from queryOrgaStats
 - Is collapsible on mobile with a toggle button
 - Uses Tailwind for responsive design
 -->
@@ -26,9 +27,6 @@ This is the profile area of the proposals view that:
 
 	export let onProposalSelect: (state: ProposalState, proposalId: string) => void;
 	export let voteThreshold: number;
-
-	// Fixed values from dashboard
-	const tokenPrice = 24.12;
 
 	// Add proper typing for user data
 	interface User {
@@ -56,6 +54,12 @@ This is the profile area of the proposals view that:
 		votes: number;
 		tokens: number;
 	}
+
+	// Query organization stats for token price
+	const orgaStatsQuery = createQuery({
+		operationName: 'queryOrgaStats',
+		refetchInterval: 30000 // Refetch every 30 seconds
+	});
 
 	// Add user data queries with proper typing
 	const userQuery = createQuery<Operations['queryMe']>({
@@ -87,11 +91,14 @@ This is the profile area of the proposals view that:
 		userTokens = $userTokensQuery.data.balance.balance;
 	}
 
-	// Calculate total assets value
+	// Get current token price from orgaStats
+	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
+
+	// Calculate total assets value using dynamic token price
 	$: totalShares =
 		Number($userTokensQuery.data?.balance?.balance || 0) +
 		Number($userTokensQuery.data?.balance?.staked_balance || 0);
-	$: totalAssetsValue = totalShares * tokenPrice;
+	$: totalAssetsValue = totalShares * currentTokenPrice;
 
 	function toggleMenu() {
 		if ($activeSidePanel === 'left') {

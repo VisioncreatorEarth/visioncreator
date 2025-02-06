@@ -3,17 +3,19 @@ HOW THIS COMPONENT WORKS:
 
 This is the dashboard area of the proposals view that:
 1. Shows key metrics about the proposal system:
-   - CTP: Fixed at 24.12€ per token with 5.7% increase
-   - CCP: Total yearly contribution with 16.32% increase
-   - MRR: Monthly recurring revenue from all VisionCreators (neutral)
+   - TP: Dynamic token price based on active VCs (Fibonacci sequence)
+   - CCP: Total yearly contribution calculated from active VCs
+   - MRR: Monthly recurring revenue (currently fixed at €0/m)
 
-2. Calculations:
-   - CCP = VCs × 365 × 0.75
-   - MRR = VCs × 365
-   - Updates automatically when VisionCreator count changes
+2. Data Source:
+   - Uses queryOrgaStats endpoint for real-time metrics
+   - Updates automatically via SvelteQuery
+   - Calculates derived values from API data
+   - MRR is currently hardcoded to 0
+   - Token price dynamically calculated based on active VCs
 
 3. Features:
-   - Real-time updates from store subscriptions
+   - Real-time updates from API
    - Dark/light mode support via Skeleton UI
    - Company branding with logo
    - Euro (€) currency format display
@@ -23,21 +25,31 @@ This is the dashboard area of the proposals view that:
 	import Icon from '@iconify/svelte';
 	import { dashboardMetrics } from '$lib/stores/proposalStore';
 	import type { ProposalState } from '$lib/stores/proposalStore';
+	import { createQuery } from '$lib/wundergraph';
 
 	// Props
 	export let activeTab: ProposalState;
 	export let onStateSelect: (state: ProposalState) => void;
 	export let states: ProposalState[];
 
-	// Subscribe to store values
-	$: visionCreators = $dashboardMetrics.visionCreators;
-	$: contributionPool = Math.round(visionCreators * 365 * 0.75);
-	$: monthlyRevenue = Math.round(visionCreators * 365);
+	// Query organization stats
+	const orgaStatsQuery = createQuery({
+		operationName: 'queryOrgaStats',
+		refetchInterval: 30000 // Refetch every 30 seconds
+	});
+
+	// Reactive values from API
+	$: stats = $orgaStatsQuery.data || {
+		totalActiveVCs: 0,
+		ccpPool: 0,
+		totalTokens: 0,
+		currentTokenPrice: 1.0
+	};
 
 	// Fixed values
-	const tokenPrice = 24.12;
 	const tokenPriceIncrease = 5.7;
 	const contributionIncrease = 16.32;
+	const monthlyRevenue = 0; // Hardcoded MRR
 </script>
 
 <div class="w-full border-b bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
@@ -65,7 +77,7 @@ This is the dashboard area of the proposals view that:
 						<h3 class="text-sm font-medium text-tertiary-200">TP</h3>
 					</div>
 					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€{tokenPrice.toFixed(2)}<span class="text-sm font-medium">/t</span>
+						€{stats.currentTokenPrice.toFixed(2)}<span class="text-sm font-medium">/t</span>
 					</p>
 				</div>
 
@@ -80,7 +92,7 @@ This is the dashboard area of the proposals view that:
 						<h3 class="text-sm font-medium text-tertiary-200">MRR</h3>
 					</div>
 					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€0<span class="text-sm font-medium">/m</span>
+						€{monthlyRevenue}<span class="text-sm font-medium">/m</span>
 					</p>
 				</div>
 
@@ -95,7 +107,7 @@ This is the dashboard area of the proposals view that:
 						<h3 class="text-sm font-medium text-tertiary-200">CCP</h3>
 					</div>
 					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€{contributionPool.toLocaleString()}<span class="text-sm font-medium" />
+						€{stats.ccpPool.toLocaleString()}<span class="text-sm font-medium" />
 					</p>
 				</div>
 			</div>
