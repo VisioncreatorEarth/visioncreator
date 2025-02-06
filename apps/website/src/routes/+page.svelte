@@ -1,3 +1,13 @@
+<script>
+  import Avatar from '$lib/Avatar.svelte';
+  
+  // Seeds for generating consistent avatars
+  const seeds = [
+    'alice', 'bob', 'charlie', 'david', 'eve', 
+    'frank', 'grace', 'henry'
+  ];
+</script>
+
 <!-- Navigation -->
 <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-cyan-900/10">
   <div class="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
@@ -16,9 +26,24 @@
     <h1 class="text-[14rem] font-bold bg-gradient-to-r from-yellow-400 via-cyan-400 to-cyan-600 text-transparent bg-clip-text leading-none tracking-tight">
       RISE
     </h1>
-    <div class="space-y-4">
-      <p class="text-4xl text-cyan-100 font-light">144 Visionaries</p>
+    <div class="space-y-8">
       <p class="text-2xl text-cyan-100">One Collective Power</p>
+      
+      <!-- Founders Joined Section -->
+      <div class="flex flex-col items-center space-y-4">
+        <div class="flex -space-x-4">
+          {#each seeds as seed}
+            <Avatar {seed} />
+          {/each}
+          <div class="w-12 h-12 rounded-full border-2 border-slate-800 bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 backdrop-blur-xl flex items-center justify-center text-cyan-100">
+            +13
+          </div>
+        </div>
+        <p class="text-lg text-cyan-100/80">
+          <span class="font-semibold text-yellow-400">21 Founders</span>
+        </p>
+        <div class="w-32 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -27,11 +52,14 @@
 <section class="min-h-screen flex items-center">
   <div class="max-w-7xl mx-auto px-8">
     <div class="space-y-12">
-      <h2 class="text-6xl font-bold leading-tight text-center">
-        Transform <span class="text-yellow-400">€1</span> Into
-        <br />
-        <span class="text-cyan-400">Ownership Power</span>
-      </h2>
+      <div class="text-center space-y-6">
+        <p class="text-2xl text-cyan-100">Together we</p>
+        <h2 class="text-6xl font-bold leading-tight">
+          Transform <span class="text-yellow-400">€1</span> Into
+          <br />
+          <span class="text-cyan-400">Ownership Power</span>
+        </h2>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-3xl p-8 backdrop-blur-xl border border-cyan-500/20">
           <p class="text-xl text-cyan-100">Join a revolutionary community of creators</p>
