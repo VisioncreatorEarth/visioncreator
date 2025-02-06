@@ -9,15 +9,14 @@ export default createOperation.query({
         requireMatchAll: ["authenticated"],
     },
     handler: async ({ input, context }) => {
-        // Get user's token balance
-        const { data: balance, error: balanceError } = await context.supabase
+        // Get user's token balances for all token types
+        const { data: balances, error: balanceError } = await context.supabase
             .from('token_balances')
             .select('*')
-            .eq('user_id', input.userId)
-            .single();
+            .eq('user_id', input.userId);
 
         if (balanceError && balanceError.code !== 'PGRST116') { // Ignore "no rows returned" error
-            throw new Error(`Failed to fetch token balance: ${balanceError.message}`);
+            throw new Error(`Failed to fetch token balances: ${balanceError.message}`);
         }
 
         // Get recent transactions
@@ -32,8 +31,14 @@ export default createOperation.query({
             throw new Error(`Failed to fetch transactions: ${txError.message}`);
         }
 
+        // Format balances by token type
+        const formattedBalances = {
+            VCE: balances?.find(b => b.token_type === 'VCE') || { balance: 0, staked_balance: 0 },
+            EURe: balances?.find(b => b.token_type === 'EURe') || { balance: 0, staked_balance: 0 }
+        };
+
         return {
-            balance: balance || { balance: 0, staked_balance: 0 },
+            balances: formattedBalances,
             transactions: transactions || []
         };
     }

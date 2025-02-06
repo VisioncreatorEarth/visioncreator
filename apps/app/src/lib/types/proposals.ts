@@ -24,6 +24,7 @@ export interface VoterInfo {
     name: string | null;
     votes: number;
     tokens: number;
+    tokens_staked_vce: number;
 }
 
 export interface User {
@@ -48,8 +49,15 @@ export interface Profile {
 }
 
 export interface UserTokens {
-    balance: {
-        balance: number;
+    balances: {
+        VCE: {
+            balance: number;
+            staked_balance: number;
+        };
+        EURe: {
+            balance: number;
+            staked_balance: number;
+        };
     };
     transactions: TokenTransaction[];
 } 

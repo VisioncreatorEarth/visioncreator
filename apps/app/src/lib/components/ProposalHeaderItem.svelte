@@ -7,6 +7,7 @@ HOW THIS COMPONENT WORKS:
    - Tablet/Desktop: Three-column layout (votes, content, state)
    - Maintains consistent styling across all views
    - Adapts voting controls for touch interfaces
+   - Uses VCE tokens only for voting and staking
 
 2. Props:
    - proposal: The proposal data to display
@@ -16,7 +17,7 @@ HOW THIS COMPONENT WORKS:
    - canUnstakeVote: Function to check if unstaking is allowed
    - getVoteDisplay: Function to get vote display info
    - onVote: Callback for vote actions
-   - userTokens: Current user's token balance
+   - userTokens: Current user's VCE token balance
    - getNextVoteCost: Function to calculate next vote cost
    - onDecision: Callback for admin decisions
    - isAdmin: Function to check if user is admin
@@ -151,7 +152,10 @@ HOW THIS COMPONENT WORKS:
 								getNextVoteCost(
 									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
 								)}
-						on:click|stopPropagation={() => onVote(proposal.id, true)}
+						on:click|stopPropagation={(e) => {
+							e.stopPropagation();
+							onVote(proposal.id, true);
+						}}
 						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 					>
 						<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
@@ -213,7 +217,10 @@ HOW THIS COMPONENT WORKS:
 								getNextVoteCost(
 									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
 								)}
-						on:click|stopPropagation={() => onVote(proposal.id, true)}
+						on:click|stopPropagation={(e) => {
+							e.stopPropagation();
+							onVote(proposal.id, true);
+						}}
 						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
 					>
 						<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
@@ -430,3 +437,7 @@ HOW THIS COMPONENT WORKS:
 		</div>
 	</div>
 </div>
+
+<style>
+	/* ... existing styles ... */
+</style>

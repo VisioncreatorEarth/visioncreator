@@ -84,8 +84,12 @@ HOW THIS SYSTEM WORKS:
 
 	interface UserTokens {
 		balance: {
+			id: string;
+			user_id: string;
+			token_type: 'VCE' | 'EURe';
 			balance: number;
-		};
+			staked_balance: number;
+		}[];
 		transactions: TokenTransaction[];
 	}
 
@@ -167,9 +171,10 @@ HOW THIS SYSTEM WORKS:
 		operationName: 'createProposal'
 	});
 
-	// Update user tokens when data changes
-	$: if ($userTokensQuery.data?.balance?.balance) {
-		userTokens = Number($userTokensQuery.data.balance.balance);
+	// Update user tokens when data changes to specifically track VCE tokens
+	$: if ($userTokensQuery.data?.balances) {
+		userTokens = $userTokensQuery.data.balances.VCE.balance || 0;
+		console.log('Current VCE balance:', userTokens); // Debug log
 	}
 
 	// Get user's staked tokens for each proposal
@@ -347,6 +352,23 @@ HOW THIS SYSTEM WORKS:
 		const voters = getVotersForProposal(proposalId);
 		const userVoteInfo = voters.find((v) => v.id === userId);
 		const currentVotes = userVoteInfo?.votes || 0;
+		const nextCost = getNextVoteCost(currentVotes);
+
+		console.log('Vote attempt:', {
+			isIncrease,
+			userTokens,
+			nextCost,
+			currentVotes
+		});
+
+		// Check if user has enough VCE tokens for voting
+		if (isIncrease && userTokens < nextCost) {
+			console.error('Insufficient VCE tokens for voting', {
+				available: userTokens,
+				required: nextCost
+			});
+			return;
+		}
 
 		try {
 			const result = await $updateVotesMutation.mutateAsync({
@@ -357,6 +379,11 @@ HOW THIS SYSTEM WORKS:
 			});
 
 			if (result?.success) {
+				// Force immediate refetch of token balance
+				if ($userTokensQuery.refetch) {
+					await $userTokensQuery.refetch();
+				}
+
 				// Immediately update local state
 				votersStore.update((store) => {
 					const newStore = new Map(store);
@@ -379,13 +406,22 @@ HOW THIS SYSTEM WORKS:
 					return newStore;
 				});
 
-				// Immediately refetch all relevant data
-				await Promise.all([
-					$userTokensQuery.refetch(),
-					$proposalsQuery.refetch(),
-					$currentProposalVotersQuery.refetch(),
-					...[...($votersQueriesStore.values() || [])].map((query) => query.refetch())
-				]);
+				// Safely refetch all relevant data
+				const refetchPromises = [
+					$userTokensQuery.refetch && $userTokensQuery.refetch(),
+					$proposalsQuery.refetch && $proposalsQuery.refetch(),
+					$currentProposalVotersQuery.refetch && $currentProposalVotersQuery.refetch()
+				].filter(Boolean);
+
+				// Add voter queries refetch if available
+				const voterQueries = [...($votersQueriesStore.values() || [])];
+				voterQueries.forEach((query) => {
+					if (query?.refetch) {
+						refetchPromises.push(query.refetch());
+					}
+				});
+
+				await Promise.all(refetchPromises);
 
 				// Force refresh of specific proposal's voters
 				const query = $votersQueriesStore.get(proposalId);
@@ -407,9 +443,8 @@ HOW THIS SYSTEM WORKS:
 	// Update the proposal card display to show quadratic voting info
 	function getVoteDisplay(proposal: Proposal, voter?: VoterInfo) {
 		const currentVotes = voter?.votes || 0;
-		const currentTokens = voter?.tokens || 0;
+		const currentTokens = voter?.tokens_staked_vce || 0; // Use VCE-specific token count
 		const nextVoteCost = getNextVoteCost(currentVotes);
-		// Calculate tokens that would be returned on unstake
 		const unstakeReturn = currentVotes > 0 ? getQuadraticCost(currentVotes - 1) : 0;
 
 		return {
@@ -555,6 +590,12 @@ HOW THIS SYSTEM WORKS:
 		if (!newProposal.title || !newProposal.details) return;
 
 		try {
+			// Check VCE token balance first
+			const vceBalance = $userTokensQuery.data?.balances.VCE.balance || 0;
+			if (vceBalance < 1) {
+				throw new Error('Insufficient VCE tokens for proposal creation');
+			}
+
 			const result = await $createProposalMutation.mutateAsync({
 				title: newProposal.title,
 				details: newProposal.details,
@@ -569,8 +610,9 @@ HOW THIS SYSTEM WORKS:
 					tags: []
 				};
 				showNewProposalForm = false;
-				// Refresh proposals
-				await proposalsQuery.refetch?.();
+
+				// Force immediate refetch of relevant data
+				await Promise.all([$userTokensQuery.refetch(), $proposalsQuery.refetch()]);
 			}
 		} catch (error) {
 			console.error('Failed to create proposal:', error);
@@ -778,15 +820,15 @@ HOW THIS SYSTEM WORKS:
 								</div>
 
 								<!-- Add token balance warning if insufficient -->
-								{#if $userTokensQuery.data?.balance?.balance < 1}
+								{#if ($userTokensQuery.data?.balances.VCE.balance || 0) < 1}
 									<div class="p-4 mb-4 border rounded-lg border-error-500/20 bg-error-500/10">
 										<div class="flex items-start gap-3">
 											<Icon icon="mdi:alert-circle" class="w-5 h-5 mt-0.5 text-error-400" />
 											<div>
-												<p class="font-medium text-error-400">Insufficient Tokens</p>
+												<p class="font-medium text-error-400">Insufficient VCE Tokens</p>
 												<p class="mt-1 text-sm text-error-300">
-													You need at least 1 token to create a new idea. Your current balance: {$userTokensQuery
-														.data?.balance?.balance || 0} tokens
+													You need at least 1 VCE token to create a new idea. Your current balance: {$userTokensQuery
+														.data?.balances.VCE.balance || 0} VCE
 												</p>
 											</div>
 										</div>
@@ -854,12 +896,12 @@ HOW THIS SYSTEM WORKS:
 											type="submit"
 											class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
 											disabled={$createProposalMutation.isLoading ||
-												($userTokensQuery.data?.balance?.balance || 0) < 1}
+												($userTokensQuery.data?.balances.VCE.balance || 0) < 1}
 										>
 											{#if $createProposalMutation.isLoading}
 												Creating...
 											{:else}
-												Create Proposal (1 token)
+												Create Proposal (1 VCE token)
 											{/if}
 										</button>
 									</div>

@@ -15,6 +15,8 @@ interface ProposalData {
         state: string;
         total_votes: number;
         total_tokens_staked: number;
+        total_tokens_staked_vce: number;
+        total_tokens_staked_eure: number;
         tags?: string[];
     };
     token_transaction: {
@@ -28,7 +30,7 @@ export default createOperation.mutation({
     input: z.object({
         title: z.string(),
         details: z.string(),
-        tags: z.array(z.enum(validTags)).optional()
+        tags: z.array(z.string()).optional()
     }),
     requireAuthentication: true,
     rbac: {
@@ -36,40 +38,69 @@ export default createOperation.mutation({
     },
     handler: async ({ input, context, user }) => {
         if (!user?.customClaims?.id) {
-            throw new AuthorizationError({ message: "No authenticated user found." });
+            throw new Error("User not authenticated");
         }
 
-        const initialStakeAmount = 1; // 1 token required for proposal creation
+        const userId = user.customClaims.id;
 
-        try {
-            const { data, error } = await context.supabase.rpc('create_proposal_with_stake', {
-                p_title: input.title,
-                p_details: input.details,
-                p_author: user.customClaims.id,
-                p_stake_amount: initialStakeAmount,
-                p_tags: input.tags || []
+        // Start a transaction
+        const { data: proposal, error: proposalError } = await context.supabase
+            .from('proposals')
+            .insert({
+                title: input.title,
+                details: input.details,
+                author: userId,
+                state: 'idea',
+                total_votes: 1, // Initial author vote
+                total_tokens_staked: 1, // Initial stake
+                total_tokens_staked_vce: 1, // Initial VCE stake
+                total_tokens_staked_eure: 0, // No initial EURe stake
+                tags: input.tags || []
+            })
+            .select()
+            .single();
+
+        if (proposalError) {
+            throw new Error(`Failed to create proposal: ${proposalError.message}`);
+        }
+
+        // Create initial stake transaction
+        const { error: stakeError } = await context.supabase
+            .from('token_transactions')
+            .insert({
+                transaction_type: 'stake',
+                token_type: 'VCE',
+                from_user_id: userId,
+                proposal_id: proposal.id,
+                amount: 1
             });
 
-            if (error) {
-                throw new Error(`Failed to create proposal: ${error.message}`);
-            }
-
-            if (!data) {
-                throw new Error('No data returned from create_proposal_with_stake');
-            }
-
-            const proposalData = data as ProposalData;
-
-            return {
-                success: true,
-                message: 'Proposal created successfully',
-                proposal: proposalData.proposal
-            } as const;
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to create proposal: ${error.message}`);
-            }
-            throw new Error('An unknown error occurred while creating the proposal');
+        if (stakeError) {
+            throw new Error(`Failed to create stake transaction: ${stakeError.message}`);
         }
+
+        // Create initial vote record with UPSERT
+        const { error: voteError } = await context.supabase
+            .from('user_proposal_votes')
+            .upsert({
+                user_id: userId,
+                proposal_id: proposal.id,
+                user_votes: 1,
+                tokens_staked: 1,
+                tokens_staked_vce: 1,
+                tokens_staked_eure: 0
+            }, {
+                onConflict: 'user_id,proposal_id',
+                ignoreDuplicates: false
+            });
+
+        if (voteError) {
+            throw new Error(`Failed to create vote record: ${voteError.message}`);
+        }
+
+        return {
+            success: true,
+            proposal
+        };
     },
 }); 

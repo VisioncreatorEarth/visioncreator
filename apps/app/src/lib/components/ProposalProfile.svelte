@@ -4,7 +4,8 @@ HOW THIS COMPONENT WORKS:
 This is the profile area of the proposals view that:
 - Shows user profile and voting information using real user data from queryMe
 - Displays voted proposals list with quadratic voting information
-- Calculates total asset value using dynamic token price from queryOrgaStats
+- Calculates total asset value using dynamic VCE token price from queryOrgaStats
+- Shows VCE token balances (free and locked)
 - Is collapsible on mobile with a toggle button
 - Uses Tailwind for responsive design
 -->
@@ -35,17 +36,11 @@ This is the profile area of the proposals view that:
 		onboarded: boolean;
 	}
 
-	interface TokenBalance {
-		balance: {
+	interface TokenBalances {
+		VCE: {
 			balance: number;
 			staked_balance: number;
 		};
-		transactions: Array<{
-			id: string;
-			amount: number;
-			transaction_type: string;
-			created_at: string;
-		}>;
 	}
 
 	interface VoterInfo {
@@ -55,7 +50,7 @@ This is the profile area of the proposals view that:
 		tokens: number;
 	}
 
-	// Query organization stats for token price
+	// Query organization stats for token prices
 	const orgaStatsQuery = createQuery({
 		operationName: 'queryOrgaStats',
 		refetchInterval: 30000 // Refetch every 30 seconds
@@ -84,20 +79,25 @@ This is the profile area of the proposals view that:
 
 	// Add new state for user votes
 	let userVotes = new Map<string, VoterInfo>();
-	let userTokens = 0;
+	let userTokens = {
+		VCE: 0
+	};
 
 	// Update user tokens when data changes
-	$: if ($userTokensQuery.data?.balance?.balance) {
-		userTokens = $userTokensQuery.data.balance.balance;
+	$: if ($userTokensQuery.data?.balances) {
+		userTokens = {
+			VCE: $userTokensQuery.data.balances.VCE.balance || 0
+		};
 	}
 
 	// Get current token price from orgaStats
 	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
 
-	// Calculate total assets value using dynamic token price
+	// Calculate total assets value using VCE only
 	$: totalShares =
-		Number($userTokensQuery.data?.balance?.balance || 0) +
-		Number($userTokensQuery.data?.balance?.staked_balance || 0);
+		Number($userTokensQuery.data?.balances.VCE.balance || 0) +
+		Number($userTokensQuery.data?.balances.VCE.staked_balance || 0);
+
 	$: totalAssetsValue = totalShares * currentTokenPrice;
 
 	function toggleMenu() {
@@ -183,14 +183,14 @@ This is the profile area of the proposals view that:
 					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Shares</h4>
 					<div class="grid grid-cols-2 gap-4">
 						<div>
-							<p class="text-2xl font-bold text-tertiary-100">{userTokens}</p>
-							<p class="text-xs text-tertiary-300">Free to use</p>
+							<p class="text-2xl font-bold text-tertiary-100">{userTokens.VCE}</p>
+							<p class="text-xs text-tertiary-300">Free VCE</p>
 						</div>
 						<div>
 							<p class="text-2xl font-bold text-tertiary-100">
-								{$userTokensQuery.data?.balance?.staked_balance || 0}
+								{$userTokensQuery.data?.balances.VCE.staked_balance || 0}
 							</p>
-							<p class="text-xs text-tertiary-300">Locked in votes</p>
+							<p class="text-xs text-tertiary-300">Locked VCE</p>
 						</div>
 					</div>
 				</div>

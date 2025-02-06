@@ -4,17 +4,19 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create enums
 CREATE TYPE proposal_state AS ENUM ('idea', 'draft', 'pending', 'accepted', 'rejected');
 CREATE TYPE token_transaction_type AS ENUM ('mint', 'transfer', 'stake', 'unstake');
+CREATE TYPE token_type AS ENUM ('VCE', 'EURe');
 
 -- Create tables
 CREATE TABLE token_balances (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES profiles(id),
+    token_type token_type NOT NULL DEFAULT 'VCE',
     balance BIGINT NOT NULL DEFAULT 0,
     staked_balance BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT positive_balances CHECK (balance >= 0 AND staked_balance >= 0),
-    UNIQUE(user_id)
+    UNIQUE(user_id, token_type)
 );
 
 CREATE TABLE proposals (
@@ -26,6 +28,8 @@ CREATE TABLE proposals (
     state proposal_state NOT NULL DEFAULT 'idea',
     total_votes INTEGER NOT NULL DEFAULT 0,
     total_tokens_staked BIGINT NOT NULL DEFAULT 0,
+    total_tokens_staked_vce BIGINT NOT NULL DEFAULT 0,
+    total_tokens_staked_eure BIGINT NOT NULL DEFAULT 0,
     responsible UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -37,6 +41,7 @@ CREATE TABLE proposals (
 CREATE TABLE token_transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     transaction_type token_transaction_type NOT NULL,
+    token_type token_type NOT NULL DEFAULT 'VCE',
     from_user_id UUID REFERENCES profiles(id),
     to_user_id UUID REFERENCES profiles(id),
     amount BIGINT NOT NULL,
@@ -47,7 +52,7 @@ CREATE TABLE token_transactions (
     CONSTRAINT valid_transfer CHECK (
         (transaction_type = 'transfer' AND from_user_id IS NOT NULL AND to_user_id IS NOT NULL) OR
         (transaction_type = 'mint' AND from_user_id IS NULL AND to_user_id IS NOT NULL) OR
-        ((transaction_type = 'stake' OR transaction_type = 'unstake') AND from_user_id IS NOT NULL AND proposal_id IS NOT NULL)
+        ((transaction_type = 'stake' OR transaction_type = 'unstake') AND from_user_id IS NOT NULL AND proposal_id IS NOT NULL AND token_type = 'VCE')
     )
 );
 
@@ -57,6 +62,8 @@ CREATE TABLE user_proposal_votes (
     proposal_id UUID NOT NULL REFERENCES proposals(id),
     user_votes INTEGER NOT NULL DEFAULT 0,
     tokens_staked BIGINT NOT NULL DEFAULT 0,
+    tokens_staked_vce BIGINT NOT NULL DEFAULT 0,
+    tokens_staked_eure BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id, proposal_id)
@@ -66,9 +73,11 @@ CREATE TABLE user_proposal_votes (
 CREATE INDEX proposals_state_idx ON proposals(state);
 CREATE INDEX proposals_votes_count_idx ON proposals(total_votes DESC);
 CREATE INDEX token_balances_user_id_idx ON token_balances(user_id);
+CREATE INDEX token_balances_token_type_idx ON token_balances(token_type);
 CREATE INDEX token_transactions_from_user_idx ON token_transactions(from_user_id);
 CREATE INDEX token_transactions_to_user_idx ON token_transactions(to_user_id);
 CREATE INDEX token_transactions_proposal_idx ON token_transactions(proposal_id);
+CREATE INDEX token_transactions_token_type_idx ON token_transactions(token_type);
 CREATE INDEX token_transactions_created_at_idx ON token_transactions(created_at DESC);
 CREATE INDEX idx_user_proposal_votes_user ON user_proposal_votes(user_id);
 CREATE INDEX idx_user_proposal_votes_proposal ON user_proposal_votes(proposal_id);
@@ -90,7 +99,7 @@ DECLARE
     v_current_votes INT;
     v_proposal_state proposal_state;
 BEGIN
-    -- Check if this is a nested call by looking at the transaction context
+    -- Check if this is a nested call
     SELECT EXISTS (
         SELECT 1 
         FROM pg_trigger 
@@ -106,6 +115,11 @@ BEGIN
 
     -- First check if this is a proposal-related transaction
     IF NEW.proposal_id IS NOT NULL THEN
+        -- Only allow VCE tokens for proposal-related transactions
+        IF NEW.token_type != 'VCE' THEN
+            RAISE EXCEPTION 'Only VCE tokens can be used for proposal actions';
+        END IF;
+
         -- Check if the proposal is in a final state
         SELECT state, author = NEW.from_user_id INTO v_proposal_state, v_is_author
         FROM proposals 
@@ -120,6 +134,7 @@ BEGIN
                     staked_balance = staked_balance - NEW.amount,
                     updated_at = NOW()
                 WHERE user_id = NEW.from_user_id
+                AND token_type = 'VCE'
                 AND staked_balance >= NEW.amount;
                 RETURN NEW;
             END IF;
@@ -129,9 +144,9 @@ BEGIN
     -- Regular token balance handling
     CASE NEW.transaction_type
         WHEN 'mint' THEN
-            INSERT INTO token_balances (user_id, balance)
-            VALUES (NEW.to_user_id, NEW.amount)
-            ON CONFLICT (user_id) DO UPDATE
+            INSERT INTO token_balances (user_id, token_type, balance)
+            VALUES (NEW.to_user_id, NEW.token_type, NEW.amount)
+            ON CONFLICT (user_id, token_type) DO UPDATE
             SET balance = token_balances.balance + NEW.amount,
                 updated_at = NOW();
         
@@ -140,33 +155,54 @@ BEGIN
             SET balance = balance - NEW.amount,
                 updated_at = NOW()
             WHERE user_id = NEW.from_user_id
+            AND token_type = NEW.token_type
             AND balance >= NEW.amount;
             
-            INSERT INTO token_balances (user_id, balance)
-            VALUES (NEW.to_user_id, NEW.amount)
-            ON CONFLICT (user_id) DO UPDATE
+            INSERT INTO token_balances (user_id, token_type, balance)
+            VALUES (NEW.to_user_id, NEW.token_type, NEW.amount)
+            ON CONFLICT (user_id, token_type) DO UPDATE
             SET balance = token_balances.balance + NEW.amount,
                 updated_at = NOW();
         
         WHEN 'stake' THEN
+            -- Only allow VCE tokens for staking
+            IF NEW.token_type != 'VCE' THEN
+                RAISE EXCEPTION 'Only VCE tokens can be used for staking';
+            END IF;
+
             -- Handle staking
             UPDATE token_balances
             SET balance = balance - NEW.amount,
                 staked_balance = staked_balance + NEW.amount,
                 updated_at = NOW()
             WHERE user_id = NEW.from_user_id
+            AND token_type = 'VCE'
             AND balance >= NEW.amount;
             
             -- Update or create vote record
-            INSERT INTO user_proposal_votes (user_id, proposal_id, user_votes, tokens_staked)
-            VALUES (NEW.from_user_id, NEW.proposal_id, 1, NEW.amount)
+            INSERT INTO user_proposal_votes (
+                user_id, 
+                proposal_id, 
+                user_votes, 
+                tokens_staked,
+                tokens_staked_vce
+            )
+            VALUES (
+                NEW.from_user_id, 
+                NEW.proposal_id, 
+                1,
+                NEW.amount,
+                NEW.amount
+            )
             ON CONFLICT (user_id, proposal_id) DO UPDATE
             SET user_votes = user_proposal_votes.user_votes + 1,
-                tokens_staked = user_proposal_votes.tokens_staked + NEW.amount;
+                tokens_staked = user_proposal_votes.tokens_staked + NEW.amount,
+                tokens_staked_vce = user_proposal_votes.tokens_staked_vce + NEW.amount;
             
             -- Update proposal totals
             UPDATE proposals
             SET total_tokens_staked = total_tokens_staked + NEW.amount,
+                total_tokens_staked_vce = total_tokens_staked_vce + NEW.amount,
                 total_votes = (
                     SELECT SUM(user_votes)
                     FROM user_proposal_votes
@@ -175,6 +211,11 @@ BEGIN
             WHERE id = NEW.proposal_id;
         
         WHEN 'unstake' THEN
+            -- Only allow VCE tokens for unstaking
+            IF NEW.token_type != 'VCE' THEN
+                RAISE EXCEPTION 'Only VCE tokens can be used for unstaking';
+            END IF;
+
             -- Only check author restrictions for non-final states
             IF NEW.proposal_id IS NOT NULL THEN
                 SELECT 
@@ -202,19 +243,22 @@ BEGIN
                 staked_balance = staked_balance - NEW.amount,
                 updated_at = NOW()
             WHERE user_id = NEW.from_user_id
+            AND token_type = 'VCE'
             AND staked_balance >= NEW.amount;
             
             -- Update vote record if this is a proposal unstake
             IF NEW.proposal_id IS NOT NULL THEN
                 UPDATE user_proposal_votes
                 SET user_votes = user_votes - 1,
-                    tokens_staked = tokens_staked - NEW.amount
+                    tokens_staked = tokens_staked - NEW.amount,
+                    tokens_staked_vce = tokens_staked_vce - NEW.amount
                 WHERE user_id = NEW.from_user_id
                 AND proposal_id = NEW.proposal_id;
             
                 -- Update proposal totals
                 UPDATE proposals
                 SET total_tokens_staked = total_tokens_staked - NEW.amount,
+                    total_tokens_staked_vce = total_tokens_staked_vce - NEW.amount,
                     total_votes = (
                         SELECT SUM(user_votes)
                         FROM user_proposal_votes
@@ -465,6 +509,8 @@ BEGIN
         state,
         total_votes,
         total_tokens_staked,
+        total_tokens_staked_vce,
+        total_tokens_staked_eure,
         tags
     ) VALUES (
         p_title,
@@ -473,6 +519,9 @@ BEGIN
         'idea',
         1,  -- Initial author vote
         p_stake_amount,
+        CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END,
+        CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END,
+        CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END,
         v_filtered_tags
     )
     RETURNING * INTO v_proposal;
@@ -503,16 +552,22 @@ BEGIN
         user_id,
         proposal_id,
         user_votes,
-        tokens_staked
+        tokens_staked,
+        tokens_staked_vce,
+        tokens_staked_eure
     ) VALUES (
         p_author,
         v_proposal.id,
         1,  -- Initial author vote
-        p_stake_amount
+        p_stake_amount,
+        CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END,
+        CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END
     )
     ON CONFLICT (user_id, proposal_id) DO UPDATE
     SET user_votes = 1,
-        tokens_staked = p_stake_amount;
+        tokens_staked = p_stake_amount,
+        tokens_staked_vce = CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END,
+        tokens_staked_eure = CASE WHEN p_stake_amount > 0 THEN p_stake_amount ELSE 0 END;
 
     RETURN json_build_object(
         'proposal', v_proposal,
@@ -633,7 +688,9 @@ BEGIN
     SET state = v_new_state,
         decided_at = NOW(),
         total_votes = v_original_votes,  -- Explicitly preserve vote count
-        total_tokens_staked = 0
+        total_tokens_staked = 0,
+        total_tokens_staked_vce = 0,
+        total_tokens_staked_eure = 0
     WHERE id = p_proposal_id
     RETURNING * INTO v_proposal;
 

@@ -376,19 +376,19 @@
 					<!-- Token Management Section -->
 					<div class="p-6 rounded-lg bg-surface-800">
 						<div class="flex items-center justify-between mb-4">
-							<h3 class="text-lg font-semibold text-white">Token Balance</h3>
+							<h3 class="text-lg font-semibold text-white">VCE Token Balance</h3>
 							<div class="flex items-center gap-2">
 								<button
 									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
 									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 25)}
 								>
-									Mint 25 VC Tokens
+									Mint 25 VCE
 								</button>
 								<button
 									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
 									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 365)}
 								>
-									Mint 365 VC Tokens
+									Mint 365 VCE
 								</button>
 							</div>
 						</div>
@@ -402,13 +402,13 @@
 								<div class="p-4 rounded-lg bg-surface-700">
 									<p class="text-sm text-surface-200">Available Balance</p>
 									<p class="mt-1 text-2xl font-semibold text-white">
-										{$getUserTokensQuery.data.balance.balance || 0} VC
+										{$getUserTokensQuery.data.balances.VCE.balance || 0} VCE
 									</p>
 								</div>
 								<div class="p-4 rounded-lg bg-surface-700">
 									<p class="text-sm text-surface-200">Staked Balance</p>
 									<p class="mt-1 text-2xl font-semibold text-white">
-										{$getUserTokensQuery.data.balance.staked_balance || 0} VC
+										{$getUserTokensQuery.data.balances.VCE.staked_balance || 0} VCE
 									</p>
 								</div>
 							</div>
@@ -421,7 +421,7 @@
 											<div class="p-3 text-sm rounded-lg bg-surface-700/50">
 												<div class="flex items-center justify-between">
 													<span class="font-medium capitalize">{tx.transaction_type}</span>
-													<span class="text-tertiary-400">{tx.amount} VC</span>
+													<span class="text-tertiary-400">{tx.amount} VCE</span>
 												</div>
 												<p class="mt-1 text-xs text-surface-300">
 													{new Date(tx.created_at).toLocaleString()}
