@@ -1,7 +1,7 @@
 <!--
 HOW THIS COMPONENT WORKS:
 
-This is the right aside area of the proposals view that:
+This is the profile area of the proposals view that:
 - Shows user profile and voting information using real user data from queryMe
 - Displays voted proposals list with quadratic voting information
 - Is collapsible on mobile with a toggle button
@@ -18,12 +18,16 @@ This is the right aside area of the proposals view that:
 		getStateColor,
 		getStateIcon,
 		getStateBgColor,
-		type ProposalState
+		type ProposalState,
+		dashboardMetrics
 	} from '$lib/stores/proposalStore';
 	import { activeSidePanel } from '$lib/stores/sidePanelStore';
 
 	export let onProposalSelect: (state: ProposalState, proposalId: string) => void;
 	export let voteThreshold: number;
+
+	// Fixed values from dashboard
+	const tokenPrice = 24.12;
 
 	// Add proper typing for user data
 	interface User {
@@ -82,15 +86,21 @@ This is the right aside area of the proposals view that:
 		userTokens = ($userTokensQuery.data.balance as { balance: number }).balance;
 	}
 
+	// Calculate total assets value
+	$: totalShares =
+		($userTokensQuery.data?.balance?.balance || 0) +
+		($userTokensQuery.data?.balance?.staked_balance || 0);
+	$: totalAssetsValue = totalShares * tokenPrice;
+
 	function toggleMenu() {
-		if ($activeSidePanel === 'right') {
+		if ($activeSidePanel === 'left') {
 			activeSidePanel.close();
 		} else {
-			activeSidePanel.openRight();
+			activeSidePanel.openLeft();
 		}
 	}
 
-	$: isOpen = $activeSidePanel === 'right';
+	$: isOpen = $activeSidePanel === 'left';
 
 	// Calculate quadratic cost for next vote
 	function getNextVoteCost(currentVotes: number): number {
@@ -105,7 +115,7 @@ This is the right aside area of the proposals view that:
 
 <!-- Mobile Toggle Button -->
 <button
-	class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 right-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
+	class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
 	on:click={toggleMenu}
 >
 	<Icon icon={isOpen ? 'mdi:close' : 'mdi:account'} class="w-6 h-6 text-tertiary-300" />
@@ -122,9 +132,9 @@ This is the right aside area of the proposals view that:
 
 <!-- Aside Container -->
 <div
-	class="aside-panel right-0 z-50 transition-transform duration-200 border-l {isOpen
+	class="aside-panel left-0 z-50 transition-transform duration-200 border-r {isOpen
 		? 'translate-x-0'
-		: 'translate-x-full'} {typeof window !== 'undefined' && window.innerWidth >= 1024
+		: '-translate-x-full'} {typeof window !== 'undefined' && window.innerWidth >= 1024
 		? 'lg:translate-x-0 lg:w-80'
 		: 'w-[320px]'}"
 >
@@ -149,7 +159,18 @@ This is the right aside area of the proposals view that:
 					{/if}
 				</div>
 
-				<!-- Voting Power -->
+				<!-- Total Assets Value -->
+				<div class="p-4 border rounded-lg border-surface-700/50">
+					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">Total Assets Value</h4>
+					<div class="flex flex-col gap-2">
+						<div>
+							<p class="text-2xl font-bold text-tertiary-100">€{totalAssetsValue.toFixed(2)}</p>
+							<p class="text-xs text-tertiary-300">Total value of all shares</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Shares Distribution -->
 				<div class="p-4 border rounded-lg border-surface-700/50">
 					<h4 class="mb-4 text-sm font-semibold text-tertiary-200">My Shares</h4>
 					<div class="grid grid-cols-2 gap-4">

@@ -116,7 +116,7 @@ HOW THIS COMPONENT WORKS:
 
 <div class="flex flex-col md:flex-row md:items-stretch">
 	<!-- Left side: Votes -->
-	<div class="hidden md:flex items-center justify-between p-6 w-40 border-r border-surface-700/50">
+	<div class="items-center justify-between hidden w-40 p-6 border-r md:flex border-surface-700/50">
 		<div class="flex items-center gap-4">
 			<div class="relative text-center">
 				<div class="flex items-center justify-center">
@@ -130,7 +130,7 @@ HOW THIS COMPONENT WORKS:
 						)}
 						{#if voteInfo.tokens > 0}
 							<div
-								class="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs font-medium bg-tertiary-500/30 text-tertiary-200 rounded-full"
+								class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
 							>
 								{voteInfo.tokens}
 							</div>
@@ -177,7 +177,7 @@ HOW THIS COMPONENT WORKS:
 		<!-- First Row: Title and Tags -->
 		<div class="flex flex-col p-2 bg-surface-800/95">
 			<div class="flex items-start justify-between">
-				<h3 class="flex-1 text-base font-semibold text-tertiary-100 mr-4 truncate">
+				<h3 class="flex-1 mr-4 text-base font-semibold truncate text-tertiary-100">
 					{proposal.title}
 				</h3>
 				{#if proposal.tags && proposal.tags.length > 0}
@@ -214,7 +214,7 @@ HOW THIS COMPONENT WORKS:
 									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
 								)}
 						on:click|stopPropagation={() => onVote(proposal.id, true)}
-						class="flex items-center justify-center w-10 h-10 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border border-tertiary-500/30"
+						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
 					>
 						<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
 					</button>
@@ -225,7 +225,7 @@ HOW THIS COMPONENT WORKS:
 								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
 							)}
 						on:click|stopPropagation={() => onVote(proposal.id, false)}
-						class="flex items-center justify-center w-10 h-10 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border border-tertiary-500/30"
+						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
 					>
 						<Icon icon="mdi:minus" class="w-7 h-7 text-tertiary-200" />
 					</button>
@@ -282,7 +282,7 @@ HOW THIS COMPONENT WORKS:
 							>{getStateLabel(proposal.state)}</span
 						>
 					</div>
-					<div class="flex-grow flex items-center justify-between gap-2">
+					<div class="flex items-center justify-between flex-grow gap-2">
 						<div class="flex-grow">
 							<div class="w-full h-1 overflow-hidden rounded-full bg-surface-700/50">
 								<div
@@ -310,9 +310,9 @@ HOW THIS COMPONENT WORKS:
 	</div>
 
 	<!-- Middle: Basic Info (Desktop) -->
-	<div class="hidden md:flex flex-grow min-w-0 p-6 border-r border-surface-700/50">
-		<div class="flex flex-col min-h-[80px]">
-			<h3 class="text-2xl font-semibold truncate text-tertiary-100 mb-4">
+	<div class="flex-grow hidden min-w-0 p-6 border-r md:flex border-surface-700/50">
+		<div class="flex flex-col min-h-[80px] w-full overflow-hidden">
+			<h3 class="mb-4 text-2xl font-semibold truncate text-tertiary-100">
 				{proposal.title}
 			</h3>
 			<div class="flex items-center gap-3">
@@ -320,7 +320,7 @@ HOW THIS COMPONENT WORKS:
 					<div class="relative">
 						<Avatar me={formatVoterForAvatar(voter)} />
 						<div
-							class="absolute -top-2 -right-2 px-1.5 py-0.5 text-[10px] font-medium bg-tertiary-500/30 text-tertiary-200 rounded-full"
+							class="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center text-[10px] font-medium bg-tertiary-500 text-surface-900 rounded-full border border-tertiary-400/30 shadow-sm"
 						>
 							{voter.votes}
 						</div>

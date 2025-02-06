@@ -13,6 +13,11 @@ HOW THIS SYSTEM WORKS:
    - User data and tokens are managed through respective queries
    - Work items are temporarily managed through local state (to be moved to DB later)
    - Real-time updates through query refetching
+
+3. Layout Structure:
+   - Desktop: Two-column grid layout (280px left profile, 1fr main content)
+   - Mobile/Tablet: Full-width with collapsible left profile panel
+   - Responsive breakpoints handle layout transitions
 -->
 
 <script lang="ts">
@@ -21,11 +26,11 @@ HOW THIS SYSTEM WORKS:
 	import type { QueryObserverResult } from '@tanstack/svelte-query';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import LeftAsideProposals from './LeftAsideProposals.svelte';
-	import RightAsideProposals from './RightAsideProposals.svelte';
 	import { writable } from 'svelte/store';
 	import ProposalDetailView from './ProposalDetailView.svelte';
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
+	import ProposalDashboard from './ProposalDashboard.svelte';
+	import ProposalProfile from './ProposalProfile.svelte';
 
 	// Define types
 	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
@@ -127,6 +132,7 @@ HOW THIS SYSTEM WORKS:
 	let userTokens = 0;
 	let userVotes = new Map<string, number>();
 	let isWorkPackageFormVisible = false;
+	let showMobileProfile = false;
 
 	// Work package form state
 	let newWorkPackage = {
@@ -662,17 +668,39 @@ HOW THIS SYSTEM WORKS:
 	}
 </script>
 
-<div class="relative flex w-full h-full overflow-hidden">
-	<!-- Left Aside -->
-	<LeftAsideProposals
-		selectedState={$activeTab}
-		onStateSelect={(state) => activeTab.set(state)}
-		states={PROPOSAL_TABS}
-	/>
+<div class="grid lg:grid-cols-[280px_1fr] h-full">
+	<!-- Left Profile (Desktop) -->
+	<div class="hidden lg:block border-r border-surface-700/50 bg-surface-800/50">
+		<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
+	</div>
 
 	<!-- Main Content Area -->
-	<main class="flex-grow h-full overflow-hidden">
-		<div class="h-full">
+	<div class="flex flex-col h-full overflow-hidden">
+		<ProposalDashboard
+			selectedState={$activeTab}
+			onStateSelect={(state) => activeTab.set(state)}
+			states={PROPOSAL_TABS}
+		/>
+
+		<!-- Mobile Profile Toggle -->
+		<button
+			class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 lg:hidden bg-surface-800 hover:bg-surface-700"
+			on:click={() => (showMobileProfile = !showMobileProfile)}
+		>
+			<Icon
+				icon={showMobileProfile ? 'mdi:close' : 'mdi:account'}
+				class="w-6 h-6 text-tertiary-300"
+			/>
+		</button>
+
+		{#if showMobileProfile}
+			<div class="lg:hidden">
+				<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
+			</div>
+		{/if}
+
+		<!-- Proposals List and Details -->
+		<div class="flex-1 overflow-hidden">
 			<!-- Tabs Bar - Fixed to top -->
 			<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
 				<div class="max-w-5xl px-4 py-4 mx-auto">
@@ -898,13 +926,14 @@ HOW THIS SYSTEM WORKS:
 				</div>
 			</div>
 		</div>
-	</main>
-
-	<!-- Right Aside -->
-	<RightAsideProposals onProposalSelect={handleProposalSelect} voteThreshold={10} />
+	</div>
 </div>
 
 <style>
+	:global(.proposal-system) {
+		@apply h-full overflow-hidden bg-surface-900;
+	}
+
 	:global(.proposal-card) {
 		@apply overflow-hidden rounded-xl bg-surface-900/50 border border-surface-700/50;
 	}
