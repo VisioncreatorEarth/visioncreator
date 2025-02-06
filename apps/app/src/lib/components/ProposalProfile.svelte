@@ -136,8 +136,8 @@ This is the profile area of the proposals view that:
 	class="aside-panel left-0 z-50 transition-transform duration-200 border-r {isOpen
 		? 'translate-x-0'
 		: '-translate-x-full'} {typeof window !== 'undefined' && window.innerWidth >= 1024
-		? 'lg:translate-x-0 lg:w-80'
-		: 'w-[320px]'}"
+		? 'lg:translate-x-0 w-[280px]'
+		: 'w-[280px]'}"
 >
 	<div class="flex flex-col h-full overflow-hidden bg-surface-900/95 backdrop-blur-sm">
 		<!-- Main Content Area -->
