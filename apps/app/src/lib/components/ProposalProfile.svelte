@@ -22,6 +22,7 @@ This is the profile area of the proposals view that:
 		dashboardMetrics
 	} from '$lib/stores/proposalStore';
 	import { activeSidePanel } from '$lib/stores/sidePanelStore';
+	import type { Operations } from 'generated-wundergraph';
 
 	export let onProposalSelect: (state: ProposalState, proposalId: string) => void;
 	export let voteThreshold: number;
@@ -57,7 +58,7 @@ This is the profile area of the proposals view that:
 	}
 
 	// Add user data queries with proper typing
-	const userQuery = createQuery({
+	const userQuery = createQuery<Operations['queryMe']>({
 		operationName: 'queryMe',
 		enabled: true
 	});
@@ -71,7 +72,7 @@ This is the profile area of the proposals view that:
 		  }
 		: null;
 
-	$: userTokensQuery = createQuery({
+	$: userTokensQuery = createQuery<Operations['getUserTokens']>({
 		operationName: 'getUserTokens',
 		input: { userId: userData?.id || '' },
 		enabled: !!userData?.id
@@ -82,14 +83,14 @@ This is the profile area of the proposals view that:
 	let userTokens = 0;
 
 	// Update user tokens when data changes
-	$: if ($userTokensQuery.data?.balance) {
-		userTokens = ($userTokensQuery.data.balance as { balance: number }).balance;
+	$: if ($userTokensQuery.data?.balance?.balance) {
+		userTokens = $userTokensQuery.data.balance.balance;
 	}
 
 	// Calculate total assets value
 	$: totalShares =
-		($userTokensQuery.data?.balance?.balance || 0) +
-		($userTokensQuery.data?.balance?.staked_balance || 0);
+		Number($userTokensQuery.data?.balance?.balance || 0) +
+		Number($userTokensQuery.data?.balance?.staked_balance || 0);
 	$: totalAssetsValue = totalShares * tokenPrice;
 
 	function toggleMenu() {

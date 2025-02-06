@@ -17,6 +17,12 @@ HOW THIS COMPONENT WORKS:
    - Receives proposal data and user context as props
    - Manages local state for active tab and mobile view
    - Handles voting and proposal updates through parent events
+
+4. Color Utilities:
+   - Uses centralized color utilities from proposalStateColors.ts
+   - Supports both light and dark mode through Skeleton UI Theme syntax
+   - Background colors adapt based on proposal state
+   - Interactive elements (buttons, tabs) use state-specific hover and active colors
 -->
 
 <script lang="ts">
@@ -31,6 +37,11 @@ HOW THIS COMPONENT WORKS:
 	import { onDestroy } from 'svelte';
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
 	import type { Proposal, ProposalState, VoterInfo, User } from '$lib/types/proposals';
+	import {
+		getStateBgColor,
+		getStateActiveBgColor,
+		getStateHoverBgColor
+	} from '$lib/utils/proposalStateColors';
 
 	// Props
 	export let proposal: Proposal;
@@ -44,10 +55,6 @@ HOW THIS COMPONENT WORKS:
 	export let getVoteDisplay: (proposal: Proposal, voter?: VoterInfo) => any;
 	export let isAdmin: (userId: string) => boolean;
 	export let getTimeAgo: (date: string) => string;
-	export let getStateColor: (state: ProposalState) => string;
-	export let getStateBgColor: (state: ProposalState) => string;
-	export let getStateIcon: (state: ProposalState) => string;
-	export let getStateLabel: (state: ProposalState) => string;
 	export let userTokens: number;
 	export let getNextVoteCost: (currentVotes: number) => number;
 
@@ -88,13 +95,29 @@ HOW THIS COMPONENT WORKS:
 			window.removeEventListener('resize', updateViewport);
 		});
 	}
+
+	// Helper function to get nav button classes
+	function getNavButtonClasses(tabName: typeof detailTab): string {
+		const isActive = detailTab === tabName;
+		return `flex flex-col items-center justify-center w-16 h-16 transition-colors ${
+			isActive
+				? 'text-tertiary-100 ' + getStateActiveBgColor(proposal.state)
+				: 'text-tertiary-300 ' + getStateHoverBgColor(proposal.state)
+		}`;
+	}
+
+	// Helper function to get metadata section classes
+	function getMetadataSectionClasses(isDesktop = false): string {
+		return 'mb-6'; // Simplified to just margin bottom
+	}
 </script>
 
 <svelte:window on:resize={updateViewport} />
 
 <div class="flex flex-col h-full overflow-hidden bg-surface-900">
+	<!-- Header -->
 	<div
-		class="overflow-hidden transition-all duration-200 border card rounded-xl border-surface-700/50 bg-surface-900/50"
+		class="overflow-hidden transition-all duration-200 border card rounded-xl border-surface-700/50 bg-surface-900"
 	>
 		<ProposalHeaderItem
 			{proposal}
@@ -113,40 +136,22 @@ HOW THIS COMPONENT WORKS:
 	</div>
 
 	<!-- Content Area -->
-	<div class="flex flex-1 overflow-hidden border-t border-surface-700/50">
+	<div class="flex flex-1 overflow-hidden border rounded-xl border-surface-700/50">
 		<!-- Left Navigation -->
-		<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800/50">
-			<button
-				class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
-				'details'
-					? 'bg-surface-700 text-tertiary-100'
-					: 'text-tertiary-300 hover:bg-surface-700/50'}"
-				on:click={() => (detailTab = 'details')}
-			>
+		<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800">
+			<button class={getNavButtonClasses('details')} on:click={() => (detailTab = 'details')}>
 				<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
 				<span class="mt-1 text-[10px]">Details</span>
 			</button>
 
 			{#if isMobileView}
-				<button
-					class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
-					'metadata'
-						? 'bg-surface-700 text-tertiary-100'
-						: 'text-tertiary-300 hover:bg-surface-700/50'}"
-					on:click={() => (detailTab = 'metadata')}
-				>
+				<button class={getNavButtonClasses('metadata')} on:click={() => (detailTab = 'metadata')}>
 					<Icon icon="mdi:information-outline" class="w-6 h-6" />
 					<span class="mt-1 text-[10px]">Info</span>
 				</button>
 			{/if}
 
-			<button
-				class="flex flex-col items-center justify-center w-16 h-16 transition-colors {detailTab ===
-				'chat'
-					? 'bg-surface-700 text-tertiary-100'
-					: 'text-tertiary-300 hover:bg-surface-700/50'}"
-				on:click={() => (detailTab = 'chat')}
-			>
+			<button class={getNavButtonClasses('chat')} on:click={() => (detailTab = 'chat')}>
 				<Icon icon="mdi:chat-outline" class="w-6 h-6" />
 				<span class="mt-1 text-[10px]">Chat</span>
 			</button>
@@ -156,7 +161,7 @@ HOW THIS COMPONENT WORKS:
 		<div
 			class="flex flex-col flex-grow overflow-hidden {!isMobileView
 				? 'border-r border-surface-700/50'
-				: ''} bg-surface-800/50"
+				: ''} bg-surface-800"
 		>
 			<div class="flex-1 overflow-y-auto">
 				{#if detailTab === 'details'}
@@ -185,7 +190,7 @@ HOW THIS COMPONENT WORKS:
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{:else if detailTab === 'metadata' && isMobileView}
-					<div class="p-6 space-y-6">
+					<div class="p-6 space-y-6 bg-surface-900">
 						<!-- Mobile Metadata Content -->
 						<div>
 							<h4 class="mb-2 text-sm font-medium text-tertiary-200">Author</h4>
@@ -255,10 +260,10 @@ HOW THIS COMPONENT WORKS:
 
 		<!-- Right Metadata (Desktop Only) -->
 		{#if !isMobileView}
-			<div class="w-[280px] shrink-0 {getStateBgColor(proposal.state)} overflow-y-auto">
+			<div class="w-[280px] shrink-0 overflow-y-auto {getStateBgColor(proposal.state)}">
 				<div class="p-6 space-y-6">
 					<!-- Desktop Metadata Content -->
-					<div>
+					<div class={getMetadataSectionClasses(true)}>
 						<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">Author</h4>
 						<div class="flex items-center justify-end gap-3">
 							<p class="text-sm font-medium text-tertiary-100">
@@ -275,7 +280,7 @@ HOW THIS COMPONENT WORKS:
 					</div>
 
 					{#if proposal.responsible}
-						<div>
+						<div class={getMetadataSectionClasses(true)}>
 							<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">Responsible</h4>
 							<div class="flex items-center justify-end gap-3">
 								<div class="text-right">
@@ -294,14 +299,14 @@ HOW THIS COMPONENT WORKS:
 					{/if}
 
 					{#if proposal.state !== 'idea'}
-						<div>
+						<div class={getMetadataSectionClasses(true)}>
 							<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">Pain Point</h4>
 							<p class="text-sm text-right text-tertiary-300">
 								{proposal.metadata?.pain || 'Not defined yet'}
 							</p>
 						</div>
 
-						<div>
+						<div class={getMetadataSectionClasses(true)}>
 							<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
 								Expected Benefits
 							</h4>
@@ -312,7 +317,7 @@ HOW THIS COMPONENT WORKS:
 
 						{#each Object.entries(proposal.metadata || {}) as [key, value]}
 							{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
-								<div>
+								<div class={getMetadataSectionClasses(true)}>
 									<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
 										{key.charAt(0).toUpperCase() + key.slice(1)}
 									</h4>

@@ -668,260 +668,268 @@ HOW THIS SYSTEM WORKS:
 	}
 </script>
 
-<div class="grid lg:grid-cols-[280px_1fr] h-full">
-	<!-- Left Profile (Desktop) -->
-	<div class="hidden lg:block border-r border-surface-700/50 bg-surface-800/50">
-		<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
-	</div>
-
-	<!-- Main Content Area -->
-	<div class="flex flex-col h-full overflow-hidden">
-		<ProposalDashboard
-			selectedState={$activeTab}
-			onStateSelect={(state) => activeTab.set(state)}
-			states={PROPOSAL_TABS}
-		/>
-
-		<!-- Mobile Profile Toggle -->
-		<button
-			class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 lg:hidden bg-surface-800 hover:bg-surface-700"
-			on:click={() => (showMobileProfile = !showMobileProfile)}
-		>
-			<Icon
-				icon={showMobileProfile ? 'mdi:close' : 'mdi:account'}
-				class="w-6 h-6 text-tertiary-300"
-			/>
-		</button>
-
-		{#if showMobileProfile}
-			<div class="lg:hidden">
+<!-- Root Container -->
+<div class="h-full bg-surface-900">
+	<!-- Main Grid Layout - Grid on desktop, stack on mobile -->
+	<div class="grid h-full lg:grid-cols-[280px_1fr]">
+		<!-- Left Profile (Desktop) -->
+		<div class="hidden border-r lg:block border-surface-700/50 bg-surface-800/50">
+			<div class="h-full overflow-y-auto">
 				<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
 			</div>
-		{/if}
+		</div>
 
-		<!-- Proposals List and Details -->
-		<div class="flex-1 overflow-hidden">
-			<!-- Tabs Bar - Fixed to top -->
-			<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
-				<div class="max-w-5xl px-4 py-4 mx-auto">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							{#if expandedProposalId}
-								<button
-									on:click={() => {
-										expandedProposalId = null;
-										goto(`/me?view=Proposals`, { replaceState: true });
-									}}
-									class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-								>
-									<Icon icon="mdi:arrow-left" class="w-5 h-5" />
-									Back to List
-								</button>
-							{/if}
-							{#each PROPOSAL_TABS as state}
-								<button
-									class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
-									state
-										? getStateBgColor(state) + ' ' + getStateColor(state)
-										: 'hover:bg-surface-700/20 text-surface-300'}"
-									on:click={() => {
-										expandedProposalId = null;
-										activeTab.set(state);
-									}}
-									aria-selected={$activeTab === state}
-								>
-									<div class="flex items-center gap-2">
-										<Icon icon={getStateIcon(state)} class="w-4 h-4" />
-										{getTabLabel(state)}
-									</div>
-								</button>
-							{/each}
-						</div>
-						{#if !expandedProposalId}
-							<button
-								on:click={() => (showNewProposalForm = true)}
-								class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
-							>
-								<Icon icon="mdi:plus" class="w-5 h-5" />
-								Add New Idea
-							</button>
-						{/if}
-					</div>
-				</div>
-			</div>
+		<!-- Main Content Area -->
+		<div class="flex flex-col h-full overflow-hidden">
+			<!-- Dashboard -->
+			<ProposalDashboard
+				selectedState={$activeTab}
+				onStateSelect={(state) => activeTab.set(state)}
+				states={PROPOSAL_TABS}
+			/>
 
-			<!-- Update the form to show token requirement -->
-			{#if showNewProposalForm}
-				<div class="max-w-5xl mx-auto">
-					<div class="px-4 py-4">
-						<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
-							<div class="flex items-center justify-between mb-4">
-								<div>
-									<h3 class="text-lg font-medium text-tertiary-100">Create New Idea</h3>
-									<p class="mt-1 text-sm text-tertiary-300">
-										Creating a new idea requires 1 token for initial stake
-									</p>
-								</div>
-								<button
-									on:click={() => (showNewProposalForm = false)}
-									class="p-2 rounded-lg hover:bg-surface-700/50"
-								>
-									<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
-								</button>
-							</div>
+			<!-- Mobile Profile Toggle -->
+			<button
+				class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 lg:hidden bg-surface-800 hover:bg-surface-700"
+				on:click={() => (showMobileProfile = !showMobileProfile)}
+			>
+				<Icon
+					icon={showMobileProfile ? 'mdi:close' : 'mdi:account'}
+					class="w-6 h-6 text-tertiary-300"
+				/>
+			</button>
 
-							<!-- Add token balance warning if insufficient -->
-							{#if $userTokensQuery.data?.balance?.balance < 1}
-								<div class="p-4 mb-4 border rounded-lg border-error-500/20 bg-error-500/10">
-									<div class="flex items-start gap-3">
-										<Icon icon="mdi:alert-circle" class="w-5 h-5 mt-0.5 text-error-400" />
-										<div>
-											<p class="font-medium text-error-400">Insufficient Tokens</p>
-											<p class="mt-1 text-sm text-error-300">
-												You need at least 1 token to create a new idea. Your current balance: {$userTokensQuery
-													.data?.balance?.balance || 0} tokens
-											</p>
-										</div>
-									</div>
-								</div>
-							{/if}
-
-							<form on:submit|preventDefault={handleCreateProposal} class="space-y-4">
-								<div>
-									<label for="title" class="block mb-2 text-sm font-medium text-tertiary-200">
-										Title
-									</label>
-									<input
-										type="text"
-										id="title"
-										bind:value={newProposal.title}
-										class="w-full px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
-										placeholder="Enter your idea title"
-										required
-									/>
-								</div>
-
-								<!-- Add tag selection -->
-								<div>
-									<label class="block mb-2 text-sm font-medium text-tertiary-200">
-										Tags (Optional)
-									</label>
-									<div class="flex flex-wrap gap-2">
-										{#each VALID_TAGS as tag}
-											<button
-												type="button"
-												class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {newProposal.tags.includes(
-													tag
-												)
-													? 'bg-tertiary-500/20 text-tertiary-300 border-tertiary-500'
-													: 'bg-surface-700/50 text-surface-300 hover:bg-surface-700 border-surface-600'} border"
-												on:click={() => toggleTag(tag)}
-											>
-												{tag}
-											</button>
-										{/each}
-									</div>
-								</div>
-
-								<div>
-									<label for="details" class="block mb-2 text-sm font-medium text-tertiary-200">
-										Details
-									</label>
-									<textarea
-										id="details"
-										bind:value={newProposal.details}
-										class="w-full h-32 px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
-										placeholder="Describe your idea in detail (Markdown supported)"
-										required
-									/>
-								</div>
-								<div class="flex justify-end gap-3">
-									<button
-										type="button"
-										on:click={() => (showNewProposalForm = false)}
-										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-surface-700 text-tertiary-300"
-									>
-										Cancel
-									</button>
-									<button
-										type="submit"
-										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
-										disabled={$createProposalMutation.isLoading ||
-											($userTokensQuery.data?.balance?.balance || 0) < 1}
-									>
-										{#if $createProposalMutation.isLoading}
-											Creating...
-										{:else}
-											Create Proposal (1 token)
-										{/if}
-									</button>
-								</div>
-							</form>
-						</div>
-					</div>
+			<!-- Mobile Profile (Collapsible) -->
+			{#if showMobileProfile}
+				<div class="lg:hidden">
+					<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
 				</div>
 			{/if}
 
-			<!-- Scrollable Content Area -->
-			<div class="h-[calc(100vh-4rem)] overflow-y-auto">
-				<div class="max-w-5xl mx-auto">
-					<!-- Proposals List -->
-					<div class="grid gap-4 px-4 pt-4">
-						{#if expandedProposalId}
-							{@const proposal = $proposalsQuery.data?.proposals.find(
-								(p) => p.id === expandedProposalId
-							)}
-							{#if proposal}
-								<ProposalDetailView
-									{proposal}
-									onClose={() => {
-										expandedProposalId = null;
-										goto(`/me?view=Proposals`, { replaceState: true });
-									}}
-									onVote={handleVote}
-									onDecision={handleDecision}
-									{userQuery}
-									{getVotersForProposal}
-									{canVote}
-									{canUnstakeVote}
-									{getVoteDisplay}
-									{isAdmin}
-									{getTimeAgo}
-									{getStateColor}
-									{getStateBgColor}
-									{getStateIcon}
-									{getStateLabel}
-									{userTokens}
-									{getNextVoteCost}
-								/>
-							{/if}
-						{:else}
-							{#each filteredProposals as proposal (proposal.id)}
-								<div
-									id="proposal-{proposal.id}"
-									class={getProposalCardClasses(proposal)}
-									on:click={() => {
-										handleProposalSelect(proposal.state, proposal.id);
-										centerProposalInView(proposal.id);
-									}}
+			<!-- Main Content Scroll Area -->
+			<div class="flex-1 overflow-y-auto">
+				<!-- Tabs Bar - Fixed to top -->
+				<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
+					<div class="max-w-5xl px-4 py-4 mx-auto">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-2">
+								{#if expandedProposalId}
+									<button
+										on:click={() => {
+											expandedProposalId = null;
+											goto(`/me?view=Proposals`, { replaceState: true });
+										}}
+										class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+									>
+										<Icon icon="mdi:arrow-left" class="w-5 h-5" />
+										Back to List
+									</button>
+								{/if}
+								{#each PROPOSAL_TABS as state}
+									<button
+										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
+										state
+											? getStateBgColor(state) + ' ' + getStateColor(state)
+											: 'hover:bg-surface-700/20 text-surface-300'}"
+										on:click={() => {
+											expandedProposalId = null;
+											activeTab.set(state);
+										}}
+										aria-selected={$activeTab === state}
+									>
+										<div class="flex items-center gap-2">
+											<Icon icon={getStateIcon(state)} class="w-4 h-4" />
+											{getTabLabel(state)}
+										</div>
+									</button>
+								{/each}
+							</div>
+							{#if !expandedProposalId}
+								<button
+									on:click={() => (showNewProposalForm = true)}
+									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
 								>
-									<ProposalHeaderItem
+									<Icon icon="mdi:plus" class="w-5 h-5" />
+									Add New Idea
+								</button>
+							{/if}
+						</div>
+					</div>
+				</div>
+
+				<!-- Update the form to show token requirement -->
+				{#if showNewProposalForm}
+					<div class="max-w-5xl mx-auto">
+						<div class="px-4 py-4">
+							<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
+								<div class="flex items-center justify-between mb-4">
+									<div>
+										<h3 class="text-lg font-medium text-tertiary-100">Create New Idea</h3>
+										<p class="mt-1 text-sm text-tertiary-300">
+											Creating a new idea requires 1 token for initial stake
+										</p>
+									</div>
+									<button
+										on:click={() => (showNewProposalForm = false)}
+										class="p-2 rounded-lg hover:bg-surface-700/50"
+									>
+										<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
+									</button>
+								</div>
+
+								<!-- Add token balance warning if insufficient -->
+								{#if $userTokensQuery.data?.balance?.balance < 1}
+									<div class="p-4 mb-4 border rounded-lg border-error-500/20 bg-error-500/10">
+										<div class="flex items-start gap-3">
+											<Icon icon="mdi:alert-circle" class="w-5 h-5 mt-0.5 text-error-400" />
+											<div>
+												<p class="font-medium text-error-400">Insufficient Tokens</p>
+												<p class="mt-1 text-sm text-error-300">
+													You need at least 1 token to create a new idea. Your current balance: {$userTokensQuery
+														.data?.balance?.balance || 0} tokens
+												</p>
+											</div>
+										</div>
+									</div>
+								{/if}
+
+								<form on:submit|preventDefault={handleCreateProposal} class="space-y-4">
+									<div>
+										<label for="title" class="block mb-2 text-sm font-medium text-tertiary-200">
+											Title
+										</label>
+										<input
+											type="text"
+											id="title"
+											bind:value={newProposal.title}
+											class="w-full px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
+											placeholder="Enter your idea title"
+											required
+										/>
+									</div>
+
+									<!-- Add tag selection -->
+									<div>
+										<label class="block mb-2 text-sm font-medium text-tertiary-200">
+											Tags (Optional)
+										</label>
+										<div class="flex flex-wrap gap-2">
+											{#each VALID_TAGS as tag}
+												<button
+													type="button"
+													class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {newProposal.tags.includes(
+														tag
+													)
+														? 'bg-tertiary-500/20 text-tertiary-300 border-tertiary-500'
+														: 'bg-surface-700/50 text-surface-300 hover:bg-surface-700 border-surface-600'} border"
+													on:click={() => toggleTag(tag)}
+												>
+													{tag}
+												</button>
+											{/each}
+										</div>
+									</div>
+
+									<div>
+										<label for="details" class="block mb-2 text-sm font-medium text-tertiary-200">
+											Details
+										</label>
+										<textarea
+											id="details"
+											bind:value={newProposal.details}
+											class="w-full h-32 px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
+											placeholder="Describe your idea in detail (Markdown supported)"
+											required
+										/>
+									</div>
+									<div class="flex justify-end gap-3">
+										<button
+											type="button"
+											on:click={() => (showNewProposalForm = false)}
+											class="px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-surface-700 text-tertiary-300"
+										>
+											Cancel
+										</button>
+										<button
+											type="submit"
+											class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
+											disabled={$createProposalMutation.isLoading ||
+												($userTokensQuery.data?.balance?.balance || 0) < 1}
+										>
+											{#if $createProposalMutation.isLoading}
+												Creating...
+											{:else}
+												Create Proposal (1 token)
+											{/if}
+										</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Scrollable Content Area -->
+				<div class="h-[calc(100vh-4rem)] overflow-y-auto">
+					<div class="max-w-5xl mx-auto">
+						<!-- Proposals List -->
+						<div class="grid gap-4 px-4 pt-4">
+							{#if expandedProposalId}
+								{@const proposal = $proposalsQuery.data?.proposals.find(
+									(p) => p.id === expandedProposalId
+								)}
+								{#if proposal}
+									<ProposalDetailView
 										{proposal}
-										{userData}
+										onClose={() => {
+											expandedProposalId = null;
+											goto(`/me?view=Proposals`, { replaceState: true });
+										}}
+										onVote={handleVote}
+										onDecision={handleDecision}
+										{userQuery}
 										{getVotersForProposal}
 										{canVote}
 										{canUnstakeVote}
 										{getVoteDisplay}
-										onVote={handleVote}
-										{userTokens}
-										{getNextVoteCost}
-										onDecision={handleDecision}
 										{isAdmin}
 										{getTimeAgo}
+										{getStateColor}
+										{getStateBgColor}
+										{getStateIcon}
+										{getStateLabel}
+										{userTokens}
+										{getNextVoteCost}
 									/>
-								</div>
-							{/each}
-						{/if}
+								{/if}
+							{:else}
+								{#each filteredProposals as proposal (proposal.id)}
+									<div
+										id="proposal-{proposal.id}"
+										class={getProposalCardClasses(proposal)}
+										on:click={() => {
+											handleProposalSelect(proposal.state, proposal.id);
+											centerProposalInView(proposal.id);
+										}}
+									>
+										<ProposalHeaderItem
+											{proposal}
+											{userData}
+											{getVotersForProposal}
+											{canVote}
+											{canUnstakeVote}
+											{getVoteDisplay}
+											onVote={handleVote}
+											{userTokens}
+											{getNextVoteCost}
+											onDecision={handleDecision}
+											{isAdmin}
+											{getTimeAgo}
+										/>
+									</div>
+								{/each}
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
