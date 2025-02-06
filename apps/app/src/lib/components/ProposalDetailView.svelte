@@ -101,8 +101,8 @@ HOW THIS COMPONENT WORKS:
 		const isActive = detailTab === tabName;
 		return `flex flex-col items-center justify-center w-16 h-16 transition-colors ${
 			isActive
-				? 'text-tertiary-100 ' + getStateActiveBgColor(proposal.state)
-				: 'text-tertiary-300 ' + getStateHoverBgColor(proposal.state)
+				? `text-tertiary-100 ${getStateActiveBgColor(proposal.state)}`
+				: `text-tertiary-300 ${getStateHoverBgColor(proposal.state)}`
 		}`;
 	}
 
@@ -114,7 +114,7 @@ HOW THIS COMPONENT WORKS:
 
 <svelte:window on:resize={updateViewport} />
 
-<div class="flex flex-col h-full overflow-hidden bg-surface-900">
+<div class="flex flex-col h-[calc(100vh-16rem)] overflow-hidden bg-surface-900">
 	<!-- Header -->
 	<div
 		class="overflow-hidden transition-all duration-200 border card rounded-xl border-surface-700/50 bg-surface-900"
@@ -136,7 +136,7 @@ HOW THIS COMPONENT WORKS:
 	</div>
 
 	<!-- Content Area -->
-	<div class="flex flex-1 overflow-hidden border rounded-xl border-surface-700/50">
+	<div class="flex flex-1 mt-4 overflow-hidden border card rounded-xl border-surface-700/50">
 		<!-- Left Navigation -->
 		<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800">
 			<button class={getNavButtonClasses('details')} on:click={() => (detailTab = 'details')}>
@@ -159,11 +159,11 @@ HOW THIS COMPONENT WORKS:
 
 		<!-- Main Content -->
 		<div
-			class="flex flex-col flex-grow overflow-hidden {!isMobileView
+			class="flex-1 overflow-hidden {!isMobileView
 				? 'border-r border-surface-700/50'
 				: ''} bg-surface-800"
 		>
-			<div class="flex-1 overflow-y-auto">
+			<div class="h-full overflow-y-auto">
 				{#if detailTab === 'details'}
 					<div class="flex flex-col gap-6 p-6">
 						{#if proposal.video_id}
@@ -174,7 +174,7 @@ HOW THIS COMPONENT WORKS:
 
 						<div class="flex flex-col gap-2">
 							<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-							<div class="pb-20 prose prose-invert max-w-none">
+							<div class="prose prose-invert max-w-none">
 								{#if proposal.details}
 									{@html marked(proposal.details)}
 								{:else}
@@ -186,11 +186,11 @@ HOW THIS COMPONENT WORKS:
 						</div>
 					</div>
 				{:else if detailTab === 'chat'}
-					<div class="relative h-full">
+					<div class="h-full">
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{:else if detailTab === 'metadata' && isMobileView}
-					<div class="p-6 space-y-6 bg-surface-900">
+					<div class="h-full overflow-y-auto p-6 space-y-6 bg-surface-900">
 						<!-- Mobile Metadata Content -->
 						<div>
 							<h4 class="mb-2 text-sm font-medium text-tertiary-200">Author</h4>
@@ -260,7 +260,7 @@ HOW THIS COMPONENT WORKS:
 
 		<!-- Right Metadata (Desktop Only) -->
 		{#if !isMobileView}
-			<div class="w-[280px] shrink-0 overflow-y-auto {getStateBgColor(proposal.state)}">
+			<div class="w-[280px] shrink-0 h-full overflow-y-auto {getStateBgColor(proposal.state)}">
 				<div class="p-6 space-y-6">
 					<!-- Desktop Metadata Content -->
 					<div class={getMetadataSectionClasses(true)}>
@@ -334,6 +334,6 @@ HOW THIS COMPONENT WORKS:
 
 <style>
 	:global(.proposal-detail-view) {
-		@apply h-full overflow-hidden bg-surface-900;
+		@apply h-[calc(100vh-16rem)] overflow-hidden bg-surface-900;
 	}
 </style>
