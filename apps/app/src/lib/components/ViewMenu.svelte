@@ -23,6 +23,12 @@
 		refetchOnWindowFocus: true
 	});
 
+	const activeVCQuery = createQuery({
+		operationName: 'activeVC',
+		enabled: true,
+		refetchInterval: 1000
+	});
+
 	$: isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 	$: isTablet =
 		typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
@@ -38,6 +44,8 @@
 					(cap.config?.tier && ['FREE', 'HOMINIO', 'VISIONCREATOR'].includes(cap.config.tier)))
 		) ?? false;
 
+	$: hasVCETokens = $activeVCQuery.data?.isActive ?? false;
+
 	$: views = [
 		{
 			metadata: {
@@ -47,14 +55,18 @@
 			},
 			view: meView
 		},
-		{
-			metadata: {
-				id: 'Proposals',
-				name: 'Proposals',
-				icon: 'mdi:lightbulb'
-			},
-			view: proposalsView
-		},
+		...(hasVCETokens
+			? [
+					{
+						metadata: {
+							id: 'Proposals',
+							name: 'Proposals',
+							icon: 'mdi:lightbulb'
+						},
+						view: proposalsView
+					}
+			  ]
+			: []),
 		...(hasRequiredCapability
 			? [
 					{
@@ -68,6 +80,10 @@
 			  ]
 			: [])
 	];
+
+	$: if (!hasVCETokens && activeViewId === 'Proposals') {
+		goto('/me');
+	}
 
 	function handleViewSelect(viewItem: any) {
 		if (viewItem.metadata.id !== 'MyDashboard') {

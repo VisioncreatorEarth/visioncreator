@@ -5,6 +5,7 @@ import type { ClientOperationErrors, GraphQLError } from "@wundergraph/sdk/clien
 export type OperationErrors = {
 	MyNewsletterStatus: MyNewsletterStatusErrors;
 	NewsletterToggle: NewsletterToggleErrors;
+	activeVC: ActiveVCErrors;
 	addItemsToShoppingList: AddItemsToShoppingListErrors;
 	askClaude: AskClaudeErrors;
 	askHominio: AskHominioErrors;
@@ -73,6 +74,7 @@ export type OperationUltravoxAuthenticationError = {
 
 export type MyNewsletterStatusErrors = ClientOperationErrors;
 export type NewsletterToggleErrors = ClientOperationErrors;
+export type ActiveVCErrors = ClientOperationErrors;
 export type AddItemsToShoppingListErrors = ClientOperationErrors;
 export type AskClaudeErrors = ClientOperationErrors;
 export type AskHominioErrors =
