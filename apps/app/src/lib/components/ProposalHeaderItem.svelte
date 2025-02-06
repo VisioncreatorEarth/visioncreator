@@ -125,15 +125,12 @@ HOW THIS COMPONENT WORKS:
 						{proposal.total_votes || 0}
 					</p>
 					{#if userData}
-						{@const voteInfo = getVoteDisplay(
-							proposal,
-							getVotersForProposal(proposal.id).find((v) => v.id === userData.id)
-						)}
-						{#if voteInfo.tokens > 0}
+						{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
+						{#if voter?.tokens > 0}
 							<div
 								class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
 							>
-								{voteInfo.tokens}
+								{voter.tokens}
 							</div>
 						{/if}
 					{/if}
@@ -201,8 +198,18 @@ HOW THIS COMPONENT WORKS:
 		<!-- Second Row: Votes, Buttons, and Avatars -->
 		<div class="flex items-center gap-4 p-2 bg-surface-800/95">
 			<!-- Vote count -->
-			<div class="flex items-center pl-2">
+			<div class="flex items-center pl-2 relative">
 				<span class="text-4xl font-bold text-tertiary-100">{proposal.total_votes || 0}</span>
+				{#if userData}
+					{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
+					{#if voter?.tokens > 0}
+						<div
+							class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
+						>
+							{voter.tokens}
+						</div>
+					{/if}
+				{/if}
 			</div>
 
 			{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}

@@ -267,15 +267,14 @@ This is the profile area of the proposals view that:
 			</div>
 		</div>
 
-		<!-- Close Button at Bottom -->
+		<!-- Update the close button at the bottom -->
 		{#if typeof window !== 'undefined' && window.innerWidth < 1024}
 			<div class="p-4 border-t border-surface-700/50">
 				<button
-					class="flex items-center justify-center w-full gap-2 px-4 py-2 transition-colors rounded-lg hover:bg-surface-800"
+					class="flex items-center justify-center w-10 h-10 transition-colors rounded-full hover:bg-surface-800"
 					on:click={() => activeSidePanel.close()}
 				>
-					<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
-					<span class="text-sm font-medium text-tertiary-300">Close Menu</span>
+					<Icon icon="mdi:close" class="w-6 h-6 text-tertiary-300" />
 				</button>
 			</div>
 		{/if}

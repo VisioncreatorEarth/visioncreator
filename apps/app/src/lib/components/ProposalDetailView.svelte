@@ -100,7 +100,7 @@ HOW THIS COMPONENT WORKS:
 	// Helper function to get nav button classes
 	function getNavButtonClasses(tabName: typeof detailTab): string {
 		const isActive = detailTab === tabName;
-		return `flex flex-col items-center justify-center w-16 h-16 transition-colors ${
+		return `flex items-center justify-center w-16 h-16 transition-colors ${
 			isActive
 				? `${getStateColor(proposal.state)} ${getStateActiveBgColor(proposal.state)}`
 				: `text-tertiary-300 hover:${getStateHoverBgColor(proposal.state)}`
@@ -144,12 +144,14 @@ HOW THIS COMPONENT WORKS:
 				class={getNavButtonClasses('details')}
 				on:click={() => (detailTab = 'details')}
 				aria-pressed={detailTab === 'details'}
-				data-active={detailTab === 'details'}
 			>
-				<div class={detailTab === 'details' ? 'text-inherit' : ''}>
+				<div
+					class="flex flex-col items-center justify-center w-full"
+					class:text-inherit={detailTab === 'details'}
+				>
 					<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
+					<span class="mt-1 text-[10px]">Details</span>
 				</div>
-				<span class="mt-1 text-[10px]">Details</span>
 			</button>
 
 			{#if isMobileView}
@@ -157,12 +159,14 @@ HOW THIS COMPONENT WORKS:
 					class={getNavButtonClasses('metadata')}
 					on:click={() => (detailTab = 'metadata')}
 					aria-pressed={detailTab === 'metadata'}
-					data-active={detailTab === 'metadata'}
 				>
-					<div class={detailTab === 'metadata' ? 'text-inherit' : ''}>
+					<div
+						class="flex flex-col items-center justify-center w-full"
+						class:text-inherit={detailTab === 'metadata'}
+					>
 						<Icon icon="mdi:information-outline" class="w-6 h-6" />
+						<span class="mt-1 text-[10px]">Info</span>
 					</div>
-					<span class="mt-1 text-[10px]">Info</span>
 				</button>
 			{/if}
 
@@ -170,12 +174,14 @@ HOW THIS COMPONENT WORKS:
 				class={getNavButtonClasses('chat')}
 				on:click={() => (detailTab = 'chat')}
 				aria-pressed={detailTab === 'chat'}
-				data-active={detailTab === 'chat'}
 			>
-				<div class={detailTab === 'chat' ? 'text-inherit' : ''}>
+				<div
+					class="flex flex-col items-center justify-center w-full"
+					class:text-inherit={detailTab === 'chat'}
+				>
 					<Icon icon="mdi:chat-outline" class="w-6 h-6" />
+					<span class="mt-1 text-[10px]">Chat</span>
 				</div>
-				<span class="mt-1 text-[10px]">Chat</span>
 			</button>
 		</div>
 
@@ -357,9 +363,5 @@ HOW THIS COMPONENT WORKS:
 <style>
 	:global(.proposal-detail-view) {
 		@apply h-[calc(100vh-16rem)] overflow-hidden bg-surface-900;
-	}
-
-	[data-active='true'] {
-		@apply text-inherit;
 	}
 </style>

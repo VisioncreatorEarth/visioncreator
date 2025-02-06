@@ -728,7 +728,19 @@ HOW THIS SYSTEM WORKS:
 				selectedState={$activeTab}
 				onStateSelect={(state) => activeTab.set(state)}
 				states={PROPOSAL_TABS}
-			/>
+			>
+				<!-- Add this near the top of the dashboard area, next to Visioncreator title -->
+				<div class="flex items-center justify-between p-4">
+					<div class="flex items-center gap-4">
+						<h2 class="text-2xl font-semibold text-tertiary-100">Visioncreator</h2>
+						<span
+							class="px-2 py-0.5 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
+						>
+							BETA
+						</span>
+					</div>
+				</div>
+			</ProposalDashboard>
 
 			<!-- Mobile Profile Toggle -->
 			<button
@@ -752,24 +764,26 @@ HOW THIS SYSTEM WORKS:
 			<div class="flex-1 overflow-y-auto">
 				<!-- Tabs Bar - Fixed to top -->
 				<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
-					<div class="max-w-5xl px-4 py-4 mx-auto">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
+					<div class="max-w-5xl px-4 py-2 mx-auto">
+						<!-- Main Navigation Row -->
+						<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+							<!-- Back Button and Tabs -->
+							<div class="flex items-center gap-1 overflow-x-auto sm:gap-2 thin-scrollbar">
 								{#if expandedProposalId}
 									<button
 										on:click={() => {
 											expandedProposalId = null;
 											goto(`/me?view=Proposals`, { replaceState: true });
 										}}
-										class="flex items-center gap-2 px-4 py-2 mr-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
+										class="flex items-center gap-1 px-2 sm:px-4 py-1.5 sm:py-2 mr-1 sm:mr-2 text-xs sm:text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
 									>
-										<Icon icon="mdi:arrow-left" class="w-5 h-5" />
-										Back to List
+										<Icon icon="mdi:arrow-left" class="w-4 h-4 sm:w-5 sm:h-5" />
+										<span class="hidden sm:inline">Back to List</span>
 									</button>
 								{/if}
 								{#each PROPOSAL_TABS as state}
 									<button
-										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg {$activeTab ===
+										class="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors rounded-lg whitespace-nowrap {$activeTab ===
 										state
 											? getStateBgColor(state) + ' ' + getStateColor(state)
 											: 'hover:bg-surface-700/20 text-surface-300'}"
@@ -779,87 +793,99 @@ HOW THIS SYSTEM WORKS:
 										}}
 										aria-selected={$activeTab === state}
 									>
-										<div class="flex items-center gap-2">
-											<Icon icon={getStateIcon(state)} class="w-4 h-4" />
+										<div class="flex items-center gap-1 sm:gap-2">
+											<Icon icon={getStateIcon(state)} class="w-3 h-3 sm:w-4 sm:h-4" />
 											{getTabLabel(state)}
 										</div>
 									</button>
 								{/each}
 							</div>
+
+							<!-- Create New Idea Button - Second Row on Mobile -->
 							{#if !expandedProposalId}
+								<div class="flex w-full pt-2 border-t sm:hidden border-surface-700/50">
+									<button
+										on:click={() => (showNewProposalForm = true)}
+										class="w-full py-2 text-sm btn bg-gradient-to-br variant-gradient-secondary-primary"
+									>
+										<Icon icon="mdi:plus" class="w-4 h-4" />
+										New Idea
+									</button>
+								</div>
+								<!-- Desktop Create Button -->
 								<button
 									on:click={() => (showNewProposalForm = true)}
-									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10 text-tertiary-300"
+									class="order-first hidden py-2 text-sm sm:flex btn bg-gradient-to-br variant-gradient-secondary-primary"
 								>
-									<Icon icon="mdi:plus" class="w-5 h-5" />
-									Add New Idea
+									<Icon icon="mdi:plus" class="w-4 h-4" />
+									New Idea
 								</button>
 							{/if}
 						</div>
 					</div>
 				</div>
 
-				<!-- Update the form to show token requirement -->
+				<!-- Create New Proposal Form -->
 				{#if showNewProposalForm}
-					<div class="max-w-5xl mx-auto">
-						<div class="px-4 py-4">
-							<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
-								<div class="flex items-center justify-between mb-4">
-									<div>
-										<h3 class="text-lg font-medium text-tertiary-100">Create New Idea</h3>
-										<p class="mt-1 text-sm text-tertiary-300">
-											Creating a new idea requires 1 token for initial stake
-										</p>
-									</div>
+					<div
+						class="fixed inset-0 z-50 flex items-start justify-center p-4 sm:items-center bg-surface-900/95"
+					>
+						<div
+							class="w-full max-w-2xl max-h-[calc(100vh-16rem)] overflow-y-auto rounded-3xl bg-surface-800 border border-surface-600/50 shadow-2xl"
+						>
+							<div class="p-8 sm:p-10">
+								<div class="flex items-center justify-between mb-6">
+									<h3 class="text-xl font-bold sm:text-2xl text-tertiary-100">Create New Idea</h3>
 									<button
 										on:click={() => (showNewProposalForm = false)}
-										class="p-2 rounded-lg hover:bg-surface-700/50"
+										class="p-2 rounded-lg hover:bg-surface-700"
 									>
-										<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
+										<Icon icon="mdi:close" class="w-6 h-6 text-tertiary-300" />
 									</button>
 								</div>
+								<p class="mb-4 text-sm sm:text-base text-tertiary-300">
+									Creating a new idea requires 1 token for initial stake
+								</p>
 
-								<!-- Add token balance warning if insufficient -->
-								{#if ($userTokensQuery.data?.balances.VCE.balance || 0) < 1}
-									<div class="p-4 mb-4 border rounded-lg border-error-500/20 bg-error-500/10">
-										<div class="flex items-start gap-3">
-											<Icon icon="mdi:alert-circle" class="w-5 h-5 mt-0.5 text-error-400" />
-											<div>
-												<p class="font-medium text-error-400">Insufficient VCE Tokens</p>
-												<p class="mt-1 text-sm text-error-300">
-													You need at least 1 VCE token to create a new idea. Your current balance: {$userTokensQuery
-														.data?.balances.VCE.balance || 0} VCE
-												</p>
-											</div>
-										</div>
-									</div>
-								{/if}
-
-								<form on:submit|preventDefault={handleCreateProposal} class="space-y-4">
+								<form on:submit|preventDefault={handleCreateProposal} class="space-y-6">
 									<div>
-										<label for="title" class="block mb-2 text-sm font-medium text-tertiary-200">
-											Title
-										</label>
 										<input
 											type="text"
-											id="title"
 											bind:value={newProposal.title}
-											class="w-full px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
-											placeholder="Enter your idea title"
+											placeholder="Title of your idea"
+											class="w-full px-6 py-3 text-base transition-all duration-300 ease-in-out border rounded-full outline-none sm:text-lg bg-surface-900 border-surface-600 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
 											required
 										/>
 									</div>
 
-									<!-- Add tag selection -->
+									<div class="space-y-2">
+										<textarea
+											bind:value={newProposal.details}
+											class="w-full h-64 px-6 py-4 text-base transition-all duration-300 ease-in-out border outline-none sm:text-lg rounded-xl bg-surface-900 border-surface-600 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:ring-opacity-50 placeholder:text-surface-300/60"
+											placeholder="Please describe your proposal and answer one or more of the following questions:
+
+- What are the main tasks and todos you want to accomplish?
+- What budget do you think your proposal would need and why?
+
+And explain how your proposal addresses one or more of these aspects:
+- How does this help to increase the MRR (Monthly Recurring Revenue)?
+- How can this generate new co-creating Visioncreators and therefore more investments?
+- How does this increase the overall perceived value of our Visioncreator token?
+- How does this generate a new asset opportunity or income stream opportunity for Visioncreators?
+- Is this a completely new product/startup idea? If so, describe the vision."
+											required
+										/>
+									</div>
+
 									<div>
-										<label class="block mb-2 text-sm font-medium text-tertiary-200">
+										<label class="block mb-3 text-sm font-medium sm:text-base text-tertiary-200">
 											Tags (Optional)
 										</label>
 										<div class="flex flex-wrap gap-2">
 											{#each VALID_TAGS as tag}
 												<button
 													type="button"
-													class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors {newProposal.tags.includes(
+													class="px-4 py-2 text-sm sm:text-base font-medium rounded-lg transition-colors {newProposal.tags.includes(
 														tag
 													)
 														? 'bg-tertiary-500/20 text-tertiary-300 border-tertiary-500'
@@ -872,36 +898,46 @@ HOW THIS SYSTEM WORKS:
 										</div>
 									</div>
 
-									<div>
-										<label for="details" class="block mb-2 text-sm font-medium text-tertiary-200">
-											Details
-										</label>
-										<textarea
-											id="details"
-											bind:value={newProposal.details}
-											class="w-full h-32 px-4 py-2 text-sm border rounded-lg bg-surface-900 border-surface-700 text-tertiary-100 focus:border-tertiary-500 focus:ring-1 focus:ring-tertiary-500"
-											placeholder="Describe your idea in detail (Markdown supported)"
-											required
-										/>
-									</div>
-									<div class="flex justify-end gap-3">
+									<div class="flex justify-end gap-4 pt-6">
 										<button
 											type="button"
 											on:click={() => (showNewProposalForm = false)}
-											class="px-4 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-surface-700 text-tertiary-300"
+											class="px-6 py-2.5 text-sm font-medium transition-colors rounded-lg sm:text-base hover:bg-surface-700 text-tertiary-300"
 										>
 											Cancel
 										</button>
 										<button
 											type="submit"
-											class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-tertiary-500 hover:bg-tertiary-600"
+											class="px-6 py-2.5 text-sm sm:text-base btn bg-gradient-to-br variant-gradient-secondary-primary"
 											disabled={$createProposalMutation.isLoading ||
 												($userTokensQuery.data?.balances.VCE.balance || 0) < 1}
 										>
 											{#if $createProposalMutation.isLoading}
-												Creating...
+												<div class="flex items-center justify-center gap-2">
+													<svg
+														class="w-5 h-5 animate-spin"
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+													>
+														<circle
+															class="opacity-25"
+															cx="12"
+															cy="12"
+															r="10"
+															stroke="currentColor"
+															stroke-width="4"
+														/>
+														<path
+															class="opacity-75"
+															fill="currentColor"
+															d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+														/>
+													</svg>
+													<span>Processing...</span>
+												</div>
 											{:else}
-												Create Proposal (1 VCE token)
+												Create Proposal
 											{/if}
 										</button>
 									</div>
@@ -994,5 +1030,20 @@ HOW THIS SYSTEM WORKS:
 
 	:global(.aside-panel) {
 		@apply fixed top-0 h-screen bg-surface-900 border-surface-700/50 shadow-2xl;
+	}
+
+	.thin-scrollbar {
+		scrollbar-width: thin;
+		-ms-overflow-style: none;
+	}
+	.thin-scrollbar::-webkit-scrollbar {
+		height: 4px;
+	}
+	.thin-scrollbar::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	.thin-scrollbar::-webkit-scrollbar-thumb {
+		background-color: rgba(255, 255, 255, 0.1);
+		border-radius: 2px;
 	}
 </style>

@@ -17,8 +17,9 @@ This is the dashboard area of the proposals view that:
 3. Features:
    - Real-time updates from API
    - Dark/light mode support via Skeleton UI
-   - Company branding with logo
+   - Company branding with logo (hidden on mobile)
    - Euro (€) currency format display
+   - Responsive design for mobile and desktop
 -->
 
 <script lang="ts">
@@ -67,57 +68,59 @@ This is the dashboard area of the proposals view that:
 		<div class="flex items-center justify-between p-4">
 			<!-- Company Branding -->
 			<div class="flex items-center gap-4 pr-6 border-r border-surface-700/50">
-				<img src="/logo.png" alt="Visioncreator Logo" class="w-10 h-10" />
-				<div>
+				<img src="/logo.png" alt="Visioncreator Logo" class="w-9 h-9 sm:w-10 sm:h-10" />
+				<div class="hidden sm:block">
 					<h2 class="text-2xl font-semibold text-tertiary-100">Visioncreator</h2>
 					<p class="text-sm text-tertiary-300">GmbH</p>
 				</div>
 			</div>
 
 			<!-- Metrics Grid -->
-			<div class="flex justify-end gap-6">
+			<div class="flex justify-end gap-3 sm:gap-6">
 				<!-- TP -->
-				<div class="flex flex-col items-end gap-1">
-					<div class="flex items-center gap-2 whitespace-nowrap">
+				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
 						<span
-							class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-success-500/10 text-success-400"
+							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
 						>
 							+{tokenPriceIncrease}%
 						</span>
-						<h3 class="text-sm font-medium text-tertiary-200">TP</h3>
+						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TP</h3>
 					</div>
-					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€{stats.currentTokenPrice.toFixed(2)}<span class="text-sm font-medium">/t</span>
+					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
+						€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm"
+							>/t</span
+						>
 					</p>
 				</div>
 
 				<!-- MRR -->
-				<div class="flex flex-col items-end gap-1">
-					<div class="flex items-center gap-2 whitespace-nowrap">
+				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
 						<span
-							class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-surface-700/50 text-surface-300"
+							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-surface-700/50 text-surface-300"
 						>
 							0%
 						</span>
-						<h3 class="text-sm font-medium text-tertiary-200">MRR</h3>
+						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">MRR</h3>
 					</div>
-					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€{monthlyRevenue}<span class="text-sm font-medium">/m</span>
+					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
+						€{monthlyRevenue}<span class="text-xs font-medium sm:text-sm">/m</span>
 					</p>
 				</div>
 
 				<!-- CCP -->
-				<div class="flex flex-col items-end gap-1">
-					<div class="flex items-center gap-2 whitespace-nowrap">
+				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
 						<span
-							class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-success-500/10 text-success-400"
+							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
 						>
 							+{contributionIncrease}%
 						</span>
-						<h3 class="text-sm font-medium text-tertiary-200">CCP</h3>
+						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">CCP</h3>
 					</div>
-					<p class="text-2xl font-bold text-tertiary-100 whitespace-nowrap">
-						€{adminEureBalance.toLocaleString()}<span class="text-sm font-medium" />
+					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
+						€{adminEureBalance.toLocaleString()}<span class="text-xs font-medium sm:text-sm" />
 					</p>
 				</div>
 			</div>
