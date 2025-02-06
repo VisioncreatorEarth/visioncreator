@@ -36,13 +36,9 @@ HOW THIS COMPONENT WORKS:
 	import type { Readable } from 'svelte/store';
 	import { onDestroy } from 'svelte';
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
-	import type { Proposal, ProposalState, VoterInfo, User } from '$lib/types/proposals';
-	import {
-		getStateBgColor,
-		getStateActiveBgColor,
-		getStateHoverBgColor,
-		getStateColor
-	} from '$lib/utils/proposalStateColors';
+	import type { Proposal, VoterInfo, User } from '$lib/types/proposals';
+	import { getStateBgColor } from '$lib/utils/proposalStateColors';
+	import { writable } from 'svelte/store';
 
 	// Props
 	export let proposal: Proposal;
@@ -59,8 +55,10 @@ HOW THIS COMPONENT WORKS:
 	export let userTokens: number;
 	export let getNextVoteCost: (currentVotes: number) => number;
 
+	// Create a store for the detail tab and make it reactive
+	const activeTab = writable<'details' | 'metadata' | 'chat'>('details');
+
 	// Local state
-	let detailTab: 'details' | 'metadata' | 'chat' = 'details';
 	let isMobileView = false;
 
 	// Author profile query
@@ -97,19 +95,26 @@ HOW THIS COMPONENT WORKS:
 		});
 	}
 
-	// Helper function to get nav button classes
-	function getNavButtonClasses(tabName: typeof detailTab): string {
-		const isActive = detailTab === tabName;
-		return `flex items-center justify-center w-16 h-16 transition-colors ${
-			isActive
-				? `${getStateColor(proposal.state)} ${getStateActiveBgColor(proposal.state)}`
-				: `text-tertiary-300 hover:${getStateHoverBgColor(proposal.state)}`
-		}`;
+	// Make the nav classes reactive with updated tertiary colors
+	$: getNavClasses = (tabName: 'details' | 'metadata' | 'chat') => {
+		const base =
+			'flex items-center justify-center w-16 h-16 transition-colors hover:bg-surface-700/50';
+		const isActive = $activeTab === tabName;
+		return `${base} ${isActive ? 'text-tertiary-500 bg-tertiary-300/10' : 'text-tertiary-300'}`;
+	};
+
+	// Handle tab changes with explicit functions
+	function setTab(tab: 'details' | 'metadata' | 'chat') {
+		activeTab.set(tab);
 	}
 
-	// Helper function to get metadata section classes
+	// Add back the metadata section classes helper
 	function getMetadataSectionClasses(isDesktop = false): string {
-		return 'mb-6'; // Simplified to just margin bottom
+		const baseClasses = 'space-y-2';
+		if (isDesktop) {
+			return `${baseClasses} mb-6`;
+		}
+		return baseClasses;
 	}
 </script>
 
@@ -140,45 +145,24 @@ HOW THIS COMPONENT WORKS:
 	<div class="flex flex-1 mt-4 overflow-hidden border card rounded-xl border-surface-700/50">
 		<!-- Left Navigation -->
 		<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800">
-			<button
-				class={getNavButtonClasses('details')}
-				on:click={() => (detailTab = 'details')}
-				aria-pressed={detailTab === 'details'}
-			>
-				<div
-					class="flex flex-col items-center justify-center w-full"
-					class:text-inherit={detailTab === 'details'}
-				>
+			<button class={getNavClasses('details')} on:click={() => setTab('details')}>
+				<div class="flex flex-col items-center justify-center w-full">
 					<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
 					<span class="mt-1 text-[10px]">Details</span>
 				</div>
 			</button>
 
 			{#if isMobileView}
-				<button
-					class={getNavButtonClasses('metadata')}
-					on:click={() => (detailTab = 'metadata')}
-					aria-pressed={detailTab === 'metadata'}
-				>
-					<div
-						class="flex flex-col items-center justify-center w-full"
-						class:text-inherit={detailTab === 'metadata'}
-					>
+				<button class={getNavClasses('metadata')} on:click={() => setTab('metadata')}>
+					<div class="flex flex-col items-center justify-center w-full">
 						<Icon icon="mdi:information-outline" class="w-6 h-6" />
 						<span class="mt-1 text-[10px]">Info</span>
 					</div>
 				</button>
 			{/if}
 
-			<button
-				class={getNavButtonClasses('chat')}
-				on:click={() => (detailTab = 'chat')}
-				aria-pressed={detailTab === 'chat'}
-			>
-				<div
-					class="flex flex-col items-center justify-center w-full"
-					class:text-inherit={detailTab === 'chat'}
-				>
+			<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
+				<div class="flex flex-col items-center justify-center w-full">
 					<Icon icon="mdi:chat-outline" class="w-6 h-6" />
 					<span class="mt-1 text-[10px]">Chat</span>
 				</div>
@@ -192,7 +176,7 @@ HOW THIS COMPONENT WORKS:
 				: ''} bg-surface-800"
 		>
 			<div class="h-full overflow-y-auto">
-				{#if detailTab === 'details'}
+				{#if $activeTab === 'details'}
 					<div class="flex flex-col gap-6 p-6">
 						{#if proposal.video_id}
 							<div class="w-full overflow-hidden rounded-lg bg-surface-800">
@@ -213,11 +197,11 @@ HOW THIS COMPONENT WORKS:
 							</div>
 						</div>
 					</div>
-				{:else if detailTab === 'chat'}
+				{:else if $activeTab === 'chat'}
 					<div class="h-full">
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
-				{:else if detailTab === 'metadata' && isMobileView}
+				{:else if $activeTab === 'metadata' && isMobileView}
 					<div class="h-full p-6 space-y-6 overflow-y-auto bg-surface-900">
 						<!-- Mobile Metadata Content -->
 						<div>

@@ -23,7 +23,6 @@ HOW THIS SYSTEM WORKS:
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { createQuery, createMutation } from '$lib/wundergraph';
-	import type { QueryObserverResult } from '@tanstack/svelte-query';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { writable } from 'svelte/store';
@@ -69,31 +68,12 @@ HOW THIS SYSTEM WORKS:
 		from_user_id: string;
 	}
 
-	interface Profile {
-		id: string;
-		name: string | null;
-		onboarded: boolean;
-	}
-
 	interface VoterInfo {
 		id: string;
 		name: string | null;
 		votes: number;
 		tokens: number;
 	}
-
-	interface UserTokens {
-		balance: {
-			id: string;
-			user_id: string;
-			token_type: 'VCE' | 'EURe';
-			balance: number;
-			staked_balance: number;
-		}[];
-		transactions: TokenTransaction[];
-	}
-
-	type UserQueryResult = QueryObserverResult<User | undefined>;
 
 	// Update the queries to handle refetch
 	type WundergraphQuery<T> = {
@@ -132,31 +112,13 @@ HOW THIS SYSTEM WORKS:
 	// State management
 	const activeTab = writable<ProposalState>('idea');
 	let expandedProposalId: string | null = null;
-	let detailTab: 'details' | 'chat' = 'details';
 	let userTokens = 0;
-	let userVotes = new Map<string, number>();
-	let isWorkPackageFormVisible = false;
 	let showMobileProfile = false;
-
-	// Work package form state
-	let newWorkPackage = {
-		title: '',
-		deliverables: '',
-		budget: 0,
-		assignee: ''
-	};
 
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'accepted', 'rejected'];
 	const VALID_TAGS = ['startup', 'distribution', 'product'] as const;
 	type ValidTag = (typeof VALID_TAGS)[number];
-
-	// Update the state thresholds
-	const STATE_THRESHOLDS = {
-		idea: 10, // 10 votes to move from idea to draft
-		draft: 20, // 20 votes (not 19) to move from draft to pending
-		decision: 30 // 30 votes to move from decision to implementation
-	};
 
 	// Add mutations with proper typing
 	const updateVotesMutation = createMutation<Operations['updateVotes']>({
@@ -218,12 +180,6 @@ HOW THIS SYSTEM WORKS:
 
 		// Update the reactive store with final totals
 		userStakedTokens = new Map(proposalTotals);
-	}
-
-	// Update assignee when user data loads
-	$: if ($userQuery.data) {
-		const userData = $userQuery.data as User;
-		newWorkPackage.assignee = userData.name;
 	}
 
 	// Helper functions
@@ -468,15 +424,6 @@ HOW THIS SYSTEM WORKS:
 		}, 0);
 	}
 
-	// Format voter data for Avatar component
-	function formatVoterForAvatar(voter: VoterInfo) {
-		return {
-			data: { seed: voter.name || voter.id },
-			design: { highlight: voter.id === userId },
-			size: 'xs' as const
-		};
-	}
-
 	// Add a store to manage voters queries for all visible proposals
 	const votersQueriesStore = writable(new Map<string, ReturnType<typeof createQuery>>());
 
@@ -553,20 +500,10 @@ HOW THIS SYSTEM WORKS:
 		  }
 		: null;
 
-	// Add author profile query store
-	$: authorProfileQuery = createQuery({
-		operationName: 'getProfile',
-		input: { userId: expandedProposal?.author || '' },
-		enabled: !!expandedProposal?.author
-	});
-
 	// Add expanded proposal reactive variable
 	$: expandedProposal = expandedProposalId
 		? $proposalsQuery.data?.proposals.find((p) => p.id === expandedProposalId)
 		: null;
-
-	// Add author profile reactive variable
-	$: authorProfile = $authorProfileQuery.data as Profile | undefined;
 
 	// Add new proposal form state
 	let showNewProposalForm = false;
@@ -664,12 +601,6 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
-	// Add this helper function for countdown display
-	function getCountdownDisplay(): string {
-		// Hardcoded 1 day countdown for now
-		return '23:59:59';
-	}
-
 	// Add this helper to check if voting is allowed
 	function canVote(proposal: Proposal, currentVotes: number): boolean {
 		if (proposal.state === 'pending') return false;
@@ -699,14 +630,6 @@ HOW THIS SYSTEM WORKS:
 		}
 
 		return 'just now';
-	}
-
-	function formatDate(date: string): string {
-		return new Date(date).toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric'
-		});
 	}
 </script>
 
