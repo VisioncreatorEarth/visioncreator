@@ -243,27 +243,34 @@ HOW THIS COMPONENT WORKS:
 
 		<!-- Mobile: Progress/Decision Info -->
 		<div class="p-2 border-t border-surface-700/50 {getStateBgColor(proposal.state)}">
-			{#if proposal.state === 'pending' && userData?.id && isAdmin(userData.id)}
-				<div class="flex gap-2">
-					<button
-						on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
-						class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
-					>
-						<div class="flex items-center justify-center gap-1">
-							<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
-							Veto
-						</div>
-					</button>
-					<button
-						on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
-						class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
-					>
-						<div class="flex items-center justify-center gap-1">
-							<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
-							Pass
-						</div>
-					</button>
-				</div>
+			{#if proposal.state === 'pending'}
+				{#if userData?.id === '00000000-0000-0000-0000-000000000001'}
+					<div class="flex gap-2">
+						<button
+							on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
+							class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+						>
+							<div class="flex items-center justify-center gap-1">
+								<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
+								Veto
+							</div>
+						</button>
+						<button
+							on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
+							class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+						>
+							<div class="flex items-center justify-center gap-1">
+								<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
+								Pass
+							</div>
+						</button>
+					</div>
+				{:else}
+					<div class="flex items-center justify-center gap-2 py-1">
+						<Icon icon="heroicons:shield-check" class="w-4 h-4 text-primary-300" />
+						<span class="text-sm font-medium text-primary-300">Awaiting Guardians Review</span>
+					</div>
+				{/if}
 			{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
 				<div class="flex items-center justify-between">
 					<p class="text-xs text-tertiary-400">Decision</p>
@@ -351,27 +358,37 @@ HOW THIS COMPONENT WORKS:
 		</div>
 
 		<div class="mt-8 text-right">
-			{#if proposal.state === 'pending' && userData?.id && isAdmin(userData.id)}
-				<div class="flex justify-end gap-2">
-					<button
-						on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
-						class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
-					>
+			{#if proposal.state === 'pending'}
+				{#if userData?.id === '00000000-0000-0000-0000-000000000001'}
+					<div class="flex justify-end gap-2">
+						<button
+							on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+						>
+							<div class="flex items-center gap-2">
+								<Icon icon="heroicons:x-mark" class="w-5 h-5" />
+								Veto
+							</div>
+						</button>
+						<button
+							on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+						>
+							<div class="flex items-center gap-2">
+								<Icon icon="heroicons:check" class="w-5 h-5" />
+								Pass
+							</div>
+						</button>
+					</div>
+				{:else}
+					<div class="flex flex-col items-end gap-2">
 						<div class="flex items-center gap-2">
-							<Icon icon="heroicons:x-mark" class="w-5 h-5" />
-							Veto
+							<Icon icon="heroicons:shield-check" class="w-5 h-5 text-primary-300" />
+							<span class="text-sm font-medium text-primary-300">Awaiting Guardians Review</span>
 						</div>
-					</button>
-					<button
-						on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
-						class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
-					>
-						<div class="flex items-center gap-2">
-							<Icon icon="heroicons:check" class="w-5 h-5" />
-							Pass
-						</div>
-					</button>
-				</div>
+						<p class="text-xs text-tertiary-300">Compliance check in progress</p>
+					</div>
+				{/if}
 			{:else if proposal.state === 'accepted' || proposal.state === 'rejected'}
 				<div class="flex flex-col items-end gap-1">
 					<p class="text-2xl font-bold text-tertiary-100">

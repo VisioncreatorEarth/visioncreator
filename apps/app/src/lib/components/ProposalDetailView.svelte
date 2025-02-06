@@ -40,7 +40,8 @@ HOW THIS COMPONENT WORKS:
 	import {
 		getStateBgColor,
 		getStateActiveBgColor,
-		getStateHoverBgColor
+		getStateHoverBgColor,
+		getStateColor
 	} from '$lib/utils/proposalStateColors';
 
 	// Props
@@ -101,8 +102,8 @@ HOW THIS COMPONENT WORKS:
 		const isActive = detailTab === tabName;
 		return `flex flex-col items-center justify-center w-16 h-16 transition-colors ${
 			isActive
-				? `text-tertiary-100 ${getStateActiveBgColor(proposal.state)}`
-				: `text-tertiary-300 ${getStateHoverBgColor(proposal.state)}`
+				? `${getStateColor(proposal.state)} ${getStateActiveBgColor(proposal.state)}`
+				: `text-tertiary-300 hover:${getStateHoverBgColor(proposal.state)}`
 		}`;
 	}
 
@@ -139,20 +140,41 @@ HOW THIS COMPONENT WORKS:
 	<div class="flex flex-1 mt-4 overflow-hidden border card rounded-xl border-surface-700/50">
 		<!-- Left Navigation -->
 		<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800">
-			<button class={getNavButtonClasses('details')} on:click={() => (detailTab = 'details')}>
-				<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
+			<button
+				class={getNavButtonClasses('details')}
+				on:click={() => (detailTab = 'details')}
+				aria-pressed={detailTab === 'details'}
+				data-active={detailTab === 'details'}
+			>
+				<div class={detailTab === 'details' ? 'text-inherit' : ''}>
+					<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
+				</div>
 				<span class="mt-1 text-[10px]">Details</span>
 			</button>
 
 			{#if isMobileView}
-				<button class={getNavButtonClasses('metadata')} on:click={() => (detailTab = 'metadata')}>
-					<Icon icon="mdi:information-outline" class="w-6 h-6" />
+				<button
+					class={getNavButtonClasses('metadata')}
+					on:click={() => (detailTab = 'metadata')}
+					aria-pressed={detailTab === 'metadata'}
+					data-active={detailTab === 'metadata'}
+				>
+					<div class={detailTab === 'metadata' ? 'text-inherit' : ''}>
+						<Icon icon="mdi:information-outline" class="w-6 h-6" />
+					</div>
 					<span class="mt-1 text-[10px]">Info</span>
 				</button>
 			{/if}
 
-			<button class={getNavButtonClasses('chat')} on:click={() => (detailTab = 'chat')}>
-				<Icon icon="mdi:chat-outline" class="w-6 h-6" />
+			<button
+				class={getNavButtonClasses('chat')}
+				on:click={() => (detailTab = 'chat')}
+				aria-pressed={detailTab === 'chat'}
+				data-active={detailTab === 'chat'}
+			>
+				<div class={detailTab === 'chat' ? 'text-inherit' : ''}>
+					<Icon icon="mdi:chat-outline" class="w-6 h-6" />
+				</div>
 				<span class="mt-1 text-[10px]">Chat</span>
 			</button>
 		</div>
@@ -190,7 +212,7 @@ HOW THIS COMPONENT WORKS:
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{:else if detailTab === 'metadata' && isMobileView}
-					<div class="h-full overflow-y-auto p-6 space-y-6 bg-surface-900">
+					<div class="h-full p-6 space-y-6 overflow-y-auto bg-surface-900">
 						<!-- Mobile Metadata Content -->
 						<div>
 							<h4 class="mb-2 text-sm font-medium text-tertiary-200">Author</h4>
@@ -335,5 +357,9 @@ HOW THIS COMPONENT WORKS:
 <style>
 	:global(.proposal-detail-view) {
 		@apply h-[calc(100vh-16rem)] overflow-hidden bg-surface-900;
+	}
+
+	[data-active='true'] {
+		@apply text-inherit;
 	}
 </style>
