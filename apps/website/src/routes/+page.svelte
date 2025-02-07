@@ -27,21 +27,7 @@
       RISE
     </h1>
     <div class="space-y-16">
-      <p class="text-4xl font-light text-cyan-100/90">Create Value. Build Ownership. Work Freely.</p>
-      
-      <div class="flex justify-center items-center space-x-4">
-        <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
-          Choose Your Projects
-        </div>
-        <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
-        <div class="px-4 py-2 rounded-full bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 text-yellow-400">
-          Own Your Impact
-        </div>
-        <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
-        <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
-          Work Anywhere
-        </div>
-      </div>
+      <p class="text-4xl font-light text-cyan-100/90">Work Freely. Create Value. Build Ownership.</p>
       
       <div class="text-xl text-cyan-100/80">
         Start with just <span class="text-yellow-400 font-bold">€1 daily</span> and unlock your full potential
@@ -108,7 +94,7 @@
             </div>
             <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
             <div class="px-4 py-2 rounded-full bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 text-yellow-400">
-              Decentralized DAO
+              Decentralized
             </div>
             <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
             <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
