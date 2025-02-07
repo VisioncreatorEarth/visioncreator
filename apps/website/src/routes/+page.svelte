@@ -51,14 +51,53 @@
 <!-- Transform Section -->
 <section class="min-h-screen flex items-center">
   <div class="max-w-7xl mx-auto px-8">
-    <div class="space-y-20">
-      <p class="text-3xl text-cyan-100 text-center font-light tracking-wide">Together we</p>
-      <div class="text-center">
-        <h2 class="text-6xl font-bold leading-tight">
-          Transform <span class="text-yellow-400">€1</span> Into
-          <br />
-          <span class="text-cyan-400">Ownership</span>
-        </h2>
+    <div class="space-y-12">
+      <div class="flex flex-col items-center space-y-8">
+        <div class="flex items-center space-x-3 text-3xl text-cyan-100 font-light tracking-wide">
+          <span class="relative">
+            Together
+            <div class="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
+          </span>
+          <span class="relative">
+            we invest
+            <div class="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-yellow-400 to-transparent"></div>
+          </span>
+        </div>
+        
+        <div class="text-center space-y-6">
+          <div class="relative">
+            <h2 class="text-7xl font-bold leading-tight">
+              <span class="relative inline-block">
+                <span class="text-yellow-400">€1</span>
+                <div class="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 to-transparent"></div>
+              </span>
+              <span class="text-3xl ml-4 text-cyan-100">Daily</span>
+            </h2>
+            <div class="mt-4">
+              <h2 class="text-8xl font-bold">
+                Into
+                <span class="relative inline-block ml-4">
+                  <span class="bg-gradient-to-r from-cyan-400 to-cyan-300 text-transparent bg-clip-text">Ownership</span>
+                  <div class="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 to-transparent"></div>
+                </span>
+              </h2>
+            </div>
+          </div>
+          
+          <div class="flex justify-center items-center space-x-4 mt-12">
+            <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
+              Daily Growth
+            </div>
+            <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+            <div class="px-4 py-2 rounded-full bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 text-yellow-400">
+              Consistent Investment
+            </div>
+            <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+            <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
+              Shared Success
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -191,145 +230,204 @@
 </section>
 
 <!-- Your Rise Benefits -->
-<section class="min-h-screen py-32 px-8">
-  <div class="max-w-7xl mx-auto">
-    <h2 class="text-7xl font-bold text-yellow-400 text-center mb-24">Your Rise</h2>
-    <div class="grid grid-cols-2 gap-16">
-      <!-- Revenue Share -->
-      <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-3xl p-12 backdrop-blur-xl border border-cyan-500/20 group hover:border-cyan-500/40 transition-all duration-500">
-        <h3 class="text-4xl font-bold text-yellow-400 mb-8">Revenue Share</h3>
-        <div class="space-y-4">
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Start earning from day one as projects launch</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Every contribution grows your income stream</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Multiple projects = Multiple revenue flows</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Passive income that scales with our growth</p>
+<section class="min-h-screen py-32 px-8 relative overflow-hidden">
+  <div class="max-w-7xl mx-auto relative">
+    <!-- Title -->
+    <div class="text-center mb-32">
+      <h2 class="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+        Your Rise
+      </h2>
+    </div>
+
+    <!-- Benefits Tree -->
+    <div class="relative">
+      <!-- Skills & Value (Center) -->
+      <div class="max-w-2xl mx-auto mb-32">
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-r from-yellow-400/0 via-cyan-400/0 to-yellow-400/0 group-hover:via-cyan-400/20 rounded-3xl transition-all duration-700 blur-xl"></div>
+          <div class="bg-slate-900/50 backdrop-blur-sm rounded-3xl p-8 border border-transparent group-hover:border-cyan-500/40 transition-all duration-500 relative">
+            <div class="flex flex-col items-center text-center">
+              <div class="flex -space-x-2 mb-6 transform group-hover:scale-110 transition-transform duration-500">
+                <Avatar seed="dev" />
+                <Avatar seed="designer" />
+                <Avatar seed="marketer" />
+              </div>
+              <h3 class="text-3xl font-bold text-yellow-400 mb-6">Skills & Value</h3>
+              <div class="space-y-4 text-gray-300/80">
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Use your skills to build value</p>
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Choose projects you love</p>
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Grow your professional portfolio</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Contribution Value -->
-      <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-3xl p-12 backdrop-blur-xl border border-cyan-500/20 group hover:border-cyan-500/40 transition-all duration-500">
-        <h3 class="text-4xl font-bold text-yellow-400 mb-8">Contribution Value</h3>
-        <div class="space-y-4">
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Turn your existing skills into income</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Choose projects that match your expertise</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Build a portfolio of paid contributions</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Your value increases with every success</p>
+      <!-- Side Benefits -->
+      <div class="grid grid-cols-2 gap-24">
+        <!-- Token Growth -->
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-br from-yellow-400/0 to-cyan-400/0 group-hover:from-yellow-400/10 group-hover:to-cyan-400/10 rounded-3xl transition-all duration-700 blur-xl"></div>
+          <div class="bg-slate-900/50 backdrop-blur-sm rounded-3xl p-8 border border-transparent group-hover:border-cyan-500/40 transition-all duration-500 relative">
+            <div class="flex flex-col items-center text-center">
+              <div class="flex -space-x-2 mb-6 transform group-hover:scale-110 transition-transform duration-500">
+                <Avatar seed="early1" />
+                <Avatar seed="early2" />
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-white text-xs font-bold">1st</div>
+              </div>
+              <h3 class="text-3xl font-bold text-yellow-400 mb-6">Token Growth</h3>
+              <div class="space-y-4 text-gray-300/80">
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Early member advantages</p>
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Value increases over time</p>
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Limited membership spots</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <!-- Token Growth -->
-      <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-3xl p-12 backdrop-blur-xl border border-cyan-500/20 group hover:border-cyan-500/40 transition-all duration-500">
-        <h3 class="text-4xl font-bold text-yellow-400 mb-8">Token Growth</h3>
-        <div class="space-y-4">
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Early members get maximum token allocation</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Each new project increases token value</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Get in before we reach 144 members</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Limited time to join at ground level</p>
-        </div>
-      </div>
-
-      <!-- Digital Shares -->
-      <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-3xl p-12 backdrop-blur-xl border border-cyan-500/20 group hover:border-cyan-500/40 transition-all duration-500">
-        <h3 class="text-4xl font-bold text-yellow-400 mb-8">Digital Shares</h3>
-        <div class="space-y-4">
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Own real equity in every venture</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Build a portfolio of digital assets</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Each €1 converts to permanent ownership</p>
-          <p class="text-xl text-gray-300 group-hover:text-cyan-100 transition-colors duration-300">Your wealth grows as we succeed</p>
+        <!-- Digital Shares -->
+        <div class="group relative">
+          <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/0 to-yellow-400/0 group-hover:from-cyan-400/10 group-hover:to-yellow-400/10 rounded-3xl transition-all duration-700 blur-xl"></div>
+          <div class="bg-slate-900/50 backdrop-blur-sm rounded-3xl p-8 border border-transparent group-hover:border-cyan-500/40 transition-all duration-500 relative">
+            <div class="flex flex-col items-center text-center">
+              <div class="flex -space-x-2 mb-6 transform group-hover:scale-110 transition-transform duration-500">
+                <Avatar seed="owner1" />
+                <Avatar seed="owner2" />
+                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-xs font-bold">GmbH</div>
+              </div>
+              <h3 class="text-3xl font-bold text-yellow-400 mb-6">Digital Shares</h3>
+              <div class="space-y-4 text-gray-300/80">
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Real company ownership</p>
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Build your asset portfolio</p>
+                <p class="group-hover:text-cyan-100 transition-colors duration-300">Secure permanent rights</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Timeline Section with Heading -->
-<section class="relative pt-32">
-  <!-- Timeline Heading -->
+<!-- Fibonacci Journey -->
+<section class="relative py-32 overflow-hidden">
+  <!-- Journey Heading -->
   <div class="text-center mb-32">
-    <h2 class="text-7xl font-bold text-yellow-400 mb-4">Our Path</h2>
-    <p class="text-2xl text-cyan-100">From Vision to Reality</p>
+    <h2 class="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+      Fibonacci Growth
+    </h2>
+    <p class="text-2xl text-cyan-100 mt-4">Each milestone unlocks the next venture</p>
   </div>
 
-  <!-- Timeline with Milestones -->
-  <div class="relative">
-    <!-- Central Line -->
-    <div class="absolute left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-500 via-cyan-500 to-cyan-900 transform -translate-x-1/2"></div>
-
-    <!-- Milestones -->
-    <div class="relative">
-      <!-- 144 -->
-      <div class="min-h-screen flex items-center">
-        <div class="w-full max-w-7xl mx-auto px-8 grid grid-cols-2 gap-24">
-          <div class="text-right space-y-6">
-            <h3 class="text-6xl font-bold text-yellow-400">144</h3>
-            <p class="text-2xl text-cyan-100">Platform Launch</p>
-            <p class="text-xl text-cyan-100">Community Platform Goes Live</p>
-            <p class="text-xl text-cyan-100">Digitalized GmbH shares distributed</p>
+  <!-- Fibonacci Spiral Journey -->
+  <div class="max-w-7xl mx-auto px-8">
+    <!-- 144 Launch -->
+    <div class="group relative flex items-center mb-48">
+      <div class="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-yellow-400 via-cyan-400 to-transparent"></div>
+      <div class="w-full">
+        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-12 hover:border-cyan-400/40 transition-all duration-500">
+          <div class="absolute -top-6 left-1/2 -translate-x-1/2">
+            <div class="flex -space-x-2">
+              <Avatar seed="launch1" />
+              <Avatar seed="launch2" />
+              <Avatar seed="launch3" />
+              <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold">
+                144
+              </div>
+            </div>
           </div>
-          <div class="relative">
-            <div class="absolute -left-[3.25rem] top-8 w-6 h-6 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 233 -->
-      <div class="min-h-screen flex items-center">
-        <div class="w-full max-w-7xl mx-auto px-8 grid grid-cols-2 gap-24">
-          <div class="relative">
-            <div class="absolute -right-[3.25rem] top-8 w-6 h-6 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full animate-pulse"></div>
-          </div>
-          <div class="text-left space-y-6">
-            <h3 class="text-6xl font-bold text-yellow-400">233</h3>
-            <p class="text-2xl text-cyan-100">First Startup Launch</p>
-            <p class="text-xl text-cyan-100">Community selects first venture</p>
-            <p class="text-xl text-cyan-100">Revenue cycle begins</p>
+          <div class="text-center space-y-6">
+            <h3 class="text-4xl font-bold text-yellow-400">Platform Launch</h3>
+            <div class="flex justify-center gap-4">
+              <span class="px-4 py-2 rounded-full bg-cyan-400/10 text-cyan-100">Community Platform</span>
+              <span class="px-4 py-2 rounded-full bg-yellow-400/10 text-yellow-400">Digital Shares</span>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- 377 -->
-      <div class="min-h-screen flex items-center">
-        <div class="w-full max-w-7xl mx-auto px-8 grid grid-cols-2 gap-24">
-          <div class="text-right space-y-6">
-            <h3 class="text-6xl font-bold text-yellow-400">377</h3>
-            <p class="text-2xl text-cyan-100">Multiple Ventures Live</p>
-            <p class="text-xl text-cyan-100">Network Effects Begin</p>
-            <p class="text-xl text-cyan-100">Growth Accelerates</p>
+    <!-- 233 First Startup -->
+    <div class="group relative flex items-center mb-48">
+      <div class="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-yellow-400 via-cyan-400 to-transparent"></div>
+      <div class="w-full">
+        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-12 hover:border-cyan-400/40 transition-all duration-500">
+          <div class="absolute -top-6 left-1/2 -translate-x-1/2">
+            <div class="flex -space-x-2">
+              <Avatar seed="voter1" />
+              <Avatar seed="voter2" />
+              <Avatar seed="voter3" />
+              <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold">
+                233
+              </div>
+            </div>
           </div>
-          <div class="relative">
-            <div class="absolute -left-[3.25rem] top-8 w-6 h-6 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full animate-pulse"></div>
+          <div class="text-center space-y-6">
+            <h3 class="text-4xl font-bold text-yellow-400">First Venture Vote</h3>
+            <div class="flex justify-center gap-4">
+              <span class="px-4 py-2 rounded-full bg-cyan-400/10 text-cyan-100">Community Selection</span>
+              <span class="px-4 py-2 rounded-full bg-yellow-400/10 text-yellow-400">Revenue Begins</span>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- 610 -->
-      <div class="min-h-screen flex items-center">
-        <div class="w-full max-w-7xl mx-auto px-8 grid grid-cols-2 gap-24">
-          <div class="relative">
-            <div class="absolute -right-[3.25rem] top-8 w-6 h-6 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full animate-pulse"></div>
+    <!-- 377 Network Effects -->
+    <div class="group relative flex items-center mb-48">
+      <div class="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-yellow-400 via-cyan-400 to-transparent"></div>
+      <div class="w-full">
+        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-12 hover:border-cyan-400/40 transition-all duration-500">
+          <div class="absolute -top-6 left-1/2 -translate-x-1/2">
+            <div class="flex -space-x-2">
+              <Avatar seed="dev1" />
+              <Avatar seed="designer1" />
+              <Avatar seed="marketer1" />
+              <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold">
+                377
+              </div>
+            </div>
           </div>
-          <div class="text-left space-y-6">
-            <h3 class="text-6xl font-bold text-yellow-400">610</h3>
-            <p class="text-2xl text-cyan-100">Market Impact</p>
-            <p class="text-xl text-cyan-100">Multiple Revenue Streams</p>
-            <p class="text-xl text-cyan-100">Ecosystem Thrives</p>
+          <div class="text-center space-y-6">
+            <h3 class="text-4xl font-bold text-yellow-400">Network Growth</h3>
+            <div class="flex justify-center gap-4">
+              <span class="px-4 py-2 rounded-full bg-cyan-400/10 text-cyan-100">Multiple Ventures</span>
+              <span class="px-4 py-2 rounded-full bg-yellow-400/10 text-yellow-400">Accelerating Growth</span>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Infinite -->
-      <div class="min-h-screen flex items-center">
-        <div class="w-full max-w-7xl mx-auto px-8 grid grid-cols-2 gap-24">
-          <div class="text-right space-y-6">
-            <h3 class="text-6xl font-bold text-yellow-400">∞</h3>
-            <p class="text-2xl text-cyan-100">The Rise Continues</p>
-            <p class="text-xl text-cyan-100">Unlimited Potential</p>
+    <!-- 610 Ecosystem -->
+    <div class="group relative flex items-center">
+      <div class="w-full">
+        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-12 hover:border-cyan-400/40 transition-all duration-500">
+          <div class="absolute -top-6 left-1/2 -translate-x-1/2">
+            <div class="flex -space-x-2">
+              <Avatar seed="eco1" />
+              <Avatar seed="eco2" />
+              <Avatar seed="eco3" />
+              <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold">
+                610
+              </div>
+            </div>
           </div>
-          <div class="relative">
-            <div class="absolute -left-[3.25rem] top-8 w-6 h-6 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full animate-pulse"></div>
+          <div class="text-center space-y-6">
+            <h3 class="text-4xl font-bold text-yellow-400">Thriving Ecosystem</h3>
+            <div class="flex justify-center gap-4">
+              <span class="px-4 py-2 rounded-full bg-cyan-400/10 text-cyan-100">Market Impact</span>
+              <span class="px-4 py-2 rounded-full bg-yellow-400/10 text-yellow-400">Sustainable Growth</span>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Decorative Elements -->
+    <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+      <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"></div>
+      <div class="absolute top-3/4 -right-48 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl"></div>
     </div>
   </div>
 </section>
