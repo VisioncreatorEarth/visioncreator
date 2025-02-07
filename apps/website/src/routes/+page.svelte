@@ -21,14 +21,32 @@
 </nav>
 
 <!-- Hero -->
-<section class="h-screen flex flex-col justify-center items-center p-8">
+<section class="min-h-screen flex flex-col justify-center items-center p-8 pt-32">
   <div class="space-y-16 text-center">
     <h1 class="text-[14rem] font-bold bg-gradient-to-r from-yellow-400 via-cyan-400 to-cyan-600 text-transparent bg-clip-text leading-none tracking-tight">
       RISE
     </h1>
     <div class="space-y-16">
-      <p class="text-6xl font-light text-cyan-100 tracking-wide">One Collective Power</p>
+      <p class="text-4xl font-light text-cyan-100/90">Create Value. Build Ownership. Work Freely.</p>
       
+      <div class="flex justify-center items-center space-x-4">
+        <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
+          Choose Your Projects
+        </div>
+        <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+        <div class="px-4 py-2 rounded-full bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 text-yellow-400">
+          Own Your Impact
+        </div>
+        <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+        <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
+          Work Anywhere
+        </div>
+      </div>
+      
+      <div class="text-xl text-cyan-100/80">
+        Start with just <span class="text-yellow-400 font-bold">€1 daily</span> and unlock your full potential
+      </div>
+
       <!-- Founders Joined Section -->
       <div class="flex flex-col items-center space-y-6 mt-24">
         <div class="flex -space-x-4">
@@ -40,7 +58,7 @@
           </div>
         </div>
         <p class="text-lg text-cyan-100/80">
-          <span class="font-semibold text-yellow-400">21 Founders</span>
+          <span class="font-semibold text-yellow-400">21 Founders</span> Already Creating Their Future
         </p>
         <div class="w-24 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
       </div>
