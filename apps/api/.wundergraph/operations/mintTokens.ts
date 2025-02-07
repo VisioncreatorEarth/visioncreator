@@ -1,63 +1,65 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
+import { TOKEN_POLICY } from '../utils/tokens';
 
 export default createOperation.mutation({
     input: z.object({
-        userId: z.string(),
-        amount: z.number().int().positive()
+        userId: z.string()
     }),
     requireAuthentication: true,
     rbac: {
         requireMatchAll: ["authenticated", "admin"],
     },
     handler: async ({ input, context, user }) => {
-        if (!user?.customClaims?.id) {
-            throw new Error("User not authenticated");
-        }
-
-        const adminId = '00000000-0000-0000-0000-000000000001';
-        const isAdmin = user.customClaims.id === adminId;
-
-        if (!isAdmin) {
+        if (!user?.customClaims?.id || user.customClaims.id !== TOKEN_POLICY.ADMIN_ACCOUNT_ID) {
             throw new Error("Only admin can mint tokens");
         }
 
-        // Start a transaction for VCE tokens
+        // Check if user is eligible (hasn't invested before)
+        const isEligible = await TOKEN_POLICY.isEligibleForInvestment(context, input.userId);
+        if (!isEligible) {
+            throw new Error("User has already invested");
+        }
+
+        // Get current metrics
+        const totalVCs = await TOKEN_POLICY.getTotalVCs(context);
+
+        // Calculate token amounts
+        const vceAmount = TOKEN_POLICY.calculateVceTokens(totalVCs);
+        const eureAmount = TOKEN_POLICY.calculateAdminPoolTokens(TOKEN_POLICY.BASE_INVESTMENT_AMOUNT);
+
+        // Create VCE token transaction
         const { error: vceError } = await context.supabase
             .from('token_transactions')
             .insert({
-                transaction_type: 'mint',
-                token_type: 'VCE',
+                from_user_id: null,
                 to_user_id: input.userId,
-                amount: input.amount
+                token_type: 'VCE',
+                transaction_type: 'mint',
+                amount: vceAmount,
+                created_at: new Date().toISOString()
             });
 
-        if (vceError) {
-            throw new Error(`Failed to mint VCE tokens: ${vceError.message}`);
-        }
+        if (vceError) throw new Error(`Failed to mint VCE tokens: ${vceError.message}`);
 
-        let eureMessage = '';
+        // Mint EURe tokens to admin pool
+        const { error: eureError } = await context.supabase
+            .from('token_transactions')
+            .insert({
+                from_user_id: null,
+                to_user_id: TOKEN_POLICY.ADMIN_ACCOUNT_ID,
+                token_type: 'EURe',
+                transaction_type: 'mint',
+                amount: eureAmount,
+                created_at: new Date().toISOString()
+            });
 
-        // If minting exactly 365 VCE tokens, mint 273 EURe tokens to admin (75% of 365 = 273.75, rounded down to 273)
-        if (input.amount === 365) {
-            const { error: eureError } = await context.supabase
-                .from('token_transactions')
-                .insert({
-                    transaction_type: 'mint',
-                    token_type: 'EURe',
-                    to_user_id: adminId,
-                    amount: 273 // Exactly 273 EURe tokens (75% of 365, rounded down)
-                });
-
-            if (eureError) {
-                throw new Error(`Failed to mint EURe tokens: ${eureError.message}`);
-            }
-
-            eureMessage = ' and 273 EURe tokens to admin';
-        }
+        if (eureError) throw new Error(`Failed to mint EURe tokens: ${eureError.message}`);
 
         return {
             success: true,
-            message: `Successfully minted ${input.amount} VCE tokens${eureMessage}`
+            vceAmount,
+            eureAmount,
+            totalVCs: totalVCs + 1
         };
     }
 }); 

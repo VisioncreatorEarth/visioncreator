@@ -187,11 +187,6 @@
 		return `${displayMinutes}m ${secondsStr}s`;
 	}
 
-	$: if ($userStatsQuery.data) {
-		console.log('Raw stats data:', $userStatsQuery.data);
-		console.log('Recent calls:', $userStatsQuery.data.recent_calls);
-	}
-
 	async function handleTierChange(userId: string, tierId: string) {
 		if (!userId || changingTierId) return;
 		changingTierId = tierId;
@@ -214,7 +209,6 @@
 
 	async function handleRemoveCapability(capability: Capability) {
 		try {
-			console.log('Revoking capability:', capability);
 			const result = await $manageCapabilitiesMutation.mutateAsync({
 				userId: selectedUserId,
 				action: 'revoke',
@@ -240,42 +234,50 @@
 		// Add minutes to user's current tier
 	}
 
-	// Add new queries and mutations for tokens
+	// Query for user tokens
 	$: getUserTokensQuery = createQuery({
 		operationName: 'getUserTokens',
 		input: { userId: selectedUserId || '' },
 		enabled: !!selectedUserId
 	});
 
-	const mintTokensMutation = createMutation({
+	// Investment metrics query
+	const investmentMetricsQuery = createQuery({
+		operationName: 'getInvestmentMetrics',
+		enabled: true,
+		refetchInterval: 5000
+	});
+
+	// Investment mutation
+	const investMutation = createMutation({
 		operationName: 'mintTokens'
 	});
 
-	async function handleMintTokens(userId: string, amount: number) {
+	// Format number with 3 decimal places
+	const formatNumber = (num: number | undefined) => {
+		if (num === undefined || num === null) return '0,000';
+		return num.toFixed(3).replace('.', ',');
+	};
+
+	// Handle investment
+	async function handleInvestment(userId: string) {
+		if (!userId || $investMutation.isLoading) return;
+
 		try {
-			const result = await $mintTokensMutation.mutateAsync({
-				userId,
-				amount
-			});
-
-			if (!result) {
-				throw new Error('Failed to mint tokens');
-			}
-
-			// Show success message with token details
-			const message =
-				amount === 365
-					? `Successfully minted ${amount} VCE and 273 EURe tokens`
-					: `Successfully minted ${amount} VCE tokens`;
-
-			console.log(message);
-
-			// Refresh token balance
-			await $getUserTokensQuery.refetch();
+			const result = await $investMutation.mutateAsync({ userId });
+			await Promise.all([
+				$getUserCapabilitiesQuery.refetch(),
+				$userStatsQuery.refetch(),
+				$investmentMetricsQuery.refetch()
+			]);
 		} catch (error) {
-			console.error('Failed to mint tokens:', error);
+			console.error('Investment failed:', error);
 		}
 	}
+
+	// Tab management
+	type Tab = 'visioncreator' | 'hominio';
+	let activeTab: Tab = 'visioncreator';
 </script>
 
 <div class="flex h-screen">
@@ -349,172 +351,286 @@
 		{:else if selectedUserId}
 			<div class="p-6 space-y-6">
 				{#if $userStatsQuery.data}
-					<!-- Usage Overview -->
-					<div class="grid grid-cols-2 gap-4 mb-6 md:grid-cols-4">
-						<div class="p-4 rounded-lg bg-surface-800">
-							<p class="text-sm text-surface-200">Total Calls</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{$userStatsQuery.data.total_calls}
-							</p>
-						</div>
-						<div class="p-4 rounded-lg bg-surface-800">
-							<p class="text-sm text-surface-200">Success Rate</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{$userStatsQuery.data.success_rate.toFixed(1)}%
-							</p>
-						</div>
-						<div class="p-4 rounded-lg bg-surface-800">
-							<p class="text-sm text-surface-200">Minutes Used</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{formatDuration($userStatsQuery.data.minutes_used)}
-							</p>
-							<p class="mt-1 text-xs text-surface-300">
-								of {formatDuration($userStatsQuery.data.minutes_limit)}
-							</p>
-						</div>
-						<div class="p-4 rounded-lg bg-surface-800">
-							<p class="text-sm text-surface-200">Minutes Remaining</p>
-							<p class="mt-1 text-2xl font-semibold text-white">
-								{formatDuration($userStatsQuery.data.minutes_remaining)}
-							</p>
-							<p class="mt-1 text-xs text-surface-300">this month</p>
-						</div>
+					<!-- Tab Navigation -->
+					<div
+						class="sticky top-0 z-10 flex border-b bg-surface-800/95 backdrop-blur border-surface-700"
+					>
+						<button
+							class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab ===
+							'visioncreator'
+								? 'border-tertiary-500 text-tertiary-400'
+								: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
+							on:click={() => (activeTab = 'visioncreator')}
+						>
+							VisionCreator
+						</button>
+						<button
+							class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab ===
+							'hominio'
+								? 'border-tertiary-500 text-tertiary-400'
+								: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
+							on:click={() => (activeTab = 'hominio')}
+						>
+							Hominio
+						</button>
 					</div>
 
-					<!-- Token Management Section -->
-					<div class="p-6 rounded-lg bg-surface-800">
-						<div class="flex items-center justify-between mb-4">
-							<h3 class="text-lg font-semibold text-white">Token Management</h3>
-							<div class="flex items-center gap-2">
-								<button
-									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
-									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 25)}
-								>
-									Mint 25 VCE
-								</button>
-								<button
-									class="px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-secondary-500 text-secondary-400 hover:bg-secondary-500/10"
-									on:click={() => selectedUserId && handleMintTokens(selectedUserId, 365)}
-								>
-									Mint 365 VCE + 273 EURe
-								</button>
-							</div>
-						</div>
+					<div class="p-6">
+						{#if activeTab === 'visioncreator'}
+							<!-- VisionCreator Tab Content -->
+							<div class="space-y-6">
+								<!-- Token Balances Overview -->
+								<div class="grid grid-cols-2 gap-4 mb-6 md:grid-cols-4">
+									<div class="col-span-2 p-4 rounded-lg bg-surface-800">
+										<p class="text-sm text-surface-200">VCE Balance</p>
+										<p class="mt-1 text-2xl font-semibold text-white">
+											{$getUserTokensQuery.data?.balances.VCE.balance || 0} VCE
+										</p>
+									</div>
+									<div class="col-span-2 p-4 rounded-lg bg-surface-800">
+										<p class="text-sm text-surface-200">EURe Balance</p>
+										<p class="mt-1 text-2xl font-semibold text-white">
+											{$getUserTokensQuery.data?.balances.EURe.balance || 0} EURe
+										</p>
+									</div>
+								</div>
 
-						{#if $getUserTokensQuery.isLoading}
-							<div class="flex justify-center p-4">
-								<div class="w-8 h-8 border-b-2 rounded-full animate-spin border-tertiary-500" />
-							</div>
-						{:else if $getUserTokensQuery.data}
-							<!-- VCE Balance -->
-							<div class="p-4 rounded-lg bg-surface-700">
-								<p class="text-sm text-surface-200">VCE Balance</p>
-								<p class="mt-1 text-2xl font-semibold text-white">
-									{$getUserTokensQuery.data.balances.VCE.balance || 0} VCE
-								</p>
-							</div>
-
-							<!-- EURe Balance -->
-							<div class="mt-4 p-4 rounded-lg bg-surface-700">
-								<p class="text-sm text-surface-200">EURe Balance</p>
-								<p class="mt-1 text-2xl font-semibold text-white">
-									{$getUserTokensQuery.data.balances.EURe.balance || 0} EURe
-								</p>
-							</div>
-
-							{#if $getUserTokensQuery.data.transactions?.length}
-								<div class="mt-6">
-									<h4 class="mb-4 text-sm font-medium text-surface-200">Recent Transactions</h4>
-									<div class="space-y-2">
-										{#each $getUserTokensQuery.data.transactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as tx}
-											<div class="p-3 text-sm rounded-lg bg-surface-700/50">
-												<div class="flex items-center justify-between">
-													<div class="flex items-center gap-2">
-														<span class="font-medium capitalize">{tx.transaction_type}</span>
-														<span
-															class="px-2 py-0.5 text-xs rounded-full bg-surface-600/50 text-surface-300"
-														>
-															{tx.token_type}
-														</span>
+								<!-- Investment Dashboard -->
+								<div class="p-6 rounded-lg bg-surface-800">
+									{#if $investmentMetricsQuery.data}
+										{@const metrics = $investmentMetricsQuery.data}
+										<div class="space-y-6">
+											<!-- Current Status -->
+											<div class="p-4 rounded-lg bg-surface-700/50">
+												<div class="flex items-center justify-between mb-6">
+													<div>
+														<h4 class="text-sm font-medium text-tertiary-200">Current Status</h4>
+														<p class="mt-1 text-2xl font-bold text-tertiary-100">
+															Milestone {metrics.currentMilestone.milestone} ({metrics.totalVCs} VCs)
+														</p>
 													</div>
-													<span class="text-tertiary-400 font-medium">
-														{tx.amount}
-														{tx.token_type}
-													</span>
 												</div>
-												<p class="mt-1 text-xs text-surface-300">
-													{new Date(tx.created_at).toLocaleString()}
-												</p>
+
+												<div class="flex items-center justify-between">
+													<div>
+														<h4 class="text-sm font-medium text-tertiary-200">
+															Next Investment Receives
+														</h4>
+														<p class="mt-1 text-2xl font-bold text-tertiary-100">
+															{formatNumber(
+																metrics.nextInvestorRate?.vcePerInvestment ||
+																	metrics.currentMilestone.vcePerInvestment
+															)} VCE
+														</p>
+														<p class="mt-2 text-sm text-tertiary-300">
+															{#if metrics.totalVCs === metrics.currentMilestone.totalVCs}
+																0 spots left at {formatNumber(
+																	metrics.currentMilestone.vcePerInvestment
+																)} VCE
+															{:else}
+																{metrics.currentMilestone.totalVCs - metrics.totalVCs} spots left at
+																{formatNumber(metrics.currentMilestone.vcePerInvestment)} VCE
+															{/if}
+														</p>
+													</div>
+													<button
+														class="px-4 py-2 text-sm font-medium rounded-lg bg-tertiary-200 text-surface-900 hover:bg-tertiary-300"
+														on:click={() => handleInvestment(selectedUserId)}
+														disabled={$investMutation.isLoading || !selectedUserId}
+													>
+														{#if $investMutation.isLoading}
+															<div
+																class="w-5 h-5 border-2 rounded-full border-t-transparent animate-spin"
+															/>
+														{:else}
+															Invest €365
+														{/if}
+													</button>
+												</div>
+											</div>
+
+											<!-- Milestone History -->
+											<div class="overflow-hidden rounded-lg">
+												<table class="w-full">
+													<thead class="text-xs text-tertiary-200 bg-surface-700">
+														<tr>
+															<th class="px-4 py-2 text-left">Milestone</th>
+															<th class="px-4 py-2 text-right">Total VCs</th>
+															<th class="px-4 py-2 text-right">New VCs</th>
+															<th class="px-4 py-2 text-right">Tokens per VC</th>
+														</tr>
+													</thead>
+													<tbody class="divide-y divide-surface-600">
+														{#each metrics.levels as level}
+															<tr
+																class="text-sm bg-surface-700/50 {level.totalVCs ===
+																metrics.currentMilestone?.totalVCs
+																	? 'bg-tertiary-500/10'
+																	: ''}"
+															>
+																<td class="px-4 py-2">{level.milestone}</td>
+																<td class="px-4 py-2 text-right">{level.totalVCs}</td>
+																<td class="px-4 py-2 text-right">{level.newVCs}</td>
+																<td class="px-4 py-2 text-right"
+																	>{formatNumber(level.vcePerInvestment)}</td
+																>
+															</tr>
+														{/each}
+													</tbody>
+												</table>
+											</div>
+										</div>
+									{:else if $investmentMetricsQuery.isLoading}
+										<div class="flex items-center justify-center p-8">
+											<div
+												class="w-8 h-8 border-2 rounded-full border-t-transparent animate-spin"
+											/>
+										</div>
+									{:else if $investmentMetricsQuery.error}
+										<div class="p-4 rounded-lg text-error-400 bg-error-400/10">
+											Failed to load investment metrics
+										</div>
+									{/if}
+								</div>
+							</div>
+						{:else}
+							<!-- Hominio Tab Content -->
+							<div class="space-y-6">
+								<!-- Usage Overview -->
+								<div class="grid grid-cols-2 gap-4 mb-6 md:grid-cols-4">
+									<div class="p-4 rounded-lg bg-surface-800">
+										<p class="text-sm text-surface-200">Total Calls</p>
+										<p class="mt-1 text-2xl font-semibold text-white">
+											{$userStatsQuery.data.total_calls}
+										</p>
+									</div>
+									<div class="p-4 rounded-lg bg-surface-800">
+										<p class="text-sm text-surface-200">Success Rate</p>
+										<p class="mt-1 text-2xl font-semibold text-white">
+											{$userStatsQuery.data.success_rate.toFixed(1)}%
+										</p>
+									</div>
+									<div class="p-4 rounded-lg bg-surface-800">
+										<p class="text-sm text-surface-200">Minutes Used</p>
+										<p class="mt-1 text-2xl font-semibold text-white">
+											{formatDuration($userStatsQuery.data.minutes_used)}
+										</p>
+										<p class="mt-1 text-xs text-surface-300">
+											of {formatDuration($userStatsQuery.data.minutes_limit)}
+										</p>
+									</div>
+									<div class="p-4 rounded-lg bg-surface-800">
+										<p class="text-sm text-surface-200">Minutes Remaining</p>
+										<p class="mt-1 text-2xl font-semibold text-white">
+											{formatDuration($userStatsQuery.data.minutes_remaining)}
+										</p>
+										<p class="mt-1 text-xs text-surface-300">this month</p>
+									</div>
+								</div>
+
+								<!-- Capabilities Section -->
+								<div class="p-6 rounded-lg bg-surface-800">
+									<h3 class="mb-4 text-lg font-semibold text-white">Active Capabilities</h3>
+									<div class="space-y-4">
+										{#each $getUserCapabilitiesQuery.data.capabilities.filter((cap) => cap.active) as capability}
+											<div
+												class="flex items-center justify-between p-4 rounded-lg bg-surface-700/50"
+											>
+												<div>
+													<h3 class="font-medium text-tertiary-200">{capability.name}</h3>
+													<p class="text-sm text-surface-300">{capability.description}</p>
+												</div>
+												{#if capability.type === 'TIER' && !['HOMINIO', 'VISIONCREATOR'].includes(capability.config?.tier)}
+													<button
+														class="px-3 py-1 text-sm font-medium rounded-lg text-error-400 hover:bg-error-400/10"
+														on:click={() => handleRemoveCapability(capability)}
+														disabled={changingTierId === capability.id}
+													>
+														{#if changingTierId === capability.id}
+															<div
+																class="w-4 h-4 border-2 rounded-full animate-spin border-t-transparent"
+															/>
+														{:else}
+															Remove
+														{/if}
+													</button>
+												{/if}
 											</div>
 										{/each}
 									</div>
 								</div>
-							{/if}
+
+								<!-- Minutes Management -->
+								<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+									<button
+										class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+										on:click={() => selectedUserId && handleTierChange(selectedUserId, '5M')}
+									>
+										<span>+5m</span>
+										<span class="text-xs">5M</span>
+									</button>
+									<button
+										class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+										on:click={() => selectedUserId && handleTierChange(selectedUserId, '30M')}
+									>
+										<span>+30m</span>
+										<span class="text-xs">30M</span>
+									</button>
+									<button
+										class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+										on:click={() => selectedUserId && handleTierChange(selectedUserId, '1H')}
+									>
+										<span>+1h</span>
+										<span class="text-xs">1H</span>
+									</button>
+									<button
+										class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
+										on:click={() => selectedUserId && handleTierChange(selectedUserId, '4H')}
+									>
+										<span>+4h</span>
+										<span class="text-xs">4H</span>
+									</button>
+								</div>
+
+								<!-- Call History -->
+								{#if $userStatsQuery.data?.recent_calls?.length}
+									<div class="p-6 rounded-lg bg-surface-800">
+										<h3 class="mb-4 text-lg font-semibold text-white">
+											Call History ({$userStatsQuery.data.recent_calls.length} calls)
+										</h3>
+										<div class="space-y-4">
+											{#each $userStatsQuery.data.recent_calls as call}
+												<div class="p-4 rounded-lg bg-surface-700/50">
+													<div class="flex items-start justify-between">
+														<div>
+															<p class="text-sm font-medium text-surface-200">
+																{new Date(call.start_time).toLocaleString()}
+															</p>
+															<p class="mt-1 text-xs text-surface-300">
+																Duration: {formatDuration(call.duration)}
+															</p>
+														</div>
+														<span
+															class={`px-2 py-1 text-xs font-medium rounded-full
+																	${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
+																	${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
+																	${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
+																`}
+														>
+															{call.status}
+														</span>
+													</div>
+													{#if call.error}
+														<p class="mt-2 text-xs text-error-400">{call.error}</p>
+													{/if}
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
 						{/if}
 					</div>
-
-					<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-						<button
-							class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-							on:click={() => selectedUserId && handleTierChange(selectedUserId, '5M')}
-						>
-							<span>+5m</span>
-							<span class="text-xs">5M</span>
-						</button>
-						<button
-							class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-							on:click={() => selectedUserId && handleTierChange(selectedUserId, '30M')}
-						>
-							<span>+30m</span>
-							<span class="text-xs">30M</span>
-						</button>
-						<button
-							class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-							on:click={() => selectedUserId && handleTierChange(selectedUserId, '1H')}
-						>
-							<span>+1h</span>
-							<span class="text-xs">1H</span>
-						</button>
-						<button
-							class="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium border rounded-lg border-tertiary-500 text-tertiary-500 hover:bg-tertiary-500/10"
-							on:click={() => selectedUserId && handleTierChange(selectedUserId, '4H')}
-						>
-							<span>+4h</span>
-							<span class="text-xs">4H</span>
-						</button>
-					</div>
-
-					<!-- Active Capabilities List -->
-					{#if $getUserCapabilitiesQuery.data?.capabilities}
-						<div class="p-6 mt-6 rounded-lg bg-surface-800">
-							<h3 class="mb-4 text-lg font-semibold text-white">Active Capabilities</h3>
-							<div class="space-y-4">
-								{#each $getUserCapabilitiesQuery.data.capabilities.filter((cap) => cap.active) as capability}
-									<div class="flex items-center justify-between p-4 rounded-lg bg-surface-700/50">
-										<div>
-											<h3 class="font-medium text-tertiary-200">{capability.name}</h3>
-											<p class="text-sm text-surface-300">{capability.description}</p>
-										</div>
-										{#if capability.type === 'TIER' && !['HOMINIO', 'VISIONCREATOR'].includes(capability.config?.tier)}
-											<button
-												class="px-3 py-1 text-sm font-medium rounded-lg text-error-400 hover:bg-error-400/10"
-												on:click={() => handleRemoveCapability(capability)}
-												disabled={changingTierId === capability.id}
-											>
-												{#if changingTierId === capability.id}
-													<div
-														class="w-4 h-4 border-2 rounded-full animate-spin border-t-transparent"
-													/>
-												{:else}
-													Remove
-												{/if}
-											</button>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/if}
 				{:else if $userStatsQuery.isLoading}
 					<!-- Loading state here -->
 				{:else if $userStatsQuery.error}
@@ -523,6 +639,43 @@
 				<!-- Bottom spacer -->
 				<div class="h-24" />
 			</div>
+		{:else}
+			<!-- Call History Section -->
+			{#if selectedUserId && $userStatsQuery.data?.recent_calls?.length}
+				<div class="h-full p-4 overflow-y-auto">
+					<h3 class="mb-4 text-lg font-semibold text-white">
+						Call History ({$userStatsQuery.data.recent_calls.length} calls)
+					</h3>
+					<div class="space-y-4">
+						{#each $userStatsQuery.data.recent_calls as call}
+							<div class="p-4 rounded-lg bg-surface-700/50">
+								<div class="flex items-start justify-between">
+									<div>
+										<p class="text-sm font-medium text-surface-200">
+											{new Date(call.start_time).toLocaleString()}
+										</p>
+										<p class="mt-1 text-xs text-surface-300">
+											Duration: {formatDuration(call.duration)}
+										</p>
+									</div>
+									<span
+										class={`px-2 py-1 text-xs font-medium rounded-full
+												${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
+												${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
+												${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
+											`}
+									>
+										{call.status}
+									</span>
+								</div>
+								{#if call.error}
+									<p class="mt-2 text-xs text-error-400">{call.error}</p>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		{/if}
 	</main>
 
@@ -625,14 +778,42 @@
 						</div>
 					{/if}
 				</div>
-			{:else}
-				<!-- Call History Section -->
-				{#if selectedUserId && $userStatsQuery.data?.recent_calls?.length}
-					<div class="h-full p-4 overflow-y-auto">
-						<h3 class="mb-4 text-lg font-semibold text-white">
-							Call History ({$userStatsQuery.data.recent_calls.length} calls)
-						</h3>
+			{:else if selectedUserId}
+				{#if activeTab === 'visioncreator'}
+					<!-- Token Transactions -->
+					{#if $getUserTokensQuery.data?.transactions?.length}
 						<div class="space-y-4">
+							<h3 class="text-lg font-semibold text-white">Token Transactions</h3>
+							{#each $getUserTokensQuery.data.transactions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as tx}
+								<div class="p-3 text-sm rounded-lg bg-surface-700/50">
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-2">
+											<span class="font-medium capitalize">{tx.transaction_type}</span>
+											<span
+												class="px-2 py-0.5 text-xs rounded-full bg-surface-600/50 text-surface-300"
+											>
+												{tx.token_type}
+											</span>
+										</div>
+										<span class="font-medium text-tertiary-400">
+											{tx.amount}
+											{tx.token_type}
+										</span>
+									</div>
+									<p class="mt-1 text-xs text-surface-300">
+										{new Date(tx.created_at).toLocaleString()}
+									</p>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				{:else}
+					<!-- Call History -->
+					{#if $userStatsQuery.data?.recent_calls?.length}
+						<div class="space-y-4">
+							<h3 class="text-lg font-semibold text-white">
+								Call History ({$userStatsQuery.data.recent_calls.length})
+							</h3>
 							{#each $userStatsQuery.data.recent_calls as call}
 								<div class="p-4 rounded-lg bg-surface-700/50">
 									<div class="flex items-start justify-between">
@@ -646,10 +827,10 @@
 										</div>
 										<span
 											class={`px-2 py-1 text-xs font-medium rounded-full
-													${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
-													${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
-													${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
-												`}
+														${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
+														${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
+														${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
+													`}
 										>
 											{call.status}
 										</span>
@@ -660,7 +841,7 @@
 								</div>
 							{/each}
 						</div>
-					</div>
+					{/if}
 				{/if}
 			{/if}
 		</div>

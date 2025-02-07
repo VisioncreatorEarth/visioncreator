@@ -47,6 +47,13 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 30000
 	});
 
+	// Add CCP query
+	const ccpQuery = createQuery({
+		operationName: 'getCCP',
+		enabled: true,
+		refetchInterval: 5000 // Update every 5 seconds
+	});
+
 	// Reactive values from API
 	$: stats = $orgaStatsQuery.data || {
 		totalActiveVCs: 0,
@@ -61,6 +68,18 @@ This is the dashboard area of the proposals view that:
 	const tokenPriceIncrease = 5.7;
 	const contributionIncrease = 16.32;
 	const monthlyRevenue = 0; // Hardcoded MRR
+
+	// Format CCP value
+	$: ccpValue = new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'EUR',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0
+	}).format($ccpQuery.data?.total || 0);
+
+	// Format distribution percentages
+	$: eurePercentage = Math.round($ccpQuery.data?.distribution.eure || 0);
+	$: vcePercentage = Math.round($ccpQuery.data?.distribution.vce || 0);
 </script>
 
 <div class="w-full border-b bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
@@ -113,14 +132,14 @@ This is the dashboard area of the proposals view that:
 				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
 					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
 						<span
-							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
+							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-secondary-500/10 text-secondaryw-400"
 						>
-							+{contributionIncrease}%
+							{eurePercentage}% / {vcePercentage}%
 						</span>
 						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">CCP</h3>
 					</div>
 					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-						€{adminEureBalance.toLocaleString()}<span class="text-xs font-medium sm:text-sm" />
+						{ccpValue}
 					</p>
 				</div>
 			</div>
