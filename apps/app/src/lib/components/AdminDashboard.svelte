@@ -276,7 +276,7 @@
 	}
 
 	// Tab management
-	type Tab = 'visioncreator' | 'hominio';
+	type Tab = 'visioncreator' | 'hominio' | 'ultravox';
 	let activeTab: Tab = 'visioncreator';
 </script>
 
@@ -303,19 +303,6 @@
 			: '-translate-x-full'} overflow-y-auto border-r border-surface-700 bg-surface-800"
 	>
 		<div class="p-4 mt-14 md:mt-0">
-			<!-- Special UltravoxDashboard Link -->
-			<button
-				class="w-full p-3 mb-4 text-left rounded-lg transition-colors {showUltravoxDashboard
-					? 'bg-tertiary-500/20 text-tertiary-400'
-					: 'hover:bg-surface-700 text-surface-200'}"
-				on:click={() => {
-					showUltravoxDashboard = true;
-					showLeftSidebar = false;
-				}}
-			>
-				UltravoxDashboard
-			</button>
-
 			<h2 class="mb-4 text-lg font-semibold text-white">Users</h2>
 
 			{#if $usersQuery.isLoading}
@@ -331,7 +318,6 @@
 								: 'hover:bg-surface-700 text-surface-200'}"
 							on:click={() => {
 								selectedUserId = user.id;
-								showUltravoxDashboard = false;
 								showLeftSidebar = false;
 							}}
 						>
@@ -346,35 +332,41 @@
 
 	<!-- Main Content Area -->
 	<main class="flex-1 overflow-y-auto pt-14 md:pt-0 bg-surface-900">
-		{#if showUltravoxDashboard}
+		<!-- Global Tab Navigation -->
+		<div class="sticky top-0 z-10 flex border-b bg-surface-800/95 backdrop-blur border-surface-700">
+			<button
+				class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab ===
+				'visioncreator'
+					? 'border-tertiary-500 text-tertiary-400'
+					: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
+				on:click={() => (activeTab = 'visioncreator')}
+			>
+				VisionCreator
+			</button>
+			<button
+				class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'hominio'
+					? 'border-tertiary-500 text-tertiary-400'
+					: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
+				on:click={() => (activeTab = 'hominio')}
+			>
+				Hominio
+			</button>
+			<button
+				class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab === 'ultravox'
+					? 'border-tertiary-500 text-tertiary-400'
+					: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
+				on:click={() => (activeTab = 'ultravox')}
+			>
+				Ultravox
+			</button>
+		</div>
+
+		<!-- Tab Content -->
+		{#if activeTab === 'ultravox'}
 			<UltravoxDashboard />
 		{:else if selectedUserId}
 			<div class="p-6 space-y-6">
 				{#if $userStatsQuery.data}
-					<!-- Tab Navigation -->
-					<div
-						class="sticky top-0 z-10 flex border-b bg-surface-800/95 backdrop-blur border-surface-700"
-					>
-						<button
-							class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab ===
-							'visioncreator'
-								? 'border-tertiary-500 text-tertiary-400'
-								: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
-							on:click={() => (activeTab = 'visioncreator')}
-						>
-							VisionCreator
-						</button>
-						<button
-							class="px-6 py-3 text-sm font-medium transition-colors border-b-2 {activeTab ===
-							'hominio'
-								? 'border-tertiary-500 text-tertiary-400'
-								: 'border-transparent text-surface-300 hover:text-surface-200 hover:border-surface-600'}"
-							on:click={() => (activeTab = 'hominio')}
-						>
-							Hominio
-						</button>
-					</div>
-
 					<div class="p-6">
 						{#if activeTab === 'visioncreator'}
 							<!-- VisionCreator Tab Content -->
@@ -640,42 +632,9 @@
 				<div class="h-24" />
 			</div>
 		{:else}
-			<!-- Call History Section -->
-			{#if selectedUserId && $userStatsQuery.data?.recent_calls?.length}
-				<div class="h-full p-4 overflow-y-auto">
-					<h3 class="mb-4 text-lg font-semibold text-white">
-						Call History ({$userStatsQuery.data.recent_calls.length} calls)
-					</h3>
-					<div class="space-y-4">
-						{#each $userStatsQuery.data.recent_calls as call}
-							<div class="p-4 rounded-lg bg-surface-700/50">
-								<div class="flex items-start justify-between">
-									<div>
-										<p class="text-sm font-medium text-surface-200">
-											{new Date(call.start_time).toLocaleString()}
-										</p>
-										<p class="mt-1 text-xs text-surface-300">
-											Duration: {formatDuration(call.duration)}
-										</p>
-									</div>
-									<span
-										class={`px-2 py-1 text-xs font-medium rounded-full
-												${call.status === 'completed' ? 'bg-success-500/20 text-success-400' : ''}
-												${call.status === 'error' ? 'bg-error-500/20 text-error-400' : ''}
-												${call.status === 'active' ? 'bg-warning-500/20 text-warning-400' : ''}
-											`}
-									>
-										{call.status}
-									</span>
-								</div>
-								{#if call.error}
-									<p class="mt-2 text-xs text-error-400">{call.error}</p>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				</div>
-			{/if}
+			<div class="flex items-center justify-center h-full">
+				<p class="text-surface-400">Select a user to view details</p>
+			</div>
 		{/if}
 	</main>
 
@@ -686,7 +645,7 @@
 			: 'translate-x-full'} overflow-y-auto border-l border-surface-700 bg-surface-800"
 	>
 		<div class="p-4 mt-14 md:mt-0">
-			{#if showUltravoxDashboard}
+			{#if activeTab === 'ultravox'}
 				<div class="h-full p-4 overflow-y-auto">
 					<h2 class="mb-4 text-xl font-semibold">Available Voices</h2>
 					{#if $voicesQuery.isLoading}
