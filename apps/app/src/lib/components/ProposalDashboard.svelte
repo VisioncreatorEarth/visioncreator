@@ -39,7 +39,7 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 30000 // Refetch every 30 seconds
 	});
 
-	// Query admin's EURe balance
+	// Query admin's EURe balance and VCE balance
 	const adminTokensQuery = createQuery({
 		operationName: 'getUserTokens',
 		input: { userId: '00000000-0000-0000-0000-000000000001' },
@@ -53,6 +53,17 @@ This is the dashboard area of the proposals view that:
 		enabled: true,
 		refetchInterval: 5000 // Update every 5 seconds
 	});
+
+	// Get total VCs from investment metrics
+	const investmentMetricsQuery = createQuery({
+		operationName: 'getInvestmentMetrics',
+		enabled: true,
+		refetchInterval: 5000
+	});
+
+	// Declare variables before using them in reactive statements
+	let eurePercentage = 0;
+	let vcePercentage = 0;
 
 	// Reactive values from API
 	$: stats = $orgaStatsQuery.data || {
@@ -69,17 +80,37 @@ This is the dashboard area of the proposals view that:
 	const contributionIncrease = 16.32;
 	const monthlyRevenue = 0; // Hardcoded MRR
 
-	// Format CCP value
+	// Get current token price from orgaStats
+	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
+
+	// Calculate CCP using admin's total VCE (staked + unstaked) * token price + EURe
 	$: ccpValue = new Intl.NumberFormat('en-US', {
 		style: 'currency',
 		currency: 'EUR',
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0
-	}).format($ccpQuery.data?.total || 0);
+	}).format(
+		($adminTokensQuery.data?.balances?.EURe?.balance || 0) +
+			(($adminTokensQuery.data?.balances?.VCE?.balance || 0) +
+				($adminTokensQuery.data?.balances?.VCE?.staked_balance || 0)) *
+				currentTokenPrice
+	);
 
-	// Format distribution percentages
-	$: eurePercentage = Math.round($ccpQuery.data?.distribution.eure || 0);
-	$: vcePercentage = Math.round($ccpQuery.data?.distribution.vce || 0);
+	// Format distribution percentages based on actual values
+	$: {
+		const eureAmount = $adminTokensQuery.data?.balances?.EURe?.balance || 0;
+		const totalVceAmount =
+			($adminTokensQuery.data?.balances?.VCE?.balance || 0) +
+			($adminTokensQuery.data?.balances?.VCE?.staked_balance || 0);
+		const vceInEure = totalVceAmount * currentTokenPrice;
+		const total = eureAmount + vceInEure;
+
+		eurePercentage = total > 0 ? Math.round((eureAmount / total) * 100) : 0;
+		vcePercentage = total > 0 ? Math.round((vceInEure / total) * 100) : 0;
+	}
+
+	// Reactive value for total VCs
+	$: totalVCs = $investmentMetricsQuery.data?.totalVCs || 0;
 </script>
 
 <div class="w-full border-b bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
@@ -96,6 +127,16 @@ This is the dashboard area of the proposals view that:
 
 			<!-- Metrics Grid -->
 			<div class="flex justify-end gap-3 sm:gap-6">
+				<!-- Total VCs -->
+				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">VCs</h3>
+					</div>
+					<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
+						{totalVCs}
+					</p>
+				</div>
+
 				<!-- TP -->
 				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
 					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
