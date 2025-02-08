@@ -93,12 +93,13 @@ This is the profile area of the proposals view that:
 	// Get current token price from orgaStats
 	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
 
-	// Calculate total assets value using VCE only
+	// Calculate total assets value using both VCE and EURe
 	$: totalShares =
 		Number($userTokensQuery.data?.balances.VCE.balance || 0) +
 		Number($userTokensQuery.data?.balances.VCE.staked_balance || 0);
 
-	$: totalAssetsValue = totalShares * currentTokenPrice;
+	$: totalAssetsValue =
+		totalShares * currentTokenPrice + Number($userTokensQuery.data?.balances.EURe?.balance || 0);
 
 	function toggleMenu() {
 		if ($activeSidePanel === 'left') {

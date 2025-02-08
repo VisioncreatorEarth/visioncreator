@@ -23,8 +23,6 @@ This is the dashboard area of the proposals view that:
 -->
 
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import { dashboardMetrics } from '$lib/stores/proposalStore';
 	import type { ProposalState } from '$lib/stores/proposalStore';
 	import { createQuery } from '$lib/wundergraph';
 
