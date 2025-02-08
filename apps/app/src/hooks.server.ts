@@ -1,8 +1,7 @@
-// src/hooks.server.ts
 import { env } from '$env/dynamic/public'
-import { createServerClient } from '@supabase/ssr'
-import type { Handle } from '@sveltejs/kit'
 import { dev } from '$app/environment';
+import { createServerClient } from '@supabase/ssr'
+import { type Handle } from '@sveltejs/kit'
 
 export const handle: Handle = async ({ event, resolve }) => {
     // Check for local routes in production
@@ -21,20 +20,38 @@ export const handle: Handle = async ({ event, resolve }) => {
             },
         },
     });
-
+    /**
+       * Unlike `supabase.auth.getSession()`, which returns the session _without_
+       * validating the JWT, this function also calls `getUser()` to validate the
+       * JWT before returning the session.
+       */
     event.locals.safeGetSession = async () => {
-        const { data: { user }, error } = await event.locals.supabase.auth.getUser();
-        if (error) {
-            return { session: null, user: null };
+        const {
+            data: { session },
+        } = await event.locals.supabase.auth.getSession()
+        if (!session) {
+            return { session: null, user: null }
         }
 
-        const { data: { session } } = await event.locals.supabase.auth.getSession();
-        return { session, user };
-    };
+        const {
+            data: { user },
+            error,
+        } = await event.locals.supabase.auth.getUser()
+        if (error) {
+            // JWT validation has failed
+            return { session: null, user: null }
+        }
+
+        return { session, user }
+    }
 
     return resolve(event, {
-        filterSerializedResponseHeaders(name: string) {
-            return name === 'content-range' || name === 'x-supabase-api-version';
+        filterSerializedResponseHeaders(name) {
+            /**
+             * Supabase libraries use the `content-range` and `x-supabase-api-version`
+             * headers, so we need to tell SvelteKit to pass it through.
+             */
+            return name === 'content-range' || name === 'x-supabase-api-version'
         },
-    });
+    })
 }
