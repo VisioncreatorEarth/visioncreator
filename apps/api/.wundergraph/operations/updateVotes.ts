@@ -33,7 +33,7 @@ export default createOperation.mutation({
         proposalId: z.string(),
         userId: z.string(),
         action: z.enum(['stake', 'unstake']),
-        amount: z.number().int().positive(),
+        amount: z.number().positive(),
     }),
     requireAuthentication: true,
     rbac: {

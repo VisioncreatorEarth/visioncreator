@@ -173,7 +173,7 @@ This is the profile area of the proposals view that:
 				<!-- Total Assets Value -->
 				<div class="p-4 border rounded-lg border-surface-700/50 bg-surface-800/50">
 					<div class="flex items-center justify-between mb-2">
-						<h4 class="text-xs font-medium uppercase tracking-wider text-tertiary-300">
+						<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
 							Total Assets Value
 						</h4>
 						<div class="px-2 py-0.5 rounded-full bg-success-500/10">
@@ -189,7 +189,7 @@ This is the profile area of the proposals view that:
 				<div class="grid gap-3">
 					<!-- VCE Tokens -->
 					<div class="p-4 border rounded-lg border-surface-700/50 bg-surface-800/50">
-						<h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-tertiary-300">
+						<h4 class="mb-2 text-xs font-medium tracking-wider uppercase text-tertiary-300">
 							VCE Tokens
 						</h4>
 						<div class="grid grid-cols-2 gap-4">
@@ -208,7 +208,7 @@ This is the profile area of the proposals view that:
 
 					<!-- EURe Tokens -->
 					<div class="p-4 border rounded-lg border-surface-700/50 bg-surface-800/50">
-						<h4 class="mb-2 text-xs font-medium uppercase tracking-wider text-tertiary-300">
+						<h4 class="mb-2 text-xs font-medium tracking-wider uppercase text-tertiary-300">
 							EURe Balance
 						</h4>
 						<div>
@@ -222,7 +222,7 @@ This is the profile area of the proposals view that:
 				<!-- Voted Proposals -->
 				{#if userVotes.size > 0}
 					<div class="p-6 border rounded-lg border-surface-700/50 bg-surface-800/50">
-						<h4 class="mb-4 text-sm font-medium uppercase tracking-wider text-tertiary-300">
+						<h4 class="mb-4 text-sm font-medium tracking-wider uppercase text-tertiary-300">
 							Active Votes
 						</h4>
 						<div class="space-y-3">

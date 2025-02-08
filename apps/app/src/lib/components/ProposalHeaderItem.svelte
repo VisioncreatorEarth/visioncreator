@@ -27,7 +27,15 @@ HOW THIS COMPONENT WORKS:
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import Avatar from './Avatar.svelte';
-	import type { Proposal, VoterInfo } from '$lib/types/proposals';
+	import type { Proposal } from '$lib/types/proposals';
+
+	// Update VoterInfo interface to handle decimals
+	interface VoterInfo {
+		id: string;
+		name: string | null;
+		votes: number;
+		tokens: number; // Now can handle decimals
+	}
 
 	// Props
 	export let proposal: Proposal;
@@ -113,6 +121,11 @@ HOW THIS COMPONENT WORKS:
 			size: 'xs' as const
 		};
 	}
+
+	// Add helper function to format decimal numbers
+	function formatTokens(value: number): string {
+		return value.toFixed(2);
+	}
 </script>
 
 <div class="flex flex-col md:flex-row md:items-stretch">
@@ -130,7 +143,7 @@ HOW THIS COMPONENT WORKS:
 							<div
 								class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
 							>
-								{voter.tokens}
+								{formatTokens(voter.tokens)}
 							</div>
 						{/if}
 					{/if}
@@ -206,7 +219,7 @@ HOW THIS COMPONENT WORKS:
 						<div
 							class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
 						>
-							{voter.tokens}
+							{formatTokens(voter.tokens)}
 						</div>
 					{/if}
 				{/if}
@@ -343,7 +356,7 @@ HOW THIS COMPONENT WORKS:
 						<div
 							class="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center text-[10px] font-medium bg-tertiary-500 text-surface-900 rounded-full border border-tertiary-400/30 shadow-sm"
 						>
-							{voter.votes}
+							{formatTokens(voter.votes)}
 						</div>
 					</div>
 				{/each}

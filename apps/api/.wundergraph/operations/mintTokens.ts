@@ -24,7 +24,7 @@ export default createOperation.mutation({
         const totalVCsBefore = await TOKEN_POLICY.getTotalVCs(context);
         console.log('Total VCs before minting:', totalVCsBefore);
 
-        // Calculate token amounts for investment
+        // Calculate token amounts for investment - now supports 4 decimal places directly
         const vceAmount = TOKEN_POLICY.calculateVceTokens(totalVCsBefore);
         const eureAmount = TOKEN_POLICY.calculateAdminPoolTokens(TOKEN_POLICY.BASE_INVESTMENT_AMOUNT);
 
@@ -36,7 +36,7 @@ export default createOperation.mutation({
                 to_user_id: input.userId,
                 token_type: 'VCE',
                 transaction_type: 'mint',
-                amount: vceAmount,
+                amount: vceAmount, // Can now use decimal values directly
                 created_at: new Date().toISOString()
             });
 
@@ -50,7 +50,7 @@ export default createOperation.mutation({
                 to_user_id: TOKEN_POLICY.ADMIN_ACCOUNT_ID,
                 token_type: 'EURe',
                 transaction_type: 'mint',
-                amount: eureAmount,
+                amount: eureAmount, // Can now use decimal values directly
                 created_at: new Date().toISOString()
             });
 
@@ -79,7 +79,7 @@ export default createOperation.mutation({
                     to_user_id: TOKEN_POLICY.ADMIN_ACCOUNT_ID,
                     token_type: 'VCE',
                     transaction_type: 'mint',
-                    amount: milestone.poolIncrease,
+                    amount: milestone.poolIncrease, // Can now use decimal values directly
                     created_at: new Date().toISOString()
                 });
 

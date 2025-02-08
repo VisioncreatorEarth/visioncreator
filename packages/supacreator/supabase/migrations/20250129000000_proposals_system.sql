@@ -11,8 +11,8 @@ CREATE TABLE token_balances (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES profiles(id),
     token_type token_type NOT NULL DEFAULT 'VCE',
-    balance BIGINT NOT NULL DEFAULT 0,
-    staked_balance BIGINT NOT NULL DEFAULT 0,
+    balance NUMERIC(20,6) NOT NULL DEFAULT 0,
+    staked_balance NUMERIC(20,6) NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT positive_balances CHECK (balance >= 0 AND staked_balance >= 0),
@@ -27,9 +27,9 @@ CREATE TABLE proposals (
     video_id TEXT,
     state proposal_state NOT NULL DEFAULT 'idea',
     total_votes INTEGER NOT NULL DEFAULT 0,
-    total_tokens_staked BIGINT NOT NULL DEFAULT 0,
-    total_tokens_staked_vce BIGINT NOT NULL DEFAULT 0,
-    total_tokens_staked_eure BIGINT NOT NULL DEFAULT 0,
+    total_tokens_staked NUMERIC(20,6) NOT NULL DEFAULT 0,
+    total_tokens_staked_vce NUMERIC(20,6) NOT NULL DEFAULT 0,
+    total_tokens_staked_eure NUMERIC(20,6) NOT NULL DEFAULT 0,
     responsible UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -44,7 +44,7 @@ CREATE TABLE token_transactions (
     token_type token_type NOT NULL DEFAULT 'VCE',
     from_user_id UUID REFERENCES profiles(id),
     to_user_id UUID REFERENCES profiles(id),
-    amount BIGINT NOT NULL,
+    amount NUMERIC(20,6) NOT NULL,
     proposal_id UUID REFERENCES proposals(id),
     transaction_hash TEXT NOT NULL UNIQUE DEFAULT encode(sha256(uuid_generate_v4()::text::bytea), 'hex'),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -61,9 +61,9 @@ CREATE TABLE user_proposal_votes (
     user_id UUID NOT NULL REFERENCES profiles(id),
     proposal_id UUID NOT NULL REFERENCES proposals(id),
     user_votes INTEGER NOT NULL DEFAULT 0,
-    tokens_staked BIGINT NOT NULL DEFAULT 0,
-    tokens_staked_vce BIGINT NOT NULL DEFAULT 0,
-    tokens_staked_eure BIGINT NOT NULL DEFAULT 0,
+    tokens_staked NUMERIC(20,6) NOT NULL DEFAULT 0,
+    tokens_staked_vce NUMERIC(20,6) NOT NULL DEFAULT 0,
+    tokens_staked_eure NUMERIC(20,6) NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id, proposal_id)
@@ -579,7 +579,7 @@ $$;
 -- Add mint_tokens function
 CREATE OR REPLACE FUNCTION mint_tokens(
     p_user_id UUID,
-    p_amount BIGINT
+    p_amount NUMERIC(20,6)
 ) RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -607,7 +607,7 @@ END;
 $$;
 
 -- Add helpful comment
-COMMENT ON FUNCTION mint_tokens(UUID, BIGINT) IS 
+COMMENT ON FUNCTION mint_tokens(UUID, NUMERIC(20,6)) IS 
     'Mints new tokens for a user and creates a mint transaction record.
      Parameters:
      - p_user_id: The user to mint tokens for
