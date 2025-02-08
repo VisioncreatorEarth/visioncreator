@@ -2,6 +2,7 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import UltravoxDashboard from './UltravoxDashboard.svelte';
 	import { onMount } from 'svelte';
+	import Icon from '@iconify/svelte';
 
 	const voicesQuery = createQuery({
 		operationName: 'getVoices',
@@ -187,7 +188,11 @@
 		return `${displayMinutes}m ${secondsStr}s`;
 	}
 
-	async function handleTierChange(userId: string, tierId: string) {
+	// Update the tier type to match the expected values
+	type TierType = '5M' | '30M' | '1H' | '4H' | '10H' | 'revoke' | null;
+
+	// Fix the handleTierChange function
+	async function handleTierChange(userId: string, tierId: TierType) {
 		if (!userId || changingTierId) return;
 		changingTierId = tierId;
 
@@ -278,6 +283,13 @@
 	// Tab management
 	type Tab = 'visioncreator' | 'hominio' | 'ultravox';
 	let activeTab: Tab = 'visioncreator';
+
+	// Fix the type error in the template by adding type assertions
+	$: sortedTransactions =
+		$getUserTokensQuery.data?.transactions?.sort(
+			(a: TokenTransaction, b: TokenTransaction) =>
+				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+		) || [];
 </script>
 
 <div class="flex h-screen">

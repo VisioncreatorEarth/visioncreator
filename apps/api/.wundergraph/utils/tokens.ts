@@ -116,7 +116,9 @@ export const TOKEN_POLICY = {
             .from('token_transactions')
             .select('to_user_id', { count: 'exact', distinct: true })
             .eq('token_type', 'VCE')
-            .eq('transaction_type', 'mint');
+            .eq('transaction_type', 'mint')
+            .neq('to_user_id', TOKEN_POLICY.ADMIN_ACCOUNT_ID) // Exclude admin account
+            .is('from_user_id', null); // Only count direct mints (not transfers)
 
         return count || 0;
     },

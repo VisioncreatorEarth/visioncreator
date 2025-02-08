@@ -1,4 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
+import { TOKEN_POLICY } from '../utils/tokens';
 
 export default createOperation.query({
     rbac: {
@@ -10,19 +11,23 @@ export default createOperation.query({
         }
 
         try {
+            // Check if user has any direct VCE mints (same logic as getTotalVCs)
             const { data, error } = await context.supabase
-                .from('token_balances')
-                .select('balance')
-                .eq('user_id', user.customClaims.id)
+                .from('token_transactions')
+                .select('id')
+                .eq('to_user_id', user.customClaims.id)
                 .eq('token_type', 'VCE')
-                .single();
+                .eq('transaction_type', 'mint')
+                .is('from_user_id', null) // Only count direct mints
+                .limit(1);
 
             if (error) {
                 console.error('Supabase query error:', error);
                 return { isActive: false };
             }
 
-            return { isActive: (data?.balance || 0) > 0 };
+            // User is active if they have at least one direct VCE mint
+            return { isActive: data && data.length > 0 };
 
         } catch (error) {
             console.error('Error checking VCE balance:', error);

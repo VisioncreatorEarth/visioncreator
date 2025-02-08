@@ -1,5 +1,5 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
-import { TOKEN_POLICY } from '../utils/tokens';
+import { TOKEN_POLICY, INVESTMENT_MILESTONES } from '../utils/tokens';
 
 export default createOperation.mutation({
     input: z.object({
@@ -20,14 +20,15 @@ export default createOperation.mutation({
             throw new Error("User has already invested");
         }
 
-        // Get current metrics
-        const totalVCs = await TOKEN_POLICY.getTotalVCs(context);
+        // Get current metrics before minting
+        const totalVCsBefore = await TOKEN_POLICY.getTotalVCs(context);
+        console.log('Total VCs before minting:', totalVCsBefore);
 
-        // Calculate token amounts
-        const vceAmount = TOKEN_POLICY.calculateVceTokens(totalVCs);
+        // Calculate token amounts for investment
+        const vceAmount = TOKEN_POLICY.calculateVceTokens(totalVCsBefore);
         const eureAmount = TOKEN_POLICY.calculateAdminPoolTokens(TOKEN_POLICY.BASE_INVESTMENT_AMOUNT);
 
-        // Create VCE token transaction
+        // Create VCE token transaction for investment
         const { error: vceError } = await context.supabase
             .from('token_transactions')
             .insert({
@@ -55,11 +56,57 @@ export default createOperation.mutation({
 
         if (eureError) throw new Error(`Failed to mint EURe tokens: ${eureError.message}`);
 
+        // Get new total VCs after minting
+        const totalVCsAfter = await TOKEN_POLICY.getTotalVCs(context);
+        console.log('Total VCs after minting:', totalVCsAfter);
+
+        // Debug log all milestones and current total
+        console.log('All milestones:', INVESTMENT_MILESTONES.map(m => m.totalVCs));
+        console.log('Looking for milestone match with:', totalVCsAfter);
+
+        // Check if we've hit a milestone exactly
+        const milestone = INVESTMENT_MILESTONES.find(m => m.totalVCs === totalVCsAfter);
+        console.log('Found milestone:', milestone);
+
+        if (milestone) {
+            console.log(`Milestone reached: ${milestone.totalVCs} VCs - Adding ${milestone.poolIncrease} VCE bonus to admin pool`);
+
+            // Mint bonus VCE tokens to admin pool for reaching the milestone
+            const { error: bonusError } = await context.supabase
+                .from('token_transactions')
+                .insert({
+                    from_user_id: null,
+                    to_user_id: TOKEN_POLICY.ADMIN_ACCOUNT_ID,
+                    token_type: 'VCE',
+                    transaction_type: 'mint',
+                    amount: milestone.poolIncrease,
+                    created_at: new Date().toISOString()
+                });
+
+            if (bonusError) {
+                console.error('Failed to mint milestone bonus to admin pool:', bonusError);
+                console.error('Bonus error details:', bonusError);
+            } else {
+                console.log('Successfully minted milestone bonus to admin pool');
+            }
+
+            return {
+                success: true,
+                vceAmount,
+                eureAmount,
+                totalVCs: totalVCsAfter,
+                milestoneBonus: milestone.poolIncrease
+            };
+        } else {
+            console.log('No milestone matched for total VCs:', totalVCsAfter);
+        }
+
         return {
             success: true,
             vceAmount,
             eureAmount,
-            totalVCs: totalVCs + 1
+            totalVCs: totalVCsAfter,
+            milestoneBonus: 0
         };
     }
 }); 
