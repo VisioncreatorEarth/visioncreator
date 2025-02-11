@@ -131,9 +131,9 @@ This is the profile area of the proposals view that:
 	}
 </script>
 
-<!-- Mobile Toggle Button -->
+<!-- Update the Mobile Toggle Button with more bottom spacing -->
 <button
-	class="fixed z-[100] p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
+	class="fixed z-[200] p-2 transition-colors rounded-full shadow-xl bottom-[calc(2rem+env(safe-area-inset-bottom,1.5rem))] left-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
 	on:click={toggleMenu}
 >
 	<Icon icon={isOpen ? 'mdi:close' : 'mdi:account'} class="w-6 h-6 text-tertiary-300" />
@@ -148,9 +148,9 @@ This is the profile area of the proposals view that:
 	/>
 {/if}
 
-<!-- Aside Container -->
+<!-- Update the Aside Container z-index -->
 <div
-	class="aside-panel left-0 z-50 transition-transform duration-200 border-r {isOpen
+	class="aside-panel left-0 z-[150] transition-transform duration-200 border-r {isOpen
 		? 'translate-x-0'
 		: '-translate-x-full'} {typeof window !== 'undefined' && window.innerWidth >= 1024
 		? 'lg:translate-x-0 w-[280px]'

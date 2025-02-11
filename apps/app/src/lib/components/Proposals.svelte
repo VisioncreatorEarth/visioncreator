@@ -879,28 +879,42 @@ And explain how your proposal addresses one or more of these aspects:
 									(p) => p.id === expandedProposalId
 								)}
 								{#if proposal}
-									<ProposalDetailView
-										{proposal}
-										onClose={() => {
-											expandedProposalId = null;
-											goto(`/me?view=Proposals`, { replaceState: true });
-										}}
-										onVote={handleVote}
-										onDecision={handleDecision}
-										{userQuery}
-										{getVotersForProposal}
-										{canVote}
-										{canUnstakeVote}
-										{getVoteDisplay}
-										{isAdmin}
-										{getTimeAgo}
-										{getStateColor}
-										{getStateBgColor}
-										{getStateIcon}
-										{getStateLabel}
-										{userTokens}
-										{getNextVoteCost}
-									/>
+									<!-- Update the detail view modal container -->
+									<div
+										class="fixed inset-0 z-[100] flex flex-col justify-end p-4 sm:p-6 backdrop-blur-sm bg-surface-900/95"
+									>
+										<div
+											class="relative w-full bg-surface-800 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+										>
+											<div
+												class="h-full overflow-y-auto pb-safe"
+												style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));"
+											>
+												<ProposalDetailView
+													{proposal}
+													onClose={() => {
+														expandedProposalId = null;
+														goto(`/me?view=Proposals`, { replaceState: true });
+													}}
+													onVote={handleVote}
+													onDecision={handleDecision}
+													{userQuery}
+													{getVotersForProposal}
+													{canVote}
+													{canUnstakeVote}
+													{getVoteDisplay}
+													{isAdmin}
+													{getTimeAgo}
+													{getStateColor}
+													{getStateBgColor}
+													{getStateIcon}
+													{getStateLabel}
+													{userTokens}
+													{getNextVoteCost}
+												/>
+											</div>
+										</div>
+									</div>
 								{/if}
 							{:else}
 								{#each filteredProposals as proposal (proposal.id)}
