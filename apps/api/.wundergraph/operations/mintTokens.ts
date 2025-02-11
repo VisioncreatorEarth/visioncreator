@@ -22,7 +22,6 @@ export default createOperation.mutation({
 
         // Get current metrics before minting
         const totalVCsBefore = await TOKEN_POLICY.getTotalVCs(context);
-        console.log('Total VCs before minting:', totalVCsBefore);
 
         // Calculate token amounts for investment - now supports 4 decimal places directly
         const vceAmount = TOKEN_POLICY.calculateVceTokens(totalVCsBefore);
@@ -58,18 +57,12 @@ export default createOperation.mutation({
 
         // Get new total VCs after minting
         const totalVCsAfter = await TOKEN_POLICY.getTotalVCs(context);
-        console.log('Total VCs after minting:', totalVCsAfter);
 
         // Debug log all milestones and current total
-        console.log('All milestones:', INVESTMENT_MILESTONES.map(m => m.totalVCs));
-        console.log('Looking for milestone match with:', totalVCsAfter);
-
         // Check if we've hit a milestone exactly
         const milestone = INVESTMENT_MILESTONES.find(m => m.totalVCs === totalVCsAfter);
-        console.log('Found milestone:', milestone);
 
         if (milestone) {
-            console.log(`Milestone reached: ${milestone.totalVCs} VCs - Adding ${milestone.poolIncrease} VCE bonus to admin pool`);
 
             // Mint bonus VCE tokens to admin pool for reaching the milestone
             const { error: bonusError } = await context.supabase

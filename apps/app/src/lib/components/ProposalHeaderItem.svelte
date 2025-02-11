@@ -29,6 +29,7 @@ HOW THIS COMPONENT WORKS:
 	import Avatar from './Avatar.svelte';
 	import type { Proposal } from '$lib/types/proposals';
 	import { fade, fly } from 'svelte/transition';
+	import { onDestroy } from 'svelte';
 
 	// Update VoterInfo interface to handle decimals
 	interface VoterInfo {
@@ -135,30 +136,38 @@ HOW THIS COMPONENT WORKS:
 
 	// Enhance the onVote handler to show notifications
 	async function handleVote(proposalId: string, isIncrease: boolean) {
-		const currentVoter = getVotersForProposal(proposalId).find((v) => v.id === userData?.id);
-		const currentVotes = currentVoter?.tokens || 0;
-		const nextVoteCost = getNextVoteCost(currentVoter?.votes || 0);
+		try {
+			await onVote(proposalId, isIncrease);
+			// Show success notification
+			notificationMessage = isIncrease ? '+1 Vote' : '-1 Vote';
+			showNotification = true;
 
-		// Clear any existing timeout
-		if (notificationTimeout) {
-			clearTimeout(notificationTimeout);
+			// Clear any existing timeout
+			if (notificationTimeout) clearTimeout(notificationTimeout);
+
+			// Set new timeout to hide notification
+			notificationTimeout = setTimeout(() => {
+				showNotification = false;
+			}, 2500);
+		} catch (error) {
+			console.error('Vote error:', error);
+			showNotification = true;
+			notificationMessage = 'Error voting';
+
+			// Clear any existing timeout
+			if (notificationTimeout) clearTimeout(notificationTimeout);
+
+			// Set new timeout to hide error notification
+			notificationTimeout = setTimeout(() => {
+				showNotification = false;
+			}, 2500);
 		}
-
-		// Call the original onVote
-		await onVote(proposalId, isIncrease);
-
-		// Set notification message
-		notificationMessage = isIncrease
-			? `+${nextVoteCost} tokens voted`
-			: `-${currentVotes} tokens released`;
-
-		showNotification = true;
-
-		// Hide notification after 3 seconds
-		notificationTimeout = setTimeout(() => {
-			showNotification = false;
-		}, 3000);
 	}
+
+	// Cleanup on component destroy
+	onDestroy(() => {
+		if (notificationTimeout) clearTimeout(notificationTimeout);
+	});
 </script>
 
 <div class="relative flex flex-col md:flex-row md:items-stretch">

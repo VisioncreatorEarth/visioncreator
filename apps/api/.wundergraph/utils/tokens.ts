@@ -58,11 +58,9 @@ export const TOKEN_POLICY = {
 
     // Get current milestone based on total VCs
     getCurrentMilestone(totalVCs: number): Milestone {
-        console.log('Getting milestone for totalVCs:', totalVCs);
 
         // For first 3 milestones with fixed price
         if (totalVCs <= 3) {
-            console.log('In first 3 milestones range');
             for (const milestone of INVESTMENT_MILESTONES) {
                 if (totalVCs <= milestone.totalVCs) {
                     console.log('Returning milestone:', milestone.milestone, 'price:', milestone.tokenPrice);
@@ -76,16 +74,12 @@ export const TOKEN_POLICY = {
             const currentMilestone = INVESTMENT_MILESTONES[i];
             const previousMilestone = INVESTMENT_MILESTONES[i - 1];
 
-            console.log('Checking milestone:', currentMilestone.milestone);
-            console.log('Range:', previousMilestone.totalVCs, '-', currentMilestone.totalVCs);
 
             if (totalVCs > previousMilestone.totalVCs && totalVCs <= currentMilestone.totalVCs) {
-                console.log('Found milestone:', currentMilestone.milestone, 'price:', currentMilestone.tokenPrice);
                 return currentMilestone;
             }
         }
 
-        console.log('Returning last milestone');
         return INVESTMENT_MILESTONES[INVESTMENT_MILESTONES.length - 1];
     },
 

@@ -37,8 +37,14 @@ HOW THIS COMPONENT WORKS:
 	import { onDestroy } from 'svelte';
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
 	import type { Proposal, VoterInfo, User } from '$lib/types/proposals';
-	import { getStateBgColor } from '$lib/utils/proposalStateColors';
+	import {
+		getStateBgColor,
+		getStateIcon,
+		getStateLabel,
+		getStateColor
+	} from '$lib/utils/proposalStateColors';
 	import { writable } from 'svelte/store';
+	import { fade } from 'svelte/transition';
 
 	// Props
 	export let proposal: Proposal;
@@ -118,229 +124,184 @@ HOW THIS COMPONENT WORKS:
 	}
 </script>
 
-<svelte:window on:resize={updateViewport} />
-
-<div class="flex flex-col h-[calc(100vh-16rem)] overflow-hidden bg-surface-900">
-	<!-- Header -->
-	<div
-		class="overflow-hidden transition-all duration-200 border card rounded-xl border-surface-700/50 bg-surface-900"
-	>
-		<ProposalHeaderItem
-			{proposal}
-			{userData}
-			{getVotersForProposal}
-			{canVote}
-			{canUnstakeVote}
-			{getVoteDisplay}
-			{onVote}
-			{userTokens}
-			{getNextVoteCost}
-			{onDecision}
-			{isAdmin}
-			{getTimeAgo}
-		/>
-	</div>
-
-	<!-- Content Area -->
-	<div class="flex flex-1 mt-4 overflow-hidden border card rounded-xl border-surface-700/50">
-		<!-- Left Navigation -->
-		<div class="flex flex-col w-16 border-r border-surface-700/50 bg-surface-800">
-			<button class={getNavClasses('details')} on:click={() => setTab('details')}>
-				<div class="flex flex-col items-center justify-center w-full">
-					<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
-					<span class="mt-1 text-[10px]">Details</span>
-				</div>
-			</button>
-
-			{#if isMobileView}
-				<button class={getNavClasses('metadata')} on:click={() => setTab('metadata')}>
-					<div class="flex flex-col items-center justify-center w-full">
-						<Icon icon="mdi:information-outline" class="w-6 h-6" />
-						<span class="mt-1 text-[10px]">Info</span>
-					</div>
-				</button>
-			{/if}
-
-			<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
-				<div class="flex flex-col items-center justify-center w-full">
-					<Icon icon="mdi:chat-outline" class="w-6 h-6" />
-					<span class="mt-1 text-[10px]">Chat</span>
-				</div>
-			</button>
-		</div>
-
-		<!-- Main Content -->
+<!-- Modal-like overlay -->
+<div
+	class="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-surface-900/50 backdrop-blur-sm"
+	on:click|self={onClose}
+	transition:fade={{ duration: 200 }}
+>
+	<!-- Modal Container -->
+	<div class="relative w-[95%] flex flex-col" on:click|stopPropagation>
+		<!-- Main Content Container -->
 		<div
-			class="flex-1 overflow-hidden {!isMobileView
-				? 'border-r border-surface-700/50'
-				: ''} bg-surface-800"
+			class="w-full h-[90vh] max-w-6xl mx-auto overflow-hidden rounded-t-xl bg-surface-800/95 border border-surface-700/50"
 		>
-			<div class="h-full overflow-y-auto">
-				{#if $activeTab === 'details'}
-					<div class="flex flex-col gap-6 p-6">
-						{#if proposal.video_id}
-							<div class="w-full overflow-hidden rounded-lg bg-surface-800">
-								<VideoPlayer videoId={proposal.video_id} />
+			<!-- Content -->
+			<div class="flex flex-col h-full overflow-hidden">
+				<!-- Header -->
+				<div class="border-b border-surface-700/50 bg-surface-800/95">
+					<ProposalHeaderItem
+						{proposal}
+						{userData}
+						{getVotersForProposal}
+						{canVote}
+						{canUnstakeVote}
+						{getVoteDisplay}
+						{onVote}
+						{userTokens}
+						{getNextVoteCost}
+						{onDecision}
+						{isAdmin}
+						{getTimeAgo}
+					/>
+				</div>
+
+				<!-- Main Area -->
+				<div class="flex flex-1 min-h-0 bg-surface-800/95">
+					<!-- Left Navigation (Fixed) -->
+					<div class="flex flex-col w-16 shrink-0 bg-surface-800/50 border-r border-surface-700/50">
+						<button class={getNavClasses('details')} on:click={() => setTab('details')}>
+							<div class="flex flex-col items-center justify-center w-full">
+								<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
+								<span class="mt-1 text-[10px]">Details</span>
 							</div>
+						</button>
+
+						{#if isMobileView}
+							<button class={getNavClasses('metadata')} on:click={() => setTab('metadata')}>
+								<div class="flex flex-col items-center justify-center w-full">
+									<Icon icon="mdi:information-outline" class="w-6 h-6" />
+									<span class="mt-1 text-[10px]">Info</span>
+								</div>
+							</button>
 						{/if}
 
-						<div class="flex flex-col gap-2">
-							<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-							<div class="prose prose-invert max-w-none">
-								{#if proposal.details}
-									{@html marked(proposal.details)}
-								{:else}
-									<p class="text-tertiary-300">
-										No project overview available yet. Click to edit and add details.
-									</p>
-								{/if}
+						<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
+							<div class="flex flex-col items-center justify-center w-full">
+								<Icon icon="mdi:chat-outline" class="w-6 h-6" />
+								<span class="mt-1 text-[10px]">Chat</span>
 							</div>
-						</div>
+						</button>
 					</div>
-				{:else if $activeTab === 'chat'}
-					<div class="h-full">
-						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
-					</div>
-				{:else if $activeTab === 'metadata' && isMobileView}
-					<div class="h-full p-6 space-y-6 overflow-y-auto bg-surface-900">
-						<!-- Mobile Metadata Content -->
-						<div>
-							<h4 class="mb-2 text-sm font-medium text-tertiary-200">Author</h4>
-							<div class="flex items-center gap-3">
-								<Avatar
-									me={{
-										data: { seed: authorProfile?.name || proposal.author || '' },
-										design: { highlight: false },
-										size: 'sm'
-									}}
-								/>
-								<p class="text-sm font-medium text-tertiary-100">
-									{authorProfile?.name || 'Not assigned'}
-								</p>
-							</div>
-						</div>
 
-						{#if proposal.responsible}
-							<div>
-								<h4 class="mb-2 text-sm font-medium text-tertiary-200">Responsible</h4>
-								<div class="flex items-center gap-3">
-									<Avatar
-										me={{
-											data: { seed: proposal.responsible },
-											design: { highlight: false },
-											size: 'sm'
-										}}
-									/>
-									<div>
-										<p class="text-sm font-medium text-tertiary-100">{proposal.responsible}</p>
-										<p class="text-xs text-tertiary-300">Lead</p>
+					<!-- Content Area -->
+					<div class="flex flex-1 min-h-0">
+						<div class="flex-1 overflow-y-auto">
+							{#if $activeTab === 'details'}
+								<div class="flex flex-col gap-6 p-6">
+									{#if proposal.video_id}
+										<div class="w-full overflow-hidden rounded-lg bg-surface-800">
+											<VideoPlayer videoId={proposal.video_id} />
+										</div>
+									{/if}
+
+									<div class="flex flex-col gap-2">
+										<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
+										<div class="prose prose-invert max-w-none">
+											{#if proposal.details}
+												{@html marked(proposal.details)}
+											{:else}
+												<p class="text-tertiary-300">
+													No project overview available yet. Click to edit and add details.
+												</p>
+											{/if}
+										</div>
 									</div>
 								</div>
-							</div>
-						{/if}
-
-						{#if proposal.state !== 'idea'}
-							<div>
-								<h4 class="mb-2 text-sm font-medium text-tertiary-200">Pain Point</h4>
-								<p class="text-sm text-tertiary-300">
-									{proposal.metadata?.pain || 'Not defined yet'}
-								</p>
-							</div>
-
-							<div>
-								<h4 class="mb-2 text-sm font-medium text-tertiary-200">Expected Benefits</h4>
-								<p class="text-sm text-tertiary-300">
-									{proposal.metadata?.benefits || 'Not defined yet'}
-								</p>
-							</div>
-
-							{#each Object.entries(proposal.metadata || {}) as [key, value]}
-								{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
-									<div>
-										<h4 class="mb-2 text-sm font-medium text-tertiary-200">
-											{key.charAt(0).toUpperCase() + key.slice(1)}
-										</h4>
-										<p class="text-sm text-tertiary-300">{value}</p>
-									</div>
-								{/if}
-							{/each}
-						{/if}
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Right Metadata (Desktop Only) -->
-		{#if !isMobileView}
-			<div class="w-[280px] shrink-0 h-full overflow-y-auto {getStateBgColor(proposal.state)}">
-				<div class="p-6 space-y-6">
-					<!-- Desktop Metadata Content -->
-					<div class={getMetadataSectionClasses(true)}>
-						<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">Author</h4>
-						<div class="flex items-center justify-end gap-3">
-							<p class="text-sm font-medium text-tertiary-100">
-								{authorProfile?.name || 'Not assigned'}
-							</p>
-							<Avatar
-								me={{
-									data: { seed: authorProfile?.name || proposal.author || '' },
-									design: { highlight: false },
-									size: 'sm'
-								}}
-							/>
-						</div>
-					</div>
-
-					{#if proposal.responsible}
-						<div class={getMetadataSectionClasses(true)}>
-							<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">Responsible</h4>
-							<div class="flex items-center justify-end gap-3">
-								<div class="text-right">
-									<p class="text-sm font-medium text-tertiary-100">{proposal.responsible}</p>
-									<p class="text-xs text-tertiary-300">Lead</p>
-								</div>
-								<Avatar
-									me={{
-										data: { seed: proposal.responsible },
-										design: { highlight: false },
-										size: 'sm'
-									}}
-								/>
-							</div>
-						</div>
-					{/if}
-
-					{#if proposal.state !== 'idea'}
-						<div class={getMetadataSectionClasses(true)}>
-							<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">Pain Point</h4>
-							<p class="text-sm text-right text-tertiary-300">
-								{proposal.metadata?.pain || 'Not defined yet'}
-							</p>
-						</div>
-
-						<div class={getMetadataSectionClasses(true)}>
-							<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-								Expected Benefits
-							</h4>
-							<p class="text-sm text-right text-tertiary-300">
-								{proposal.metadata?.benefits || 'Not defined yet'}
-							</p>
-						</div>
-
-						{#each Object.entries(proposal.metadata || {}) as [key, value]}
-							{#if !['pain', 'benefits'].includes(key) && value !== null && value !== undefined}
-								<div class={getMetadataSectionClasses(true)}>
-									<h4 class="mb-2 text-sm font-medium text-right text-tertiary-200">
-										{key.charAt(0).toUpperCase() + key.slice(1)}
-									</h4>
-									<p class="text-sm text-right text-tertiary-300">{value}</p>
+							{:else if $activeTab === 'chat'}
+								<div class="h-full">
+									<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 								</div>
 							{/if}
-						{/each}
-					{/if}
+						</div>
+
+						<!-- Right Metadata (Desktop Only) -->
+						{#if !isMobileView}
+							<div
+								class="w-[280px] shrink-0 overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
+									proposal.state
+								)}"
+							>
+								<div class="p-6 space-y-6">
+									<!-- Author Info -->
+									<div class={getMetadataSectionClasses(true)}>
+										<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+											Author
+										</h4>
+										<div class="flex items-center gap-3 mt-2">
+											<Avatar
+												me={{
+													data: { seed: authorProfile?.id || proposal.author },
+													design: { highlight: false },
+													size: 'sm'
+												}}
+											/>
+											<div>
+												<p class="text-sm font-medium text-tertiary-100">
+													{authorProfile?.name || 'Anonymous'}
+												</p>
+												<p class="text-xs text-tertiary-300">Visioncreator</p>
+											</div>
+										</div>
+									</div>
+
+									<!-- Status Info -->
+									<div class={getMetadataSectionClasses(true)}>
+										<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+											Status
+										</h4>
+										<div class="flex items-center gap-2 mt-2">
+											<Icon
+												icon={getStateIcon(proposal.state)}
+												class="w-5 h-5 {getStateColor(proposal.state)}"
+											/>
+											<span class="text-sm font-medium {getStateColor(proposal.state)}">
+												{getStateLabel(proposal.state)}
+											</span>
+										</div>
+									</div>
+
+									<!-- Timestamps -->
+									<div class={getMetadataSectionClasses(true)}>
+										<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+											Timeline
+										</h4>
+										<div class="mt-2 space-y-2">
+											<div class="flex justify-between">
+												<span class="text-sm text-tertiary-300">Created</span>
+												<span class="text-sm text-tertiary-100"
+													>{getTimeAgo(proposal.created_at)}</span
+												>
+											</div>
+											{#if proposal.updated_at !== proposal.created_at}
+												<div class="flex justify-between">
+													<span class="text-sm text-tertiary-300">Updated</span>
+													<span class="text-sm text-tertiary-100"
+														>{getTimeAgo(proposal.updated_at)}</span
+													>
+												</div>
+											{/if}
+										</div>
+									</div>
+								</div>
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
-		{/if}
+		</div>
+
+		<!-- Close Button Extension -->
+		<div
+			class="absolute bottom-0 flex items-center justify-center w-16 h-8 -translate-x-1/2 translate-y-full rounded-b-full left-1/2 bg-surface-800/95"
+		>
+			<button
+				on:click={onClose}
+				class="flex items-center justify-center w-full h-full hover:bg-surface-600/50 text-tertiary-300"
+			>
+				<Icon icon="mdi:close" class="w-5 h-5" />
+			</button>
+		</div>
 	</div>
 </div>
 

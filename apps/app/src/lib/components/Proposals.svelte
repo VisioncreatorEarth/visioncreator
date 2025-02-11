@@ -416,12 +416,11 @@ HOW THIS SYSTEM WORKS:
 		return Math.pow(voteNumber + 1, 2) - Math.pow(voteNumber, 2);
 	}
 
-	function handleProposalSelect(state: ProposalState, proposalId: string) {
+	function handleProposalSelect(state: ProposalState, id: string) {
+		expandedProposalId = id;
 		activeTab.set(state);
-		setTimeout(() => {
-			expandedProposalId = proposalId;
-			centerProposalInView(proposalId);
-		}, 0);
+		// Update URL without scrolling
+		goto(`/me?view=Proposals&id=${id}`, { replaceState: true });
 	}
 
 	// Add a store to manage voters queries for all visible proposals
@@ -874,7 +873,7 @@ And explain how your proposal addresses one or more of these aspects:
 				<div class="h-[calc(100vh-4rem)] overflow-y-auto">
 					<div class="max-w-5xl mx-auto">
 						<!-- Proposals List -->
-						<div class="grid gap-4 px-4 pt-4">
+						<div class="grid gap-4 px-4 pt-4 pb-64 sm:pb-48">
 							{#if expandedProposalId}
 								{@const proposal = $proposalsQuery.data?.proposals.find(
 									(p) => p.id === expandedProposalId

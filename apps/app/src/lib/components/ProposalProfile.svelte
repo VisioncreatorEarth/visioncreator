@@ -133,7 +133,7 @@ This is the profile area of the proposals view that:
 
 <!-- Mobile Toggle Button -->
 <button
-	class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
+	class="fixed z-[100] p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
 	on:click={toggleMenu}
 >
 	<Icon icon={isOpen ? 'mdi:close' : 'mdi:account'} class="w-6 h-6 text-tertiary-300" />
