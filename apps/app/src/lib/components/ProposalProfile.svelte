@@ -90,16 +90,25 @@ This is the profile area of the proposals view that:
 		};
 	}
 
-	// Get current token price from orgaStats
-	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
+	// Update the token price calculation to match ProposalDashboard
+	$: stats = $orgaStatsQuery.data || {
+		totalActiveVCs: 0,
+		totalTokens: 0,
+		currentTokenPrice: 1.0
+	};
+
+	// Replace the current token price calculation
+	$: currentTokenPrice = stats.currentTokenPrice;
 
 	// Calculate total assets value using both VCE and EURe
 	$: totalShares =
 		Number($userTokensQuery.data?.balances.VCE.balance || 0) +
 		Number($userTokensQuery.data?.balances.VCE.staked_balance || 0);
 
+	// Update total assets calculation to use the same price
 	$: totalAssetsValue =
-		totalShares * currentTokenPrice + Number($userTokensQuery.data?.balances.EURe?.balance || 0);
+		totalShares * stats.currentTokenPrice +
+		Number($userTokensQuery.data?.balances.EURe?.balance || 0);
 
 	function toggleMenu() {
 		if ($activeSidePanel === 'left') {

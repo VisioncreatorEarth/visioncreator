@@ -1,4 +1,5 @@
-import { createOperation, z } from '../generated/wundergraph.factory';
+import { createOperation } from '../generated/wundergraph.factory';
+import { TOKEN_POLICY } from '../utils/tokens';
 
 // Fibonacci sequence and corresponding prices
 const vcPriceMap = new Map([
@@ -45,34 +46,17 @@ function getTokenPrice(activeVCs: number): number {
 
 export default createOperation.query({
     handler: async ({ context }) => {
-        // Get count of users with positive token balance
-        const { data: activeVCs, error } = await context.supabase
-            .from('token_balances')
-            .select('user_id, balance')
-            .gt('balance', 0);
+        try {
+            const totalVCs = await TOKEN_POLICY.getTotalVCs(context);
+            const currentTokenPrice = TOKEN_POLICY.calculateTokenPrice(totalVCs);
 
-        if (error) {
-            throw new Error(`Failed to fetch organization stats: ${error.message}`);
+            return {
+                totalActiveVCs: totalVCs,
+                totalTokens: 0,
+                currentTokenPrice
+            };
+        } catch (error) {
+            throw error;
         }
-
-        // Calculate total active Visioncreators
-        const totalActiveVCs = activeVCs?.length || 0;
-
-        // Calculate current token price based on active VCs
-        const currentTokenPrice = getTokenPrice(totalActiveVCs);
-
-        // Calculate pools and revenue
-        const ccpPool = Math.floor(totalActiveVCs * 365 * 0.75); // Yearly contribution pool
-        const monthlyRevenue = Math.floor(totalActiveVCs * 365); // Monthly recurring revenue
-        const totalTokens = activeVCs?.reduce((sum, vc) => sum + Number(vc.balance || 0), 0) || 0;
-
-        return {
-            totalActiveVCs,
-            ccpPool,
-            monthlyRevenue,
-            totalTokens,
-            currentTokenPrice,
-            updatedAt: new Date().toISOString()
-        };
     }
 }); 
