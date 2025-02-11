@@ -4,7 +4,7 @@ import { TOKEN_POLICY } from '../utils/tokens';
 export default createOperation.query({
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated", "admin"],
+        requireMatchAll: ["authenticated"],
     },
     handler: async ({ context }) => {
         return TOKEN_POLICY.getCurrentMetrics(context);

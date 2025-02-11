@@ -128,6 +128,8 @@ This is the dashboard area of the proposals view that:
 				<!-- Total VCs -->
 				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
 					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+						<!-- Add invisible placeholder to match height of other metrics with badges -->
+						<span class="invisible px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs">000</span>
 						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">VCs</h3>
 					</div>
 					<p class="text-lg font-bold sm:text-2xl text-tertiary-100">

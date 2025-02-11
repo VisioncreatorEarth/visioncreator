@@ -4,7 +4,7 @@ import { TOKEN_POLICY, INVESTMENT_MILESTONES } from '../utils/tokens';
 export default createOperation.query({
     requireAuthentication: true,
     rbac: {
-        requireMatchAll: ["authenticated", "admin"],
+        requireMatchAll: ["authenticated"],
     },
     handler: async ({ context }) => {
         try {

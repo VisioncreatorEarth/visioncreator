@@ -28,6 +28,7 @@ HOW THIS COMPONENT WORKS:
 	import Icon from '@iconify/svelte';
 	import Avatar from './Avatar.svelte';
 	import type { Proposal } from '$lib/types/proposals';
+	import { fade, fly } from 'svelte/transition';
 
 	// Update VoterInfo interface to handle decimals
 	interface VoterInfo {
@@ -57,6 +58,11 @@ HOW THIS COMPONENT WORKS:
 		draft: 20,
 		decision: 30
 	};
+
+	// Add notification state
+	let showNotification = false;
+	let notificationMessage = '';
+	let notificationTimeout: NodeJS.Timeout;
 
 	// Helper functions
 	function getStateColor(state: Proposal['state']): string {
@@ -122,13 +128,40 @@ HOW THIS COMPONENT WORKS:
 		};
 	}
 
-	// Add helper function to format decimal numbers
+	// Update helper function to format numbers as integers
 	function formatTokens(value: number): string {
-		return value.toFixed(2);
+		return Math.floor(value).toString();
+	}
+
+	// Enhance the onVote handler to show notifications
+	async function handleVote(proposalId: string, isIncrease: boolean) {
+		const currentVoter = getVotersForProposal(proposalId).find((v) => v.id === userData?.id);
+		const currentVotes = currentVoter?.tokens || 0;
+		const nextVoteCost = getNextVoteCost(currentVoter?.votes || 0);
+
+		// Clear any existing timeout
+		if (notificationTimeout) {
+			clearTimeout(notificationTimeout);
+		}
+
+		// Call the original onVote
+		await onVote(proposalId, isIncrease);
+
+		// Set notification message
+		notificationMessage = isIncrease
+			? `+${nextVoteCost} tokens voted`
+			: `-${currentVotes} tokens released`;
+
+		showNotification = true;
+
+		// Hide notification after 3 seconds
+		notificationTimeout = setTimeout(() => {
+			showNotification = false;
+		}, 3000);
 	}
 </script>
 
-<div class="flex flex-col md:flex-row md:items-stretch">
+<div class="relative flex flex-col md:flex-row md:items-stretch">
 	<!-- Left side: Votes -->
 	<div class="items-center justify-between hidden w-40 p-6 border-r md:flex border-surface-700/50">
 		<div class="flex items-center gap-4">
@@ -164,7 +197,7 @@ HOW THIS COMPONENT WORKS:
 								)}
 						on:click|stopPropagation={(e) => {
 							e.stopPropagation();
-							onVote(proposal.id, true);
+							handleVote(proposal.id, true);
 						}}
 						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 					>
@@ -176,7 +209,7 @@ HOW THIS COMPONENT WORKS:
 								proposal,
 								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
 							)}
-						on:click|stopPropagation={() => onVote(proposal.id, false)}
+						on:click|stopPropagation={() => handleVote(proposal.id, false)}
 						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 					>
 						<Icon icon="mdi:minus" class="w-5 h-5 text-tertiary-300" />
@@ -185,6 +218,68 @@ HOW THIS COMPONENT WORKS:
 			{/if}
 		</div>
 	</div>
+
+	<!-- Notification overlay -->
+	{#if showNotification}
+		<div
+			class="absolute top-0 bottom-0 right-0 z-50 hidden pointer-events-none left-40 md:block"
+			transition:fly={{ x: 20, duration: 200, opacity: 0 }}
+		>
+			<div
+				class="w-full h-full flex items-center {notificationMessage.includes('+')
+					? 'bg-success-500/90 dark:bg-success-900/90'
+					: 'bg-error-500/90 dark:bg-error-900/90'}"
+			>
+				<div class="flex flex-col gap-4 px-6 py-4">
+					<Icon
+						icon={notificationMessage.includes('+')
+							? 'heroicons:plus-circle'
+							: 'heroicons:minus-circle'}
+						class="w-12 h-12 {notificationMessage.includes('+')
+							? 'text-success-100'
+							: 'text-error-100'}"
+					/>
+					<span
+						class="text-2xl font-medium {notificationMessage.includes('+')
+							? 'text-success-100'
+							: 'text-error-100'}"
+					>
+						{notificationMessage}
+					</span>
+				</div>
+			</div>
+		</div>
+
+		<!-- Mobile notification -->
+		<div
+			class="absolute bottom-0 left-0 right-0 z-50 pointer-events-none md:hidden"
+			transition:fly={{ y: 20, duration: 200, opacity: 0 }}
+		>
+			<div
+				class="w-full flex items-center justify-start px-4 py-2 {notificationMessage.includes('+')
+					? 'bg-success-500/90 dark:bg-success-900/90'
+					: 'bg-error-500/90 dark:bg-error-900/90'}"
+			>
+				<div class="flex items-center gap-2">
+					<Icon
+						icon={notificationMessage.includes('+')
+							? 'heroicons:plus-circle'
+							: 'heroicons:minus-circle'}
+						class="w-5 h-5 {notificationMessage.includes('+')
+							? 'text-success-100'
+							: 'text-error-100'}"
+					/>
+					<span
+						class="text-sm font-medium {notificationMessage.includes('+')
+							? 'text-success-100'
+							: 'text-error-100'}"
+					>
+						{notificationMessage}
+					</span>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<!-- Mobile Layout -->
 	<div class="flex flex-col md:hidden">
@@ -211,7 +306,7 @@ HOW THIS COMPONENT WORKS:
 		<!-- Second Row: Votes, Buttons, and Avatars -->
 		<div class="flex items-center gap-4 p-2 bg-surface-800/95">
 			<!-- Vote count -->
-			<div class="flex items-center pl-2 relative">
+			<div class="relative flex items-center pl-2">
 				<span class="text-4xl font-bold text-tertiary-100">{proposal.total_votes || 0}</span>
 				{#if userData}
 					{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
@@ -239,7 +334,7 @@ HOW THIS COMPONENT WORKS:
 								)}
 						on:click|stopPropagation={(e) => {
 							e.stopPropagation();
-							onVote(proposal.id, true);
+							handleVote(proposal.id, true);
 						}}
 						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
 					>
@@ -251,7 +346,7 @@ HOW THIS COMPONENT WORKS:
 								proposal,
 								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
 							)}
-						on:click|stopPropagation={() => onVote(proposal.id, false)}
+						on:click|stopPropagation={() => handleVote(proposal.id, false)}
 						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
 					>
 						<Icon icon="mdi:minus" class="w-7 h-7 text-tertiary-200" />
