@@ -11,9 +11,13 @@
 	import LegalAndPrivacyPolicy from './LegalAndPrivacyPolicy.svelte';
 	import { page } from '$app/stores';
 	import ViewMenu from './ViewMenu.svelte';
+	import ComposeView from '$lib/components/ComposeView.svelte';
+	import ProposalDetailView from './ProposalDetailView.svelte';
+	import { view as defaultView } from '$lib/views/Default';
 
 	export let session: any;
 	export let supabase: any;
+	export let customView: any = null;
 
 	const dispatch = createEventDispatcher();
 
@@ -32,10 +36,23 @@
 	const DEBOUNCE_DELAY = 300;
 
 	// Keep track of the initial modal type
-	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' = 'menu';
+	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' | 'custom-view' =
+		'menu';
+
+	// Add component mapping
+	const COMPONENT_MAP = {
+		ProposalDetail: ProposalDetailView,
+		Default: ComposeView
+	};
 
 	function handleClose(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
+			if (currentModalType === 'custom-view') {
+				// Only handle custom view modals here
+				const url = new URL(window.location.href);
+				url.searchParams.delete('modal');
+				goto(url.toString(), { replaceState: true });
+			}
 			isModalOpen = false;
 		}
 	}
@@ -90,16 +107,25 @@
 		}
 	}
 
-	function toggleModal(type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy') {
+	function toggleModal(
+		type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' | 'custom-view'
+	) {
 		if (!type) {
-			isModalOpen = false;
-
-			// Clean up URL only when closing legal modal
-			if (currentModalType === 'legal-and-privacy-policy' && $page.url.searchParams.has('open')) {
+			if (currentModalType === 'custom-view') {
+				// Only handle custom view modals here
+				const url = new URL(window.location.href);
+				url.searchParams.delete('modal');
+				goto(url.toString(), { replaceState: true });
+			} else if (
+				currentModalType === 'legal-and-privacy-policy' &&
+				$page.url.searchParams.has('open')
+			) {
+				// Keep original legal modal behavior
 				const url = new URL(window.location.href);
 				url.searchParams.delete('open');
 				goto(url.pathname + url.search, { replaceState: true });
 			}
+			isModalOpen = false;
 			return;
 		}
 
@@ -141,10 +167,25 @@
 	}
 
 	function handleModalOpen(event: CustomEvent) {
-		const { type } = event.detail;
+		const { type, component } = event.detail;
 
 		if (type === 'legal-and-privacy-policy') {
+			// Keep original legal modal behavior
 			handleLegalModal();
+		} else if (type === 'custom-view' && component) {
+			currentModalType = 'custom-view';
+			if (component === 'Default') {
+				customView = {
+					component: COMPONENT_MAP[component],
+					props: { view: defaultView }
+				};
+			} else {
+				customView = {
+					component: COMPONENT_MAP[component],
+					props: event.detail.props || {}
+				};
+			}
+			isModalOpen = true;
 		} else {
 			toggleModal(type);
 		}
@@ -212,16 +253,27 @@
 			toggleModal();
 		};
 
+		const handleCustomView = (event: CustomEvent) => {
+			const viewConfig = event.detail;
+			if (viewConfig) {
+				currentModalType = 'custom-view';
+				customView = viewConfig;
+				isModalOpen = true;
+			}
+		};
+
 		window.addEventListener('updateView', handleViewUpdate as EventListener);
 		window.addEventListener('legalModalTrigger', handleLegalTrigger);
 		window.addEventListener('openModal', handleModalOpen);
 		window.addEventListener('closeModal', handleCloseModal);
+		window.addEventListener('customView', handleCustomView as EventListener);
 
 		return () => {
 			window.removeEventListener('updateView', handleViewUpdate as EventListener);
 			window.removeEventListener('legalModalTrigger', handleLegalTrigger);
 			window.removeEventListener('openModal', handleModalOpen);
 			window.removeEventListener('closeModal', handleCloseModal);
+			window.removeEventListener('customView', handleCustomView as EventListener);
 		};
 	});
 </script>
@@ -294,8 +346,8 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-6"
-			class:max-w-6xl={currentModalType === 'menu'}
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[2.125rem]"
+			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
 			on:click={handleContentClick}
@@ -340,11 +392,19 @@
 				<div class="relative">
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 				</div>
+			{:else if currentModalType === 'custom-view' && customView}
+				<div class="p-4">
+					<svelte:component
+						this={customView.component}
+						{...customView.props}
+						onClose={() => toggleModal()}
+					/>
+				</div>
 			{/if}
 		</div>
 
 		<button
-			class="absolute z-20 flex items-center justify-center transition-all duration-200 border rounded-full shadow-lg w-9 h-9 bottom-1.5 bg-tertiary-500 text-surface-800 hover:text-surface-800 hover:shadow-xl hover:scale-105 border-surface-700/50"
+			class="absolute z-20 flex items-center justify-center transition-all duration-200 border rounded-full shadow-lg w-9 h-9 -translate-x-1/2 left-1/2 bottom-1.5 bg-tertiary-500 text-surface-800 hover:text-surface-800 hover:shadow-xl hover:scale-105 border-surface-700/50"
 			on:click={() => toggleModal()}
 		>
 			<svg

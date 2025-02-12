@@ -21,6 +21,7 @@ HOW THIS SYSTEM WORKS:
 -->
 
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import Icon from '@iconify/svelte';
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { page } from '$app/stores';
@@ -30,6 +31,7 @@ HOW THIS SYSTEM WORKS:
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
 	import ProposalDashboard from './ProposalDashboard.svelte';
 	import ProposalProfile from './ProposalProfile.svelte';
+	import { view as defaultView } from '$lib/views/Default';
 
 	// Define types
 	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
@@ -248,17 +250,18 @@ HOW THIS SYSTEM WORKS:
 		.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0));
 
 	// Update URL parameter handling with proper typing
-	$: if ($page.url.searchParams.get('id')) {
-		const proposalId = $page.url.searchParams.get('id');
-		if (proposalId) {
+	$: {
+		const params = $page.url.searchParams;
+		const proposalId = params.get('id');
+		const modalParam = params.get('modal');
+
+		if (proposalId && modalParam === 'ProposalDetail') {
 			const proposal = $proposalsQuery.data?.proposals.find(
 				(p: { id: string }) => p.id === proposalId
 			);
 			if (proposal) {
 				activeTab.set(proposal.state as ProposalState);
-				setTimeout(() => {
-					expandedProposalId = proposalId;
-				}, 0);
+				expandedProposalId = proposalId;
 			}
 		}
 	}
@@ -419,8 +422,8 @@ HOW THIS SYSTEM WORKS:
 	function handleProposalSelect(state: ProposalState, id: string) {
 		expandedProposalId = id;
 		activeTab.set(state);
-		// Update URL without scrolling
-		goto(`/me?view=Proposals&id=${id}`, { replaceState: true });
+		// Update URL to include both view and modal params
+		goto(`/me?view=Proposals&modal=ProposalDetail&id=${id}`, { replaceState: true });
 	}
 
 	// Add a store to manage voters queries for all visible proposals
@@ -630,6 +633,20 @@ HOW THIS SYSTEM WORKS:
 
 		return 'just now';
 	}
+
+	// Update the close handler
+	function handleProposalClose() {
+		expandedProposalId = null;
+		// Remove only the modal and id params
+		goto('/me?view=Proposals', { replaceState: true });
+	}
+
+	// Update the handleOpenDefaultView function
+	function handleOpenDefaultView() {
+		if (browser) {
+			goto(`/me?view=Proposals&modal=Default`, { replaceState: true });
+		}
+	}
 </script>
 
 <!-- Root Container -->
@@ -743,6 +760,16 @@ HOW THIS SYSTEM WORKS:
 									New Idea
 								</button>
 							{/if}
+						</div>
+
+						<!-- Add this after the tabs navigation -->
+						<div class="flex justify-end mt-2 border-t border-surface-700/50 pt-2">
+							<button
+								on:click={handleOpenDefaultView}
+								class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-tertiary-500/20 text-tertiary-300 hover:bg-tertiary-500/30"
+							>
+								Open Default View
+							</button>
 						</div>
 					</div>
 				</div>
@@ -893,10 +920,7 @@ And explain how your proposal addresses one or more of these aspects:
 											>
 												<ProposalDetailView
 													{proposal}
-													onClose={() => {
-														expandedProposalId = null;
-														goto(`/me?view=Proposals`, { replaceState: true });
-													}}
+													onClose={handleProposalClose}
 													onVote={handleVote}
 													onDecision={handleDecision}
 													{userQuery}

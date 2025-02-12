@@ -12,6 +12,7 @@
 	// import GlobalChat from '$lib/components/GlobalChat.svelte';
 	import { chatStore, toggleChat, closeChat } from '$lib/stores/chatStore';
 	import Icon from '@iconify/svelte';
+	import { view as defaultView } from '$lib/views/Default';
 
 	export let data: LayoutData;
 	let { supabase, session, queryClient } = data;
@@ -23,14 +24,29 @@
 
 	let modalOpen = false;
 
+	// Add custom view state
+	let currentCustomView: any = null;
+
 	// Function to check and open modal based on URL parameter
 	function checkAndOpenModal() {
-		const modalParam = $page.url.searchParams.get('open');
-		if (modalParam === 'legal-and-privacy-policy' && !modalOpen) {
+		const modalParam = $page.url.searchParams.get('modal');
+		const modalType = $page.url.searchParams.get('open');
+
+		if (modalType === 'legal-and-privacy-policy' && !modalOpen) {
 			modalOpen = true;
 			window.dispatchEvent(
 				new CustomEvent('openModal', {
 					detail: { type: 'legal-and-privacy-policy' }
+				})
+			);
+		} else if (modalParam) {
+			modalOpen = true;
+			window.dispatchEvent(
+				new CustomEvent('openModal', {
+					detail: {
+						type: 'custom-view',
+						component: modalParam
+					}
 				})
 			);
 		}
@@ -40,7 +56,11 @@
 	function handleModalClose() {
 		modalOpen = false;
 		if (browser) {
-			goto('/', { replaceState: true });
+			const url = new URL(window.location.href);
+			// Remove modal and open params but keep view param
+			url.searchParams.delete('modal');
+			url.searchParams.delete('open');
+			goto(url.toString(), { replaceState: true });
 		}
 	}
 
@@ -50,16 +70,12 @@
 			// Initial check for modal
 			checkAndOpenModal();
 
-			// Listen for modal close event
-			window.addEventListener('closeModal', handleModalClose);
-
 			// Watch for URL changes
 			const unsubscribe = page.subscribe(() => {
 				checkAndOpenModal();
 			});
 
 			return () => {
-				window.removeEventListener('closeModal', handleModalClose);
 				unsubscribe();
 			};
 		}
@@ -99,6 +115,15 @@
 			}
 		}
 	}
+
+	function handleCustomView(viewConfig: any) {
+		currentCustomView = viewConfig;
+		window.dispatchEvent(
+			new CustomEvent('openModal', {
+				detail: { type: 'custom-view' }
+			})
+		);
+	}
 </script>
 
 <QueryClientProvider client={queryClient}>
@@ -106,7 +131,7 @@
 		<slot />
 	</div>
 
-	<ActionModal {session} {supabase} on:signout={handleSignOut} />
+	<ActionModal {session} {supabase} customView={currentCustomView} on:signout={handleSignOut} />
 
 	<!--
 	Navigation Pill - Temporarily disabled

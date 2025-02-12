@@ -1,5 +1,7 @@
-export const view = {
-    id: 'HelloEarth',
+import type { View } from '$lib/types/view';
+
+export const view: View = {
+    id: 'Default',
     layout: {
         areas: `
 			"main"
@@ -7,9 +9,18 @@ export const view = {
     },
     children: [
         {
-            id: 'xyz1',
+            id: 'helloWorld',
             component: 'HelloEarth',
             slot: 'main',
+            props: {
+                title: 'Hello from Default View'
+            }
         }
-    ]
-}
+    ],
+    metadata: {
+        composer: "ComposeView241119"
+    },
+    customConfig: {
+        showSpacer: false
+    }
+};

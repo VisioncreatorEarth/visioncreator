@@ -5,6 +5,7 @@
 	import { view as sendMailView } from '$lib/views/SendMail';
 	import ComposeView from '$lib/components/ComposeView.svelte';
 	import Icon from '@iconify/svelte';
+	import type { View } from '$lib/types/view';
 
 	export let session: any;
 	export let supabase: any;
@@ -15,7 +16,7 @@
 	let showContactUs = false;
 	const dispatch = createEventDispatcher();
 
-	let currentView = updateNameView;
+	let currentView: View = updateNameView;
 
 	async function handleSignOut() {
 		if (loading) return;
@@ -37,14 +38,16 @@
 
 			dispatch('signout');
 			window.location.href = '/';
-		} catch (error) {
+		} catch (error: unknown) {
 			console.error('Error during logout:', error);
-			logoutStatus = `Error signing out: ${error.message}`;
+			logoutStatus = `Error signing out: ${
+				error instanceof Error ? error.message : 'Unknown error'
+			}`;
 			loading = false;
 		}
 	}
 
-	const toggleComposeView = (view: typeof updateNameView | typeof sendMailView) => {
+	const toggleComposeView = (view: View) => {
 		currentView = view;
 		showComposeView = !showComposeView;
 		showContactUs = false;
@@ -58,8 +61,8 @@
 
 <div class="@container">
 	{#if loading}
-		<div class="flex flex-col justify-center items-center p-6 text-center">
-			<div class="flex gap-2 justify-center items-center mb-4">
+		<div class="flex flex-col items-center justify-center p-6 text-center">
+			<div class="flex items-center justify-center gap-2 mb-4">
 				<svg
 					class="w-8 h-8 animate-spin"
 					xmlns="http://www.w3.org/2000/svg"
@@ -104,7 +107,7 @@
 			/>
 		</div>
 	{:else}
-		<div class="flex flex-row gap-2 items-center pb-2">
+		<div class="flex flex-row items-center gap-2 pb-2">
 			<button
 				on:click={handleSignOut}
 				class="btn btn-sm sm:btn-md variant-ghost-surface !p-2 md:!p-3"
