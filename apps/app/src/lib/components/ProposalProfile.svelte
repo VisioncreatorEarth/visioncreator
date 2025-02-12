@@ -131,32 +131,33 @@ This is the profile area of the proposals view that:
 	}
 </script>
 
-<!-- Update the Mobile Toggle Button with more bottom spacing -->
+<!-- Single Mobile Toggle Button - Smaller with profile icon -->
 <button
-	class="fixed z-[200] p-2 transition-colors rounded-full shadow-xl bottom-[calc(2rem+env(safe-area-inset-bottom,1.5rem))] left-4 bg-surface-800 hover:bg-surface-700 lg:hidden"
-	on:click={toggleMenu}
+	class="flex fixed z-50 justify-center items-center w-12 h-12 rounded-full shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 bg-surface-800 hover:bg-surface-700 lg:hidden"
+	style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 1rem)); left: 1rem;"
+	on:click|stopPropagation={toggleMenu}
 >
-	<Icon icon={isOpen ? 'mdi:close' : 'mdi:account'} class="w-6 h-6 text-tertiary-300" />
+	<Icon icon="mdi:account" class="w-5 h-5 text-tertiary-300" />
 </button>
 
-<!-- Overlay when menu is open on mobile/tablet -->
+<!-- Overlay with proper z-index -->
 {#if isOpen && typeof window !== 'undefined' && window.innerWidth < 1024}
 	<div
-		class="fixed inset-0 z-40 bg-surface-800/50 backdrop-blur-sm"
-		on:click={() => activeSidePanel.close()}
+		class="fixed inset-0 z-[90] bg-surface-900/40 backdrop-blur-sm"
+		on:click|stopPropagation={() => activeSidePanel.close()}
 		transition:fly={{ duration: 200, opacity: 0 }}
 	/>
 {/if}
 
-<!-- Update the Aside Container z-index -->
+<!-- Aside Container -->
 <div
-	class="aside-panel left-0 z-[150] transition-transform duration-200 border-r {isOpen
+	class="fixed left-0 z-[95] h-[100dvh] w-[280px] transition-transform duration-200 border-r border-surface-700/50 {isOpen
 		? 'translate-x-0'
 		: '-translate-x-full'} {typeof window !== 'undefined' && window.innerWidth >= 1024
-		? 'lg:translate-x-0 w-[280px]'
-		: 'w-[280px]'}"
+		? 'lg:translate-x-0'
+		: ''}"
 >
-	<div class="flex flex-col h-full overflow-hidden bg-surface-900/95 backdrop-blur-sm">
+	<div class="flex flex-col h-full bg-surface-900/95 backdrop-blur-sm">
 		<!-- Main Content Area -->
 		<div class="flex-1 overflow-y-auto">
 			<div class="p-6 space-y-6">
@@ -277,14 +278,17 @@ This is the profile area of the proposals view that:
 			</div>
 		</div>
 
-		<!-- Update the close button at the bottom -->
+		<!-- Bottom area with close button -->
 		{#if typeof window !== 'undefined' && window.innerWidth < 1024}
-			<div class="p-4 border-t border-surface-700/50">
+			<div
+				class="p-4 border-t border-surface-700/50"
+				style="padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 1rem));"
+			>
 				<button
 					class="flex items-center justify-center w-10 h-10 transition-colors rounded-full hover:bg-surface-800"
-					on:click={() => activeSidePanel.close()}
+					on:click|stopPropagation={() => activeSidePanel.close()}
 				>
-					<Icon icon="mdi:close" class="w-6 h-6 text-tertiary-300" />
+					<Icon icon="mdi:close" class="w-5 h-5 text-tertiary-300" />
 				</button>
 			</div>
 		{/if}

@@ -881,14 +881,15 @@ And explain how your proposal addresses one or more of these aspects:
 								{#if proposal}
 									<!-- Update the detail view modal container -->
 									<div
-										class="fixed inset-0 z-[100] flex flex-col justify-end p-4 sm:p-6 backdrop-blur-sm bg-surface-900/95"
+										class="fixed inset-0 z-[100] flex flex-col justify-end backdrop-blur-sm bg-surface-900/95"
 									>
 										<div
-											class="relative w-full bg-surface-800 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+											class="relative w-full h-[90vh] bg-surface-800 rounded-t-3xl flex flex-col overflow-hidden"
+											style="padding-bottom: env(safe-area-inset-bottom, 0px);"
 										>
 											<div
-												class="h-full overflow-y-auto pb-safe"
-												style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));"
+												class="h-full overflow-y-auto"
+												style="padding-bottom: calc(2rem + env(safe-area-inset-bottom, 1rem));"
 											>
 												<ProposalDetailView
 													{proposal}
