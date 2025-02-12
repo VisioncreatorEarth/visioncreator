@@ -249,19 +249,19 @@ HOW THIS SYSTEM WORKS:
 		.filter((p: Proposal) => p.state === $activeTab)
 		.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0));
 
-	// Update URL parameter handling with proper typing
+	// Update URL parameter handling
 	$: {
 		const params = $page.url.searchParams;
-		const proposalId = params.get('id');
-		const modalParam = params.get('modal');
+		const modalType = params.get('modal');
+		const props = parseUrlProps(params.get('props'));
 
-		if (proposalId && modalParam === 'ProposalDetail') {
+		if (modalType === 'ProposalDetail' && props.id) {
 			const proposal = $proposalsQuery.data?.proposals.find(
-				(p: { id: string }) => p.id === proposalId
+				(p: { id: string }) => p.id === props.id
 			);
 			if (proposal) {
 				activeTab.set(proposal.state as ProposalState);
-				expandedProposalId = proposalId;
+				expandedProposalId = props.id;
 			}
 		}
 	}
@@ -422,8 +422,8 @@ HOW THIS SYSTEM WORKS:
 	function handleProposalSelect(state: ProposalState, id: string) {
 		expandedProposalId = id;
 		activeTab.set(state);
-		// Update URL to include both view and modal params
-		goto(`/me?view=Proposals&modal=ProposalDetail&id=${id}`, { replaceState: true });
+		// Always use the modal route
+		goto(`/me?view=Proposals&modal=ProposalDetail&props=id=${id}`, { replaceState: true });
 	}
 
 	// Add a store to manage voters queries for all visible proposals
@@ -647,6 +647,21 @@ HOW THIS SYSTEM WORKS:
 			goto(`/me?view=Proposals&modal=Default`, { replaceState: true });
 		}
 	}
+
+	// Helper function to parse props (same as in ActionModal)
+	function parseUrlProps(propsString: string | null): Record<string, string> {
+		if (!propsString) return {};
+		try {
+			return propsString.split(',').reduce((acc, pair) => {
+				const [key, value] = pair.split('=');
+				acc[key] = value;
+				return acc;
+			}, {} as Record<string, string>);
+		} catch (e) {
+			console.error('Failed to parse props:', e);
+			return {};
+		}
+	}
 </script>
 
 <!-- Root Container -->
@@ -763,7 +778,7 @@ HOW THIS SYSTEM WORKS:
 						</div>
 
 						<!-- Add this after the tabs navigation -->
-						<div class="flex justify-end mt-2 border-t border-surface-700/50 pt-2">
+						<div class="flex justify-end pt-2 mt-2 border-t border-surface-700/50">
 							<button
 								on:click={handleOpenDefaultView}
 								class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-tertiary-500/20 text-tertiary-300 hover:bg-tertiary-500/30"
@@ -901,73 +916,31 @@ And explain how your proposal addresses one or more of these aspects:
 					<div class="max-w-5xl mx-auto">
 						<!-- Proposals List -->
 						<div class="grid gap-4 px-4 pt-4 pb-64 sm:pb-48">
-							{#if expandedProposalId}
-								{@const proposal = $proposalsQuery.data?.proposals.find(
-									(p) => p.id === expandedProposalId
-								)}
-								{#if proposal}
-									<!-- Update the detail view modal container -->
-									<div
-										class="fixed inset-0 z-[100] flex flex-col justify-end backdrop-blur-sm bg-surface-900/95"
-									>
-										<div
-											class="relative w-full h-[90vh] bg-surface-800 rounded-t-3xl flex flex-col overflow-hidden"
-											style="padding-bottom: env(safe-area-inset-bottom, 0px);"
-										>
-											<div
-												class="h-full overflow-y-auto"
-												style="padding-bottom: calc(2rem + env(safe-area-inset-bottom, 1rem));"
-											>
-												<ProposalDetailView
-													{proposal}
-													onClose={handleProposalClose}
-													onVote={handleVote}
-													onDecision={handleDecision}
-													{userQuery}
-													{getVotersForProposal}
-													{canVote}
-													{canUnstakeVote}
-													{getVoteDisplay}
-													{isAdmin}
-													{getTimeAgo}
-													{getStateColor}
-													{getStateBgColor}
-													{getStateIcon}
-													{getStateLabel}
-													{userTokens}
-													{getNextVoteCost}
-												/>
-											</div>
-										</div>
-									</div>
-								{/if}
-							{:else}
-								{#each filteredProposals as proposal (proposal.id)}
-									<div
-										id="proposal-{proposal.id}"
-										class={getProposalCardClasses(proposal)}
-										on:click={() => {
-											handleProposalSelect(proposal.state, proposal.id);
-											centerProposalInView(proposal.id);
-										}}
-									>
-										<ProposalHeaderItem
-											{proposal}
-											{userData}
-											{getVotersForProposal}
-											{canVote}
-											{canUnstakeVote}
-											{getVoteDisplay}
-											onVote={handleVote}
-											{userTokens}
-											{getNextVoteCost}
-											onDecision={handleDecision}
-											{isAdmin}
-											{getTimeAgo}
-										/>
-									</div>
-								{/each}
-							{/if}
+							{#each filteredProposals as proposal (proposal.id)}
+								<div
+									id="proposal-{proposal.id}"
+									class={getProposalCardClasses(proposal)}
+									on:click={() => {
+										handleProposalSelect(proposal.state, proposal.id);
+										centerProposalInView(proposal.id);
+									}}
+								>
+									<ProposalHeaderItem
+										{proposal}
+										{userData}
+										{getVotersForProposal}
+										{canVote}
+										{canUnstakeVote}
+										{getVoteDisplay}
+										onVote={handleVote}
+										{userTokens}
+										{getNextVoteCost}
+										onDecision={handleDecision}
+										{isAdmin}
+										{getTimeAgo}
+									/>
+								</div>
+							{/each}
 						</div>
 					</div>
 				</div>

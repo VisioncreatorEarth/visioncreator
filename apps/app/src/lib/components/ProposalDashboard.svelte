@@ -27,9 +27,9 @@ This is the dashboard area of the proposals view that:
 	import { createQuery } from '$lib/wundergraph';
 
 	// Props
-	export let activeTab: ProposalState;
-	export let onStateSelect: (state: ProposalState) => void;
-	export let states: ProposalState[];
+	export let activeTab: string;
+	export let states: string[];
+	export let onStateSelect: (state: string) => void;
 
 	// Query organization stats
 	const orgaStatsQuery = createQuery({

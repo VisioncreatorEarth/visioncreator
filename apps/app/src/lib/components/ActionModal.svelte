@@ -45,6 +45,21 @@
 		Default: ComposeView
 	};
 
+	// Add helper to parse URL props
+	function parseUrlProps(propsString: string | null): Record<string, string> {
+		if (!propsString) return {};
+		try {
+			return propsString.split(',').reduce((acc, pair) => {
+				const [key, value] = pair.split('=');
+				acc[key] = value;
+				return acc;
+			}, {} as Record<string, string>);
+		} catch (e) {
+			console.error('Failed to parse props:', e);
+			return {};
+		}
+	}
+
 	function handleClose(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			if (currentModalType === 'custom-view') {
@@ -170,19 +185,30 @@
 		const { type, component } = event.detail;
 
 		if (type === 'legal-and-privacy-policy') {
-			// Keep original legal modal behavior
 			handleLegalModal();
 		} else if (type === 'custom-view' && component) {
 			currentModalType = 'custom-view';
+
+			// Get props from URL if available
+			const urlProps = parseUrlProps($page.url.searchParams.get('props'));
+
 			if (component === 'Default') {
 				customView = {
 					component: COMPONENT_MAP[component],
 					props: { view: defaultView }
 				};
+			} else if (component === 'ProposalDetail') {
+				customView = {
+					component: COMPONENT_MAP[component],
+					props: {
+						proposalId: urlProps.id,
+						onClose: () => toggleModal()
+					}
+				};
 			} else {
 				customView = {
 					component: COMPONENT_MAP[component],
-					props: event.detail.props || {}
+					props: { ...urlProps, onClose: () => toggleModal() }
 				};
 			}
 			isModalOpen = true;
@@ -338,7 +364,7 @@
 
 {#if isModalOpen}
 	<div
-		class="fixed inset-0 z-50 flex items-end justify-center p-4 backdrop-blur-sm sm:p-6 bg-surface-900/40"
+		class="fixed inset-0 z-50 flex items-end justify-center backdrop-blur-sm bg-surface-900/40"
 		on:click={handleClose}
 		on:keydown={(e) => e.key === 'Escape' && handleClose()}
 		role="dialog"
@@ -346,7 +372,7 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[2.125rem]"
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[3rem]"
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
@@ -393,18 +419,20 @@
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 				</div>
 			{:else if currentModalType === 'custom-view' && customView}
-				<div class="p-4">
-					<svelte:component
-						this={customView.component}
-						{...customView.props}
-						onClose={() => toggleModal()}
-					/>
+				<div class="relative flex flex-col w-full h-full max-h-[90vh] overflow-hidden">
+					<div class="flex-1 overflow-y-auto">
+						<svelte:component
+							this={customView.component}
+							{...customView.props}
+							onClose={() => toggleModal()}
+						/>
+					</div>
 				</div>
 			{/if}
 		</div>
 
 		<button
-			class="absolute z-20 flex items-center justify-center transition-all duration-200 border rounded-full shadow-lg w-9 h-9 -translate-x-1/2 left-1/2 bottom-1.5 bg-tertiary-500 text-surface-800 hover:text-surface-800 hover:shadow-xl hover:scale-105 border-surface-700/50"
+			class="absolute z-20 flex items-center justify-center transition-all duration-200 -translate-x-1/2 border rounded-full shadow-lg bottom-2 w-9 h-9 left-1/2 bg-tertiary-500 text-surface-800 hover:text-surface-800 hover:shadow-xl hover:scale-105 border-surface-700/50"
 			on:click={() => toggleModal()}
 		>
 			<svg
