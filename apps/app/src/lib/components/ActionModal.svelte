@@ -242,7 +242,7 @@
 	/>
 
 	<button
-		class="flex fixed bottom-4 left-1/2 z-50 justify-center items-center rounded-full shadow-lg transition-all duration-300 -translate-x-1/2 hover:shadow-xl hover:scale-105"
+		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 rounded-full shadow-lg bottom-4 left-1/2 hover:shadow-xl hover:scale-105"
 		class:bg-error-500={isRecording}
 		class:bg-surface-800={isProcessing}
 		class:bg-surface-600={!isRecording && !isProcessing}
@@ -277,7 +277,7 @@
 	</button>
 {:else if !isModalOpen}
 	<button
-		class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 btn btn-sm variant-ghost-secondary"
+		class="fixed z-50 -translate-x-1/2 bottom-4 left-1/2 btn btn-sm variant-ghost-secondary"
 		on:click={() => toggleModal('login')}
 	>
 		<span>Login</span>
@@ -286,7 +286,7 @@
 
 {#if isModalOpen}
 	<div
-		class="flex fixed inset-0 z-50 justify-center items-end p-4 backdrop-blur-sm sm:p-6 bg-surface-900/40"
+		class="fixed inset-0 z-50 flex items-end justify-center p-4 backdrop-blur-sm sm:p-6 bg-surface-900/40"
 		on:click={handleClose}
 		on:keydown={(e) => e.key === 'Escape' && handleClose()}
 		role="dialog"
@@ -294,32 +294,15 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden"
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-6"
 			class:max-w-6xl={currentModalType === 'menu'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
-				<div class="flex relative flex-col">
+				<div class="relative flex flex-col">
 					<Auth modalType={currentModalType} {supabase} />
-					<div class="flex justify-center mb-3">
-						<button
-							class="flex justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
-							on:click={() => toggleModal()}
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke-width="2"
-								stroke="currentColor"
-								class="w-4 h-4"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-							</svg>
-						</button>
-					</div>
 				</div>
 			{:else if currentModalType === 'menu'}
 				<div class="relative">
@@ -352,42 +335,28 @@
 							on:close={() => toggleModal()}
 						/>
 					</div>
-					<button
-						class="flex absolute bottom-2 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
-						on:click={() => toggleModal()}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-						</svg>
-					</button>
 				</div>
 			{:else if currentModalType === 'legal-and-privacy-policy'}
 				<div class="relative">
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
-					<button
-						class="flex absolute top-4 right-4 justify-center items-center w-8 h-8 rounded-full transition-colors bg-surface-700 hover:bg-surface-800 text-tertiary-400 hover:text-tertiary-300"
-						on:click={() => toggleModal()}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-						</svg>
-					</button>
 				</div>
 			{/if}
 		</div>
+
+		<button
+			class="absolute z-20 flex items-center justify-center transition-all duration-200 border rounded-full shadow-lg w-9 h-9 bottom-1.5 bg-tertiary-500 text-surface-800 hover:text-surface-800 hover:shadow-xl hover:scale-105 border-surface-700/50"
+			on:click={() => toggleModal()}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="2.5"
+				stroke="currentColor"
+				class="w-4 h-4"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+			</svg>
+		</button>
 	</div>
 {/if}
