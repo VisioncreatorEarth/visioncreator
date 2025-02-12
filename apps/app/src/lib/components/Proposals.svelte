@@ -32,6 +32,7 @@ HOW THIS SYSTEM WORKS:
 	import ProposalDashboard from './ProposalDashboard.svelte';
 	import ProposalProfile from './ProposalProfile.svelte';
 	import { view as defaultView } from '$lib/views/Default';
+	import { asidePanels } from '$lib/stores/asidePanelStore';
 
 	// Define types
 	type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
@@ -103,19 +104,9 @@ HOW THIS SYSTEM WORKS:
 		refetchInterval: 500
 	}) as unknown as WundergraphQuery<Operations['getUserTokens']>;
 
-	// Create a single query for the current proposal's voters
-	$: currentProposalVotersQuery = createQuery<Operations['getProposalVoters']>({
-		operationName: 'getProposalVoters',
-		input: { proposalId: expandedProposalId || '' },
-		enabled: !!expandedProposalId,
-		refetchInterval: 1000
-	}) as unknown as WundergraphQuery<Operations['getProposalVoters']>;
-
 	// State management
 	const activeTab = writable<ProposalState>('idea');
-	let expandedProposalId: string | null = null;
 	let userTokens = 0;
-	let showMobileProfile = false;
 
 	// Constants
 	const PROPOSAL_TABS: ProposalState[] = ['idea', 'draft', 'pending', 'accepted', 'rejected'];
@@ -252,23 +243,10 @@ HOW THIS SYSTEM WORKS:
 	// Update URL parameter handling
 	$: {
 		const params = $page.url.searchParams;
-		const modalType = params.get('modal');
-		const props = parseUrlProps(params.get('props'));
-
-		if (modalType === 'ProposalDetail' && props.id) {
-			const proposal = $proposalsQuery.data?.proposals.find(
-				(p: { id: string }) => p.id === props.id
-			);
-			if (proposal) {
-				activeTab.set(proposal.state as ProposalState);
-				expandedProposalId = props.id;
-			}
+		const state = params.get('state');
+		if (state && PROPOSAL_TABS.includes(state as ProposalState)) {
+			activeTab.set(state as ProposalState);
 		}
-	}
-
-	// Reset expanded view when tab changes
-	$: if ($activeTab) {
-		expandedProposalId = null;
 	}
 
 	// Add quadratic voting helper function
@@ -368,8 +346,7 @@ HOW THIS SYSTEM WORKS:
 				// Safely refetch all relevant data
 				const refetchPromises = [
 					$userTokensQuery.refetch && $userTokensQuery.refetch(),
-					$proposalsQuery.refetch && $proposalsQuery.refetch(),
-					$currentProposalVotersQuery.refetch && $currentProposalVotersQuery.refetch()
+					$proposalsQuery.refetch && $proposalsQuery.refetch()
 				].filter(Boolean);
 
 				// Add voter queries refetch if available
@@ -419,13 +396,6 @@ HOW THIS SYSTEM WORKS:
 		return Math.pow(voteNumber + 1, 2) - Math.pow(voteNumber, 2);
 	}
 
-	function handleProposalSelect(state: ProposalState, id: string) {
-		expandedProposalId = id;
-		activeTab.set(state);
-		// Always use the modal route
-		goto(`/me?view=Proposals&modal=ProposalDetail&props=id=${id}`, { replaceState: true });
-	}
-
 	// Add a store to manage voters queries for all visible proposals
 	const votersQueriesStore = writable(new Map<string, ReturnType<typeof createQuery>>());
 
@@ -458,23 +428,6 @@ HOW THIS SYSTEM WORKS:
 		});
 	}
 
-	// Update expanded proposal handling without refetch
-	$: if (expandedProposalId) {
-		const query = $votersQueriesStore.get(expandedProposalId);
-		if (query) {
-			// Force a new query instance to trigger a refresh
-			$votersQueriesStore.set(
-				expandedProposalId,
-				createQuery({
-					operationName: 'getProposalVoters',
-					input: { proposalId: expandedProposalId },
-					enabled: true,
-					refetchInterval: 1000
-				})
-			);
-		}
-	}
-
 	// Function to get voters for a proposal
 	function getVotersForProposal(proposalId: string): VoterInfo[] {
 		return $votersStore.get(proposalId) || [];
@@ -500,11 +453,6 @@ HOW THIS SYSTEM WORKS:
 				name: $userQuery.data.name as string,
 				onboarded: $userQuery.data.onboarded as boolean
 		  }
-		: null;
-
-	// Add expanded proposal reactive variable
-	$: expandedProposal = expandedProposalId
-		? $proposalsQuery.data?.proposals.find((p) => p.id === expandedProposalId)
 		: null;
 
 	// Add new proposal form state
@@ -586,17 +534,8 @@ HOW THIS SYSTEM WORKS:
 			if (result?.success) {
 				// Refresh all relevant data
 				await Promise.all(
-					[
-						proposalsQuery.refetch?.(),
-						currentProposalVotersQuery.refetch?.(),
-						userTokensQuery.refetch?.()
-					].filter(Boolean)
+					[proposalsQuery.refetch?.(), userTokensQuery.refetch?.()].filter(Boolean)
 				);
-
-				// If the proposal was the expanded one, close it
-				if (expandedProposalId === proposalId) {
-					expandedProposalId = null;
-				}
 			}
 		} catch (error) {
 			console.error('Failed to handle decision:', error);
@@ -634,13 +573,6 @@ HOW THIS SYSTEM WORKS:
 		return 'just now';
 	}
 
-	// Update the close handler
-	function handleProposalClose() {
-		expandedProposalId = null;
-		// Remove only the modal and id params
-		goto('/me?view=Proposals', { replaceState: true });
-	}
-
 	// Update the handleOpenDefaultView function
 	function handleOpenDefaultView() {
 		if (browser) {
@@ -662,89 +594,36 @@ HOW THIS SYSTEM WORKS:
 			return {};
 		}
 	}
+
+	// Remove internal toggle logic and use store
+	$: showProfile = $asidePanels.left === 'ProposalProfile';
 </script>
 
 <!-- Root Container -->
 <div class="h-full bg-surface-900">
-	<!-- Main Grid Layout - Grid on desktop, stack on mobile -->
-	<div class="grid h-full lg:grid-cols-[280px_1fr]">
-		<!-- Left Profile (Desktop) -->
-		<div class="hidden border-r lg:block border-surface-700/50 bg-surface-800/50">
-			<div class="h-full overflow-y-auto">
-				<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
-			</div>
-		</div>
-
+	<!-- Main Grid Layout - No more aside, just the content -->
+	<div class="h-full">
 		<!-- Main Content Area -->
-		<div class="flex flex-col h-full overflow-hidden">
-			<!-- Dashboard -->
-			<ProposalDashboard
-				selectedState={$activeTab}
-				onStateSelect={(state) => activeTab.set(state)}
-				states={PROPOSAL_TABS}
-			>
-				<!-- Add this near the top of the dashboard area, next to Visioncreator title -->
-				<div class="flex items-center justify-between p-4">
-					<div class="flex items-center gap-4">
-						<h2 class="text-2xl font-semibold text-tertiary-100">Visioncreator</h2>
-						<span
-							class="px-2 py-0.5 text-xs font-medium rounded-full bg-primary-500/20 text-primary-300"
-						>
-							BETA
-						</span>
-					</div>
-				</div>
-			</ProposalDashboard>
+		<div class="flex flex-col h-full">
+			<!-- Header -->
+			<div class="flex-none border-b border-surface-700/50">
+				<ProposalDashboard />
+			</div>
 
-			<!-- Mobile Profile Toggle -->
-			<button
-				class="fixed z-50 p-2 transition-colors rounded-full shadow-xl bottom-6 left-4 lg:hidden bg-surface-800 hover:bg-surface-700"
-				on:click={() => (showMobileProfile = !showMobileProfile)}
-			>
-				<Icon
-					icon={showMobileProfile ? 'mdi:close' : 'mdi:account'}
-					class="w-6 h-6 text-tertiary-300"
-				/>
-			</button>
-
-			<!-- Mobile Profile (Collapsible) -->
-			{#if showMobileProfile}
-				<div class="lg:hidden">
-					<ProposalProfile onProposalSelect={handleProposalSelect} voteThreshold={10} />
-				</div>
-			{/if}
-
-			<!-- Main Content Scroll Area -->
-			<div class="flex-1 overflow-y-auto">
+			<!-- Content -->
+			<div class="flex-1 overflow-hidden">
 				<!-- Tabs Bar - Fixed to top -->
 				<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
 					<div class="max-w-5xl px-4 py-2 mx-auto">
-						<!-- Main Navigation Row -->
 						<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-							<!-- Back Button and Tabs -->
 							<div class="flex items-center gap-1 overflow-x-auto sm:gap-2 thin-scrollbar">
-								{#if expandedProposalId}
-									<button
-										on:click={() => {
-											expandedProposalId = null;
-											goto(`/me?view=Proposals`, { replaceState: true });
-										}}
-										class="flex items-center gap-1 px-2 sm:px-4 py-1.5 sm:py-2 mr-1 sm:mr-2 text-xs sm:text-sm font-medium transition-colors rounded-lg hover:bg-tertiary-500/20 bg-tertiary-500/10"
-									>
-										<Icon icon="mdi:arrow-left" class="w-4 h-4 sm:w-5 sm:h-5" />
-										<span class="hidden sm:inline">Back to List</span>
-									</button>
-								{/if}
 								{#each PROPOSAL_TABS as state}
 									<button
 										class="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors rounded-lg whitespace-nowrap {$activeTab ===
 										state
 											? getStateBgColor(state) + ' ' + getStateColor(state)
 											: 'hover:bg-surface-700/20 text-surface-300'}"
-										on:click={() => {
-											expandedProposalId = null;
-											activeTab.set(state);
-										}}
+										on:click={() => activeTab.set(state)}
 										aria-selected={$activeTab === state}
 									>
 										<div class="flex items-center gap-1 sm:gap-2">
@@ -754,37 +633,6 @@ HOW THIS SYSTEM WORKS:
 									</button>
 								{/each}
 							</div>
-
-							<!-- Create New Idea Button - Second Row on Mobile -->
-							{#if !expandedProposalId}
-								<div class="flex w-full pt-2 border-t sm:hidden border-surface-700/50">
-									<button
-										on:click={() => (showNewProposalForm = true)}
-										class="w-full py-2 text-sm btn bg-gradient-to-br variant-gradient-secondary-primary"
-									>
-										<Icon icon="mdi:plus" class="w-4 h-4" />
-										New Idea
-									</button>
-								</div>
-								<!-- Desktop Create Button -->
-								<button
-									on:click={() => (showNewProposalForm = true)}
-									class="order-first hidden py-2 text-sm sm:flex btn bg-gradient-to-br variant-gradient-secondary-primary"
-								>
-									<Icon icon="mdi:plus" class="w-4 h-4" />
-									New Idea
-								</button>
-							{/if}
-						</div>
-
-						<!-- Add this after the tabs navigation -->
-						<div class="flex justify-end pt-2 mt-2 border-t border-surface-700/50">
-							<button
-								on:click={handleOpenDefaultView}
-								class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-tertiary-500/20 text-tertiary-300 hover:bg-tertiary-500/30"
-							>
-								Open Default View
-							</button>
 						</div>
 					</div>
 				</div>
@@ -921,8 +769,10 @@ And explain how your proposal addresses one or more of these aspects:
 									id="proposal-{proposal.id}"
 									class={getProposalCardClasses(proposal)}
 									on:click={() => {
-										handleProposalSelect(proposal.state, proposal.id);
-										centerProposalInView(proposal.id);
+										const url = new URL(window.location.href);
+										url.searchParams.set('modal', 'ProposalDetail');
+										url.searchParams.set('props', `id=${proposal.id}`);
+										goto(url.toString(), { replaceState: true });
 									}}
 								>
 									<ProposalHeaderItem

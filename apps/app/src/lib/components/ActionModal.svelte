@@ -14,6 +14,7 @@
 	import ComposeView from '$lib/components/ComposeView.svelte';
 	import ProposalDetailView from './ProposalDetailView.svelte';
 	import { view as defaultView } from '$lib/views/Default';
+	import ProposalProfile from './ProposalProfile.svelte';
 
 	export let session: any;
 	export let supabase: any;
@@ -36,13 +37,19 @@
 	const DEBOUNCE_DELAY = 300;
 
 	// Keep track of the initial modal type
-	let currentModalType: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' | 'custom-view' =
-		'menu';
+	let currentModalType:
+		| 'login'
+		| 'signup'
+		| 'menu'
+		| 'legal-and-privacy-policy'
+		| 'custom-view'
+		| 'aside-view' = 'menu';
 
 	// Add component mapping
 	const COMPONENT_MAP = {
 		ProposalDetail: ProposalDetailView,
-		Default: ComposeView
+		Default: ComposeView,
+		ProposalProfile: ProposalProfile
 	};
 
 	// Add helper to parse URL props
@@ -63,9 +70,15 @@
 	function handleClose(event?: MouseEvent) {
 		if (!event || event.target === event.currentTarget) {
 			if (currentModalType === 'custom-view') {
-				// Only handle custom view modals here
+				// Clean up URL - remove modal, props, and any view-specific params
 				const url = new URL(window.location.href);
 				url.searchParams.delete('modal');
+				url.searchParams.delete('props');
+
+				// Keep only the base view parameter
+				const currentView = url.searchParams.get('view');
+				url.searchParams.set('view', 'Proposals');
+
 				goto(url.toString(), { replaceState: true });
 			}
 			isModalOpen = false;
@@ -123,19 +136,23 @@
 	}
 
 	function toggleModal(
-		type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' | 'custom-view'
+		type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' | 'custom-view' | 'aside-view'
 	) {
 		if (!type) {
 			if (currentModalType === 'custom-view') {
-				// Only handle custom view modals here
+				// Clean up URL params
 				const url = new URL(window.location.href);
 				url.searchParams.delete('modal');
+				url.searchParams.delete('props');
+
+				// Keep only the base view parameter
+				url.searchParams.set('view', 'Proposals');
+
 				goto(url.toString(), { replaceState: true });
 			} else if (
 				currentModalType === 'legal-and-privacy-policy' &&
 				$page.url.searchParams.has('open')
 			) {
-				// Keep original legal modal behavior
 				const url = new URL(window.location.href);
 				url.searchParams.delete('open');
 				goto(url.pathname + url.search, { replaceState: true });
@@ -184,7 +201,14 @@
 	function handleModalOpen(event: CustomEvent) {
 		const { type, component } = event.detail;
 
-		if (type === 'legal-and-privacy-policy') {
+		if (type === 'aside-view' && component) {
+			currentModalType = 'aside-view';
+			customView = {
+				component: COMPONENT_MAP[component],
+				props: parseUrlProps($page.url.searchParams.get('asideProps'))
+			};
+			isModalOpen = true;
+		} else if (type === 'legal-and-privacy-policy') {
 			handleLegalModal();
 		} else if (type === 'custom-view' && component) {
 			currentModalType = 'custom-view';
@@ -302,65 +326,118 @@
 			window.removeEventListener('customView', handleCustomView as EventListener);
 		};
 	});
+
+	// Add function to handle aside toggle
+	function toggleAside(side: 'left' | 'right', component: string, props?: Record<string, string>) {
+		const url = new URL(window.location.href);
+		const currentAside = url.searchParams.get(
+			`aside${side.charAt(0).toUpperCase() + side.slice(1)}`
+		);
+
+		if (currentAside === component) {
+			// If same component, remove it (toggle off)
+			url.searchParams.delete(`aside${side.charAt(0).toUpperCase() + side.slice(1)}`);
+			if (props) {
+				url.searchParams.delete('asideProps');
+			}
+		} else {
+			// Set new component
+			url.searchParams.set(`aside${side.charAt(0).toUpperCase() + side.slice(1)}`, component);
+			if (props) {
+				url.searchParams.set(
+					'asideProps',
+					Object.entries(props)
+						.map(([k, v]) => `${k}=${v}`)
+						.join(',')
+				);
+			}
+		}
+
+		goto(url.toString(), { replaceState: true });
+	}
 </script>
 
 <svelte:window on:openModal={handleModalOpen} />
 
-{#if session}
-	<MyIntent
-		bind:this={myIntentRef}
-		{session}
-		isOpen={isIntentModalOpen}
-		onRecordingStateChange={(rec, proc) => {
-			isRecording = rec;
-			isProcessing = proc;
-		}}
-		on:close={handleIntentClose}
-		style="display: none;"
-	/>
+<!-- Update the nav pills container - Only show when authenticated -->
+<div class="fixed z-50 flex items-center justify-center gap-3 -translate-x-1/2 bottom-4 left-1/2">
+	{#if session}
+		<!-- Left Nav Pill - Ghost Style -->
+		<button
+			class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
+			on:click={() => {
+				if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+					window.dispatchEvent(
+						new CustomEvent('openModal', {
+							detail: {
+								type: 'aside-view',
+								component: 'ProposalProfile'
+							}
+						})
+					);
+				} else {
+					toggleAside('left', 'ProposalProfile');
+				}
+			}}
+		>
+			<Icon icon="heroicons:user-circle" class="w-5 h-5" />
+		</button>
 
-	<button
-		class="fixed z-50 flex items-center justify-center transition-all duration-300 -translate-x-1/2 rounded-full shadow-lg bottom-4 left-1/2 hover:shadow-xl hover:scale-105"
-		class:bg-error-500={isRecording}
-		class:bg-surface-800={isProcessing}
-		class:bg-surface-600={!isRecording && !isProcessing}
-		class:w-14={!isRecording}
-		class:h-14={true}
-		class:w-28={isRecording}
-		on:mousedown={handleMouseDown}
-		on:mouseup={handleMouseUp}
-		on:mouseleave={handleMouseUp}
-		on:touchstart|preventDefault={handleMouseDown}
-		on:touchend|preventDefault={handleMouseUp}
-		on:touchcancel|preventDefault={handleMouseUp}
-		style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
-	>
-		{#if isRecording}
-			<div class="flex items-center gap-2">
-				<div class="w-3 h-3 bg-white rounded-full animate-pulse" />
-				<span class="text-sm font-medium text-white">End Call</span>
-			</div>
-		{:else if isProcessing}
-			<svg class="w-6 h-6 text-tertiary-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-				/>
-			</svg>
-		{:else}
-			<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-		{/if}
-	</button>
-{:else if !isModalOpen}
-	<button
-		class="fixed z-50 -translate-x-1/2 bottom-4 left-1/2 btn btn-sm variant-ghost-secondary"
-		on:click={() => toggleModal('login')}
-	>
-		<span>Login</span>
-	</button>
-{/if}
+		<!-- Main Action Button (existing) -->
+		<button
+			class="flex items-center justify-center transition-all duration-300 rounded-full shadow-lg hover:shadow-xl hover:scale-105"
+			class:bg-error-500={isRecording}
+			class:bg-surface-800={isProcessing}
+			class:bg-surface-600={!isRecording && !isProcessing}
+			class:w-14={!isRecording}
+			class:h-14={true}
+			class:w-28={isRecording}
+			on:mousedown={handleMouseDown}
+			on:mouseup={handleMouseUp}
+			on:mouseleave={handleMouseUp}
+			on:touchstart|preventDefault={handleMouseDown}
+			on:touchend|preventDefault={handleMouseUp}
+			on:touchcancel|preventDefault={handleMouseUp}
+			style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
+		>
+			{#if isRecording}
+				<div class="flex items-center gap-2">
+					<div class="w-3 h-3 bg-white rounded-full animate-pulse" />
+					<span class="text-sm font-medium text-white">End Call</span>
+				</div>
+			{:else if isProcessing}
+				<svg
+					class="w-6 h-6 text-tertiary-200"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+					/>
+				</svg>
+			{:else}
+				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+			{/if}
+		</button>
+
+		<!-- Right Nav Pill - Ghost Style -->
+		<button
+			class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
+			on:click={() => goto('/me', { replaceState: true })}
+		>
+			<Icon icon="heroicons:home" class="w-5 h-5" />
+		</button>
+	{:else if !isModalOpen}
+		<!-- Login Button -->
+		<button class="btn btn-sm variant-ghost-secondary" on:click={() => toggleModal('login')}>
+			<span>Login</span>
+		</button>
+	{/if}
+</div>
 
 {#if isModalOpen}
 	<div
@@ -372,10 +449,12 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[3rem]"
+			class="relative z-10 w-[calc(100%-1rem)] md:w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[3rem] mx-2 md:mx-0"
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
+			class:h-[92vh]={currentModalType === 'aside-view'}
+			class:md:h-[85vh]={currentModalType === 'aside-view'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
@@ -419,7 +498,7 @@
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 				</div>
 			{:else if currentModalType === 'custom-view' && customView}
-				<div class="relative flex flex-col w-full h-full max-h-[90vh] overflow-hidden">
+				<div class="relative flex flex-col w-full h-[92vh] md:h-[85vh] h-full overflow-hidden">
 					<div class="flex-1 overflow-y-auto">
 						<svelte:component
 							this={customView.component}
@@ -427,6 +506,10 @@
 							onClose={() => toggleModal()}
 						/>
 					</div>
+				</div>
+			{:else if currentModalType === 'aside-view' && customView}
+				<div class="flex-1 overflow-y-auto">
+					<svelte:component this={customView.component} {...customView.props} />
 				</div>
 			{/if}
 		</div>

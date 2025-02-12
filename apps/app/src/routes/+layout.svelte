@@ -13,6 +13,7 @@
 	import { chatStore, toggleChat, closeChat } from '$lib/stores/chatStore';
 	import Icon from '@iconify/svelte';
 	import { view as defaultView } from '$lib/views/Default';
+	import AsidePanel from '$lib/components/AsidePanel.svelte';
 
 	export let data: LayoutData;
 	let { supabase, session, queryClient } = data;
@@ -127,8 +128,17 @@
 </script>
 
 <QueryClientProvider client={queryClient}>
-	<div class="@container overflow-hidden w-full h-full">
-		<slot />
+	<div class="flex min-h-screen bg-surface-900 @container overflow-hidden w-full">
+		<!-- Left Aside Area -->
+		<AsidePanel side="left" />
+
+		<!-- Main Content Area -->
+		<div class="flex flex-col flex-1 min-h-screen">
+			<slot />
+		</div>
+
+		<!-- Right Aside Area -->
+		<AsidePanel side="right" />
 	</div>
 
 	<ActionModal {session} {supabase} customView={currentCustomView} on:signout={handleSignOut} />

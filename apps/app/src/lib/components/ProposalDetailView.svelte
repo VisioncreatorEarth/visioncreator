@@ -274,74 +274,69 @@ HOW THIS COMPONENT WORKS:
 	}
 </script>
 
-<!-- Root container with fixed height -->
-<div class="min-h-[90vh] md:min-h-[80vh] h-full flex flex-col">
-	{#if proposal}
-		{#if isLoadingVoters}
-			<div class="flex items-center justify-center flex-1">
-				<p class="text-tertiary-300">Loading voters...</p>
+{#if proposal}
+	{#if isLoadingVoters}
+		<div class="flex items-center justify-center flex-1">
+			<p class="text-tertiary-300">Loading voters...</p>
+		</div>
+	{:else if hasVotersError}
+		<div class="flex items-center justify-center flex-1">
+			<p class="text-error-300">Failed to load voters</p>
+		</div>
+	{:else}
+		<div class="h-full overflow-hidden">
+			<div
+				class="sticky top-0 z-10 flex-none border-b bg-surface-800/95 backdrop-blur-sm border-surface-700/50"
+			>
+				<ProposalHeaderItem
+					{proposal}
+					{userData}
+					{getVotersForProposal}
+					{canVote}
+					{canUnstakeVote}
+					{getVoteDisplay}
+					onVote={handleVote}
+					userTokens={$userTokensQuery.data?.balances?.VCE?.balance || 0}
+					{getNextVoteCost}
+					onDecision={handleDecision}
+					{isAdmin}
+					{getTimeAgo}
+				/>
 			</div>
-		{:else if hasVotersError}
-			<div class="flex items-center justify-center flex-1">
-				<p class="text-error-300">Failed to load voters</p>
-			</div>
-		{:else}
-			<!-- Main Layout Container -->
-			<div class="flex flex-col h-full">
-				<!-- Fixed Header - Always visible -->
-				<div
-					class="sticky top-0 z-10 flex-none bg-surface-800/95 backdrop-blur-sm border-b border-surface-700/50"
-				>
-					<ProposalHeaderItem
-						{proposal}
-						{userData}
-						{getVotersForProposal}
-						{canVote}
-						{canUnstakeVote}
-						{getVoteDisplay}
-						onVote={handleVote}
-						userTokens={$userTokensQuery.data?.balances?.VCE?.balance || 0}
-						{getNextVoteCost}
-						onDecision={handleDecision}
-						{isAdmin}
-						{getTimeAgo}
-					/>
+
+			<!-- Scrollable Content Container -->
+			<div class="flex flex-1 h-full pb-36">
+				<!-- Left Navigation - Fixed, No Scroll -->
+				<div class="flex flex-col flex-none w-16 border-r bg-surface-800/50 border-surface-700/50">
+					<button class={getNavClasses('details')} on:click={() => setTab('details')}>
+						<div class="flex flex-col items-center justify-center w-full">
+							<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
+							<span class="mt-1 text-[10px]">Details</span>
+						</div>
+					</button>
+
+					{#if isMobileView}
+						<button class={getNavClasses('metadata')} on:click={() => setTab('metadata')}>
+							<div class="flex flex-col items-center justify-center w-full">
+								<Icon icon="mdi:information-outline" class="w-6 h-6" />
+								<span class="mt-1 text-[10px]">Info</span>
+							</div>
+						</button>
+					{/if}
+
+					<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
+						<div class="flex flex-col items-center justify-center w-full">
+							<Icon icon="mdi:chat-outline" class="w-6 h-6" />
+							<span class="mt-1 text-[10px]">Chat</span>
+						</div>
+					</button>
 				</div>
 
-				<!-- Scrollable Content Container -->
-				<div class="flex flex-1 min-h-0">
-					<!-- Left Navigation - Fixed, No Scroll -->
-					<div
-						class="flex-none flex flex-col w-16 border-r bg-surface-800/50 border-surface-700/50"
-					>
-						<button class={getNavClasses('details')} on:click={() => setTab('details')}>
-							<div class="flex flex-col items-center justify-center w-full">
-								<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
-								<span class="mt-1 text-[10px]">Details</span>
-							</div>
-						</button>
-
-						{#if isMobileView}
-							<button class={getNavClasses('metadata')} on:click={() => setTab('metadata')}>
-								<div class="flex flex-col items-center justify-center w-full">
-									<Icon icon="mdi:information-outline" class="w-6 h-6" />
-									<span class="mt-1 text-[10px]">Info</span>
-								</div>
-							</button>
-						{/if}
-
-						<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
-							<div class="flex flex-col items-center justify-center w-full">
-								<Icon icon="mdi:chat-outline" class="w-6 h-6" />
-								<span class="mt-1 text-[10px]">Chat</span>
-							</div>
-						</button>
-					</div>
-
-					<!-- Main Content Area - Independent Scroll -->
-					<div class="flex-1 overflow-y-auto">
-						{#if $activeTab === 'details'}
-							<div class="flex flex-col gap-6 p-6">
+				<!-- Main Content Area - Independent Scroll -->
+				<div class="flex-1 h-full overflow-y-auto">
+					{#if $activeTab === 'details'}
+						<div class="flex flex-col h-full overflow-hidden">
+							<div class="flex flex-col gap-6 p-6 overflow-y-auto">
 								{#if proposal.video_id}
 									<div class="w-full overflow-hidden rounded-lg bg-surface-800">
 										<VideoPlayer videoId={proposal.video_id} />
@@ -361,90 +356,88 @@ HOW THIS COMPONENT WORKS:
 									</div>
 								</div>
 							</div>
-						{:else if $activeTab === 'chat'}
-							<div class="h-full">
-								<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
-							</div>
-						{/if}
-					</div>
-
-					<!-- Right Metadata - Independent Scroll -->
-					{#if !isMobileView}
-						<div
-							class="flex-none w-[280px] overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
-								proposal.state
-							)}"
-						>
-							<div class="p-6 space-y-6">
-								<!-- Author Info -->
-								<div class={getMetadataSectionClasses(true)}>
-									<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
-										Author
-									</h4>
-									<div class="flex items-center gap-3 mt-2">
-										<Avatar
-											me={{
-												data: { seed: authorProfile?.id || proposal.author },
-												design: { highlight: false },
-												size: 'sm'
-											}}
-										/>
-										<div>
-											<p class="text-sm font-medium text-tertiary-100">
-												{authorProfile?.name || 'Anonymous'}
-											</p>
-											<p class="text-xs text-tertiary-300">Visioncreator</p>
-										</div>
-									</div>
-								</div>
-
-								<!-- Status Info -->
-								<div class={getMetadataSectionClasses(true)}>
-									<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
-										Status
-									</h4>
-									<div class="flex items-center gap-2 mt-2">
-										<Icon
-											icon={getStateIcon(proposal.state)}
-											class="w-5 h-5 {getStateColor(proposal.state)}"
-										/>
-										<span class="text-sm font-medium {getStateColor(proposal.state)}">
-											{getStateLabel(proposal.state)}
-										</span>
-									</div>
-								</div>
-
-								<!-- Timestamps -->
-								<div class={getMetadataSectionClasses(true)}>
-									<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
-										Timeline
-									</h4>
-									<div class="mt-2 space-y-2">
-										<div class="flex justify-between">
-											<span class="text-sm text-tertiary-300">Created</span>
-											<span class="text-sm text-tertiary-100"
-												>{getTimeAgo(proposal.created_at)}</span
-											>
-										</div>
-										{#if proposal.updated_at !== proposal.created_at}
-											<div class="flex justify-between">
-												<span class="text-sm text-tertiary-300">Updated</span>
-												<span class="text-sm text-tertiary-100"
-													>{getTimeAgo(proposal.updated_at)}</span
-												>
-											</div>
-										{/if}
-									</div>
-								</div>
-							</div>
+						</div>
+					{:else if $activeTab === 'chat'}
+						<div class="h-full">
+							<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 						</div>
 					{/if}
 				</div>
+
+				<!-- Right Metadata - Independent Scroll -->
+				{#if !isMobileView}
+					<div
+						class="flex-none w-[280px] overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
+							proposal.state
+						)}"
+					>
+						<div class="p-6 space-y-6">
+							<!-- Author Info -->
+							<div class={getMetadataSectionClasses(true)}>
+								<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+									Author
+								</h4>
+								<div class="flex items-center gap-3 mt-2">
+									<Avatar
+										me={{
+											data: { seed: authorProfile?.id || proposal.author },
+											design: { highlight: false },
+											size: 'sm'
+										}}
+									/>
+									<div>
+										<p class="text-sm font-medium text-tertiary-100">
+											{authorProfile?.name || 'Anonymous'}
+										</p>
+										<p class="text-xs text-tertiary-300">Visioncreator</p>
+									</div>
+								</div>
+							</div>
+
+							<!-- Status Info -->
+							<div class={getMetadataSectionClasses(true)}>
+								<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+									Status
+								</h4>
+								<div class="flex items-center gap-2 mt-2">
+									<Icon
+										icon={getStateIcon(proposal.state)}
+										class="w-5 h-5 {getStateColor(proposal.state)}"
+									/>
+									<span class="text-sm font-medium {getStateColor(proposal.state)}">
+										{getStateLabel(proposal.state)}
+									</span>
+								</div>
+							</div>
+
+							<!-- Timestamps -->
+							<div class={getMetadataSectionClasses(true)}>
+								<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+									Timeline
+								</h4>
+								<div class="mt-2 space-y-2">
+									<div class="flex justify-between">
+										<span class="text-sm text-tertiary-300">Created</span>
+										<span class="text-sm text-tertiary-100">{getTimeAgo(proposal.created_at)}</span>
+									</div>
+									{#if proposal.updated_at !== proposal.created_at}
+										<div class="flex justify-between">
+											<span class="text-sm text-tertiary-300">Updated</span>
+											<span class="text-sm text-tertiary-100"
+												>{getTimeAgo(proposal.updated_at)}</span
+											>
+										</div>
+									{/if}
+								</div>
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
-		{/if}
-	{:else}
-		<div class="flex items-center justify-center flex-1">
-			<p class="text-tertiary-300">Loading proposal...</p>
 		</div>
 	{/if}
-</div>
+{:else}
+	<div class="flex items-center justify-center flex-1">
+		<p class="text-tertiary-300">Loading proposal...</p>
+	</div>
+{/if}
