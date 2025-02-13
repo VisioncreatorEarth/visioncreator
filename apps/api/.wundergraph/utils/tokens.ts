@@ -63,7 +63,6 @@ export const TOKEN_POLICY = {
         if (totalVCs <= 3) {
             for (const milestone of INVESTMENT_MILESTONES) {
                 if (totalVCs <= milestone.totalVCs) {
-                    console.log('Returning milestone:', milestone.milestone, 'price:', milestone.tokenPrice);
                     return milestone;
                 }
             }
