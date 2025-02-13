@@ -355,9 +355,18 @@
 
 		goto(url.toString(), { replaceState: true });
 	}
+
+	// Simplified and more robust keyboard handler
+	function handleEscape(event: KeyboardEvent) {
+		if (event.key === 'Escape' && isModalOpen) {
+			event.preventDefault(); // Prevent any default browser behavior
+			toggleModal(); // Use toggleModal instead of handleClose for more reliable closing
+		}
+	}
 </script>
 
-<svelte:window on:openModal={handleModalOpen} />
+<!-- Add window event binding for keyboard events -->
+<svelte:window on:keydown={handleEscape} />
 
 <!-- Update the nav pills container - Only show when authenticated -->
 <!-- Global gradient overlay for all modals -->
