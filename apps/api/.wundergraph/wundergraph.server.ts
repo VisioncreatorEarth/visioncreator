@@ -25,8 +25,8 @@ class MyContext {
     const nangoSecretKey = process.env.NANGO_SECRET_KEY;
     const postmarkServerToken = process.env.POSTMARK_SERVER_TOKEN;
     // const polarAccessToken = process.env.POLAR_ACCESS_TOKEN;
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-    const openAIApiKey = process.env.OPENAI_API_KEY;
+    // const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    // const openAIApiKey = process.env.OPENAI_API_KEY;
     const ultravoxApiKey = process.env.ULTRAVOX_API_KEY;
 
     if (
@@ -36,8 +36,8 @@ class MyContext {
       !nangoSecretKey ||
       !postmarkServerToken ||
       // !polarAccessToken ||
-      !anthropicApiKey ||
-      !openAIApiKey ||
+      // !anthropicApiKey ||
+      // !openAIApiKey ||
       !ultravoxApiKey
     ) {
       throw new Error(
@@ -57,12 +57,12 @@ class MyContext {
     // });
     this.ultravox = new UltravoxClient(ultravoxApiKey);
     // this.sandbox = new SandboxClient();
-    this.anthropic = new Anthropic({
-      apiKey: anthropicApiKey,
-    });
-    this.openai = new OpenAI({
-      apiKey: openAIApiKey
-    });
+    // this.anthropic = new Anthropic({
+    //   apiKey: anthropicApiKey,
+    // });
+    // this.openai = new OpenAI({
+    //   apiKey: openAIApiKey
+    // });
   }
 }
 
