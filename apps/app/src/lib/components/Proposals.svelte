@@ -249,58 +249,45 @@ HOW THIS SYSTEM WORKS:
 		}
 	}
 
-	// Add quadratic voting helper function
+	// Update the quadratic voting helper functions
 	function getNextVoteCost(currentVotes: number): number {
+		// Next vote will cost: (n+1)^2 - n^2
+		// For example:
+		// Vote 1: 1^2 - 0^2 = 1
+		// Vote 2: 2^2 - 1^2 = 3
+		// Vote 3: 3^2 - 2^2 = 5
 		return Math.pow(currentVotes + 1, 2) - Math.pow(currentVotes, 2);
 	}
 
-	// Update the interface definitions
-	interface Proposal {
-		id: string;
-		title: string;
-		author: string;
-		details: string | null;
-		benefits: string | null;
-		pain: string | null;
-		video_id: string | null;
-		state: ProposalState;
-		total_votes: number;
-		total_tokens_staked: number;
-		responsible: string | null;
-		created_at: string;
-		updated_at: string;
-		tags?: string[];
-		metadata?: Record<string, string | null>;
-		decided_at?: string;
+	function getQuadraticCost(voteNumber: number): number {
+		// Total cost for n votes is n^2
+		return Math.pow(voteNumber, 2);
 	}
 
-	interface VoterInfo {
-		id: string;
-		name: string | null;
-		votes: number;
-		tokens: number;
-	}
-
-	// Update handleVote function
+	// Update handleVote function to properly handle quadratic costs
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		if (!$userQuery.data?.id) return;
 
-		const userId = $userQuery.data.id as string;
+		const userId = $userQuery.data.id;
 		const voters = getVotersForProposal(proposalId);
 		const userVoteInfo = voters.find((v) => v.id === userId);
 		const currentVotes = userVoteInfo?.votes || 0;
-		const nextCost = getNextVoteCost(currentVotes);
+
+		// Calculate costs
+		const nextCost = isIncrease
+			? getNextVoteCost(currentVotes)
+			: getQuadraticCost(currentVotes - 1);
 
 		console.log('Vote attempt:', {
 			isIncrease,
+			currentVotes,
 			userTokens,
-			nextCost,
-			currentVotes
+			nextCost
 		});
 
-		// Check if user has enough VCE tokens for voting
+		// Check if user has enough tokens for voting
 		if (isIncrease && userTokens < nextCost) {
-			console.error('Insufficient VCE tokens for voting', {
+			console.error('Insufficient tokens for voting', {
 				available: userTokens,
 				required: nextCost
 			});
@@ -312,64 +299,14 @@ HOW THIS SYSTEM WORKS:
 				proposalId,
 				userId,
 				action: isIncrease ? 'stake' : 'unstake',
-				amount: 1
+				amount: nextCost // Pass the correct quadratic cost
 			});
 
 			if (result?.success) {
-				// Force immediate refetch of token balance
-				if ($userTokensQuery.refetch) {
-					await $userTokensQuery.refetch();
-				}
-
-				// Immediately update local state
-				votersStore.update((store) => {
-					const newStore = new Map(store);
-					const currentVoters = newStore.get(proposalId) || [];
-					const updatedVoters = currentVoters.map((voter) => {
-						if (voter.id === userId) {
-							const newVotes = isIncrease ? currentVotes + 1 : currentVotes - 1;
-							const newTokens = isIncrease
-								? voter.tokens + getQuadraticCost(currentVotes)
-								: voter.tokens - getQuadraticCost(currentVotes - 1);
-							return {
-								...voter,
-								votes: newVotes,
-								tokens: newTokens
-							};
-						}
-						return voter;
-					});
-					newStore.set(proposalId, updatedVoters);
-					return newStore;
-				});
-
-				// Safely refetch all relevant data
-				const refetchPromises = [
-					$userTokensQuery.refetch && $userTokensQuery.refetch(),
-					$proposalsQuery.refetch && $proposalsQuery.refetch()
-				].filter(Boolean);
-
-				// Add voter queries refetch if available
-				const voterQueries = [...($votersQueriesStore.values() || [])];
-				voterQueries.forEach((query) => {
-					if (query?.refetch) {
-						refetchPromises.push(query.refetch());
-					}
-				});
-
-				await Promise.all(refetchPromises);
-
-				// Force refresh of specific proposal's voters
-				const query = $votersQueriesStore.get(proposalId);
-				if (query) {
-					const newQuery = createQuery({
-						operationName: 'getProposalVoters',
-						input: { proposalId },
-						enabled: true,
-						refetchInterval: 500
-					});
-					$votersQueriesStore.set(proposalId, newQuery);
-				}
+				// Force immediate refetch of token balance and data
+				await Promise.all(
+					[$userTokensQuery.refetch?.(), $proposalsQuery.refetch?.()].filter(Boolean)
+				);
 			}
 		} catch (error) {
 			console.error('Failed to update vote:', error);
@@ -389,11 +326,6 @@ HOW THIS SYSTEM WORKS:
 			nextCost: nextVoteCost,
 			unstakeReturn
 		};
-	}
-
-	// Helper function to calculate quadratic cost for a specific vote number
-	function getQuadraticCost(voteNumber: number): number {
-		return Math.pow(voteNumber + 1, 2) - Math.pow(voteNumber, 2);
 	}
 
 	// Add a store to manage voters queries for all visible proposals
@@ -615,7 +547,7 @@ HOW THIS SYSTEM WORKS:
 				<!-- Tabs Bar - Fixed to top -->
 				<div id="proposal-tabs" class="sticky top-0 z-10 w-full bg-surface-800/50 backdrop-blur-sm">
 					<div class="max-w-5xl px-4 py-2 mx-auto">
-						<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+						<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 							<div class="flex items-center gap-1 overflow-x-auto sm:gap-2 thin-scrollbar">
 								{#each PROPOSAL_TABS as state}
 									<button
@@ -633,6 +565,17 @@ HOW THIS SYSTEM WORKS:
 									</button>
 								{/each}
 							</div>
+
+							<!-- Create Proposal Button -->
+							{#if userData}
+								<button
+									class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 rounded-6xl sm:text-base btn bg-gradient-to-br variant-gradient-secondary-primary hover:scale-105"
+									on:click={() => (showNewProposalForm = true)}
+								>
+									<Icon icon="heroicons:plus-circle" class="w-5 h-5" />
+									<span>Add New Idea</span>
+								</button>
+							{/if}
 						</div>
 					</div>
 				</div>

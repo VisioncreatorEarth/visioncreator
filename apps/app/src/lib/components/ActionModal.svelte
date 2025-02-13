@@ -362,26 +362,28 @@
 <!-- Update the nav pills container - Only show when authenticated -->
 <div class="fixed z-50 flex items-center justify-center gap-3 -translate-x-1/2 bottom-4 left-1/2">
 	{#if session}
-		<!-- Left Nav Pill - Ghost Style -->
-		<button
-			class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
-			on:click={() => {
-				if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-					window.dispatchEvent(
-						new CustomEvent('openModal', {
-							detail: {
-								type: 'aside-view',
-								component: 'ProposalProfile'
-							}
-						})
-					);
-				} else {
-					toggleAside('left', 'ProposalProfile');
-				}
-			}}
-		>
-			<Icon icon="heroicons:user-circle" class="w-5 h-5" />
-		</button>
+		{#if $page.url.pathname !== '/me' || $page.url.searchParams.get('view') === 'Proposals'}
+			<!-- Left Nav Pill - Ghost Style -->
+			<button
+				class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
+				on:click={() => {
+					if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+						window.dispatchEvent(
+							new CustomEvent('openModal', {
+								detail: {
+									type: 'aside-view',
+									component: 'ProposalProfile'
+								}
+							})
+						);
+					} else {
+						toggleAside('left', 'ProposalProfile');
+					}
+				}}
+			>
+				<Icon icon="heroicons:user-circle" class="w-5 h-5" />
+			</button>
+		{/if}
 
 		<!-- Main Action Button (existing) -->
 		<button
@@ -424,13 +426,15 @@
 			{/if}
 		</button>
 
-		<!-- Right Nav Pill - Ghost Style -->
-		<button
-			class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
-			on:click={() => goto('/me', { replaceState: true })}
-		>
-			<Icon icon="heroicons:home" class="w-5 h-5" />
-		</button>
+		{#if $page.url.pathname !== '/me' || $page.url.searchParams.get('view') === 'Proposals'}
+			<!-- Right Nav Pill - Ghost Style -->
+			<button
+				class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
+				on:click={() => goto('/me', { replaceState: true })}
+			>
+				<Icon icon="heroicons:home" class="w-5 h-5" />
+			</button>
+		{/if}
 	{:else if !isModalOpen}
 		<!-- Login Button -->
 		<button class="btn btn-sm variant-ghost-secondary" on:click={() => toggleModal('login')}>

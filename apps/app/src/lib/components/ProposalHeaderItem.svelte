@@ -31,21 +31,30 @@ HOW THIS COMPONENT WORKS:
 	import { fade, fly } from 'svelte/transition';
 	import { onDestroy } from 'svelte';
 
-	// Update VoterInfo interface to handle decimals
+	// Define VoterInfo interface
 	interface VoterInfo {
 		id: string;
 		name: string | null;
 		votes: number;
-		tokens: number; // Now can handle decimals
+		tokens: number;
+		tokens_staked_vce?: number;
 	}
 
-	// Props
+	// Props with proper typing
 	export let proposal: Proposal;
 	export let userData: { id: string; name: string; onboarded: boolean } | null;
 	export let getVotersForProposal: (proposalId: string) => VoterInfo[];
 	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
 	export let canUnstakeVote: (proposal: Proposal, voter?: VoterInfo) => boolean;
-	export let getVoteDisplay: (proposal: Proposal, voter?: VoterInfo) => any;
+	export let getVoteDisplay: (
+		proposal: Proposal,
+		voter?: VoterInfo
+	) => {
+		votes: number;
+		tokens: number;
+		nextCost: number;
+		unstakeReturn: number;
+	};
 	export let onVote: (proposalId: string, isIncrease: boolean) => void;
 	export let userTokens: number;
 	export let getNextVoteCost: (currentVotes: number) => number;

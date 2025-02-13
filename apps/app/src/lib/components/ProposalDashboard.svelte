@@ -119,7 +119,7 @@ This is the dashboard area of the proposals view that:
 				<img src="/logo.png" alt="Visioncreator Logo" class="w-9 h-9 sm:w-10 sm:h-10" />
 				<div class="hidden sm:block">
 					<h2 class="text-2xl font-semibold text-tertiary-100">Visioncreator</h2>
-					<p class="text-sm text-tertiary-300">GmbH</p>
+					<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
 				</div>
 			</div>
 
@@ -145,27 +145,12 @@ This is the dashboard area of the proposals view that:
 						>
 							+{tokenPriceIncrease}%
 						</span>
-						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TP</h3>
+						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
 					</div>
 					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
 						€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm"
 							>/t</span
 						>
-					</p>
-				</div>
-
-				<!-- MRR -->
-				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-						<span
-							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-surface-700/50 text-surface-300"
-						>
-							0%
-						</span>
-						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">MRR</h3>
-					</div>
-					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-						€{monthlyRevenue}<span class="text-xs font-medium sm:text-sm">/m</span>
 					</p>
 				</div>
 
@@ -177,7 +162,7 @@ This is the dashboard area of the proposals view that:
 						>
 							{eurePercentage}% / {vcePercentage}%
 						</span>
-						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">CCP</h3>
+						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
 					</div>
 					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
 						{ccpValue}
