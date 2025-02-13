@@ -12,7 +12,6 @@ HOW THIS COMPONENT WORKS:
 2. Props:
    - proposal: The proposal data to display
    - userData: Current user data for vote checks
-   - getVotersForProposal: Function to get voters
    - canVote: Function to check if voting is allowed
    - canUnstakeVote: Function to check if unstaking is allowed
    - getVoteDisplay: Function to get vote display info
@@ -43,7 +42,6 @@ HOW THIS COMPONENT WORKS:
 	// Props with proper typing
 	export let proposal: Proposal & { voters: VoterInfo[] };
 	export let userData: { id: string; name: string; onboarded: boolean } | null;
-	export let getVotersForProposal: (proposalId: string) => VoterInfo[];
 	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
 	export let canUnstakeVote: (proposal: Proposal, voter?: VoterInfo) => boolean;
 	export let getVoteDisplay: (
@@ -189,6 +187,7 @@ HOW THIS COMPONENT WORKS:
 
 	// Get current voter info directly from proposal
 	$: currentVoter = userData ? proposal.voters.find((v) => v.id === userData.id) : undefined;
+	$: currentVotes = currentVoter?.votes || 0;
 </script>
 
 <div class="relative flex flex-col md:flex-row md:items-stretch">
@@ -214,9 +213,8 @@ HOW THIS COMPONENT WORKS:
 				<div class="flex flex-col gap-2">
 					<button
 						disabled={!userData ||
-							!canVote(proposal, proposal.voters.find((v) => v.id === userData?.id)?.votes || 0) ||
-							userTokens <
-								getNextVoteCost(proposal.voters.find((v) => v.id === userData?.id)?.votes || 0)}
+							!canVote(proposal, currentVotes) ||
+							userTokens < getNextVoteCost(currentVotes)}
 						on:click|stopPropagation={(e) => {
 							e.stopPropagation();
 							handleVote(proposal.id, true);
@@ -226,11 +224,7 @@ HOW THIS COMPONENT WORKS:
 						<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
 					</button>
 					<button
-						disabled={!userData ||
-							!canUnstakeVote(
-								proposal,
-								proposal.voters.find((v) => v.id === userData?.id)
-							)}
+						disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
 						on:click|stopPropagation={() => handleVote(proposal.id, false)}
 						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
 					>
@@ -312,9 +306,8 @@ HOW THIS COMPONENT WORKS:
 				<div class="flex gap-2">
 					<button
 						disabled={!userData ||
-							!canVote(proposal, proposal.voters.find((v) => v.id === userData?.id)?.votes || 0) ||
-							userTokens <
-								getNextVoteCost(proposal.voters.find((v) => v.id === userData?.id)?.votes || 0)}
+							!canVote(proposal, currentVotes) ||
+							userTokens < getNextVoteCost(currentVotes)}
 						on:click|stopPropagation={(e) => {
 							e.stopPropagation();
 							handleVote(proposal.id, true);
@@ -324,11 +317,7 @@ HOW THIS COMPONENT WORKS:
 						<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
 					</button>
 					<button
-						disabled={!userData ||
-							!canUnstakeVote(
-								proposal,
-								proposal.voters.find((v) => v.id === userData?.id)
-							)}
+						disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
 						on:click|stopPropagation={() => handleVote(proposal.id, false)}
 						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
 					>
