@@ -41,7 +41,7 @@ HOW THIS COMPONENT WORKS:
 	}
 
 	// Props with proper typing
-	export let proposal: Proposal;
+	export let proposal: Proposal & { voters: VoterInfo[] };
 	export let userData: { id: string; name: string; onboarded: boolean } | null;
 	export let getVotersForProposal: (proposalId: string) => VoterInfo[];
 	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
@@ -177,6 +177,9 @@ HOW THIS COMPONENT WORKS:
 	onDestroy(() => {
 		if (notificationTimeout) clearTimeout(notificationTimeout);
 	});
+
+	// Get current voter info directly from proposal
+	$: currentVoter = userData ? proposal.voters.find((v) => v.id === userData.id) : undefined;
 </script>
 
 <div class="relative flex flex-col md:flex-row md:items-stretch">
@@ -188,15 +191,12 @@ HOW THIS COMPONENT WORKS:
 					<p class="text-4xl font-bold text-tertiary-100">
 						{proposal.total_votes || 0}
 					</p>
-					{#if userData}
-						{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
-						{#if voter?.tokens > 0}
-							<div
-								class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
-							>
-								{formatTokens(voter.tokens)}
-							</div>
-						{/if}
+					{#if currentVoter?.tokens_staked_vce}
+						<div
+							class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
+						>
+							{formatTokens(currentVoter.tokens_staked_vce)}
+						</div>
 					{/if}
 				</div>
 				<div class="text-sm text-tertiary-400">votes</div>
@@ -205,14 +205,9 @@ HOW THIS COMPONENT WORKS:
 				<div class="flex flex-col gap-2">
 					<button
 						disabled={!userData ||
-							!canVote(
-								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-							) ||
+							!canVote(proposal, proposal.voters.find((v) => v.id === userData?.id)?.votes || 0) ||
 							userTokens <
-								getNextVoteCost(
-									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-								)}
+								getNextVoteCost(proposal.voters.find((v) => v.id === userData?.id)?.votes || 0)}
 						on:click|stopPropagation={(e) => {
 							e.stopPropagation();
 							handleVote(proposal.id, true);
@@ -225,7 +220,7 @@ HOW THIS COMPONENT WORKS:
 						disabled={!userData ||
 							!canUnstakeVote(
 								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
+								proposal.voters.find((v) => v.id === userData?.id)
 							)}
 						on:click|stopPropagation={() => handleVote(proposal.id, false)}
 						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
@@ -326,15 +321,12 @@ HOW THIS COMPONENT WORKS:
 			<!-- Vote count -->
 			<div class="relative flex items-center pl-2">
 				<span class="text-4xl font-bold text-tertiary-100">{proposal.total_votes || 0}</span>
-				{#if userData}
-					{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
-					{#if voter?.tokens > 0}
-						<div
-							class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
-						>
-							{formatTokens(voter.tokens)}
-						</div>
-					{/if}
+				{#if currentVoter?.tokens_staked_vce}
+					<div
+						class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
+					>
+						{formatTokens(currentVoter.tokens_staked_vce)}
+					</div>
 				{/if}
 			</div>
 
@@ -342,14 +334,9 @@ HOW THIS COMPONENT WORKS:
 				<div class="flex gap-2">
 					<button
 						disabled={!userData ||
-							!canVote(
-								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-							) ||
+							!canVote(proposal, proposal.voters.find((v) => v.id === userData?.id)?.votes || 0) ||
 							userTokens <
-								getNextVoteCost(
-									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-								)}
+								getNextVoteCost(proposal.voters.find((v) => v.id === userData?.id)?.votes || 0)}
 						on:click|stopPropagation={(e) => {
 							e.stopPropagation();
 							handleVote(proposal.id, true);
@@ -362,7 +349,7 @@ HOW THIS COMPONENT WORKS:
 						disabled={!userData ||
 							!canUnstakeVote(
 								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
+								proposal.voters.find((v) => v.id === userData?.id)
 							)}
 						on:click|stopPropagation={() => handleVote(proposal.id, false)}
 						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
@@ -373,7 +360,7 @@ HOW THIS COMPONENT WORKS:
 			{/if}
 
 			<div class="flex items-center gap-1.5 overflow-x-auto">
-				{#each getVotersForProposal(proposal.id) as voter (voter.id)}
+				{#each proposal.voters as voter (voter.id)}
 					<div class="relative flex-shrink-0">
 						<Avatar me={formatVoterForAvatar(voter)} />
 					</div>
@@ -463,7 +450,7 @@ HOW THIS COMPONENT WORKS:
 				{proposal.title}
 			</h3>
 			<div class="flex items-center gap-3">
-				{#each getVotersForProposal(proposal.id) as voter (voter.id)}
+				{#each proposal.voters as voter (voter.id)}
 					<div class="relative">
 						<Avatar me={formatVoterForAvatar(voter)} />
 						<div
