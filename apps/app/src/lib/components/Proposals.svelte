@@ -289,7 +289,8 @@ HOW THIS SYSTEM WORKS:
 			});
 
 			if (result?.success) {
-				// Force immediate refetch of all relevant data
+				// Use tick to ensure DOM is updated properly
+				await tick();
 				await Promise.all(
 					[$proposalsQuery.refetch?.(), $userTokensQuery.refetch?.()].filter(Boolean)
 				);

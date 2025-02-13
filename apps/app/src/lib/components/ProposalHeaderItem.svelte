@@ -143,39 +143,48 @@ HOW THIS COMPONENT WORKS:
 		return Math.floor(value).toString();
 	}
 
-	// Enhance the onVote handler to show notifications
+	// Update notification handling
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		try {
 			await onVote(proposalId, isIncrease);
-			// Show success notification
+
+			// Clear any existing timeout first
+			if (notificationTimeout) {
+				clearTimeout(notificationTimeout);
+			}
+
+			// Show notification
 			notificationMessage = isIncrease ? '+1 Vote' : '-1 Vote';
 			showNotification = true;
 
-			// Clear any existing timeout
-			if (notificationTimeout) clearTimeout(notificationTimeout);
-
-			// Set new timeout to hide notification
+			// Set new timeout
 			notificationTimeout = setTimeout(() => {
 				showNotification = false;
-			}, 2500);
+			}, 2000) as unknown as NodeJS.Timeout;
 		} catch (error) {
 			console.error('Vote error:', error);
-			showNotification = true;
+
+			// Clear any existing timeout first
+			if (notificationTimeout) {
+				clearTimeout(notificationTimeout);
+			}
+
+			// Show error notification
 			notificationMessage = 'Error voting';
+			showNotification = true;
 
-			// Clear any existing timeout
-			if (notificationTimeout) clearTimeout(notificationTimeout);
-
-			// Set new timeout to hide error notification
+			// Set new timeout
 			notificationTimeout = setTimeout(() => {
 				showNotification = false;
-			}, 2500);
+			}, 2000) as unknown as NodeJS.Timeout;
 		}
 	}
 
-	// Cleanup on component destroy
+	// Make sure to clean up on destroy
 	onDestroy(() => {
-		if (notificationTimeout) clearTimeout(notificationTimeout);
+		if (notificationTimeout) {
+			clearTimeout(notificationTimeout);
+		}
 	});
 
 	// Get current voter info directly from proposal
@@ -235,58 +244,27 @@ HOW THIS COMPONENT WORKS:
 	<!-- Notification overlay -->
 	{#if showNotification}
 		<div
-			class="absolute top-0 bottom-0 right-0 z-50 hidden pointer-events-none left-40 md:block"
-			transition:fly={{ x: 20, duration: 200, opacity: 0 }}
+			class="fixed inset-0 z-50 pointer-events-none"
+			in:fade={{ duration: 200 }}
+			out:fade={{ duration: 200 }}
 		>
 			<div
-				class="w-full h-full flex items-center {notificationMessage.includes('+')
+				class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-6 py-4 rounded-xl {notificationMessage.includes(
+					'+'
+				)
 					? 'bg-success-500/90 dark:bg-success-900/90'
 					: 'bg-error-500/90 dark:bg-error-900/90'}"
 			>
-				<div class="flex flex-col gap-4 px-6 py-4">
+				<div class="flex items-center gap-3">
 					<Icon
 						icon={notificationMessage.includes('+')
 							? 'heroicons:plus-circle'
 							: 'heroicons:minus-circle'}
-						class="w-12 h-12 {notificationMessage.includes('+')
+						class="w-8 h-8 {notificationMessage.includes('+')
 							? 'text-success-100'
 							: 'text-error-100'}"
 					/>
-					<span
-						class="text-2xl font-medium {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					>
-						{notificationMessage}
-					</span>
-				</div>
-			</div>
-		</div>
-
-		<!-- Mobile notification -->
-		<div
-			class="absolute bottom-0 left-0 right-0 z-50 pointer-events-none md:hidden"
-			transition:fly={{ y: 20, duration: 200, opacity: 0 }}
-		>
-			<div
-				class="w-full flex items-center justify-start px-4 py-2 {notificationMessage.includes('+')
-					? 'bg-success-500/90 dark:bg-success-900/90'
-					: 'bg-error-500/90 dark:bg-error-900/90'}"
-			>
-				<div class="flex items-center gap-2">
-					<Icon
-						icon={notificationMessage.includes('+')
-							? 'heroicons:plus-circle'
-							: 'heroicons:minus-circle'}
-						class="w-5 h-5 {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					/>
-					<span
-						class="text-sm font-medium {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					>
+					<span class="text-xl font-medium text-white">
 						{notificationMessage}
 					</span>
 				</div>
