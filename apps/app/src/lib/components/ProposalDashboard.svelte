@@ -4,7 +4,7 @@ HOW THIS COMPONENT WORKS:
 This is the dashboard area of the proposals view that:
 1. Shows key metrics about the proposal system:
    - TP: Dynamic token price based on active VCs (Fibonacci sequence)
-   - CCP: Total yearly contribution calculated from active VCs
+   - Pool: Total yearly contribution calculated from active VCs
    - MRR: Monthly recurring revenue (currently fixed at €0/m)
 
 2. Data Source:
@@ -109,6 +109,14 @@ This is the dashboard area of the proposals view that:
 
 	// Reactive value for total VCs
 	$: totalVCs = $investmentMetricsQuery.data?.totalVCs || 0;
+
+	// Add state for modal
+	let isMetricsModalOpen = false;
+
+	// Function to toggle modal
+	function toggleMetricsModal() {
+		isMetricsModalOpen = !isMetricsModalOpen;
+	}
 </script>
 
 <div class="w-full border-b bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
@@ -125,50 +133,63 @@ This is the dashboard area of the proposals view that:
 
 			<!-- Metrics Grid -->
 			<div class="flex justify-end gap-3 sm:gap-6">
-				<!-- Total VCs -->
-				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-						<!-- Add invisible placeholder to match height of other metrics with badges -->
-						<span class="invisible px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs">000</span>
-						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">VCs</h3>
-					</div>
-					<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
-						{totalVCs}
-					</p>
-				</div>
+				<!-- Add group class to parent for hover effect -->
+				<div class="group relative">
+					<!-- Glow effect rectangle -->
+					<div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 
+						transition-opacity duration-300 bg-gradient-to-r from-surface-600/40 
+						to-surface-700/40 shadow-[0_0_40px_rgba(255,255,255,0.3)] 
+						border border-surface-400/20"></div>
+					
+					<!-- Existing metrics content -->
+					<div class="relative flex gap-3 sm:gap-6 p-4">
+						<!-- Total VCs -->
+						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+								<span class="invisible px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs">000</span>
+								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">VCs</h3>
+							</div>
+							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
+								{totalVCs}
+							</p>
+						</div>
 
-				<!-- TP -->
-				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-						<span
-							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
-						>
-							+{tokenPriceIncrease}%
-						</span>
-						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
-					</div>
-					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-						€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm"
-							>/t</span
-						>
-					</p>
-				</div>
+						<!-- TP -->
+						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+								<span
+									class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
+								>
+									+{tokenPriceIncrease}%
+								</span>
+								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
+							</div>
+							<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
+								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm"
+									>/t</span
+								>
+							</p>
+						</div>
 
-				<!-- CCP -->
-				<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-					<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-						<span
-							class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-secondary-500/10 text-secondaryw-400"
-						>
-							{eurePercentage}% / {vcePercentage}%
-						</span>
-						<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
+						<!-- CCP -->
+						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
+							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+								<span
+									class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-secondary-500/10 text-secondaryw-400"
+								>
+									{eurePercentage}% / {vcePercentage}%
+								</span>
+								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">CCP</h3>
+							</div>
+							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
+								{ccpValue}
+							</p>
+						</div>
 					</div>
-					<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-						{ccpValue}
-					</p>
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
+
+
