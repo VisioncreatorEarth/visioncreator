@@ -1,53 +1,60 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/apple-touch-icon.png" />
+		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon-32x32.png" />
+		<link rel="icon" type="image/png" sizes="16x16" href="%sveltekit.assets%/favicon-16x16.png" />
+		<link rel="manifest" href="%sveltekit.assets%/site.webmanifest" />
+		<link rel="mask-icon" href="%sveltekit.assets%/safari-pinned-tab.svg" color="#212359" />
+		<meta name="msapplication-TileColor" content="#f4f3f2" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+		/>
+		<meta name="theme-color" content="#0d1132" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="#0d1132" />
+		%sveltekit.head%
 
-<head>
-	<meta charset="utf-8" />
-	<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/apple-touch-icon.png" />
-	<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon-32x32.png" />
-	<link rel="icon" type="image/png" sizes="16x16" href="%sveltekit.assets%/favicon-16x16.png" />
-	<link rel="manifest" href="%sveltekit.assets%/site.webmanifest" />
-	<link rel="mask-icon" href="%sveltekit.assets%/safari-pinned-tab.svg" color="#212359" />
-	<meta name="msapplication-TileColor" content="#f4f3f2" />
-	<meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover" />
-	<meta name="theme-color" content="#0d1132" />
-	<meta name="apple-mobile-web-app-status-bar-style" content="#0d1132" />
-	%sveltekit.head%
+		<!-- Primary Meta Tags -->
+		<title>Your gateway to collective abundance - SIGNUP TO WAITLIST NOW</title>
+		<meta name="title" content="Your gateway to collective abundance" />
+		<meta
+			name="description"
+			content="Unlock multiple income streams while turning your contributions into ownership - become a founding member now - limited to the first 144 Visioncreators."
+		/>
 
-	<!-- Primary Meta Tags -->
-	<title>Your gateway to collective abundance - SIGNUP TO WAITLIST NOW</title>
-	<meta name="title" content="Your gateway to collective abundance" />
-	<meta name="description"
-		content="Unlock multiple income streams while turning your contributions into ownership - become a founding member now - limited to the first 144 Visioncreators." />
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://visioncreator.earth/" />
+		<meta property="og:title" content="Your gateway to collective abundance" />
+		<meta
+			property="og:description"
+			content="Unlock multiple income streams while turning your contributions into ownership - become a founding member now - limited to the first 144 Visioncreators."
+		/>
+		<meta property="og:image" content="https://visioncreator.earth/metaimage.png" />
 
-	<!-- Open Graph / Facebook -->
-	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://visioncreator.earth/" />
-	<meta property="og:title" content="Your gateway to collective abundance" />
-	<meta property="og:description"
-		content="Unlock multiple income streams while turning your contributions into ownership - become a founding member now - limited to the first 144 Visioncreators." />
-	<meta property="og:image" content="https://visioncreator.earth/metaimage.png" />
+		<!-- X / Twitter -->
+		<meta property="twitter:card" content="summary_large_image" />
+		<meta property="twitter:url" content="https://visioncreator.earth/" />
+		<meta property="twitter:title" content="Your gateway to collective abundance" />
+		<meta
+			property="twitter:description"
+			content="Unlock multiple income streams while turning your contributions into ownership - become a founding member now - limited to the first 144 Visioncreators."
+		/>
+		<meta property="twitter:image" content="https://visioncreator.earth/metaimage.png" />
+	</head>
 
-	<!-- X / Twitter -->
-	<meta property="twitter:card" content="summary_large_image" />
-	<meta property="twitter:url" content="https://visioncreator.earth/" />
-	<meta property="twitter:title" content="Your gateway to collective abundance" />
-	<meta property="twitter:description"
-		content="Unlock multiple income streams while turning your contributions into ownership - become a founding member now - limited to the first 144 Visioncreators." />
-	<meta property="twitter:image" content="https://visioncreator.earth/metaimage.png" />
-</head>
+	<script>
+		global = window;
+		window.process = {
+			env: {
+				NODE_ENV: 'development'
+			}
+		};
+	</script>
 
-<script>
-	global = window;
-	window.process = {
-		env: {
-			NODE_ENV: 'development'
-		}
-	};
-</script>
-
-<body data-sveltekit-preload-data="hover" data-theme="vc-theme">
-	<div style="display: contents" class="overflow-hidden w-full h-full">%sveltekit.body%</div>
-</body>
-
+	<body data-sveltekit-preload-data="hover" data-theme="vc-theme">
+		<div style="display: contents" class="overflow-hidden w-full h-full">%sveltekit.body%</div>
+	</body>
 </html>

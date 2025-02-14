@@ -250,7 +250,7 @@ HOW THIS COMPONENT WORKS:
 </script>
 
 {#if proposal}
-	<div class="flex flex-col h-full">
+	<div class="flex flex-col h-full overflow-hidden">
 		<!-- Header -->
 		<div
 			class="sticky top-0 z-10 flex-none border-b bg-surface-800/95 backdrop-blur-sm border-surface-700/50"
@@ -271,31 +271,12 @@ HOW THIS COMPONENT WORKS:
 		</div>
 
 		<!-- Main Content Area -->
-		<div class="flex flex-1 min-h-0 md:grid md:grid-cols-[auto_1fr_auto]">
-			<!-- Desktop Navigation -->
-			<div
-				class="flex-col flex-none hidden w-16 border-r md:flex bg-surface-800/50 border-surface-700/50"
-			>
-				<button class={getNavClasses('details')} on:click={() => setTab('details')}>
-					<div class="flex flex-col items-center justify-center w-full">
-						<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
-						<span class="mt-1 text-[10px]">Details</span>
-					</div>
-				</button>
-
-				<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
-					<div class="flex flex-col items-center justify-center w-full">
-						<Icon icon="mdi:chat-outline" class="w-6 h-6" />
-						<span class="mt-1 text-[10px]">Chat</span>
-					</div>
-				</button>
-			</div>
-
+		<div class="flex flex-1 overflow-hidden md:grid md:grid-cols-[auto_1fr_auto]">
 			<!-- Main Content Area -->
-			<div class="flex flex-col flex-1">
+			<div class="flex flex-col flex-1 overflow-hidden">
 				{#if $activeTab === 'details'}
 					<div class="flex-1 overflow-y-auto">
-						<div class="flex flex-col gap-6 p-6 pb-[80px] md:pb-6 min-h-full">
+						<div class="flex flex-col gap-6 p-6 pb-[80px] md:pb-20">
 							{#if proposal.video_id}
 								<div class="w-full overflow-hidden rounded-lg bg-surface-800">
 									<VideoPlayer videoId={proposal.video_id} />
@@ -454,47 +435,32 @@ HOW THIS COMPONENT WORKS:
 			{/if}
 		</div>
 
-		<!-- Mobile Navigation -->
-		<div class="fixed bottom-0 left-0 right-0 z-20 md:hidden">
-			<div
-				class="flex items-center justify-between w-full px-4 py-1 border-t bg-surface-600 rounded-t-3xl border-surface-700/50"
-			>
+		<!-- Desktop Navigation -->
+		<div
+			class="sticky bottom-0 left-0 right-0 z-20 hidden border-t md:flex bg-surface-600/95 backdrop-blur-sm border-surface-700/50"
+		>
+			<div class="flex items-center justify-between w-full max-w-6xl px-4 py-2 mx-auto">
 				<!-- Left Side Nav Items -->
 				<div class="flex items-center gap-2">
-					<button
-						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-						'details'
-							? 'bg-tertiary-300/10 text-tertiary-500'
-							: 'text-tertiary-300 hover:bg-surface-700/50'}"
-						on:click={() => setTab('details')}
-					>
-						<Icon icon="mdi:text-box-outline" class="w-5 h-5 mt-1" />
-						<span class="-mt-1 text-[10px]">Details</span>
+					<button class={getNavClasses('details')} on:click={() => setTab('details')}>
+						<Icon icon="mdi:text-box-outline" class="w-5 h-5" />
+						<span class="ml-2 text-sm">Details</span>
 					</button>
 
-					<button
-						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-						'info'
-							? 'bg-tertiary-300/10 text-tertiary-500'
-							: 'text-tertiary-300 hover:bg-surface-700/50'}"
-						on:click={() => setTab('info')}
-					>
-						<Icon icon="mdi:information-outline" class="w-5 h-5 mt-1" />
-						<span class="-mt-1 text-[10px]">Info</span>
+					<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
+						<Icon icon="mdi:chat-outline" class="w-5 h-5" />
+						<span class="ml-2 text-sm">Chat</span>
 					</button>
 				</div>
 
-				<!-- Right Side Nav Items -->
-				<div class="flex items-center gap-2">
+				<!-- Right Side -->
+				<div class="flex items-center">
 					<button
-						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-						'chat'
-							? 'bg-tertiary-300/10 text-tertiary-500'
-							: 'text-tertiary-300 hover:bg-surface-700/50'}"
-						on:click={() => setTab('chat')}
+						class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 opacity-50 cursor-not-allowed rounded-6xl btn bg-gradient-to-br variant-gradient-secondary-primary"
+						disabled
 					>
-						<Icon icon="mdi:chat-outline" class="w-5 h-5 mt-1" />
-						<span class="-mt-1 text-[10px]">Chat</span>
+						<Icon icon="heroicons:pencil-square" class="w-5 h-5" />
+						Edit (Coming Soon)
 					</button>
 				</div>
 			</div>
