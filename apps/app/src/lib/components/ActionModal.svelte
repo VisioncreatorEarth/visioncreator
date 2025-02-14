@@ -489,7 +489,7 @@
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
-			class:h-[80vh]={currentModalType === 'custom-view'}
+			class:h-[85vh]={currentModalType === 'custom-view'}
 			class:md:h-[90vh]={currentModalType === 'custom-view' || currentModalType === 'aside-view'}
 			on:click={handleContentClick}
 		>

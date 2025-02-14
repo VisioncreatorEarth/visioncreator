@@ -276,7 +276,7 @@ HOW THIS COMPONENT WORKS:
 			<div class="flex flex-col flex-1 overflow-hidden">
 				{#if $activeTab === 'details'}
 					<div class="flex-1 overflow-y-auto">
-						<div class="flex flex-col gap-6 p-6 pb-[80px] md:pb-20">
+						<div class="flex flex-col gap-6 p-6 pb-[40px] md:pb-20 overflow-x-hidden">
 							{#if proposal.video_id}
 								<div class="w-full overflow-hidden rounded-lg bg-surface-800">
 									<VideoPlayer videoId={proposal.video_id} />
@@ -285,9 +285,11 @@ HOW THIS COMPONENT WORKS:
 
 							<div class="flex flex-col gap-2">
 								<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-								<div class="prose prose-invert max-w-none">
+								<div class="prose break-words prose-invert max-w-none">
 									{#if proposal.details}
-										{@html marked(proposal.details)}
+										<div class="whitespace-pre-wrap overflow-wrap-anywhere">
+											{@html marked(proposal.details)}
+										</div>
 									{:else}
 										<p class="text-tertiary-300">
 											No project overview available yet. Click to edit and add details.
