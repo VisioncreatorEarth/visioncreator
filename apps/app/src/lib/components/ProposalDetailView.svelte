@@ -285,7 +285,9 @@ HOW THIS COMPONENT WORKS:
 
 							<div class="flex flex-col gap-2">
 								<h3 class="text-sm font-medium text-tertiary-300">Project Overview</h3>
-								<div class="prose break-words prose-invert max-w-none">
+								<div
+									class="prose prose-invert max-w-none prose-p:my-0.5 prose-ul:my-0 prose-ol:my-0 prose-li:my-0 prose-headings:mb-1 [&_ul]:leading-tight [&_li]:leading-tight"
+								>
 									{#if proposal.details}
 										<div class="whitespace-pre-wrap overflow-wrap-anywhere">
 											{@html marked(proposal.details)}
