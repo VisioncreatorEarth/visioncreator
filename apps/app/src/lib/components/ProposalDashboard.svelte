@@ -218,7 +218,7 @@ This is the dashboard area of the proposals view that:
 		class="fixed inset-0 z-50 flex items-start justify-center pointer-events-none"
 	>
 		<div 
-			class="relative w-full max-w-[640px] h-[50vh] mt-24 mx-4 bg-surface-800 
+			class="relative w-full max-w-[640px] h-[80vh] mt-24 mx-4 bg-surface-800 
 			rounded-xl border border-surface-600/50 shadow-2xl overflow-y-auto
 			pointer-events-auto"
 		>
@@ -241,15 +241,15 @@ This is the dashboard area of the proposals view that:
 				<!-- Detailed metrics grid -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="p-4 rounded-lg bg-surface-700/30">
-						<h3 class="text-sm font-medium text-tertiary-200">Total VCs</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{totalVCs}</p>
-						<p class="text-sm text-tertiary-300 mt-2">Active Vision Contributors</p>
+						<h3 class="text-sm font-medium text-tertiary-200">Current VCs/Next VC Milestone</h3>
+						<p class="text-2xl font-bold text-tertiary-100">{totalVCs}/21</p>
+						<p class="text-sm text-tertiary-300 mt-2">{21 - totalVCs} more Vision Creators needed for next milestone</p>
 					</div>
 					
 					<div class="p-4 rounded-lg bg-surface-700/30">
-						<h3 class="text-sm font-medium text-tertiary-200">Token Price</h3>
+						<h3 class="text-sm font-medium text-tertiary-200">Current Token Emission Price</h3>
 						<p class="text-2xl font-bold text-tertiary-100">€{stats.currentTokenPrice.toFixed(2)}</p>
-						<p class="text-sm text-tertiary-300 mt-2">+{tokenPriceIncrease}% increase</p>
+						<p class="text-sm text-tertiary-300 mt-2">1000 Tokens sold for €2000 in last round</p>
 					</div>
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
@@ -265,24 +265,49 @@ This is the dashboard area of the proposals view that:
 					</div>
 				</div>
 
-				<!-- Additional details -->
+				<!-- New Detailed Metrics Section -->
 				<div class="p-4 rounded-lg bg-surface-700/30">
-					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Token Distribution</h3>
+					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Detailed Metrics</h3>
 					<div class="space-y-2">
 						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">EURe Balance</span>
-							<span class="text-tertiary-100 font-medium">
-								€{new Intl.NumberFormat('en-US').format(adminTokensQuery.data?.balances?.EURe?.balance || 0)}
-							</span>
+							<span class="text-tertiary-300">Metric 1</span>
+							<span class="text-tertiary-100 font-medium">-</span>
 						</div>
 						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">VCE Balance</span>
-							<span class="text-tertiary-100 font-medium">
-								{new Intl.NumberFormat('en-US').format(
-									(adminTokensQuery.data?.balances?.VCE?.balance || 0) +
-									(adminTokensQuery.data?.balances?.VCE?.staked_balance || 0)
-								)} VCE
-							</span>
+							<span class="text-tertiary-300">Metric 2</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 3</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 4</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 5</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 6</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 7</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 8</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 9</span>
+							<span class="text-tertiary-100 font-medium">-</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">Metric 10</span>
+							<span class="text-tertiary-100 font-medium">-</span>
 						</div>
 					</div>
 				</div>
