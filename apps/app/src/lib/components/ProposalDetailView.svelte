@@ -225,9 +225,13 @@ HOW THIS COMPONENT WORKS:
 	// Make the nav classes reactive with updated tertiary colors
 	$: getNavClasses = (tabName: 'details' | 'metadata' | 'chat') => {
 		const base =
-			'flex items-center justify-center w-16 h-16 transition-colors hover:bg-surface-700/50';
+			'flex items-center justify-center px-4 py-2 transition-colors rounded-full hover:bg-surface-700/50';
 		const isActive = $activeTab === tabName;
-		return `${base} ${isActive ? 'text-tertiary-500 bg-tertiary-300/10' : 'text-tertiary-300'}`;
+		return `${base} ${
+			isActive
+				? 'text-tertiary-500 bg-tertiary-300/10'
+				: 'text-tertiary-300 hover:text-tertiary-200'
+		}`;
 	};
 
 	// Handle tab changes with explicit functions
@@ -383,52 +387,6 @@ HOW THIS COMPONENT WORKS:
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{/if}
-
-				<!-- Mobile Navigation -->
-				<div class="fixed bottom-0 left-0 right-0 z-20 md:hidden">
-					<div
-						class="flex items-center justify-between w-full px-4 py-1 border-t bg-surface-600 rounded-t-3xl border-surface-700/50"
-					>
-						<!-- Left Side Nav Items -->
-						<div class="flex items-center gap-2">
-							<button
-								class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-								'details'
-									? 'bg-tertiary-300/10 text-tertiary-500'
-									: 'text-tertiary-300 hover:bg-surface-700/50'}"
-								on:click={() => setTab('details')}
-							>
-								<Icon icon="mdi:text-box-outline" class="w-5 h-5 mt-1" />
-								<span class="-mt-1 text-[10px]">Details</span>
-							</button>
-
-							<button
-								class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-								'info'
-									? 'bg-tertiary-300/10 text-tertiary-500'
-									: 'text-tertiary-300 hover:bg-surface-700/50'}"
-								on:click={() => setTab('info')}
-							>
-								<Icon icon="mdi:information-outline" class="w-5 h-5 mt-1" />
-								<span class="-mt-1 text-[10px]">Info</span>
-							</button>
-						</div>
-
-						<!-- Right Side Nav Items -->
-						<div class="flex items-center gap-2">
-							<button
-								class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-								'chat'
-									? 'bg-tertiary-300/10 text-tertiary-500'
-									: 'text-tertiary-300 hover:bg-surface-700/50'}"
-								on:click={() => setTab('chat')}
-							>
-								<Icon icon="mdi:chat-outline" class="w-5 h-5 mt-1" />
-								<span class="-mt-1 text-[10px]">Chat</span>
-							</button>
-						</div>
-					</div>
-				</div>
 			</div>
 
 			<!-- Right Metadata - Only on Desktop -->
@@ -494,6 +452,52 @@ HOW THIS COMPONENT WORKS:
 					</div>
 				</div>
 			{/if}
+		</div>
+
+		<!-- Mobile Navigation -->
+		<div class="fixed bottom-0 left-0 right-0 z-20 md:hidden">
+			<div
+				class="flex items-center justify-between w-full px-4 py-1 border-t bg-surface-600 rounded-t-3xl border-surface-700/50"
+			>
+				<!-- Left Side Nav Items -->
+				<div class="flex items-center gap-2">
+					<button
+						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+						'details'
+							? 'bg-tertiary-300/10 text-tertiary-500'
+							: 'text-tertiary-300 hover:bg-surface-700/50'}"
+						on:click={() => setTab('details')}
+					>
+						<Icon icon="mdi:text-box-outline" class="w-5 h-5 mt-1" />
+						<span class="-mt-1 text-[10px]">Details</span>
+					</button>
+
+					<button
+						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+						'info'
+							? 'bg-tertiary-300/10 text-tertiary-500'
+							: 'text-tertiary-300 hover:bg-surface-700/50'}"
+						on:click={() => setTab('info')}
+					>
+						<Icon icon="mdi:information-outline" class="w-5 h-5 mt-1" />
+						<span class="-mt-1 text-[10px]">Info</span>
+					</button>
+				</div>
+
+				<!-- Right Side Nav Items -->
+				<div class="flex items-center gap-2">
+					<button
+						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+						'chat'
+							? 'bg-tertiary-300/10 text-tertiary-500'
+							: 'text-tertiary-300 hover:bg-surface-700/50'}"
+						on:click={() => setTab('chat')}
+					>
+						<Icon icon="mdi:chat-outline" class="w-5 h-5 mt-1" />
+						<span class="-mt-1 text-[10px]">Chat</span>
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 {:else}
