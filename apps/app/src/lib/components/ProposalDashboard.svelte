@@ -133,8 +133,11 @@ This is the dashboard area of the proposals view that:
 
 			<!-- Metrics Grid -->
 			<div class="flex justify-end gap-3 sm:gap-6">
-				<!-- Add group class to parent for hover effect -->
-				<div class="group relative">
+				<!-- Add group class and click handler -->
+				<div 
+					class="group relative cursor-pointer"
+					on:click={toggleMetricsModal}
+				>
 					<!-- Glow effect rectangle -->
 					<div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 
 						transition-opacity duration-300 bg-gradient-to-r from-surface-600/40 
@@ -191,5 +194,88 @@ This is the dashboard area of the proposals view that:
 		</div>
 	</div>
 </div>
+
+<!-- Modal -->
+{#if isMetricsModalOpen}
+	<div 
+		class="fixed inset-0 z-50 flex items-start justify-center"
+		on:click|self={toggleMetricsModal}
+	>
+		<!-- Modal backdrop -->
+		<div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+		
+		<!-- Modal content -->
+		<div 
+			class="relative w-full max-w-[640px] h-[50vh] mt-24 mx-4 bg-surface-800 
+			rounded-xl border border-surface-600/50 shadow-2xl overflow-y-auto"
+		>
+			<!-- Modal header -->
+			<div class="sticky top-0 bg-surface-800 p-4 border-b border-surface-600/50">
+				<h2 class="text-xl font-semibold text-tertiary-100">Metrics Details</h2>
+				<!-- Close button -->
+				<button 
+					class="absolute top-4 right-4 text-tertiary-300 hover:text-tertiary-100"
+					on:click={toggleMetricsModal}
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<!-- Modal body -->
+			<div class="p-4 space-y-4">
+				<!-- Detailed metrics grid -->
+				<div class="grid grid-cols-2 gap-4">
+					<div class="p-4 rounded-lg bg-surface-700/30">
+						<h3 class="text-sm font-medium text-tertiary-200">Total VCs</h3>
+						<p class="text-2xl font-bold text-tertiary-100">{totalVCs}</p>
+						<p class="text-sm text-tertiary-300 mt-2">Active Vision Contributors</p>
+					</div>
+					
+					<div class="p-4 rounded-lg bg-surface-700/30">
+						<h3 class="text-sm font-medium text-tertiary-200">Token Price</h3>
+						<p class="text-2xl font-bold text-tertiary-100">€{stats.currentTokenPrice.toFixed(2)}</p>
+						<p class="text-sm text-tertiary-300 mt-2">+{tokenPriceIncrease}% increase</p>
+					</div>
+
+					<div class="p-4 rounded-lg bg-surface-700/30">
+						<h3 class="text-sm font-medium text-tertiary-200">Pool Distribution</h3>
+						<p class="text-2xl font-bold text-tertiary-100">{eurePercentage}% / {vcePercentage}%</p>
+						<p class="text-sm text-tertiary-300 mt-2">EURe / VCE ratio</p>
+					</div>
+
+					<div class="p-4 rounded-lg bg-surface-700/30">
+						<h3 class="text-sm font-medium text-tertiary-200">Total Pool Value</h3>
+						<p class="text-2xl font-bold text-tertiary-100">{ccpValue}</p>
+						<p class="text-sm text-tertiary-300 mt-2">Combined value of EURe and VCE</p>
+					</div>
+				</div>
+
+				<!-- Additional details -->
+				<div class="p-4 rounded-lg bg-surface-700/30">
+					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Token Distribution</h3>
+					<div class="space-y-2">
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">EURe Balance</span>
+							<span class="text-tertiary-100 font-medium">
+								€{new Intl.NumberFormat('en-US').format(adminTokensQuery.data?.balances?.EURe?.balance || 0)}
+							</span>
+						</div>
+						<div class="flex justify-between items-center">
+							<span class="text-tertiary-300">VCE Balance</span>
+							<span class="text-tertiary-100 font-medium">
+								{new Intl.NumberFormat('en-US').format(
+									(adminTokensQuery.data?.balances?.VCE?.balance || 0) +
+									(adminTokensQuery.data?.balances?.VCE?.staked_balance || 0)
+								)} VCE
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 
