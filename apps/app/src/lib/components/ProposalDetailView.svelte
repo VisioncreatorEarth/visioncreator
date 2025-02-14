@@ -271,7 +271,7 @@ HOW THIS COMPONENT WORKS:
 		</div>
 
 		<!-- Main Content Area -->
-		<div class="flex flex-1 overflow-hidden md:grid md:grid-cols-[auto_1fr_auto]">
+		<div class="flex flex-1 overflow-hidden md:grid md:grid-cols-[1fr_280px]">
 			<!-- Main Content Area -->
 			<div class="flex flex-col flex-1 overflow-hidden">
 				{#if $activeTab === 'details'}
@@ -373,7 +373,7 @@ HOW THIS COMPONENT WORKS:
 			<!-- Right Metadata - Only on Desktop -->
 			{#if !isMobileView}
 				<div
-					class="flex-none hidden w-[280px] md:block overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
+					class="hidden md:block overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
 						proposal.state
 					)}"
 				>

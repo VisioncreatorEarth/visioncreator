@@ -485,11 +485,12 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-[calc(100%-1rem)] md:w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[3rem] mx-2 md:mx-0"
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col overflow-hidden mb-[3rem] mx-2 md:mx-0"
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
-			class:h-[90vh]={currentModalType === 'custom-view' || currentModalType === 'aside-view'}
+			class:h-[80vh]={currentModalType === 'custom-view'}
+			class:md:h-[90vh]={currentModalType === 'custom-view' || currentModalType === 'aside-view'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
