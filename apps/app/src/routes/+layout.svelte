@@ -128,12 +128,12 @@
 </script>
 
 <QueryClientProvider client={queryClient}>
-	<div class="flex min-h-screen bg-surface-900 @container overflow-hidden w-full">
+	<div class="flex min-h-screen bg-surface-900 @container w-full relative">
 		<!-- Left Aside Area -->
 		<AsidePanel side="left" />
 
 		<!-- Main Content Area -->
-		<div class="flex flex-col flex-1 min-h-screen">
+		<div class="flex flex-col flex-1 min-h-screen overflow-x-hidden">
 			<slot />
 		</div>
 
@@ -179,8 +179,8 @@
 	{/if} -->
 </QueryClientProvider>
 
-<footer class="fixed bottom-0 left-0 py-2 @sm:py-2 text-white z-40">
-	<div class="px-4 @sm:px-4">
+<footer class="fixed bottom-0 left-0 z-40 text-white">
+	<div class="px-2 @sm:px-4">
 		<div class="flex space-x-2 @sm:space-x-4">
 			<button
 				class="text-2xs @sm:text-xs text-tertiary-500/80 hover:text-tertiary-500 transition-colors"

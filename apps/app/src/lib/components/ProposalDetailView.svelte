@@ -79,7 +79,7 @@ HOW THIS COMPONENT WORKS:
 	});
 
 	// Create a store for the detail tab
-	const activeTab = writable<'details' | 'metadata' | 'chat'>('details');
+	const activeTab = writable<'details' | 'info' | 'chat'>('details');
 
 	// Update handleVote function
 	async function handleVote(proposalId: string, isIncrease: boolean) {
@@ -231,7 +231,7 @@ HOW THIS COMPONENT WORKS:
 	};
 
 	// Handle tab changes with explicit functions
-	function setTab(tab: 'details' | 'metadata' | 'chat') {
+	function setTab(tab: 'details' | 'info' | 'chat') {
 		activeTab.set(tab);
 	}
 
@@ -246,7 +246,8 @@ HOW THIS COMPONENT WORKS:
 </script>
 
 {#if proposal}
-	<div class="h-full overflow-hidden">
+	<div class="flex flex-col h-full">
+		<!-- Header -->
 		<div
 			class="sticky top-0 z-10 flex-none border-b bg-surface-800/95 backdrop-blur-sm border-surface-700/50"
 		>
@@ -265,25 +266,18 @@ HOW THIS COMPONENT WORKS:
 			/>
 		</div>
 
-		<!-- Scrollable Content Container -->
-		<div class="flex flex-1 h-full pb-36">
-			<!-- Left Navigation - Fixed, No Scroll -->
-			<div class="flex flex-col flex-none w-16 border-r bg-surface-800/50 border-surface-700/50">
+		<!-- Main Content Area -->
+		<div class="flex flex-1 min-h-0 md:grid md:grid-cols-[auto_1fr_auto]">
+			<!-- Desktop Navigation -->
+			<div
+				class="flex-col flex-none hidden w-16 border-r md:flex bg-surface-800/50 border-surface-700/50"
+			>
 				<button class={getNavClasses('details')} on:click={() => setTab('details')}>
 					<div class="flex flex-col items-center justify-center w-full">
 						<Icon icon="mdi:text-box-outline" class="w-6 h-6" />
 						<span class="mt-1 text-[10px]">Details</span>
 					</div>
 				</button>
-
-				{#if isMobileView}
-					<button class={getNavClasses('metadata')} on:click={() => setTab('metadata')}>
-						<div class="flex flex-col items-center justify-center w-full">
-							<Icon icon="mdi:information-outline" class="w-6 h-6" />
-							<span class="mt-1 text-[10px]">Info</span>
-						</div>
-					</button>
-				{/if}
 
 				<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
 					<div class="flex flex-col items-center justify-center w-full">
@@ -293,11 +287,11 @@ HOW THIS COMPONENT WORKS:
 				</button>
 			</div>
 
-			<!-- Main Content Area - Independent Scroll -->
-			<div class="flex-1 h-full overflow-y-auto">
+			<!-- Main Content Area -->
+			<div class="flex flex-col flex-1">
 				{#if $activeTab === 'details'}
-					<div class="flex flex-col h-full overflow-hidden">
-						<div class="flex flex-col gap-6 p-6 overflow-y-auto">
+					<div class="flex-1 overflow-y-auto">
+						<div class="flex flex-col gap-6 p-6 pb-[80px] md:pb-6 min-h-full">
 							{#if proposal.video_id}
 								<div class="w-full overflow-hidden rounded-lg bg-surface-800">
 									<VideoPlayer videoId={proposal.video_id} />
@@ -318,17 +312,129 @@ HOW THIS COMPONENT WORKS:
 							</div>
 						</div>
 					</div>
+				{:else if $activeTab === 'info' && isMobileView}
+					<div class="flex-1 overflow-y-auto">
+						<div class="p-6 space-y-6 pb-[80px]">
+							<!-- Author Info -->
+							<div class="mb-6">
+								<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+									Author
+								</h4>
+								<div class="flex items-center gap-3 mt-2">
+									<Avatar
+										me={{
+											data: { seed: authorProfile?.id || proposal.author },
+											design: { highlight: false },
+											size: 'sm'
+										}}
+									/>
+									<div>
+										<p class="text-sm font-medium text-tertiary-100">
+											{authorProfile?.name || 'Anonymous'}
+										</p>
+										<p class="text-xs text-tertiary-300">Visioncreator</p>
+									</div>
+								</div>
+							</div>
+
+							<!-- Status & Timeline -->
+							<div class="space-y-6">
+								<div>
+									<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+										Status
+									</h4>
+									<div class="flex items-center gap-2 mt-2">
+										<Icon
+											icon={getStateIcon(proposal.state)}
+											class="w-5 h-5 {getStateColor(proposal.state)}"
+										/>
+										<span class="text-sm font-medium {getStateColor(proposal.state)}">
+											{getStateLabel(proposal.state)}
+										</span>
+									</div>
+								</div>
+
+								<div>
+									<h4 class="text-xs font-medium tracking-wider uppercase text-tertiary-300">
+										Timeline
+									</h4>
+									<div class="mt-2 space-y-2">
+										<div class="flex justify-between">
+											<span class="text-sm text-tertiary-300">Created</span>
+											<span class="text-sm text-tertiary-100"
+												>{getTimeAgo(proposal.created_at)}</span
+											>
+										</div>
+										{#if proposal.updated_at !== proposal.created_at}
+											<div class="flex justify-between">
+												<span class="text-sm text-tertiary-300">Updated</span>
+												<span class="text-sm text-tertiary-100"
+													>{getTimeAgo(proposal.updated_at)}</span
+												>
+											</div>
+										{/if}
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 				{:else if $activeTab === 'chat'}
-					<div class="h-full">
+					<div class="flex flex-col flex-1 h-full">
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{/if}
+
+				<!-- Mobile Navigation -->
+				<div class="fixed bottom-0 left-0 right-0 z-20 md:hidden">
+					<div
+						class="flex items-center justify-between w-full px-4 py-1 border-t bg-surface-600 rounded-t-3xl border-surface-700/50"
+					>
+						<!-- Left Side Nav Items -->
+						<div class="flex items-center gap-2">
+							<button
+								class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+								'details'
+									? 'bg-tertiary-300/10 text-tertiary-500'
+									: 'text-tertiary-300 hover:bg-surface-700/50'}"
+								on:click={() => setTab('details')}
+							>
+								<Icon icon="mdi:text-box-outline" class="w-5 h-5 mt-1" />
+								<span class="-mt-1 text-[10px]">Details</span>
+							</button>
+
+							<button
+								class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+								'info'
+									? 'bg-tertiary-300/10 text-tertiary-500'
+									: 'text-tertiary-300 hover:bg-surface-700/50'}"
+								on:click={() => setTab('info')}
+							>
+								<Icon icon="mdi:information-outline" class="w-5 h-5 mt-1" />
+								<span class="-mt-1 text-[10px]">Info</span>
+							</button>
+						</div>
+
+						<!-- Right Side Nav Items -->
+						<div class="flex items-center gap-2">
+							<button
+								class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+								'chat'
+									? 'bg-tertiary-300/10 text-tertiary-500'
+									: 'text-tertiary-300 hover:bg-surface-700/50'}"
+								on:click={() => setTab('chat')}
+							>
+								<Icon icon="mdi:chat-outline" class="w-5 h-5 mt-1" />
+								<span class="-mt-1 text-[10px]">Chat</span>
+							</button>
+						</div>
+					</div>
+				</div>
 			</div>
 
-			<!-- Right Metadata - Independent Scroll -->
+			<!-- Right Metadata - Only on Desktop -->
 			{#if !isMobileView}
 				<div
-					class="flex-none w-[280px] overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
+					class="flex-none hidden w-[280px] md:block overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
 						proposal.state
 					)}"
 				>

@@ -480,8 +480,7 @@
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
-			class:h-[92vh]={currentModalType === 'aside-view'}
-			class:md:h-[85vh]={currentModalType === 'aside-view'}
+			class:h-[90vh]={currentModalType === 'custom-view' || currentModalType === 'aside-view'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
@@ -525,8 +524,8 @@
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 				</div>
 			{:else if currentModalType === 'custom-view' && customView}
-				<div class="relative flex flex-col w-full h-[92vh] md:h-[85vh] h-full overflow-hidden">
-					<div class="flex-1 overflow-y-auto">
+				<div class="grid w-full h-full">
+					<div class="h-full overflow-hidden">
 						<svelte:component
 							this={customView.component}
 							{...customView.props}

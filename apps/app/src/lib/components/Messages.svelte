@@ -174,14 +174,10 @@ HOW THIS COMPONENT WORKS:
 	}
 </script>
 
-<div class="relative flex flex-col h-full {className}">
+<div class="flex flex-col h-full {className}">
 	<!-- Messages Container -->
-	<div
-		bind:this={messageContainer}
-		on:scroll={handleScroll}
-		class="absolute inset-0 overflow-y-auto"
-	>
-		<div class="p-4 pb-20 space-y-2">
+	<div bind:this={messageContainer} on:scroll={handleScroll} class="flex-1 min-h-0 overflow-y-auto">
+		<div class="flex flex-col justify-end min-h-full p-4 pb-2 space-y-2">
 			{#if isLoading && !messages.length}
 				<div class="flex items-center justify-center h-32">
 					<div class="text-sm text-tertiary-300">Loading messages...</div>
@@ -244,25 +240,25 @@ HOW THIS COMPONENT WORKS:
 
 	<!-- Message Input -->
 	<div
-		class="absolute bottom-0 left-0 right-0 flex gap-2 p-3 border-t border-surface-700/50 bg-surface-800/50 backdrop-blur-sm"
+		class="flex flex-none gap-2 p-3 border-t border-surface-700/50 bg-surface-600/95 rounded-t-3xl backdrop-blur-sm"
 	>
 		<input
 			type="text"
 			bind:value={newMessage}
 			on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
 			placeholder="Type your message..."
-			class="flex-grow px-3 py-1.5 text-sm rounded-lg bg-surface-700/30 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-2 focus:ring-secondary-500/50 focus:outline-none"
+			class="flex-1 px-3 py-2 text-sm rounded-2xl bg-surface-700/50 text-tertiary-100 placeholder:text-tertiary-400 focus:ring-1 focus:ring-tertiary-500/50 focus:outline-none"
 			disabled={!userData || isLoading}
 		/>
 		<button
 			on:click={handleSubmit}
 			disabled={!newMessage.trim() || !userData || isLoading}
-			class="px-3 py-1.5 text-sm font-medium transition-colors rounded-lg bg-secondary-500 hover:bg-secondary-600 text-secondary-50 disabled:opacity-50 disabled:cursor-not-allowed"
+			class="px-3 py-2 text-sm font-medium transition-colors border rounded-full btn text-tertiary-200 border-tertiary-500 bg-tertiary-900/20 hover:bg-surface-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
 		>
 			{#if $createMessageMutation.isLoading}
 				<Icon icon="mdi:loading" class="w-4 h-4 animate-spin" />
 			{:else}
-				Send
+				<Icon icon="heroicons:paper-airplane" class="w-4 h-4" />
 			{/if}
 		</button>
 	</div>

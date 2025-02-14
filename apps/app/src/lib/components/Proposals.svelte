@@ -482,7 +482,7 @@ HOW THIS SYSTEM WORKS:
 </script>
 
 <!-- Root Container -->
-<div class="h-full bg-surface-900">
+<div class="relative flex flex-col w-full overflow-x-hidden">
 	<!-- Main Grid Layout - No more aside, just the content -->
 	<div class="h-full">
 		<!-- Main Content Area -->
