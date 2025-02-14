@@ -141,7 +141,12 @@ HOW THIS COMPONENT WORKS:
 		return Math.floor(value).toString();
 	}
 
-	// Update notification handling
+	// Add getQuadraticCost function if not already present
+	function getQuadraticCost(voteNumber: number): number {
+		return Math.pow(voteNumber, 2);
+	}
+
+	// Update handleVote function to handle both increase and decrease properly
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		try {
 			await onVote(proposalId, isIncrease);
@@ -151,14 +156,19 @@ HOW THIS COMPONENT WORKS:
 				clearTimeout(notificationTimeout);
 			}
 
-			// Show notification
-			notificationMessage = isIncrease ? '+1 Vote' : '-1 Vote';
+			// Calculate next vote count for display
+			const nextVotes = isIncrease ? currentVotes + 1 : currentVotes - 1;
+
+			// Show notification with vote count and token info
+			notificationMessage = isIncrease
+				? `+1 Vote (${nextVotes} total)`
+				: `-1 Vote (${nextVotes} total)`;
 			showNotification = true;
 
 			// Set new timeout
 			notificationTimeout = setTimeout(() => {
 				showNotification = false;
-			}, 2000) as unknown as NodeJS.Timeout;
+			}, 2500) as unknown as NodeJS.Timeout;
 		} catch (error) {
 			console.error('Vote error:', error);
 
@@ -192,8 +202,10 @@ HOW THIS COMPONENT WORKS:
 
 <div class="relative flex flex-col md:flex-row md:items-stretch">
 	<!-- Left side: Votes -->
-	<div class="items-center justify-between hidden w-40 p-6 border-r md:flex border-surface-700/50">
-		<div class="flex items-center gap-4">
+	<div
+		class="items-center justify-between hidden w-32 py-6 pl-6 border-r md:flex border-surface-700/50"
+	>
+		<div class="flex items-center gap-3">
 			<div class="relative text-center">
 				<div class="flex items-center justify-center">
 					<p class="text-4xl font-bold text-tertiary-100">
@@ -210,27 +222,29 @@ HOW THIS COMPONENT WORKS:
 				<div class="text-sm text-tertiary-400">votes</div>
 			</div>
 			{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
-				<div class="flex flex-col gap-2">
-					<button
-						disabled={!userData ||
-							!canVote(proposal, currentVotes) ||
-							userTokens < getNextVoteCost(currentVotes)}
-						on:click|stopPropagation={(e) => {
-							e.stopPropagation();
-							handleVote(proposal.id, true);
-						}}
-						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-					>
-						<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
-					</button>
-					<button
-						disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
-						on:click|stopPropagation={() => handleVote(proposal.id, false)}
-						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-					>
-						<Icon icon="mdi:minus" class="w-5 h-5 text-tertiary-300" />
-					</button>
-				</div>
+				{#if userData && !isAdmin(userData.id)}
+					<div class="flex flex-col gap-2">
+						<button
+							disabled={!userData ||
+								!canVote(proposal, currentVotes) ||
+								userTokens < getNextVoteCost(currentVotes)}
+							on:click|stopPropagation={(e) => {
+								e.stopPropagation();
+								handleVote(proposal.id, true);
+							}}
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+						>
+							<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
+						</button>
+						<button
+							disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
+							on:click|stopPropagation={() => handleVote(proposal.id, false)}
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+						>
+							<Icon icon="mdi:minus" class="w-5 h-5 text-tertiary-300" />
+						</button>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -238,29 +252,41 @@ HOW THIS COMPONENT WORKS:
 	<!-- Notification overlay -->
 	{#if showNotification}
 		<div
-			class="fixed inset-0 z-50 pointer-events-none"
-			in:fade={{ duration: 200 }}
-			out:fade={{ duration: 200 }}
+			class="absolute inset-0 z-50 pointer-events-none left-24"
+			in:fade={{ duration: 300 }}
+			out:fade={{ duration: 300 }}
 		>
 			<div
-				class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-6 py-4 rounded-xl {notificationMessage.includes(
+				class="absolute left-6 h-full flex items-center right-0 px-8 backdrop-blur-sm {notificationMessage.includes(
 					'+'
 				)
-					? 'bg-success-500/90 dark:bg-success-900/90'
-					: 'bg-error-500/90 dark:bg-error-900/90'}"
+					? 'bg-success-600/80 border-l border-success-500/30'
+					: 'bg-error-600/80 border-l border-error-500/30'}"
 			>
-				<div class="flex items-center gap-3">
-					<Icon
-						icon={notificationMessage.includes('+')
-							? 'heroicons:plus-circle'
-							: 'heroicons:minus-circle'}
-						class="w-8 h-8 {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					/>
-					<span class="text-xl font-medium text-white">
-						{notificationMessage}
-					</span>
+				<div class="flex flex-col gap-2">
+					<div class="flex items-center gap-3">
+						<Icon
+							icon={notificationMessage.includes('+')
+								? 'heroicons:plus-circle'
+								: 'heroicons:minus-circle'}
+							class="w-8 h-8 {notificationMessage.includes('+')
+								? 'text-success-100'
+								: 'text-error-100'}"
+						/>
+						<span class="text-xl font-medium text-tertiary-50">
+							{notificationMessage}
+						</span>
+					</div>
+					<!-- Token cost/return information -->
+					<div class="text-sm text-tertiary-200">
+						{#if notificationMessage.includes('+')}
+							Cost: {formatTokens(getNextVoteCost(currentVotes))} VCE tokens
+						{:else}
+							Returned: {formatTokens(
+								getQuadraticCost(currentVotes) - getQuadraticCost(currentVotes - 1)
+							)} VCE tokens
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -303,27 +329,29 @@ HOW THIS COMPONENT WORKS:
 			</div>
 
 			{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
-				<div class="flex gap-2">
-					<button
-						disabled={!userData ||
-							!canVote(proposal, currentVotes) ||
-							userTokens < getNextVoteCost(currentVotes)}
-						on:click|stopPropagation={(e) => {
-							e.stopPropagation();
-							handleVote(proposal.id, true);
-						}}
-						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
-					>
-						<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
-					</button>
-					<button
-						disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
-						on:click|stopPropagation={() => handleVote(proposal.id, false)}
-						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
-					>
-						<Icon icon="mdi:minus" class="w-7 h-7 text-tertiary-200" />
-					</button>
-				</div>
+				{#if userData && !isAdmin(userData.id)}
+					<div class="flex gap-2">
+						<button
+							disabled={!userData ||
+								!canVote(proposal, currentVotes) ||
+								userTokens < getNextVoteCost(currentVotes)}
+							on:click|stopPropagation={(e) => {
+								e.stopPropagation();
+								handleVote(proposal.id, true);
+							}}
+							class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
+						>
+							<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
+						</button>
+						<button
+							disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
+							on:click|stopPropagation={() => handleVote(proposal.id, false)}
+							class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
+						>
+							<Icon icon="mdi:minus" class="w-7 h-7 text-tertiary-200" />
+						</button>
+					</div>
+				{/if}
 			{/if}
 
 			<div class="flex items-center gap-1.5 overflow-x-auto">
@@ -339,22 +367,22 @@ HOW THIS COMPONENT WORKS:
 		<div class="p-2 border-t border-surface-700/50 {getStateBgColor(proposal.state)}">
 			{#if proposal.state === 'pending'}
 				{#if userData?.id === '00000000-0000-0000-0000-000000000001'}
-					<div class="flex gap-2">
+					<div class="flex justify-end gap-2">
 						<button
 							on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
-							class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
 						>
-							<div class="flex items-center justify-center gap-1">
-								<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
+							<div class="flex items-center gap-2">
+								<Icon icon="heroicons:x-mark" class="w-5 h-5" />
 								Veto
 							</div>
 						</button>
 						<button
 							on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
-							class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
 						>
-							<div class="flex items-center justify-center gap-1">
-								<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
+							<div class="flex items-center gap-2">
+								<Icon icon="heroicons:check" class="w-5 h-5" />
 								Pass
 							</div>
 						</button>

@@ -365,29 +365,28 @@
 
 {#if $context.isOpen}
 	<div
-		class="flex fixed inset-0 z-50 flex-col justify-end"
+		class="fixed inset-0 z-50 flex flex-col justify-end"
 		transition:fade={{ duration: 200 }}
 		on:click|self={handleModalClose}
 	>
 		<!-- Separate backdrop div with iOS-compatible blur -->
 		<div class="absolute inset-0 -z-10 bg-surface-900/10" />
 		{#if $currentState === 'calling'}
-			<AskHominio
-				bind:this={askHominioComponent}
-				bind:session
-				onCallEnd={() => machine.send('END_CALL')}
-				showControls={false}
-			/>
+			<div class="relative w-[56rem] left-1/2 -translate-x-1/2 mb-20">
+				<AskHominio
+					bind:this={askHominioComponent}
+					bind:session
+					onCallEnd={() => machine.send('END_CALL')}
+					showControls={false}
+				/>
+			</div>
 		{:else}
-			<div class="relative mx-auto mb-20 w-full max-w-4xl">
-				<div
-					class="overflow-y-auto absolute inset-x-0 bottom-0 px-4"
-					style="max-height: calc(100vh - 120px);"
-				>
+			<div class="relative w-[56rem] left-1/2 -translate-x-1/2 mb-20">
+				<div class="w-full px-4 overflow-y-auto" style="max-height: calc(100vh - 120px);">
 					<div class="space-y-3">
-						<div class="rounded-xl backdrop-blur-xl bg-surface-400/10">
+						<div class="w-full min-w-[56rem] p-6 rounded-xl backdrop-blur-xl bg-surface-400/10">
 							{#if $currentState === 'requestPermissions'}
-								<div class="p-6 text-center">
+								<div class="text-center">
 									<div class="mb-4 text-4xl">🎤</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Required</h2>
 									<p class="mt-2 text-tertiary-200/80">
@@ -395,7 +394,7 @@
 									</p>
 								</div>
 							{:else if $currentState === 'permissionBlocked'}
-								<div class="p-6 text-center">
+								<div class="text-center">
 									<div class="mb-4 text-4xl">🚫</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Microphone Access Blocked</h2>
 									<p class="mt-2 text-tertiary-200/80">
@@ -409,7 +408,7 @@
 									</button>
 								</div>
 							{:else if $currentState === 'readyToCall'}
-								<div class="p-4 text-center">
+								<div class="text-center">
 									<div class="mb-4 text-4xl">🎤</div>
 									<h2 class="text-2xl font-bold text-tertiary-200">Ready to Record</h2>
 									<p class="mt-2 text-tertiary-200/80">
@@ -417,7 +416,7 @@
 									</p>
 								</div>
 							{:else if $currentState === 'paywall'}
-								<div class="p-6 text-center">
+								<div class="text-center">
 									<div class="flex justify-center mb-4">
 										<Icon
 											icon="solar:lock-password-bold-duotone"
@@ -442,7 +441,7 @@
 										</div>
 									{/if}
 
-									<div class="flex gap-4 justify-center mt-4">
+									<div class="flex justify-center gap-4 mt-4">
 										<button
 											class="btn variant-ghost-tertiary btn-md @3xl:btn-lg rounded-full"
 											on:click={() => machine.send('CLOSE')}
@@ -457,7 +456,7 @@
 										>
 											{#if requestStatus === 'loading'}
 												<div
-													class="w-5 h-5 rounded-full border-2 animate-spin border-tertiary-200 border-t-transparent"
+													class="w-5 h-5 border-2 rounded-full animate-spin border-tertiary-200 border-t-transparent"
 												/>
 											{:else}
 												Request Minutes
@@ -466,7 +465,7 @@
 									</div>
 								</div>
 							{:else if $currentState === 'waitinglist'}
-								<div class="p-6 text-center">
+								<div class="text-center">
 									<h2 class="text-2xl font-bold text-tertiary-200">Early BETA Access</h2>
 									<p class="mt-2 text-tertiary-200/80">
 										Invite 3 visioncreators to get early BETA access!
@@ -486,11 +485,6 @@
 				</div>
 			</div>
 		{/if}
-	</div>
-	<div class="fixed right-0 bottom-0 left-0 z-30 h-96 pointer-events-none">
-		<div
-			class="absolute inset-0 bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
-		/>
 	</div>
 {/if}
 
