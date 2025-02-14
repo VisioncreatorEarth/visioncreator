@@ -78,7 +78,7 @@ Chielo, Yvonne and Samuel
 					<h2
 						class="text-2xl font-bold sm:text-3xl md:text-4xl text-tertiary-100 dark:text-surface-100"
 					>
-						Welcome {$query.data.name} <br />
+						Welcome {$query.data?.name ? $query.data.name : ''} <br />
 						<span class="text-2xl font-thin"
 							>become part of our founding family of {TOTAL_FOUNDERS}</span
 						>
