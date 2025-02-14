@@ -66,7 +66,42 @@ export default createOperation.mutation({
       nameToUpdate = generateRandomName();
     }
 
+    // Update name in Listmonk if user exists there
+    try {
+      // First check if user exists in Listmonk
+      const checkResponse = await context.nango.proxy({
+        method: "GET",
+        endpoint: "/subscribers",
+        connectionId: "listmonk-vc",
+        providerConfigKey: "listmonk",
+        params: {
+          query: `subscribers.email='${user.email}'`,
+          page: "1",
+          per_page: "1",
+        },
+      });
 
+      const subscribers = checkResponse.data.data.results;
+
+      if (subscribers.length > 0) {
+        // User exists in Listmonk, update their name
+        const subscriber = subscribers[0];
+        await context.nango.proxy({
+          method: "PUT",
+          endpoint: `/subscribers/${subscriber.id}`,
+          connectionId: "listmonk-vc",
+          providerConfigKey: "listmonk",
+          data: {
+            email: user.email,
+            name: nameToUpdate,
+            status: subscriber.status, // Keep existing status
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update name in Listmonk:", error);
+      // Don't throw error - we still want to update the local profile
+    }
 
     const retryCount = 3;
     let attempt = 0;

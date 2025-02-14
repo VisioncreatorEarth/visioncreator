@@ -1,11 +1,40 @@
 <script lang="ts">
-	import { createMutation } from '$lib/wundergraph';
+	import { createMutation, createQuery } from '$lib/wundergraph';
+	import { onMount } from 'svelte';
 	export let me;
 	const query = $me.query;
 
 	const FIBONACCI_MILESTONES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
 	const TOTAL_FOUNDERS = 144;
 	const CURRENT_FOUNDERS = 21;
+
+	// Setup updateMe mutation
+	const updateMeMutation = createMutation({
+		operationName: 'updateMe'
+	});
+
+	// Check for null username and trigger update if needed
+	onMount(() => {
+		setTimeout(async () => {
+			// Only update if name is strictly null or undefined
+			if ($query.data?.name === null || $query.data?.name === undefined) {
+				console.log('Detected missing/null username, triggering updateMe');
+				try {
+					await $updateMeMutation.mutateAsync({
+						// Don't pass name at all to ensure random name generation
+						name: undefined
+					});
+					console.log('Username updated successfully');
+					// Optionally refresh the query to show new name
+					await query.refetch();
+				} catch (error) {
+					console.error('Failed to update null username:', error);
+				}
+			} else {
+				console.log('Username already set:', $query.data?.name);
+			}
+		}, 5000); // 5 second delay
+	});
 
 	// Calculate all milestone values
 	$: currentCircle = FIBONACCI_MILESTONES.findIndex((n) => n > CURRENT_FOUNDERS) + 1;
