@@ -184,7 +184,7 @@ This is the dashboard area of the proposals view that:
 							</p>
 						</div>
 
-						<!-- CCP -->
+						<!-- POOL -->
 						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
 							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
 								<span
@@ -192,7 +192,7 @@ This is the dashboard area of the proposals view that:
 								>
 									{eurePercentage}% / {vcePercentage}%
 								</span>
-								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">CCP</h3>
+								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
 								{ccpValue}
