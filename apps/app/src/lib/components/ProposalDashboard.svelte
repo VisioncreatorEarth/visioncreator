@@ -207,17 +207,20 @@ This is the dashboard area of the proposals view that:
 
 <!-- Modal -->
 {#if isMetricsModalOpen}
+	<!-- Backdrop with click handler -->
 	<div 
-		class="fixed inset-0 z-50 flex items-start justify-center"
-		on:click|self={toggleMetricsModal}
+		class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+		on:click={() => toggleMetricsModal(false)}
+	></div>
+	
+	<!-- Modal content in separate layer -->
+	<div 
+		class="fixed inset-0 z-50 flex items-start justify-center pointer-events-none"
 	>
-		<!-- Modal backdrop -->
-		<div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
-		
-		<!-- Modal content -->
 		<div 
 			class="relative w-full max-w-[640px] h-[50vh] mt-24 mx-4 bg-surface-800 
-			rounded-xl border border-surface-600/50 shadow-2xl overflow-y-auto"
+			rounded-xl border border-surface-600/50 shadow-2xl overflow-y-auto
+			pointer-events-auto"
 		>
 			<!-- Modal header -->
 			<div class="sticky top-0 bg-surface-800 p-4 border-b border-surface-600/50">
@@ -225,7 +228,7 @@ This is the dashboard area of the proposals view that:
 				<!-- Close button -->
 				<button 
 					class="absolute top-4 right-4 text-tertiary-300 hover:text-tertiary-100"
-					on:click={toggleMetricsModal}
+					on:click={() => toggleMetricsModal(false)}
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
