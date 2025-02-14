@@ -113,11 +113,21 @@ This is the dashboard area of the proposals view that:
 	// Add state for modal
 	let isMetricsModalOpen = false;
 
-	// Function to toggle modal
-	function toggleMetricsModal() {
-		isMetricsModalOpen = !isMetricsModalOpen;
+	// Enhanced toggle function with optional force value
+	function toggleMetricsModal(force?: boolean) {
+		isMetricsModalOpen = force !== undefined ? force : !isMetricsModalOpen;
+	}
+
+	// Handle ESC key
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && isMetricsModalOpen) {
+			toggleMetricsModal(false);
+		}
 	}
 </script>
+
+<!-- Add keydown event listener to window -->
+<svelte:window on:keydown={handleKeydown} />
 
 <div class="w-full border-b bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
 	<div class="max-w-5xl mx-auto">
