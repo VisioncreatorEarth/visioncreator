@@ -6,7 +6,7 @@ import {
 
 export default createOperation.mutation({
   input: z.object({
-    name: z.string(),
+    name: z.string().nullable().optional(),
   }),
   requireAuthentication: true,
   rbac: {
@@ -34,8 +34,10 @@ export default createOperation.mutation({
       .eq("id", user.customClaims.id)
       .single();
 
-    // Generate a random name if empty string is passed
-    if (input.name === '') {
+
+
+    // Helper function to generate random animal name
+    function generateRandomName() {
       const adjectives = [
         "Sparkling", "Lucky", "Smooth", "Dreamy", "Bright",
         "Shining", "Joyful", "Lively", "Charming", "Playful",
@@ -52,8 +54,53 @@ export default createOperation.mutation({
       ];
       const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
       const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
-      input.name = `${randomAdjective}${randomAnimal}`;
-      console.log('Generated random name:', { newName: input.name });
+      const name = `${randomAdjective}${randomAnimal}`;
+      return name;
+    }
+
+    // Use provided name if valid, otherwise generate random animal name
+    let nameToUpdate;
+    if (input.name?.trim()) {
+      nameToUpdate = input.name.trim();
+    } else {
+      nameToUpdate = generateRandomName();
+    }
+
+    // Update name in Listmonk if user exists there
+    try {
+      // First check if user exists in Listmonk
+      const checkResponse = await context.nango.proxy({
+        method: "GET",
+        endpoint: "/subscribers",
+        connectionId: "listmonk-vc",
+        providerConfigKey: "listmonk",
+        params: {
+          query: `subscribers.email='${user.email}'`,
+          page: "1",
+          per_page: "1",
+        },
+      });
+
+      const subscribers = checkResponse.data.data.results;
+
+      if (subscribers.length > 0) {
+        // User exists in Listmonk, update their name
+        const subscriber = subscribers[0];
+        await context.nango.proxy({
+          method: "PUT",
+          endpoint: `/subscribers/${subscriber.id}`,
+          connectionId: "listmonk-vc",
+          providerConfigKey: "listmonk",
+          data: {
+            email: user.email,
+            name: nameToUpdate,
+            status: subscriber.status, // Keep existing status
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update name in Listmonk:", error);
+      // Don't throw error - we still want to update the local profile
     }
 
     const retryCount = 3;
@@ -68,7 +115,7 @@ export default createOperation.mutation({
       try {
         const { data: updateData, error: updateError } = await context.supabase
           .from("profiles")
-          .update({ name: input.name, active: true })
+          .update({ name: nameToUpdate, active: true })
           .eq("id", user.customClaims.id)
           .select()
           .single();
@@ -111,7 +158,7 @@ export default createOperation.mutation({
 
     return {
       success: true,
-      message: `Profile updated to ${input.name}!`,
+      message: `Profile updated to ${nameToUpdate}!`,
       data,
     };
   },

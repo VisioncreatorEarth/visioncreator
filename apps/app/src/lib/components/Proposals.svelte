@@ -54,6 +54,7 @@ HOW THIS SYSTEM WORKS:
 		tags?: string[];
 		metadata?: Record<string, string | null>;
 		decided_at?: string;
+		voters: VoterInfo[];
 	}
 
 	interface User {
@@ -76,25 +77,20 @@ HOW THIS SYSTEM WORKS:
 		name: string | null;
 		votes: number;
 		tokens: number;
+		tokens_staked_vce?: number;
 	}
 
-	// Update the queries to handle refetch
-	type WundergraphQuery<T> = {
-		data?: T;
-		refetch?: () => Promise<void>;
-	};
-
-	// Queries with proper typing
+	// Update the queries to match DetailView's pattern
 	const proposalsQuery = createQuery<Operations['queryProposals']>({
 		operationName: 'queryProposals',
 		enabled: true,
-		refetchInterval: 1000
-	}) as unknown as WundergraphQuery<Operations['queryProposals']>;
+		refetchInterval: 1000 // Match DetailView's interval
+	});
 
 	const userQuery = createQuery<Operations['queryMe']>({
 		operationName: 'queryMe',
 		enabled: true
-	}) as unknown as WundergraphQuery<Operations['queryMe']>;
+	});
 
 	$: userId = $userQuery.data?.id;
 	$: userTokensQuery = createQuery<Operations['getUserTokens']>({
@@ -264,7 +260,13 @@ HOW THIS SYSTEM WORKS:
 		return Math.pow(voteNumber, 2);
 	}
 
-	// Update handleVote function to properly handle quadratic costs
+	// Update getVotersForProposal to use the data directly from the proposal
+	function getVotersForProposal(proposalId: string): VoterInfo[] {
+		const proposal = $proposalsQuery.data?.proposals.find((p) => p.id === proposalId);
+		return proposal?.voters || [];
+	}
+
+	// Update handleVote to refetch the correct voter query
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		if (!$userQuery.data?.id) return;
 
@@ -278,34 +280,19 @@ HOW THIS SYSTEM WORKS:
 			? getNextVoteCost(currentVotes)
 			: getQuadraticCost(currentVotes - 1);
 
-		console.log('Vote attempt:', {
-			isIncrease,
-			currentVotes,
-			userTokens,
-			nextCost
-		});
-
-		// Check if user has enough tokens for voting
-		if (isIncrease && userTokens < nextCost) {
-			console.error('Insufficient tokens for voting', {
-				available: userTokens,
-				required: nextCost
-			});
-			return;
-		}
-
 		try {
 			const result = await $updateVotesMutation.mutateAsync({
 				proposalId,
 				userId,
 				action: isIncrease ? 'stake' : 'unstake',
-				amount: nextCost // Pass the correct quadratic cost
+				amount: nextCost
 			});
 
 			if (result?.success) {
-				// Force immediate refetch of token balance and data
+				// Use tick to ensure DOM is updated properly
+				await tick();
 				await Promise.all(
-					[$userTokensQuery.refetch?.(), $proposalsQuery.refetch?.()].filter(Boolean)
+					[$proposalsQuery.refetch?.(), $userTokensQuery.refetch?.()].filter(Boolean)
 				);
 			}
 		} catch (error) {
@@ -326,43 +313,6 @@ HOW THIS SYSTEM WORKS:
 			nextCost: nextVoteCost,
 			unstakeReturn
 		};
-	}
-
-	// Add a store to manage voters queries for all visible proposals
-	const votersQueriesStore = writable(new Map<string, ReturnType<typeof createQuery>>());
-
-	// Add this at the top level with other stores
-	const votersStore = writable(new Map<string, VoterInfo[]>());
-
-	// Update the votersQueriesStore subscription for better reactivity
-	$: if ($proposalsQuery.data?.proposals) {
-		$proposalsQuery.data.proposals.forEach((proposal) => {
-			if (!$votersQueriesStore.has(proposal.id)) {
-				const query = createQuery({
-					operationName: 'getProposalVoters',
-					input: { proposalId: proposal.id },
-					enabled: true,
-					refetchInterval: 1000
-				});
-
-				query.subscribe((queryResult) => {
-					if (queryResult?.data?.voters) {
-						votersStore.update((store) => {
-							const newStore = new Map(store);
-							newStore.set(proposal.id, queryResult.data.voters);
-							return newStore;
-						});
-					}
-				});
-
-				$votersQueriesStore.set(proposal.id, query);
-			}
-		});
-	}
-
-	// Function to get voters for a proposal
-	function getVotersForProposal(proposalId: string): VoterInfo[] {
-		return $votersStore.get(proposalId) || [];
 	}
 
 	// Add back the missing utility functions
@@ -532,7 +482,7 @@ HOW THIS SYSTEM WORKS:
 </script>
 
 <!-- Root Container -->
-<div class="h-full bg-surface-900">
+<div class="relative flex flex-col w-full overflow-x-hidden">
 	<!-- Main Grid Layout - No more aside, just the content -->
 	<div class="h-full">
 		<!-- Main Content Area -->

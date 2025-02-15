@@ -369,6 +369,15 @@
 <svelte:window on:keydown={handleEscape} />
 
 <!-- Update the nav pills container - Only show when authenticated -->
+<!-- Global gradient overlay for all modals -->
+{#if isModalOpen || isIntentModalOpen}
+	<div class="fixed inset-x-0 bottom-0 z-40 w-screen pointer-events-none h-96">
+		<div
+			class="absolute inset-0 w-screen bg-gradient-to-t to-transparent from-surface-900 via-surface-900/50"
+		/>
+	</div>
+{/if}
+
 <div class="fixed z-50 flex items-center justify-center gap-3 -translate-x-1/2 bottom-4 left-1/2">
 	{#if session}
 		{#if $page.url.pathname !== '/me' || $page.url.searchParams.get('view') === 'Proposals'}
@@ -394,46 +403,60 @@
 			</button>
 		{/if}
 
-		<!-- Main Action Button (existing) -->
-		<button
-			class="flex items-center justify-center transition-all duration-300 rounded-full shadow-lg hover:shadow-xl hover:scale-105"
-			class:bg-error-500={isRecording}
-			class:bg-surface-800={isProcessing}
-			class:bg-surface-600={!isRecording && !isProcessing}
-			class:w-14={!isRecording}
-			class:h-14={true}
-			class:w-28={isRecording}
-			on:mousedown={handleMouseDown}
-			on:mouseup={handleMouseUp}
-			on:mouseleave={handleMouseUp}
-			on:touchstart|preventDefault={handleMouseDown}
-			on:touchend|preventDefault={handleMouseUp}
-			on:touchcancel|preventDefault={handleMouseUp}
-			style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
-		>
-			{#if isRecording}
-				<div class="flex items-center gap-2">
-					<div class="w-3 h-3 bg-white rounded-full animate-pulse" />
-					<span class="text-sm font-medium text-white">End Call</span>
-				</div>
-			{:else if isProcessing}
-				<svg
-					class="w-6 h-6 text-tertiary-200"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-					/>
-				</svg>
-			{:else}
-				<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
-			{/if}
-		</button>
+		{#if session}
+			<MyIntent
+				bind:this={myIntentRef}
+				{session}
+				isOpen={isIntentModalOpen}
+				onRecordingStateChange={(rec, proc) => {
+					isRecording = rec;
+					isProcessing = proc;
+				}}
+				on:close={handleIntentClose}
+				style="display: none;"
+			/>
+
+			<!-- Main Action Button -->
+			<button
+				class="flex items-center justify-center transition-all duration-300 rounded-full shadow-lg hover:shadow-xl hover:scale-105"
+				class:bg-error-500={isRecording}
+				class:bg-surface-800={isProcessing}
+				class:bg-surface-600={!isRecording && !isProcessing}
+				class:w-14={!isRecording}
+				class:h-14={true}
+				class:w-28={isRecording}
+				on:mousedown={handleMouseDown}
+				on:mouseup={handleMouseUp}
+				on:mouseleave={handleMouseUp}
+				on:touchstart|preventDefault={handleMouseDown}
+				on:touchend|preventDefault={handleMouseUp}
+				on:touchcancel|preventDefault={handleMouseUp}
+				style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none;"
+			>
+				{#if isRecording}
+					<div class="flex items-center gap-2">
+						<div class="w-3 h-3 bg-white rounded-full animate-pulse" />
+						<span class="text-sm font-medium text-white">End Call</span>
+					</div>
+				{:else if isProcessing}
+					<svg
+						class="w-6 h-6 text-tertiary-200"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+						/>
+					</svg>
+				{:else}
+					<img src="/logo.png" alt="Visioncreator logo" class="pointer-events-none" />
+				{/if}
+			</button>
+		{/if}
 
 		{#if $page.url.pathname !== '/me' || $page.url.searchParams.get('view') === 'Proposals'}
 			<!-- Right Nav Pill - Ghost Style -->
@@ -462,12 +485,12 @@
 		transition:fade={{ duration: 200 }}
 	>
 		<div
-			class="relative z-10 w-[calc(100%-1rem)] md:w-full bg-surface-700 rounded-3xl flex flex-col max-h-[90vh] overflow-hidden mb-[3rem] mx-2 md:mx-0"
+			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col overflow-hidden mb-[3rem] mx-2 md:mx-0"
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
-			class:h-[92vh]={currentModalType === 'aside-view'}
-			class:md:h-[85vh]={currentModalType === 'aside-view'}
+			class:h-[80vh]={currentModalType === 'custom-view'}
+			class:md:h-[90vh]={currentModalType === 'custom-view' || currentModalType === 'aside-view'}
 			on:click={handleContentClick}
 		>
 			{#if currentModalType === 'login' || currentModalType === 'signup'}
@@ -511,8 +534,8 @@
 					<LegalAndPrivacyPolicy on:close={() => toggleModal()} />
 				</div>
 			{:else if currentModalType === 'custom-view' && customView}
-				<div class="relative flex flex-col w-full h-[92vh] md:h-[85vh] h-full overflow-hidden">
-					<div class="flex-1 overflow-y-auto">
+				<div class="grid w-full h-full">
+					<div class="h-full overflow-hidden">
 						<svelte:component
 							this={customView.component}
 							{...customView.props}

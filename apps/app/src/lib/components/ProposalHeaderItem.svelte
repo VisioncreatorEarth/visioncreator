@@ -12,7 +12,6 @@ HOW THIS COMPONENT WORKS:
 2. Props:
    - proposal: The proposal data to display
    - userData: Current user data for vote checks
-   - getVotersForProposal: Function to get voters
    - canVote: Function to check if voting is allowed
    - canUnstakeVote: Function to check if unstaking is allowed
    - getVoteDisplay: Function to get vote display info
@@ -41,9 +40,8 @@ HOW THIS COMPONENT WORKS:
 	}
 
 	// Props with proper typing
-	export let proposal: Proposal;
+	export let proposal: Proposal & { voters: VoterInfo[] };
 	export let userData: { id: string; name: string; onboarded: boolean } | null;
-	export let getVotersForProposal: (proposalId: string) => VoterInfo[];
 	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
 	export let canUnstakeVote: (proposal: Proposal, voter?: VoterInfo) => boolean;
 	export let getVoteDisplay: (
@@ -143,96 +141,110 @@ HOW THIS COMPONENT WORKS:
 		return Math.floor(value).toString();
 	}
 
-	// Enhance the onVote handler to show notifications
+	// Add getQuadraticCost function if not already present
+	function getQuadraticCost(voteNumber: number): number {
+		return Math.pow(voteNumber, 2);
+	}
+
+	// Update handleVote function to handle both increase and decrease properly
 	async function handleVote(proposalId: string, isIncrease: boolean) {
 		try {
 			await onVote(proposalId, isIncrease);
-			// Show success notification
-			notificationMessage = isIncrease ? '+1 Vote' : '-1 Vote';
+
+			// Clear any existing timeout first
+			if (notificationTimeout) {
+				clearTimeout(notificationTimeout);
+			}
+
+			// Calculate next vote count for display
+			const nextVotes = isIncrease ? currentVotes + 1 : currentVotes - 1;
+
+			// Show notification with vote count and token info
+			notificationMessage = isIncrease
+				? `+1 Vote (${nextVotes} total)`
+				: `-1 Vote (${nextVotes} total)`;
 			showNotification = true;
 
-			// Clear any existing timeout
-			if (notificationTimeout) clearTimeout(notificationTimeout);
-
-			// Set new timeout to hide notification
+			// Set new timeout
 			notificationTimeout = setTimeout(() => {
 				showNotification = false;
-			}, 2500);
+			}, 2500) as unknown as NodeJS.Timeout;
 		} catch (error) {
 			console.error('Vote error:', error);
-			showNotification = true;
+
+			// Clear any existing timeout first
+			if (notificationTimeout) {
+				clearTimeout(notificationTimeout);
+			}
+
+			// Show error notification
 			notificationMessage = 'Error voting';
+			showNotification = true;
 
-			// Clear any existing timeout
-			if (notificationTimeout) clearTimeout(notificationTimeout);
-
-			// Set new timeout to hide error notification
+			// Set new timeout
 			notificationTimeout = setTimeout(() => {
 				showNotification = false;
-			}, 2500);
+			}, 2000) as unknown as NodeJS.Timeout;
 		}
 	}
 
-	// Cleanup on component destroy
+	// Make sure to clean up on destroy
 	onDestroy(() => {
-		if (notificationTimeout) clearTimeout(notificationTimeout);
+		if (notificationTimeout) {
+			clearTimeout(notificationTimeout);
+		}
 	});
+
+	// Get current voter info directly from proposal
+	$: currentVoter = userData ? proposal.voters.find((v) => v.id === userData.id) : undefined;
+	$: currentVotes = currentVoter?.votes || 0;
 </script>
 
 <div class="relative flex flex-col md:flex-row md:items-stretch">
 	<!-- Left side: Votes -->
-	<div class="items-center justify-between hidden w-40 p-6 border-r md:flex border-surface-700/50">
-		<div class="flex items-center gap-4">
+	<div
+		class="items-center justify-between hidden w-32 py-6 pl-6 border-r md:flex border-surface-700/50"
+	>
+		<div class="flex items-center gap-3">
 			<div class="relative text-center">
 				<div class="flex items-center justify-center">
 					<p class="text-4xl font-bold text-tertiary-100">
 						{proposal.total_votes || 0}
 					</p>
-					{#if userData}
-						{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
-						{#if voter?.tokens > 0}
-							<div
-								class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
-							>
-								{formatTokens(voter.tokens)}
-							</div>
-						{/if}
+					{#if currentVoter?.tokens_staked_vce}
+						<div
+							class="absolute flex items-center justify-center w-6 h-6 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
+						>
+							{formatTokens(currentVoter.tokens_staked_vce)}
+						</div>
 					{/if}
 				</div>
 				<div class="text-sm text-tertiary-400">votes</div>
 			</div>
 			{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
-				<div class="flex flex-col gap-2">
-					<button
-						disabled={!userData ||
-							!canVote(
-								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-							) ||
-							userTokens <
-								getNextVoteCost(
-									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-								)}
-						on:click|stopPropagation={(e) => {
-							e.stopPropagation();
-							handleVote(proposal.id, true);
-						}}
-						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-					>
-						<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
-					</button>
-					<button
-						disabled={!userData ||
-							!canUnstakeVote(
-								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
-							)}
-						on:click|stopPropagation={() => handleVote(proposal.id, false)}
-						class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-					>
-						<Icon icon="mdi:minus" class="w-5 h-5 text-tertiary-300" />
-					</button>
-				</div>
+				{#if userData && !isAdmin(userData.id)}
+					<div class="flex flex-col gap-2">
+						<button
+							disabled={!userData ||
+								!canVote(proposal, currentVotes) ||
+								userTokens < getNextVoteCost(currentVotes)}
+							on:click|stopPropagation={(e) => {
+								e.stopPropagation();
+								handleVote(proposal.id, true);
+							}}
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+						>
+							<Icon icon="mdi:plus" class="w-5 h-5 text-tertiary-300" />
+						</button>
+						<button
+							disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
+							on:click|stopPropagation={() => handleVote(proposal.id, false)}
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+						>
+							<Icon icon="mdi:minus" class="w-5 h-5 text-tertiary-300" />
+						</button>
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</div>
@@ -240,60 +252,41 @@ HOW THIS COMPONENT WORKS:
 	<!-- Notification overlay -->
 	{#if showNotification}
 		<div
-			class="absolute top-0 bottom-0 right-0 z-50 hidden pointer-events-none left-40 md:block"
-			transition:fly={{ x: 20, duration: 200, opacity: 0 }}
+			class="absolute inset-0 z-50 pointer-events-none left-24"
+			in:fade={{ duration: 300 }}
+			out:fade={{ duration: 300 }}
 		>
 			<div
-				class="w-full h-full flex items-center {notificationMessage.includes('+')
-					? 'bg-success-500/90 dark:bg-success-900/90'
-					: 'bg-error-500/90 dark:bg-error-900/90'}"
+				class="absolute left-6 h-full flex items-center right-0 px-8 backdrop-blur-sm {notificationMessage.includes(
+					'+'
+				)
+					? 'bg-success-600/80 border-l border-success-500/30'
+					: 'bg-error-600/80 border-l border-error-500/30'}"
 			>
-				<div class="flex flex-col gap-4 px-6 py-4">
-					<Icon
-						icon={notificationMessage.includes('+')
-							? 'heroicons:plus-circle'
-							: 'heroicons:minus-circle'}
-						class="w-12 h-12 {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					/>
-					<span
-						class="text-2xl font-medium {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					>
-						{notificationMessage}
-					</span>
-				</div>
-			</div>
-		</div>
-
-		<!-- Mobile notification -->
-		<div
-			class="absolute bottom-0 left-0 right-0 z-50 pointer-events-none md:hidden"
-			transition:fly={{ y: 20, duration: 200, opacity: 0 }}
-		>
-			<div
-				class="w-full flex items-center justify-start px-4 py-2 {notificationMessage.includes('+')
-					? 'bg-success-500/90 dark:bg-success-900/90'
-					: 'bg-error-500/90 dark:bg-error-900/90'}"
-			>
-				<div class="flex items-center gap-2">
-					<Icon
-						icon={notificationMessage.includes('+')
-							? 'heroicons:plus-circle'
-							: 'heroicons:minus-circle'}
-						class="w-5 h-5 {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					/>
-					<span
-						class="text-sm font-medium {notificationMessage.includes('+')
-							? 'text-success-100'
-							: 'text-error-100'}"
-					>
-						{notificationMessage}
-					</span>
+				<div class="flex flex-col gap-2">
+					<div class="flex items-center gap-3">
+						<Icon
+							icon={notificationMessage.includes('+')
+								? 'heroicons:plus-circle'
+								: 'heroicons:minus-circle'}
+							class="w-8 h-8 {notificationMessage.includes('+')
+								? 'text-success-100'
+								: 'text-error-100'}"
+						/>
+						<span class="text-xl font-medium text-tertiary-50">
+							{notificationMessage}
+						</span>
+					</div>
+					<!-- Token cost/return information -->
+					<div class="text-sm text-tertiary-200">
+						{#if notificationMessage.includes('+')}
+							Cost: {formatTokens(getNextVoteCost(currentVotes))} VCE tokens
+						{:else}
+							Returned: {formatTokens(
+								getQuadraticCost(currentVotes) - getQuadraticCost(currentVotes - 1)
+							)} VCE tokens
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -326,54 +319,43 @@ HOW THIS COMPONENT WORKS:
 			<!-- Vote count -->
 			<div class="relative flex items-center pl-2">
 				<span class="text-4xl font-bold text-tertiary-100">{proposal.total_votes || 0}</span>
-				{#if userData}
-					{@const voter = getVotersForProposal(proposal.id).find((v) => v.id === userData.id)}
-					{#if voter?.tokens > 0}
-						<div
-							class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
-						>
-							{formatTokens(voter.tokens)}
-						</div>
-					{/if}
+				{#if currentVoter?.tokens_staked_vce}
+					<div
+						class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full shadow-lg -top-2 -right-2 bg-tertiary-500 text-surface-900 border-tertiary-400/30"
+					>
+						{formatTokens(currentVoter.tokens_staked_vce)}
+					</div>
 				{/if}
 			</div>
 
 			{#if proposal.state !== 'pending' && proposal.state !== 'accepted' && proposal.state !== 'rejected'}
-				<div class="flex gap-2">
-					<button
-						disabled={!userData ||
-							!canVote(
-								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-							) ||
-							userTokens <
-								getNextVoteCost(
-									getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)?.votes || 0
-								)}
-						on:click|stopPropagation={(e) => {
-							e.stopPropagation();
-							handleVote(proposal.id, true);
-						}}
-						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
-					>
-						<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
-					</button>
-					<button
-						disabled={!userData ||
-							!canUnstakeVote(
-								proposal,
-								getVotersForProposal(proposal.id).find((v) => v.id === userData?.id)
-							)}
-						on:click|stopPropagation={() => handleVote(proposal.id, false)}
-						class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
-					>
-						<Icon icon="mdi:minus" class="w-7 h-7 text-tertiary-200" />
-					</button>
-				</div>
+				{#if userData && !isAdmin(userData.id)}
+					<div class="flex gap-2">
+						<button
+							disabled={!userData ||
+								!canVote(proposal, currentVotes) ||
+								userTokens < getNextVoteCost(currentVotes)}
+							on:click|stopPropagation={(e) => {
+								e.stopPropagation();
+								handleVote(proposal.id, true);
+							}}
+							class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
+						>
+							<Icon icon="mdi:plus" class="w-7 h-7 text-tertiary-200" />
+						</button>
+						<button
+							disabled={!userData || !canUnstakeVote(proposal, currentVoter)}
+							on:click|stopPropagation={() => handleVote(proposal.id, false)}
+							class="flex items-center justify-center w-10 h-10 transition-colors border rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/20 border-tertiary-500/30"
+						>
+							<Icon icon="mdi:minus" class="w-7 h-7 text-tertiary-200" />
+						</button>
+					</div>
+				{/if}
 			{/if}
 
 			<div class="flex items-center gap-1.5 overflow-x-auto">
-				{#each getVotersForProposal(proposal.id) as voter (voter.id)}
+				{#each proposal.voters as voter (voter.id)}
 					<div class="relative flex-shrink-0">
 						<Avatar me={formatVoterForAvatar(voter)} />
 					</div>
@@ -385,22 +367,22 @@ HOW THIS COMPONENT WORKS:
 		<div class="p-2 border-t border-surface-700/50 {getStateBgColor(proposal.state)}">
 			{#if proposal.state === 'pending'}
 				{#if userData?.id === '00000000-0000-0000-0000-000000000001'}
-					<div class="flex gap-2">
+					<div class="flex justify-end gap-2">
 						<button
 							on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
-							class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
 						>
-							<div class="flex items-center justify-center gap-1">
-								<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
+							<div class="flex items-center gap-2">
+								<Icon icon="heroicons:x-mark" class="w-5 h-5" />
 								Veto
 							</div>
 						</button>
 						<button
 							on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
-							class="flex-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
+							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
 						>
-							<div class="flex items-center justify-center gap-1">
-								<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
+							<div class="flex items-center gap-2">
+								<Icon icon="heroicons:check" class="w-5 h-5" />
 								Pass
 							</div>
 						</button>
@@ -463,7 +445,7 @@ HOW THIS COMPONENT WORKS:
 				{proposal.title}
 			</h3>
 			<div class="flex items-center gap-3">
-				{#each getVotersForProposal(proposal.id) as voter (voter.id)}
+				{#each proposal.voters as voter (voter.id)}
 					<div class="relative">
 						<Avatar me={formatVoterForAvatar(voter)} />
 						<div

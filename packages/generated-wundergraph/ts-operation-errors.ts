@@ -20,7 +20,6 @@ export type OperationErrors = {
 	getCurrentMetrics: GetCurrentMetricsErrors;
 	getInvestmentMetrics: GetInvestmentMetricsErrors;
 	getProfile: GetProfileErrors;
-	getProposalVoters: GetProposalVotersErrors;
 	getUserCapabilities: GetUserCapabilitiesErrors;
 	getUserStats: GetUserStatsErrors;
 	getUserTokens: GetUserTokensErrors;
@@ -96,7 +95,6 @@ export type GetCCPErrors = ClientOperationErrors;
 export type GetCurrentMetricsErrors = ClientOperationErrors;
 export type GetInvestmentMetricsErrors = ClientOperationErrors;
 export type GetProfileErrors = ClientOperationErrors;
-export type GetProposalVotersErrors = ClientOperationErrors;
 export type GetUserCapabilitiesErrors = ClientOperationErrors;
 export type GetUserStatsErrors = ClientOperationErrors;
 export type GetUserTokensErrors = ClientOperationErrors;
