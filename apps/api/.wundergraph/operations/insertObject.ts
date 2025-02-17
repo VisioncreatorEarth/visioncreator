@@ -20,6 +20,8 @@ export default createOperation.mutation({
   },
   handler: async ({ input, context }) => {
     try {
+      console.log("[insertObject] Received input:", JSON.stringify(input.object, null, 2));
+
       if (!input.object.schema_id) {
         throw new Error("Object must have a schema_id property");
       }
@@ -32,14 +34,18 @@ export default createOperation.mutation({
         .single();
 
       if (schemaError) {
+        console.error("[insertObject] Failed to fetch schema:", schemaError);
         throw new Error("Failed to fetch schema: " + schemaError.message);
       }
+
+      console.log("[insertObject] Found schema:", JSON.stringify(schemaData.json, null, 2));
 
       // Validate the object against its schema
       const validate = ajv.compile(schemaData.json);
       const valid = validate(input.object);
 
       if (!valid) {
+        console.error("[insertObject] Validation errors:", validate.errors);
         throw new Error("Validation error: " + ajv.errorsText(validate.errors));
       }
 
@@ -50,15 +56,17 @@ export default createOperation.mutation({
         .select();
 
       if (error) {
+        console.error("[insertObject] Database insert error:", error);
         throw new Error("Database insert error: " + error.message);
       }
 
+      console.log("[insertObject] Successfully inserted object:", data[0].id);
       return {
         success: true,
         insertedData: data[0]
       };
     } catch (error) {
-      console.error("Error in insertObject:", error);
+      console.error("[insertObject] Error:", error);
       return {
         success: false,
         error: "Unexpected error",
