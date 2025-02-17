@@ -54,10 +54,6 @@
 		operationName: 'insertDB'
 	});
 
-	const insertObjectMutation = createMutation({
-		operationName: 'insertObject'
-	});
-
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
 	}
@@ -65,16 +61,9 @@
 	function generateRandomSchema() {
 		return {
 			type: 'object',
-			schema_id: '00000000-0000-0000-0000-000000000001',
 			title: `User Schema ${Math.floor(Math.random() * 10000)}`,
 			description: `Schema for user profile data ${Math.random()}`,
 			properties: {
-				schema_id: {
-					type: 'string',
-					format: 'uuid',
-					title: 'Schema ID',
-					description: 'Reference to the schema this object conforms to'
-				},
 				username: {
 					type: 'string',
 					title: 'Username',
@@ -86,8 +75,7 @@
 				email: {
 					type: 'string',
 					title: 'Email',
-					description: "The user's email address",
-					format: 'email'
+					description: "The user's email address"
 				},
 				profile: {
 					type: 'object',
@@ -102,14 +90,13 @@
 						birthDate: {
 							type: 'string',
 							title: 'Birth Date',
-							description: "The user's birth date",
-							format: 'date'
+							description: "The user's birth date"
 						}
 					},
 					required: ['fullName']
 				}
 			},
-			required: ['schema_id', 'username', 'email', 'profile']
+			required: ['username', 'profile']
 		};
 	}
 
@@ -117,7 +104,11 @@
 		message = { text: '', type: '' };
 		try {
 			const schema = generateRandomSchema();
-			const result = await $insertDBMutation.mutateAsync({ schema });
+			const result = await $insertDBMutation.mutateAsync({
+				json: schema,
+				type: 'schema',
+				schema: '00000000-0000-0000-0000-000000000001'
+			});
 
 			if (result?.success) {
 				message = { text: 'Random schema generated successfully!', type: 'success' };
@@ -337,25 +328,38 @@
 			.join('');
 	}
 
+	// Helper function to format date to ISO format
+	function formatDateForSubmission(date: string): string | null {
+		if (!date) return null;
+		try {
+			// Convert to YYYY-MM-DD format
+			const d = new Date(date);
+			return d.toISOString().split('T')[0];
+		} catch {
+			return null;
+		}
+	}
+
 	async function handleCreateObject() {
 		if (!selectedItem?.id) return;
 
 		try {
 			console.log('[HominioDB] Creating object with form data:', formData);
 
-			const result = await $insertObjectMutation.mutateAsync({
-				object: {
-					type: 'object',
-					title: `New ${selectedItem.json.title} Object`,
-					description: `Object created from ${selectedItem.json.title} schema`,
-					author: 'HominioDB Client',
-					version: 1,
-					schema_id: selectedItem.id,
-					...formData // Spread the form data directly
+			// Pre-process form data to handle dates properly
+			const processedFormData = {
+				...formData,
+				profile: {
+					...formData.profile,
+					birthDate: formatDateForSubmission(formData.profile.birthDate)
 				}
-			});
+			};
 
-			console.log('[HominioDB] Create object result:', result);
+			const result = await $insertDBMutation.mutateAsync({
+				json: processedFormData,
+				type: 'object',
+				schema: selectedItem.id
+			});
 
 			if (result?.success) {
 				message = { text: 'Object created successfully!', type: 'success' };
@@ -412,6 +416,22 @@
 			closeModal();
 		}
 	}
+
+	function getSchemaDetails(schemaId: string | null) {
+		if (!schemaId || !$dbQuery?.data?.db) return null;
+		const schema = $dbQuery.data.db.find((item) => item.id === schemaId);
+		if (schema) {
+			return {
+				title: schema.json.title,
+				description: schema.json.description,
+				version: schema.version
+			};
+		}
+		return null;
+	}
+
+	// Add a reactive statement to get schema details when selectedItem changes
+	$: schemaDetails = selectedItem ? getSchemaDetails(selectedItem.schema) : null;
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -448,7 +468,7 @@
 					>
 						<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
 						<p class="text-xs truncate text-tertiary-400">
-							{item.json.type} • v{item.version} • Created by {item.author}
+							{item.json.type} • v{item.version} • Created by {item.author_name}
 							<span class="text-xs text-surface-500">
 								({new Date(item.created_at).toLocaleDateString()})
 							</span>
@@ -467,6 +487,7 @@
 			<div class="flex">
 				<!-- First column: normal props -->
 				<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
+					<!-- Title -->
 					<div class="flex items-center justify-between mb-4">
 						<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
 						<button class="btn variant-filled-primary" on:click={openCreateModal}>
@@ -474,23 +495,49 @@
 						</button>
 					</div>
 
+					<!-- Description -->
 					<span class="mb-4 text-sm text-surface-800 dark:text-tertiary-500">
 						{selectedItem.json.description}
 					</span>
-					{#if schemaInfo}
+
+					<!-- Schema Information -->
+					{#if schemaDetails}
 						<div
-							class="flex flex-col mb-2 rounded cursor-pointer hover:bg-tertiary-200 dark:hover:bg-surface-700"
-							on:click={() => loadSchema(schemaInfo.id)}
+							class="flex flex-col mb-4 p-2 rounded bg-tertiary-200 dark:bg-surface-700 cursor-pointer hover:bg-tertiary-300 dark:hover:bg-surface-600"
+							on:click={() => loadSchema(selectedItem.schema)}
 						>
 							<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
-							<span class="text-sm font-semibold text-tertiary-100 dark:text-tertiary-200">
-								{schemaInfo.title} v{schemaInfo.version ?? 0}
-							</span>
-							<span class="text-xs text-surface-700 dark:text-tertiary-400">
-								{schemaInfo.description}
+							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
+								{schemaDetails.title}
 							</span>
 						</div>
 					{/if}
+
+					<!-- Version -->
+					<div class="flex flex-col mb-2">
+						<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
+						<span class="text-xs text-surface-700 dark:text-tertiary-400">
+							v{selectedItem.version}
+						</span>
+					</div>
+
+					<!-- Author Information -->
+					<div class="flex flex-col mb-4 p-2 rounded bg-tertiary-200 dark:bg-surface-700">
+						<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
+						<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
+							{selectedItem.author_name}
+						</span>
+					</div>
+
+					<!-- Created Date -->
+					<div class="flex flex-col mb-2">
+						<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
+						<span class="text-xs text-surface-700 dark:text-tertiary-400">
+							{new Date(selectedItem.created_at).toLocaleString()}
+						</span>
+					</div>
+
+					<!-- Other Metadata -->
 					{#each ['$id', 'prev'] as key}
 						{#if selectedItem.json[key] !== undefined}
 							<div class="flex flex-col mb-2">
@@ -503,24 +550,6 @@
 							</div>
 						{/if}
 					{/each}
-					<div class="flex flex-col mb-2">
-						<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
-						<span class="text-xs text-surface-700 dark:text-tertiary-400">
-							{selectedItem.version}
-						</span>
-					</div>
-					<div class="flex flex-col mb-2">
-						<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
-						<span class="text-xs text-surface-700 dark:text-tertiary-400">
-							{selectedItem.author}
-						</span>
-					</div>
-					<div class="flex flex-col mb-2">
-						<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
-						<span class="text-xs text-surface-700 dark:text-tertiary-400">
-							{new Date(selectedItem.created_at).toLocaleString()}
-						</span>
-					</div>
 				</div>
 				<Properties
 					properties={getPropertiesToRender(selectedItem)}
@@ -626,12 +655,21 @@
 
 							<!-- Birth Date -->
 							<div class="mb-4">
-								<label for="birthDate" class="block mb-1 text-sm font-medium"> Birth Date </label>
+								<label for="birthDate" class="block mb-1 text-sm font-medium">Birth Date</label>
 								<input
 									type="date"
 									id="birthDate"
-									class="input"
 									bind:value={formData.profile.birthDate}
+									class="input w-full"
+									on:change={(e) => {
+										// Ensure proper date format
+										const date = e.target.value;
+										if (date) {
+											formData.profile.birthDate = new Date(date).toISOString().split('T')[0];
+										} else {
+											formData.profile.birthDate = '';
+										}
+									}}
 								/>
 							</div>
 						</div>

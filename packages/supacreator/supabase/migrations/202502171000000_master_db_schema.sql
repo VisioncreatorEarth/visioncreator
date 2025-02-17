@@ -3,34 +3,29 @@ create extension if not exists "wrappers" with schema "extensions";
 create table "public"."db" (
     "id" uuid not null default gen_random_uuid(),
     "json" jsonb,
-    "author" uuid references auth.users(id) on delete set null,
+    "author" uuid,
+    "schema" uuid references db(id) on delete restrict,
     "version" integer not null default 1,
     "created_at" timestamptz not null default now(),
     "updated_at" timestamptz not null default now(),
-    constraint "db_pkey" primary key ("id")
+    constraint "db_pkey" primary key ("id"),
+    constraint "db_author_fkey" foreign key ("author") references auth.users(id) on delete set null
 );
 
 -- Set the root schema ID
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-INSERT INTO "public"."db" (id, json, author, version) VALUES 
+INSERT INTO "public"."db" (id, json, author, version, schema) VALUES 
 ('00000000-0000-0000-0000-000000000001', 
 '{ 
   "type": "object",
   "title": "Meta Schema",
   "description": "Root schema for defining all other schemas",
-  "schema_id": "00000000-0000-0000-0000-000000000001",
   "properties": {
     "type": {
       "type": "string",
       "enum": ["object", "array", "string", "number", "integer", "boolean", "null"],
       "title": "Type",
       "description": "The type of the schema"
-    },
-    "schema_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Schema ID",
-      "description": "Reference to the schema this object conforms to"
     },
     "title": {
       "type": "string",
@@ -54,14 +49,16 @@ INSERT INTO "public"."db" (id, json, author, version) VALUES
       "description": "List of required properties"
     }
   },
-  "required": ["type", "schema_id", "title", "description", "properties"]
+  "required": ["type", "title", "description", "properties"]
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user ID for root schema
-1  -- Initial version
+1,  -- Initial version
+'00000000-0000-0000-0000-000000000001'  -- Self-reference for meta schema
 );
 
 -- Create indexes
 CREATE INDEX idx_db_author ON public.db(author);
+CREATE INDEX idx_db_schema ON public.db(schema);
 CREATE INDEX idx_db_version ON public.db(version);
 
 -- Enable RLS
