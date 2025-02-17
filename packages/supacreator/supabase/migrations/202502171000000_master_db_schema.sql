@@ -43,17 +43,41 @@ ALTER TABLE "public"."db_archive"
 ADD CONSTRAINT "db_archive_prev_fkey" 
 FOREIGN KEY ("prev") REFERENCES "public"."db_archive"(id);
 
-ALTER TABLE "public"."db" 
-ADD CONSTRAINT "db_schema_fkey" 
-FOREIGN KEY ("schema") REFERENCES "public"."db"(id) ON DELETE RESTRICT;
+-- First drop existing constraints
+ALTER TABLE "public"."db" DROP CONSTRAINT IF EXISTS "db_schema_fkey";
+ALTER TABLE "public"."db" DROP CONSTRAINT IF EXISTS "db_prev_fkey";
+ALTER TABLE "public"."db_archive" DROP CONSTRAINT IF EXISTS "db_archive_schema_fkey";
 
-ALTER TABLE "public"."db" 
-ADD CONSTRAINT "db_prev_fkey" 
-FOREIGN KEY ("prev") REFERENCES "public"."db_archive"(id);
+-- Create a function to validate schema references across both tables
+CREATE OR REPLACE FUNCTION public.validate_schema_reference() 
+RETURNS trigger AS $$
+BEGIN
+  -- Allow self-reference for root schema
+  IF NEW.id = '00000000-0000-0000-0000-000000000001' AND 
+     NEW.schema = '00000000-0000-0000-0000-000000000001' THEN
+    RETURN NEW;
+  END IF;
 
-ALTER TABLE "public"."db_archive" 
-ADD CONSTRAINT "db_archive_schema_fkey" 
-FOREIGN KEY ("schema") REFERENCES "public"."db"(id);
+  -- Check if the schema exists in either active or archive table
+  IF EXISTS (SELECT 1 FROM public.db WHERE id = NEW.schema) 
+     OR EXISTS (SELECT 1 FROM public.db_archive WHERE id = NEW.schema) THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Referenced schema % not found in db or db_archive', NEW.schema;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create triggers to validate schema references
+CREATE TRIGGER validate_schema_ref_db
+  BEFORE INSERT OR UPDATE ON public.db
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_schema_reference();
+
+CREATE TRIGGER validate_schema_ref_archive
+  BEFORE INSERT OR UPDATE ON public.db_archive
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_schema_reference();
 
 -- Create indexes
 CREATE INDEX idx_db_author ON public.db(author);

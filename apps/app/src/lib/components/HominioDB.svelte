@@ -1,4 +1,69 @@
 <script lang="ts">
+	/**
+	 * HominioDB Component Documentation
+	 *
+	 * Architecture Overview:
+	 * ---------------------
+	 * This component implements a universal schema-based database with versioning and archiving.
+	 *
+	 * Core Concepts:
+	 *
+	 * 1. Database Structure:
+	 *    - Two main tables: 'db' (active records) and 'db_archive' (historical versions)
+	 *    - Every record has a unique ID and a variation ID
+	 *    - Variation ID groups all versions of the same logical entity
+	 *
+	 * 2. Versioning System:
+	 *    - Records are never updated in place
+	 *    - When editing a record:
+	 *      a. Original record moves to db_archive
+	 *      b. New version created in db with updated values
+	 *      c. New version's 'prev' field points to archived version
+	 *      d. Version number increments
+	 *      e. Variation ID remains the same
+	 *
+	 * 3. Schema Management:
+	 *    - Every record references a schema (including schemas themselves)
+	 *    - Root schema (meta-schema) is self-referential
+	 *    - Schema references can point to either active or archived schemas
+	 *    - Database triggers validate schema references across both tables
+	 *
+	 * 4. Display Fields:
+	 *    - Schemas can specify a 'display_field'
+	 *    - The specified field's value is used as the record's display title
+	 *    - Display values update automatically via database triggers
+	 *
+	 * 5. Reference Handling:
+	 *    - References remain valid after archiving
+	 *    - System automatically checks both active and archived tables
+	 *    - Triggers ensure referential integrity across tables
+	 *
+	 * Key Properties:
+	 * - id: Unique identifier for each version
+	 * - variation: Groups all versions of same entity
+	 * - prev: Points to previous version in archive
+	 * - version: Incremental version number
+	 * - schema: References the schema (active or archived)
+	 * - json: Actual data following schema structure
+	 * - created_at: Timestamp of version creation
+	 * - archived_at: When version was moved to archive
+	 *
+	 * Edit Flow:
+	 * 1. User modifies a record
+	 * 2. update_db_version() function triggers
+	 * 3. Current version moves to archive
+	 * 4. New version created with updates
+	 * 5. References and version numbers update
+	 * 6. Display fields recalculate via triggers
+	 *
+	 * This architecture ensures:
+	 * - Complete version history
+	 * - No data loss
+	 * - Referential integrity
+	 * - Automatic display field updates
+	 * - Schema validation across versions
+	 */
+
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
 
@@ -83,6 +148,12 @@
 	const editDBMutation = createMutation({
 		operationName: 'editDB'
 	});
+
+	// Add these state variables after the other let declarations
+	let isEditingTitle = false;
+	let isEditingDescription = false;
+	let editedTitle = '';
+	let editedDescription = '';
 
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
@@ -507,10 +578,14 @@
 		};
 	}
 
-	// Handle ESC key to close modal
+	// Update handleKeydown to handle editing escapes
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape' && showCreateModal) {
-			closeModal();
+		if (event.key === 'Escape') {
+			if (showCreateModal) {
+				closeModal();
+			}
+			isEditingTitle = false;
+			isEditingDescription = false;
 		}
 	}
 
@@ -698,6 +773,55 @@
 		validateField(data, schema, '');
 		return errors;
 	}
+
+	// Add these functions for editing
+	function startEditing(field: 'title' | 'description') {
+		if (!selectedItem) return;
+
+		if (field === 'title') {
+			isEditingTitle = true;
+			editedTitle = selectedItem.json.title || '';
+		} else {
+			isEditingDescription = true;
+			editedDescription = selectedItem.json.description || '';
+		}
+	}
+
+	async function saveInlineEdit(field: 'title' | 'description') {
+		if (!selectedItem?.id) return;
+
+		try {
+			const newJson = JSON.parse(JSON.stringify(selectedItem.json));
+
+			if (field === 'title') {
+				newJson.title = editedTitle.trim();
+				isEditingTitle = false;
+			} else {
+				newJson.description = editedDescription.trim();
+				isEditingDescription = false;
+			}
+
+			const result = await $editDBMutation.mutateAsync({
+				id: selectedItem.id,
+				json: newJson
+			});
+
+			if (result?.success) {
+				await $dbQuery.refetch();
+			} else {
+				message = {
+					text: `Failed to save: ${result?.details || 'Unknown error'}`,
+					type: 'error'
+				};
+			}
+		} catch (error) {
+			console.error(`Error saving ${field}:`, error);
+			message = {
+				text: `Error saving ${field}: ${error instanceof Error ? error.message : String(error)}`,
+				type: 'error'
+			};
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -764,11 +888,141 @@
 				<div class="p-6 mb-6 rounded-lg bg-tertiary-50 dark:bg-surface-900">
 					<div class="flex items-start justify-between mb-4">
 						<div>
-							<h2 class="text-2xl font-semibold">{selectedItem.json.title || 'Untitled'}</h2>
-							{#if selectedItem.json.description}
-								<p class="mt-1 text-sm text-surface-600 dark:text-surface-300">
-									{selectedItem.json.description}
-								</p>
+							<div class="flex-1">
+								{#if isEditingTitle}
+									<div class="flex items-center gap-2">
+										<input
+											type="text"
+											bind:value={editedTitle}
+											class="w-full text-2xl font-semibold input"
+											placeholder="Enter title"
+											on:keydown={(e) => {
+												if (e.key === 'Enter') saveInlineEdit('title');
+												if (e.key === 'Escape') isEditingTitle = false;
+											}}
+										/>
+										<button
+											class="p-1 text-success-500 hover:text-success-600"
+											on:click={() => saveInlineEdit('title')}
+										>
+											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												/>
+											</svg>
+										</button>
+										<button
+											class="p-1 text-error-500 hover:text-error-600"
+											on:click={() => (isEditingTitle = false)}
+										>
+											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M6 18L18 6M6 6l12 12"
+												/>
+											</svg>
+										</button>
+									</div>
+								{:else}
+									<div class="flex items-center group">
+										<h2 class="text-2xl font-semibold">
+											{#if isSchema(selectedItem)}
+												{selectedItem.json.title || 'Untitled'}
+											{:else if selectedItem.schema && getSchemaDisplayField(selectedItem)}
+												{selectedItem.json[getSchemaDisplayField(selectedItem)] || 'Untitled'}
+											{:else}
+												{selectedItem.json.title || 'Untitled'}
+											{/if}
+										</h2>
+										<button
+											class="p-1 ml-2 opacity-0 group-hover:opacity-100 text-tertiary-500 hover:text-tertiary-700 dark:text-tertiary-400 dark:hover:text-tertiary-200"
+											on:click={() => startEditing('title')}
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+												/>
+											</svg>
+										</button>
+									</div>
+								{/if}
+							</div>
+
+							{#if isEditingDescription}
+								<div class="flex items-start gap-2 mt-1">
+									<textarea
+										bind:value={editedDescription}
+										class="w-full text-sm input"
+										rows="3"
+										placeholder="Enter description"
+										on:keydown={(e) => {
+											if (e.key === 'Enter' && e.ctrlKey) saveInlineEdit('description');
+											if (e.key === 'Escape') isEditingDescription = false;
+										}}
+									/>
+									<div class="flex flex-col gap-1">
+										<button
+											class="p-1 text-success-500 hover:text-success-600"
+											on:click={() => saveInlineEdit('description')}
+										>
+											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M5 13l4 4L19 7"
+												/>
+											</svg>
+										</button>
+										<button
+											class="p-1 text-error-500 hover:text-error-600"
+											on:click={() => (isEditingDescription = false)}
+										>
+											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M6 18L18 6M6 6l12 12"
+												/>
+											</svg>
+										</button>
+									</div>
+								</div>
+							{:else if selectedItem?.json.description}
+								<div class="flex items-center group">
+									<p class="mt-1 text-sm text-surface-600 dark:text-surface-300">
+										{selectedItem.json.description}
+									</p>
+									<button
+										class="p-1 ml-2 opacity-0 group-hover:opacity-100 text-tertiary-500 hover:text-tertiary-700 dark:text-tertiary-400 dark:hover:text-tertiary-200"
+										on:click={() => startEditing('description')}
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+											/>
+										</svg>
+									</button>
+								</div>
+							{:else}
+								<button
+									class="mt-1 text-sm text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200"
+									on:click={() => startEditing('description')}
+								>
+									Add description...
+								</button>
 							{/if}
 						</div>
 
