@@ -158,6 +158,9 @@
 	// Add state for active tab
 	let activeTab: 'versions' | 'variations' = 'versions';
 
+	// Add state for content tab
+	let contentTab: 'properties' | 'json' = 'properties';
+
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
 	}
@@ -895,7 +898,7 @@
 
 <div class="flex h-full">
 	<!-- Main content area -->
-	<div class="flex-1 overflow-y-auto">
+	<div class="flex-1">
 		<!-- List and details content -->
 		<div class="flex h-full">
 			<!-- Left sidebar with list -->
@@ -1159,8 +1162,30 @@
 						</div>
 					</div>
 
-					<!-- Properties section -->
-					<div class="flex-1">
+					<!-- Add this after the metadata grid and before the Properties section -->
+					<div class="flex flex-col h-full">
+						<!-- Add tabs -->
+						<div class="mb-4 border-b border-surface-300-600-token">
+							<div class="flex">
+								<button
+									class="px-4 py-2 text-sm font-medium {contentTab === 'properties'
+										? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
+										: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
+									on:click={() => (contentTab = 'properties')}
+								>
+									Properties
+								</button>
+								<button
+									class="px-4 py-2 text-sm font-medium {contentTab === 'json'
+										? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
+										: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
+									on:click={() => (contentTab = 'json')}
+								>
+									JSON
+								</button>
+							</div>
+						</div>
+
 						<!-- Save button -->
 						<div class="flex justify-end mb-4">
 							{#if hasChanges}
@@ -1173,12 +1198,29 @@
 							{/if}
 						</div>
 
-						<Properties
-							properties={selectedItem?.json}
-							{expandedProperties}
-							on:toggleProperty={handleToggleProperty}
-							on:valueChange={handleValueChange}
-						/>
+						<!-- Tab content -->
+						<div class="flex-1">
+							{#if contentTab === 'properties'}
+								<div class="h-[calc(100vh-400px)] overflow-y-auto">
+									<Properties
+										properties={selectedItem?.json}
+										{expandedProperties}
+										on:toggleProperty={handleToggleProperty}
+										on:valueChange={handleValueChange}
+									/>
+								</div>
+							{:else}
+								<div
+									class="h-[calc(100vh-400px)] overflow-y-auto p-4 font-mono text-sm bg-surface-100 dark:bg-surface-800 rounded-lg"
+								>
+									<pre class="whitespace-pre-wrap break-all">{JSON.stringify(
+											selectedItem?.json,
+											null,
+											2
+										)}</pre>
+								</div>
+							{/if}
+						</div>
 					</div>
 				{:else}
 					<p class="text-xl text-center">Select an item from the list to view details</p>
