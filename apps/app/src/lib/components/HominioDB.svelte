@@ -161,6 +161,10 @@
 	// Add state for content tab
 	let contentTab: 'properties' | 'json' = 'properties';
 
+	// Add state for JSON editing
+	let editedJsonText = '';
+	let jsonEditError = '';
+
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
 	}
@@ -697,7 +701,24 @@
 		console.log('Value changed:', { path, value, hasChanges, editedJson }); // Debug log
 	}
 
-	// Add the saveChanges function
+	// Function to handle JSON text changes
+	function handleJsonEdit(event: Event) {
+		const textarea = event.target as HTMLTextAreaElement;
+		editedJsonText = textarea.value;
+
+		try {
+			const parsed = JSON.parse(editedJsonText);
+
+			// If validation passes or no schema exists
+			editedJson = parsed;
+			hasChanges = true;
+			jsonEditError = '';
+		} catch (error) {
+			jsonEditError = 'Invalid JSON format';
+		}
+	}
+
+	// Update the saveChanges function to include validation
 	async function saveChanges() {
 		if (!selectedItem?.id || !editedJson) return;
 
@@ -891,6 +912,11 @@
 		return [activeRecord, ...(activeRecord.archived_versions || [])].sort(
 			(a, b) => b.version - a.version
 		);
+	}
+
+	// Update JSON text when tab or item changes
+	$: if (selectedItem && contentTab === 'json') {
+		editedJsonText = JSON.stringify(selectedItem.json, null, 2);
 	}
 </script>
 
@@ -1213,11 +1239,19 @@
 								<div
 									class="h-[calc(100vh-400px)] overflow-y-auto p-4 font-mono text-sm bg-surface-100 dark:bg-surface-800 rounded-lg"
 								>
-									<pre class="whitespace-pre-wrap break-all">{JSON.stringify(
-											selectedItem?.json,
-											null,
-											2
-										)}</pre>
+									<textarea
+										class="w-full h-full p-0 font-mono text-sm bg-transparent border-none resize-none focus:ring-0"
+										value={editedJsonText}
+										on:input={handleJsonEdit}
+										spellcheck="false"
+									/>
+									{#if jsonEditError}
+										<div
+											class="mt-2 p-2 text-sm text-error-500 bg-error-100 dark:bg-error-900 rounded-lg whitespace-pre-wrap"
+										>
+											{jsonEditError}
+										</div>
+									{/if}
 								</div>
 							{/if}
 						</div>
