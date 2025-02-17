@@ -1,0 +1,69 @@
+---
+title: "@{{ .Campaign.Subject }}"
+content: '@{{ template "content" . }}'
+name: "@{{ .Subscriber.Name }}"
+unsubscribeUrl: "@{{ UnsubscribeURL }}"
+emailUnsub: '@{{ L.T "email.unsub" }}'
+trackView: "@{{ TrackView }}"
+---
+
+<x-main>
+  <div class="w-full mx-auto">
+    <!-- Profile Image and Header Section -->
+    <div class="mt-8 mb-12 text-center">
+      <!-- Circular Profile Image - Increased size -->
+      <div
+        style="
+          margin: 0 auto;
+          width: 160px;
+          height: 160px;
+          border-radius: 9999px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        "
+      >
+        <img
+          src="https://listmonk.visioncreator.earth/uploads/chielo_XHIEWe.jpg"
+          alt="Chielo"
+          style="width: 100%; height: 100%; object-fit: cover"
+        />
+      </div>
+
+      <!-- Subheader - Updated with cream/white colors -->
+      <div style="margin-top: 1.5rem; color: #fafafa">
+        <h2
+          style="
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+          "
+        >
+          This Week's Storytime
+        </h2>
+        <p style="font-size: 1rem; color: #f5f5f5; font-weight: 500">
+          A personal narrative by Chielo
+        </p>
+      </div>
+    </div>
+
+    <!-- Main Content - Updated with cream/white colors -->
+    <div class="m-0 leading-6">
+      <p class="mb-4 text-base sm:text-sm" style="color: #fafafa">
+        Hey {{ page.name }},
+      </p>
+      <div class="text-base sm:text-sm" style="color: #fafafa">
+        {{{ page.content }}}
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-8 text-center">
+      <a class="text-sm text-primary-500" href="{{ page.unsubscribeUrl }}">
+        {{{ page.emailUnsub }}}
+      </a>
+    </div>
+  </div>
+  {{{ page.trackView }}}
+</x-main>
