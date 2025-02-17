@@ -140,7 +140,7 @@
 	// Add state for archived versions
 	let archivedVersions: DBItem[] = [];
 
-	// Remove edit mode state and controls
+	// Add back the state variables
 	let editedJson: any = null;
 	let hasChanges = false;
 
@@ -154,6 +154,9 @@
 	let isEditingDescription = false;
 	let editedTitle = '';
 	let editedDescription = '';
+
+	// Add state for active tab
+	let activeTab: 'versions' | 'variations' = 'versions';
 
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
@@ -664,57 +667,58 @@
 		return item.schema === '00000000-0000-0000-0000-000000000001'; // References meta schema
 	}
 
-	// Function to handle value changes from Properties component
-	function handleValueChange(event: CustomEvent<{ path: string[]; value: any }>) {
+	// Update handleValueChange to match the event format
+	function handleValueChange(event: CustomEvent<{ path: string; value: any }>) {
 		const { path, value } = event.detail;
 
 		// Initialize editedJson if not already done
-		if (!editedJson) {
+		if (!editedJson && selectedItem) {
 			editedJson = JSON.parse(JSON.stringify(selectedItem.json));
 		}
 
 		// Navigate to the correct position in the object and update the value
+		const pathParts = path.split('.');
 		let current = editedJson;
-		const lastKey = path[path.length - 1];
 
-		// Navigate through the path except the last key
-		for (let i = 0; i < path.length - 1; i++) {
-			if (!current[path[i]]) {
-				current[path[i]] = {};
+		for (let i = 0; i < pathParts.length - 1; i++) {
+			if (!current[pathParts[i]]) {
+				current[pathParts[i]] = {};
 			}
-			current = current[path[i]];
+			current = current[pathParts[i]];
 		}
 
-		// Set the value at the final position
-		current[lastKey] = value;
+		const lastPart = pathParts[pathParts.length - 1];
+		current[lastPart] = value;
 		hasChanges = true;
 
-		console.log('Updated JSON:', editedJson);
+		console.log('Value changed:', { path, value, hasChanges, editedJson }); // Debug log
 	}
 
-	// Function to save changes
+	// Add the saveChanges function
 	async function saveChanges() {
-		if (!selectedItem?.id) return;
+		if (!selectedItem?.id || !editedJson) return;
 
 		try {
-			const finalJson = editedJson || selectedItem.json;
 			const result = await $editDBMutation.mutateAsync({
 				id: selectedItem.id,
-				json: finalJson
+				json: editedJson
 			});
 
 			if (result?.success) {
-				message = { text: 'Changes saved successfully!', type: 'success' };
+				await $dbQuery.refetch();
 				editedJson = null;
 				hasChanges = false;
-				await $dbQuery.refetch();
+				message = { text: 'Changes saved successfully!', type: 'success' };
 			} else {
-				message = { text: `Failed to save: ${result?.details || 'Unknown error'}`, type: 'error' };
+				message = {
+					text: `Failed to save changes: ${result?.details || 'Unknown error'}`,
+					type: 'error'
+				};
 			}
 		} catch (error) {
 			console.error('Error saving changes:', error);
 			message = {
-				text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+				text: `Error saving changes: ${error instanceof Error ? error.message : String(error)}`,
 				type: 'error'
 			};
 		}
@@ -871,9 +875,9 @@
 		}
 	}
 
-	// Update the getAllVersions function
-	function getAllVersions(item: DBItem) {
-		if (!$dbQuery?.data?.db) return [];
+	// Update the getAllVersions function with null checks
+	function getAllVersions(item: DBItem | null) {
+		if (!item || !$dbQuery?.data?.db) return [];
 
 		// Find the active record for this variation
 		const activeRecord = $dbQuery.data.db.find((record) => record.variation === item.variation);
@@ -889,122 +893,186 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="flex h-full text-gray-900 bg-tertiary-100 dark:bg-surface-800 dark:text-white">
-	<!-- Left side: List view -->
-	<div
-		class="w-[300px] p-4 overflow-y-auto border-r border-surface-300-600-token dark:bg-surface-900"
-	>
-		<button on:click={handleGenerateSchema} class="mb-4 btn variant-filled-primary">
-			Generate Schema
-		</button>
+<div class="flex h-full">
+	<!-- Main content area -->
+	<div class="flex-1 overflow-y-auto">
+		<!-- List and details content -->
+		<div class="flex h-full">
+			<!-- Left sidebar with list -->
+			<div class="w-64 p-4 border-r border-surface-300-600-token">
+				<button on:click={handleGenerateSchema} class="mb-4 btn variant-filled-primary">
+					Generate Schema
+				</button>
 
-		{#if message.text}
-			<div
-				class={`p-2 mb-4 rounded ${
-					message.type === 'success'
-						? 'bg-success-100 text-success-800 dark:bg-success-700 dark:text-success-300'
-						: 'bg-error-100 text-error-800 dark:bg-error-600 dark:text-error-300'
-				}`}
-			>
-				{message.text}
-			</div>
-		{/if}
-
-		{#if $dbQuery.isLoading}
-			<p>Loading schemas...</p>
-		{:else if $dbQuery.error}
-			<p class="text-error-400">Error loading schemas: {$dbQuery.error.message}</p>
-		{:else if $dbQuery.data?.db}
-			<ul class="space-y-4">
-				{#each $dbQuery.data.db.sort(sortByTimestamp) as item}
-					<li
-						class="p-2 cursor-pointer card variant-filled-tertiary-200 dark:variant-filled-surface-700 hover:bg-tertiary-300 dark:hover:bg-surface-600"
-						on:click={() => (selectedItem = item)}
+				{#if message.text}
+					<div
+						class={`p-2 mb-4 rounded ${
+							message.type === 'success'
+								? 'bg-success-100 text-success-800 dark:bg-success-700 dark:text-success-300'
+								: 'bg-error-100 text-error-800 dark:bg-error-600 dark:text-error-300'
+						}`}
 					>
-						{#if isSchema(item)}
-							<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
-						{:else}
-							<h3 class="font-semibold truncate text-md">
-								{#if item.schema && getSchemaDisplayField(item)}
-									{item.json[getSchemaDisplayField(item)] || 'Untitled'}
-								{:else}
-									{item.json.title || 'Untitled'}
-								{/if}
-							</h3>
-						{/if}
-						<p class="text-xs truncate text-tertiary-400">
-							Author: {item.author_name}
-						</p>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p>No schemas available</p>
-		{/if}
-	</div>
+						{message.text}
+					</div>
+				{/if}
 
-	<!-- Right side: Detail view -->
-	<div class="flex-1 p-4 overflow-x-auto">
-		{#if selectedItem}
-			<div class="flex flex-col">
-				<!-- Header section with metadata -->
-				<div class="p-6 mb-6 rounded-lg bg-tertiary-50 dark:bg-surface-900">
-					<div class="flex items-start justify-between mb-4">
-						<div>
-							<div class="flex-1">
-								{#if isEditingTitle}
-									<div class="flex items-center gap-2">
-										<input
-											type="text"
-											bind:value={editedTitle}
-											class="w-full text-2xl font-semibold input"
-											placeholder="Enter title"
+				{#if $dbQuery.isLoading}
+					<p>Loading schemas...</p>
+				{:else if $dbQuery.error}
+					<p class="text-error-400">Error loading schemas: {$dbQuery.error.message}</p>
+				{:else if $dbQuery.data?.db}
+					<ul class="space-y-4">
+						{#each $dbQuery.data.db.sort(sortByTimestamp) as item}
+							<li
+								class="p-2 cursor-pointer card variant-filled-tertiary-200 dark:variant-filled-surface-700 hover:bg-tertiary-300 dark:hover:bg-surface-600"
+								on:click={() => (selectedItem = item)}
+							>
+								{#if isSchema(item)}
+									<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
+								{:else}
+									<h3 class="font-semibold truncate text-md">
+										{#if item.schema && getSchemaDisplayField(item)}
+											{item.json[getSchemaDisplayField(item)] || 'Untitled'}
+										{:else}
+											{item.json.title || 'Untitled'}
+										{/if}
+									</h3>
+								{/if}
+								<p class="text-xs truncate text-tertiary-400">
+									Author: {item.author_name}
+								</p>
+							</li>
+						{/each}
+					</ul>
+				{:else}
+					<p>No schemas available</p>
+				{/if}
+			</div>
+
+			<!-- Main content -->
+			<div class="flex-1 p-4">
+				{#if selectedItem}
+					<!-- Header with title/description -->
+					<div class="mb-6">
+						<div class="flex items-start justify-between mb-4">
+							<div>
+								<div class="flex-1">
+									{#if isEditingTitle}
+										<div class="flex items-center gap-2">
+											<input
+												type="text"
+												bind:value={editedTitle}
+												class="w-full text-2xl font-semibold input"
+												placeholder="Enter title"
+												on:keydown={(e) => {
+													if (e.key === 'Enter') saveInlineEdit('title');
+													if (e.key === 'Escape') isEditingTitle = false;
+												}}
+											/>
+											<button
+												class="p-1 text-success-500 hover:text-success-600"
+												on:click={() => saveInlineEdit('title')}
+											>
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M5 13l4 4L19 7"
+													/>
+												</svg>
+											</button>
+											<button
+												class="p-1 text-error-500 hover:text-error-600"
+												on:click={() => (isEditingTitle = false)}
+											>
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18L18 6M6 6l12 12"
+													/>
+												</svg>
+											</button>
+										</div>
+									{:else}
+										<div class="flex items-center group">
+											<h2 class="text-2xl font-semibold">
+												{#if isSchema(selectedItem)}
+													{selectedItem.json.title || 'Untitled'}
+												{:else if selectedItem.schema && getSchemaDisplayField(selectedItem)}
+													{selectedItem.json[getSchemaDisplayField(selectedItem)] || 'Untitled'}
+												{:else}
+													{selectedItem.json.title || 'Untitled'}
+												{/if}
+											</h2>
+											<button
+												class="p-1 ml-2 opacity-0 group-hover:opacity-100 text-tertiary-500 hover:text-tertiary-700 dark:text-tertiary-400 dark:hover:text-tertiary-200"
+												on:click={() => startEditing('title')}
+											>
+												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+													/>
+												</svg>
+											</button>
+										</div>
+									{/if}
+								</div>
+
+								{#if isEditingDescription}
+									<div class="flex items-start gap-2 mt-1">
+										<textarea
+											bind:value={editedDescription}
+											class="w-full text-sm input"
+											rows="3"
+											placeholder="Enter description"
 											on:keydown={(e) => {
-												if (e.key === 'Enter') saveInlineEdit('title');
-												if (e.key === 'Escape') isEditingTitle = false;
+												if (e.key === 'Enter' && e.ctrlKey) saveInlineEdit('description');
+												if (e.key === 'Escape') isEditingDescription = false;
 											}}
 										/>
-										<button
-											class="p-1 text-success-500 hover:text-success-600"
-											on:click={() => saveInlineEdit('title')}
-										>
-											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 13l4 4L19 7"
-												/>
-											</svg>
-										</button>
-										<button
-											class="p-1 text-error-500 hover:text-error-600"
-											on:click={() => (isEditingTitle = false)}
-										>
-											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
+										<div class="flex flex-col gap-1">
+											<button
+												class="p-1 text-success-500 hover:text-success-600"
+												on:click={() => saveInlineEdit('description')}
+											>
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M5 13l4 4L19 7"
+													/>
+												</svg>
+											</button>
+											<button
+												class="p-1 text-error-500 hover:text-error-600"
+												on:click={() => (isEditingDescription = false)}
+											>
+												<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18L18 6M6 6l12 12"
+													/>
+												</svg>
+											</button>
+										</div>
 									</div>
-								{:else}
+								{:else if selectedItem?.json.description}
 									<div class="flex items-center group">
-										<h2 class="text-2xl font-semibold">
-											{#if isSchema(selectedItem)}
-												{selectedItem.json.title || 'Untitled'}
-											{:else if selectedItem.schema && getSchemaDisplayField(selectedItem)}
-												{selectedItem.json[getSchemaDisplayField(selectedItem)] || 'Untitled'}
-											{:else}
-												{selectedItem.json.title || 'Untitled'}
-											{/if}
-										</h2>
+										<p class="mt-1 text-sm text-surface-600 dark:text-surface-300">
+											{selectedItem.json.description}
+										</p>
 										<button
 											class="p-1 ml-2 opacity-0 group-hover:opacity-100 text-tertiary-500 hover:text-tertiary-700 dark:text-tertiary-400 dark:hover:text-tertiary-200"
-											on:click={() => startEditing('title')}
+											on:click={() => startEditing('description')}
 										>
 											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
@@ -1016,89 +1084,27 @@
 											</svg>
 										</button>
 									</div>
+								{:else}
+									<button
+										class="mt-1 text-sm text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200"
+										on:click={() => startEditing('description')}
+									>
+										Add description...
+									</button>
 								{/if}
 							</div>
 
-							{#if isEditingDescription}
-								<div class="flex items-start gap-2 mt-1">
-									<textarea
-										bind:value={editedDescription}
-										class="w-full text-sm input"
-										rows="3"
-										placeholder="Enter description"
-										on:keydown={(e) => {
-											if (e.key === 'Enter' && e.ctrlKey) saveInlineEdit('description');
-											if (e.key === 'Escape') isEditingDescription = false;
-										}}
-									/>
-									<div class="flex flex-col gap-1">
-										<button
-											class="p-1 text-success-500 hover:text-success-600"
-											on:click={() => saveInlineEdit('description')}
-										>
-											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 13l4 4L19 7"
-												/>
-											</svg>
-										</button>
-										<button
-											class="p-1 text-error-500 hover:text-error-600"
-											on:click={() => (isEditingDescription = false)}
-										>
-											<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
-									</div>
-								</div>
-							{:else if selectedItem?.json.description}
-								<div class="flex items-center group">
-									<p class="mt-1 text-sm text-surface-600 dark:text-surface-300">
-										{selectedItem.json.description}
-									</p>
-									<button
-										class="p-1 ml-2 opacity-0 group-hover:opacity-100 text-tertiary-500 hover:text-tertiary-700 dark:text-tertiary-400 dark:hover:text-tertiary-200"
-										on:click={() => startEditing('description')}
-									>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-											/>
-										</svg>
-									</button>
-								</div>
-							{:else}
-								<button
-									class="mt-1 text-sm text-surface-500 hover:text-surface-700 dark:text-surface-400 dark:hover:text-surface-200"
-									on:click={() => startEditing('description')}
-								>
-									Add description...
+							<!-- Create Object Button -->
+							{#if isSchema(selectedItem)}
+								<button class="btn variant-filled-primary" on:click={openCreateModal}>
+									Create Object
 								</button>
 							{/if}
 						</div>
-
-						<!-- Create Object Button -->
-						{#if isSchema(selectedItem)}
-							<button class="btn variant-filled-primary" on:click={openCreateModal}>
-								Create Object
-							</button>
-						{/if}
 					</div>
 
 					<!-- Metadata Grid -->
-					<div class="grid grid-cols-4 gap-4 mt-4">
+					<div class="grid grid-cols-4 gap-4 mb-6">
 						<!-- Add archived badge if viewing archived version -->
 						{#if selectedItem?.is_archived}
 							<div class="col-span-4 mb-2">
@@ -1152,12 +1158,9 @@
 							</span>
 						</div>
 					</div>
-				</div>
 
-				<!-- Main content area -->
-				<div class="flex">
 					<!-- Properties section -->
-					<div class="flex-1 p-4">
+					<div class="flex-1">
 						<!-- Save button -->
 						<div class="flex justify-end mb-4">
 							{#if hasChanges}
@@ -1177,49 +1180,83 @@
 							on:valueChange={handleValueChange}
 						/>
 					</div>
-
-					<!-- Version History sidebar -->
-					<div class="w-64 p-4 border-l border-surface-300-600-token">
-						<h3 class="mb-4 text-lg font-semibold">Version History</h3>
-
-						<div class="space-y-2">
-							<!-- All Versions -->
-							{#each getAllVersions(selectedItem).sort((a, b) => b.version - a.version) as version}
-								<button
-									class="w-full p-2 text-left rounded-lg {version.id === selectedItem.id
-										? 'bg-surface-200 dark:bg-surface-700'
-										: 'hover:bg-surface-100 dark:hover:bg-surface-800'}"
-									on:click={() => {
-										selectedItem = version;
-										expandedProperties = [];
-									}}
-								>
-									<div class="flex items-center justify-between">
-										<div>
-											<span class="text-sm font-semibold">
-												Version {version.version}
-											</span>
-											<div class="text-xs text-surface-600 dark:text-surface-300">
-												{new Date(version.created_at).toLocaleString()}
-											</div>
-											<div class="mt-1 text-xs text-surface-500 dark:text-surface-400">
-												by {version.author_name}
-											</div>
-										</div>
-										{#if version.id === selectedItem.id}
-											<span class="text-xs text-surface-600 dark:text-surface-300">(viewing)</span>
-										{/if}
-									</div>
-								</button>
-							{/each}
-						</div>
-					</div>
-				</div>
+				{:else}
+					<p class="text-xl text-center">Select an item from the list to view details</p>
+				{/if}
 			</div>
-		{:else}
-			<p class="text-xl text-center">Select an item from the list to view details</p>
-		{/if}
+		</div>
 	</div>
+
+	<!-- Right aside for versions and variations -->
+	<aside class="w-80 border-l border-surface-300-600-token bg-surface-100 dark:bg-surface-800">
+		<!-- Tabs -->
+		<div class="border-b border-surface-300-600-token">
+			<div class="flex">
+				<button
+					class="px-4 py-2 text-sm font-medium {activeTab === 'versions'
+						? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
+						: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
+					on:click={() => (activeTab = 'versions')}
+				>
+					Versions
+				</button>
+				<button
+					class="px-4 py-2 text-sm font-medium {activeTab === 'variations'
+						? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
+						: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
+					on:click={() => (activeTab = 'variations')}
+				>
+					Variations
+				</button>
+			</div>
+		</div>
+
+		<!-- Tab content -->
+		<div class="p-4">
+			{#if activeTab === 'versions'}
+				<!-- Versions list -->
+				<div class="space-y-2">
+					{#if selectedItem}
+						{#each getAllVersions(selectedItem).sort((a, b) => b.version - a.version) as version}
+							<button
+								class="w-full p-2 text-left rounded-lg {version.id === selectedItem.id
+									? 'bg-surface-200 dark:bg-surface-700'
+									: 'hover:bg-surface-100 dark:hover:bg-surface-800'}"
+								on:click={() => {
+									selectedItem = version;
+									expandedProperties = [];
+								}}
+							>
+								<div class="flex items-center justify-between">
+									<div>
+										<span class="text-sm font-semibold">Version {version.version}</span>
+										<div class="text-xs text-surface-600 dark:text-surface-300">
+											{new Date(version.created_at).toLocaleString()}
+										</div>
+										<div class="mt-1 text-xs text-surface-500 dark:text-surface-400">
+											by {version.author_name}
+										</div>
+									</div>
+									{#if version.id === selectedItem.id}
+										<span class="text-xs text-surface-600 dark:text-surface-300">(viewing)</span>
+									{/if}
+								</div>
+							</button>
+						{/each}
+					{:else}
+						<p class="text-sm text-surface-500 dark:text-surface-400">
+							Select an item to view its versions
+						</p>
+					{/if}
+				</div>
+			{:else}
+				<!-- Variations list (placeholder for now) -->
+				<div class="p-4 text-sm text-surface-600 dark:text-surface-400">
+					Variations coming soon...
+				</div>
+			{/if}
+		</div>
+	</aside>
 </div>
 
 <!-- Custom Modal -->

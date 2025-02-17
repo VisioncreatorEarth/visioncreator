@@ -194,12 +194,14 @@ INSERT INTO "public"."db" (id, json, author, version, schema, variation) VALUES
       "type": "string",
       "enum": ["object", "array", "string", "number", "integer", "boolean", "null"],
       "title": "Type",
-      "description": "The type of the schema"
+      "description": "The type of the schema",
+      "isMetadata": true
     },
     "title": {
       "type": "string",
       "title": "Title",
-      "description": "The title of the schema"
+      "description": "The title of the schema",
+      "isMetadata": true
     },
     "description": {
       "type": "string",
