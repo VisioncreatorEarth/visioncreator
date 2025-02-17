@@ -2,6 +2,18 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
 
+	interface DBItem {
+		id: string;
+		json: any;
+		author: string;
+		author_name: string;
+		schema: string;
+		version: number;
+		created_at: string;
+		prev: string | null;
+		is_archived?: boolean;
+	}
+
 	interface SchemaProperty {
 		type: string;
 		title: string;
@@ -31,10 +43,10 @@
 		enabled: true
 	});
 
-	let selectedItem = null;
+	let selectedItem: DBItem | null = null;
 	let message = { text: '', type: '' };
 	let schemaInfo = null;
-	let expandedProperties = new Map();
+	let expandedProperties: string[] = [];
 	let showCreateModal = false;
 	let formData: FormData = {
 		username: '',
@@ -51,6 +63,15 @@
 
 	const insertDBMutation = createMutation({
 		operationName: 'insertDB'
+	});
+
+	// Add edit mode state
+	let isEditing = false;
+	let editedJson: any = null;
+
+	// Add editDB mutation
+	const editDBMutation = createMutation({
+		operationName: 'editDB'
 	});
 
 	function sortByTimestamp(a, b) {
@@ -171,8 +192,7 @@
 		const schema = $dbQuery.data.db.find((item) => item.id === schemaId);
 		if (schema) {
 			selectedItem = schema;
-			expandedProperties.set(schemaId, null);
-			expandedProperties = new Map(expandedProperties);
+			expandedProperties = [];
 		}
 	}
 
@@ -448,6 +468,73 @@
 	function isSchema(item: any): boolean {
 		return item.schema === '00000000-0000-0000-0000-000000000001'; // References meta schema
 	}
+
+	// Function to handle value changes from Properties component
+	function handleValueChange(event: CustomEvent<{ path: string[]; value: any }>) {
+		const { path, value } = event.detail;
+
+		// Initialize editedJson if not already done
+		if (!editedJson) {
+			editedJson = JSON.parse(JSON.stringify(selectedItem.json));
+		}
+
+		// Navigate to the correct position in the object and update the value
+		let current = editedJson;
+		const lastKey = path[path.length - 1];
+
+		// Navigate through the path except the last key
+		for (let i = 0; i < path.length - 1; i++) {
+			if (!current[path[i]]) {
+				current[path[i]] = {};
+			}
+			current = current[path[i]];
+		}
+
+		// Set the value at the final position
+		current[lastKey] = value;
+
+		console.log('Updated JSON:', editedJson);
+	}
+
+	// Function to start editing
+	function startEditing() {
+		isEditing = true;
+		editedJson = null; // Will be initialized on first change
+	}
+
+	// Function to cancel editing
+	function cancelEditing() {
+		isEditing = false;
+		editedJson = null;
+	}
+
+	// Function to save changes
+	async function saveChanges() {
+		if (!selectedItem?.id) return;
+
+		try {
+			const finalJson = editedJson || selectedItem.json;
+			const result = await $editDBMutation.mutateAsync({
+				id: selectedItem.id,
+				json: finalJson
+			});
+
+			if (result?.success) {
+				message = { text: 'Changes saved successfully!', type: 'success' };
+				isEditing = false;
+				editedJson = null;
+				await $dbQuery.refetch();
+			} else {
+				message = { text: `Failed to save: ${result?.details || 'Unknown error'}`, type: 'error' };
+			}
+		} catch (error) {
+			console.error('Error saving changes:', error);
+			message = {
+				text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+				type: 'error'
+			};
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -507,92 +594,121 @@
 	<!-- Right side: Detail view -->
 	<div class="flex-1 p-4 overflow-x-auto">
 		{#if selectedItem}
-			<div class="flex">
-				<!-- First column: normal props -->
-				<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
-					<!-- Title and description if available -->
-					<div class="mb-4">
-						<div class="flex items-center justify-between">
-							{#if selectedItem.json.title}
-								<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
-							{/if}
-						</div>
-						{#if selectedItem.json.description}
-							<span class="text-sm text-surface-800 dark:text-tertiary-500">
-								{selectedItem.json.description}
-							</span>
-						{/if}
-					</div>
-
-					<!-- Create Object Button -->
-					{#if isSchema(selectedItem)}
-						<button class="w-full mb-4 btn variant-filled-primary" on:click={openCreateModal}>
-							Create Object
+			<div class="flex flex-col">
+				<!-- Add edit controls -->
+				<div class="flex justify-end gap-2 mb-4">
+					{#if !isEditing}
+						<button
+							class="px-4 py-2 text-white rounded-lg bg-primary-500 hover:bg-primary-600"
+							on:click={startEditing}
+						>
+							Edit
+						</button>
+					{:else}
+						<button
+							class="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
+							on:click={cancelEditing}
+						>
+							Cancel
+						</button>
+						<button
+							class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
+							on:click={saveChanges}
+						>
+							Save
 						</button>
 					{/if}
+				</div>
 
-					<!-- Metadata Section - All with consistent styling -->
-					<div class="grid gap-4">
-						<!-- Schema Information -->
-						{#if schemaDetails}
-							<div class="flex flex-col">
-								<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
-								<button
-									class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
-									on:click={() => loadSchema(selectedItem.schema)}
-								>
-									{schemaDetails.title}
-								</button>
+				<div class="flex">
+					<!-- First column: normal props -->
+					<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
+						<!-- Title and description if available -->
+						<div class="mb-4">
+							<div class="flex items-center justify-between">
+								{#if selectedItem.json.title}
+									<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
+								{/if}
 							</div>
+							{#if selectedItem.json.description}
+								<span class="text-sm text-surface-800 dark:text-tertiary-500">
+									{selectedItem.json.description}
+								</span>
+							{/if}
+						</div>
+
+						<!-- Create Object Button -->
+						{#if isSchema(selectedItem)}
+							<button class="w-full mb-4 btn variant-filled-primary" on:click={openCreateModal}>
+								Create Object
+							</button>
 						{/if}
 
-						<!-- Author Information -->
-						<div class="flex flex-col">
-							<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
-							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
-								{selectedItem.author_name}
-							</span>
-							<span class="text-xs text-surface-600 dark:text-surface-400">
-								{selectedItem.author}
-							</span>
-						</div>
-
-						<!-- Version -->
-						<div class="flex flex-col">
-							<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
-							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-								v{selectedItem.version}
-							</span>
-						</div>
-
-						<!-- Created Date -->
-						<div class="flex flex-col">
-							<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
-							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-								{new Date(selectedItem.created_at).toLocaleString()}
-							</span>
-						</div>
-
-						<!-- Other Metadata -->
-						{#each ['$id', 'prev'] as key}
-							{#if selectedItem.json[key] !== undefined}
+						<!-- Metadata Section - All with consistent styling -->
+						<div class="grid gap-4">
+							<!-- Schema Information -->
+							{#if schemaDetails}
 								<div class="flex flex-col">
-									<span class="text-xs text-surface-500 dark:text-surface-400">
-										{key}
-									</span>
-									<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-										{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
-									</span>
+									<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
+									<button
+										class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
+										on:click={() => loadSchema(selectedItem.schema)}
+									>
+										{schemaDetails.title}
+									</button>
 								</div>
 							{/if}
-						{/each}
+
+							<!-- Author Information -->
+							<div class="flex flex-col">
+								<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
+								<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
+									{selectedItem.author_name}
+								</span>
+								<span class="text-xs text-surface-600 dark:text-surface-400">
+									{selectedItem.author}
+								</span>
+							</div>
+
+							<!-- Version -->
+							<div class="flex flex-col">
+								<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
+								<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+									v{selectedItem.version}
+								</span>
+							</div>
+
+							<!-- Created Date -->
+							<div class="flex flex-col">
+								<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
+								<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+									{new Date(selectedItem.created_at).toLocaleString()}
+								</span>
+							</div>
+
+							<!-- Other Metadata -->
+							{#each ['$id', 'prev'] as key}
+								{#if selectedItem.json[key] !== undefined}
+									<div class="flex flex-col">
+										<span class="text-xs text-surface-500 dark:text-surface-400">
+											{key}
+										</span>
+										<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+											{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
+										</span>
+									</div>
+								{/if}
+							{/each}
+						</div>
 					</div>
+					<Properties
+						properties={getPropertiesToRender(selectedItem)}
+						{expandedProperties}
+						{isEditing}
+						on:toggleProperty={handleToggleProperty}
+						on:valueChange={handleValueChange}
+					/>
 				</div>
-				<Properties
-					properties={getPropertiesToRender(selectedItem)}
-					{expandedProperties}
-					on:toggleProperty={handleToggleProperty}
-				/>
 			</div>
 		{:else}
 			<p class="text-xl text-center">Select an item from the list to view details</p>

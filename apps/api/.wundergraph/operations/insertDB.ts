@@ -58,7 +58,6 @@ export default createOperation.mutation({
 
       // If this is an object, validate it against its schema
       if (input.type === 'object') {
-        // Fetch the schema
         const { data: schemaData, error: schemaError } = await context.supabase
           .from("db")
           .select("json")
@@ -66,7 +65,17 @@ export default createOperation.mutation({
           .single();
 
         if (schemaError || !schemaData) {
-          throw new Error("Failed to fetch schema for validation");
+          // Try to find schema in archive if not in active db
+          const { data: archivedSchema, error: archiveError } = await context.supabase
+            .from("db_archive")
+            .select("json")
+            .eq("id", input.schema)
+            .single();
+
+          if (archiveError || !archivedSchema) {
+            throw new Error("Failed to fetch schema for validation");
+          }
+          schemaData = archivedSchema;
         }
 
         try {
@@ -136,14 +145,15 @@ export default createOperation.mutation({
         }
       }
 
-      // Insert the validated data
+      // Insert new version
       const { data, error } = await context.supabase
         .from("db")
         .insert({
           json: input.json,
           author: user.customClaims.id,
           schema: input.schema,
-          version: 1
+          version: 1,
+          prev: null // New items don't have previous versions
         })
         .select();
 

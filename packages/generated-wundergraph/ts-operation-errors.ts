@@ -15,6 +15,7 @@ export type OperationErrors = {
 	createMessage: CreateMessageErrors;
 	createProposal: CreateProposalErrors;
 	createShoppingList: CreateShoppingListErrors;
+	editDB: EditDBErrors;
 	getCCP: GetCCPErrors;
 	getCurrentMetrics: GetCurrentMetricsErrors;
 	getInvestmentMetrics: GetInvestmentMetricsErrors;
@@ -88,6 +89,7 @@ export type CreateInviteErrors = ClientOperationErrors;
 export type CreateMessageErrors = ClientOperationErrors;
 export type CreateProposalErrors = ClientOperationErrors;
 export type CreateShoppingListErrors = ClientOperationErrors;
+export type EditDBErrors = ClientOperationErrors;
 export type GetCCPErrors = ClientOperationErrors;
 export type GetCurrentMetricsErrors = ClientOperationErrors;
 export type GetInvestmentMetricsErrors = ClientOperationErrors;

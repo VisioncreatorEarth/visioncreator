@@ -8,7 +8,8 @@ interface DBItem {
   schema: string;
   version: number;
   created_at: string;
-  updated_at: string;
+  prev: string | null;
+  is_archived?: boolean;
 }
 
 export default createOperation.query({
@@ -17,35 +18,58 @@ export default createOperation.query({
     requireMatchAll: ["authenticated"],
   },
   handler: async ({ context }) => {
-    const { data, error } = await context.supabase
+    // Get active items with their profiles
+    const { data: activeData, error: activeError } = await context.supabase
       .from("db")
       .select(`
         *,
         profiles (
           name
         )
-      `)
-      .order('created_at', { ascending: false });
+      `);
 
-    if (error) {
-      throw new Error(`Database query error: ${error.message}`);
+    if (activeError) {
+      throw new Error(`Database query error: ${activeError.message}`);
     }
 
-    if (!data) {
-      return { db: [] };
+    // Get all referenced schema IDs
+    const schemaIds = new Set(activeData.map(item => item.schema));
+
+    // For schemas not found in active data, look in archive
+    const missingSchemas = Array.from(schemaIds).filter(
+      id => !activeData.find(item => item.id === id)
+    );
+
+    let allItems = [...activeData];
+
+    if (missingSchemas.length > 0) {
+      const { data: archivedSchemas } = await context.supabase
+        .from("db_archive")
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .in("id", missingSchemas);
+
+      if (archivedSchemas) {
+        allItems = [...allItems, ...archivedSchemas];
+      }
     }
 
-    const parsedData: DBItem[] = data.map((item: any) => ({
-      id: item.id,
-      json: typeof item.json === "string" ? JSON.parse(item.json) : item.json,
-      author: item.author,
-      author_name: item.profiles?.name || 'Unknown User',
-      schema: item.schema,
-      version: item.version,
-      created_at: item.created_at,
-      updated_at: item.updated_at
-    }));
-
-    return { db: parsedData };
+    return {
+      db: allItems.map(item => ({
+        id: item.id,
+        json: typeof item.json === "string" ? JSON.parse(item.json) : item.json,
+        author: item.author,
+        author_name: item.profiles?.name || 'Unknown User',
+        schema: item.schema,
+        version: item.version,
+        prev: item.prev,
+        created_at: item.created_at,
+        is_archived: 'archived_at' in item
+      }))
+    };
   },
 });
