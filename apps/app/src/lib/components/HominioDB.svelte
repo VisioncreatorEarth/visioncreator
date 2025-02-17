@@ -1,24 +1,28 @@
 <script lang="ts">
-	import { createMutation } from '$lib/wundergraph';
+	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
-	export let me;
 
-	let query = $me.query;
+	// Create the query directly
+	const dbQuery = createQuery({
+		operationName: 'queryDB',
+		enabled: true
+	});
+
 	let selectedItem = null;
 	let message = { text: '', type: '' };
 	let schemaInfo = null;
 	let expandedProperties = new Map();
 
+	// Debug logs
+	$: console.log('dbQuery:', $dbQuery);
+	$: if ($dbQuery?.data) console.log('query data:', $dbQuery.data);
+
 	const insertDBMutation = createMutation({
 		operationName: 'insertDB'
 	});
 
-	const insertObjectMutation = createMutation({
-		operationName: 'insertObject'
-	});
-
 	function sortByTimestamp(a, b) {
-		return new Date(b.json.timestamp).getTime() - new Date(a.json.timestamp).getTime();
+		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
 	}
 
 	async function generateRandomObject() {
@@ -26,7 +30,7 @@
 		const result = await $insertDBMutation.mutateAsync({});
 		if (result.success) {
 			message = { text: 'Random object generated successfully!', type: 'success' };
-			await $query.refetch();
+			await $dbQuery.refetch();
 		} else {
 			message = { text: `Failed: ${result.details}`, type: 'error' };
 			console.error('Failed:', result.details);
@@ -39,14 +43,14 @@
 	}
 
 	function findSchemaInfo(schemaId: string) {
-		if (!$query || !$query.data || !$query.data.db) return null;
-		const schema = $query.data.db.find((item) => item.json.$id === schemaId);
+		if (!$dbQuery?.data?.db) return null;
+		const schema = $dbQuery.data.db.find((item) => item.id === schemaId);
 		if (schema) {
 			return {
 				title: schema.json.title || 'Unknown Schema',
 				description: schema.json.description || 'No description available',
 				author: schema.json.author || 'Unknown',
-				id: schema.json.$id,
+				id: schema.id,
 				version: schema.json.version
 			};
 		}
@@ -61,20 +65,18 @@
 
 	function loadSchema(schemaId: string) {
 		console.log('Loading schema:', schemaId);
-		const schema = $query.data.db.find((item) => item.json.$id === schemaId);
+		const schema = $dbQuery.data.db.find((item) => item.id === schemaId);
 		if (schema) {
 			selectedItem = schema;
 			expandedProperties.set(schemaId, null);
 			expandedProperties = new Map(expandedProperties);
-			console.log('Updated expandedProperties:', expandedProperties);
 		}
 	}
+
 	function handleToggleProperty(event: CustomEvent<{ path: string; expanded: boolean }>) {
-		console.log('HominioDB: Received toggle event', event.detail);
 		const { path, expanded } = event.detail;
 
 		if (expanded) {
-			// Close all siblings at the same level
 			const pathParts = path.split('.');
 			const parentPath = pathParts.slice(0, -1).join('.');
 			expandedProperties = expandedProperties.filter((p) => {
@@ -82,66 +84,17 @@
 				return p === path || pParts.length !== pathParts.length || !p.startsWith(parentPath);
 			});
 
-			// Add the new expanded path
 			expandedProperties = [...expandedProperties, path];
 		} else {
-			// Remove the path and all its children
 			expandedProperties = expandedProperties.filter(
 				(p) => p !== path && !p.startsWith(path + '.')
 			);
 		}
-
-		console.log('HominioDB: Updated expandedProperties', expandedProperties);
 	}
 
 	$: if (selectedItem) {
 		console.log('HominioDB: Selected item changed, resetting expandedProperties');
 		expandedProperties = [];
-	}
-
-	async function insertHardcodedObject() {
-		message = { text: '', type: '' };
-		const hardcodedObject = {
-			$schema: 'https://alpha.ipfs.homin.io/QmWqLHcJsrMpmZrbxfMA3oM2YVbHjJfGw94UbZgBwm1mYR',
-			$id: '', // This will be filled by the server
-			prev: null,
-			type: 'object',
-			title: 'John Doe User Object',
-			author: 'HominioDB Client',
-			version: 1,
-			description: 'A sample user object for John Doe',
-			properties: {
-				username: 'john_doe',
-				email: 'john.doe@example.com',
-				password: 'hashedpassword123',
-				profile: {
-					fullName: 'John Doe',
-					birthDate: '1990-01-01',
-					bio: "I'm a software developer who loves coding and outdoor activities.",
-					location: {
-						country: 'United States',
-						city: 'San Francisco'
-					}
-				},
-				settings: {
-					theme: 'dark',
-					notifications: true,
-					language: 'en'
-				}
-			}
-		};
-
-		const result = await $insertObjectMutation.mutateAsync({
-			object: hardcodedObject
-		});
-
-		if (result.success) {
-			message = { text: 'Hardcoded object inserted successfully!', type: 'success' };
-			await $query.refetch();
-		} else {
-			message = { text: `Failed: ${result.details}`, type: 'error' };
-			console.error('Failed:', result.details);
-		}
 	}
 </script>
 
@@ -150,9 +103,6 @@
 	<div class="w-[300px] p-4 overflow-y-auto border-r border-surface-300-600-token">
 		<button on:click={generateRandomObject} class="mb-4 btn variant-filled-primary">
 			Generate Schema
-		</button>
-		<button on:click={insertHardcodedObject} class="mb-4 ml-2 btn variant-filled-secondary">
-			Insert Object
 		</button>
 
 		{#if message.text}
@@ -167,24 +117,27 @@
 			</div>
 		{/if}
 
-		{#if query}
+		{#if $dbQuery.isLoading}
+			<p>Loading schemas...</p>
+		{:else if $dbQuery.error}
+			<p class="text-error-400">Error loading schemas: {$dbQuery.error.message}</p>
+		{:else if $dbQuery.data?.db}
 			<ul class="space-y-4">
-				{#each $query.data.db.sort(sortByTimestamp) as item}
+				{#each $dbQuery.data.db.sort(sortByTimestamp) as item}
 					<li
 						class="p-2 cursor-pointer card variant-filled-tertiary-200 dark:variant-filled-surface-700 hover:bg-tertiary-300 dark:hover:bg-surface-600"
 						on:click={() => (selectedItem = item)}
 					>
 						<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
-						{#if item.json.author || item.json.version}
-							<p class="text-xs truncat text-tertiary-400">
-								{#if item.json.author}{item.json.author}{/if}
-								{#if item.json.author && item.json.version} • {/if}
-								{#if item.json.version}V{item.json.version}{/if}
-							</p>
-						{/if}
+						<p class="text-xs truncate text-tertiary-400">
+							{item.json.type} • {item.json.author || 'Unknown'}
+							{#if item.json.version}• v{item.json.version}{/if}
+						</p>
 					</li>
 				{/each}
 			</ul>
+		{:else}
+			<p>No schemas available</p>
 		{/if}
 	</div>
 

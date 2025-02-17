@@ -123,166 +123,56 @@ const metaSchema = {
   additionalProperties: false,
 };
 
-function generateRandomObject() {
+function generateRandomSchema() {
   return {
-    $schema: metaSchema.$id,
     type: "object",
-    author: "HominioAlpha",
-    prev: null,
-    version: 1,
+    schema_id: "00000000-0000-0000-0000-000000000001", // References root meta schema
     title: `User Schema ${Math.floor(Math.random() * 10000)}`,
     description: `Schema for user profile data ${Math.random()}`,
+    version: 1,
+    author: "HominioAlpha",
     properties: {
-      $schema: {
+      schema_id: {
         type: "string",
-        title: "Schema",
-        description: "The JSON Schema version being used",
-        format: "uri",
+        format: "uuid",
+        title: "Schema ID",
+        description: "Reference to the schema this object conforms to"
       },
-      $id: {
+      username: {
         type: "string",
-        title: "ID",
-        description: "Unique identifier for this object",
-        format: "uri",
+        title: "Username",
+        description: "The user's chosen username",
+        minLength: 3,
+        maxLength: 20,
+        pattern: "^[a-zA-Z0-9_-]+$"
       },
-      prev: {
-        type: ["string", "null"],
-        format: "uri",
-        title: "Previous Version",
-        description: "The previous version of this object, if any",
-      },
-      type: {
+      email: {
         type: "string",
-        enum: [
-          "object",
-          "array",
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null",
-        ],
-        title: "Type",
-        description: "The type of this object",
+        title: "Email",
+        description: "The user's email address",
+        format: "email"
       },
-      author: {
-        type: "string",
-        title: "Author",
-        description: "The author of this object",
-      },
-      version: {
-        type: "integer",
-        title: "Version",
-        description: "The version number of this object",
-        minimum: 0,
-      },
-      title: {
-        type: "string",
-        title: "Title",
-        description: "The title of this object",
-      },
-      description: {
-        type: "string",
-        title: "Description",
-        description: "A description of this object",
-      },
-      properties: {
+      profile: {
         type: "object",
-        title: "User Properties",
-        description: "Properties specific to a user object",
+        title: "User Profile",
+        description: "Additional profile information",
         properties: {
-          username: {
+          fullName: {
             type: "string",
-            title: "Username",
-            description: "The user's chosen username",
-            minLength: 3,
-            maxLength: 20,
-            pattern: "^[a-zA-Z0-9_-]+$",
+            title: "Full Name",
+            description: "The user's full name"
           },
-          email: {
+          birthDate: {
             type: "string",
-            title: "Email",
-            description: "The user's email address",
-            format: "email",
-          },
-          password: {
-            type: "string",
-            title: "Password",
-            description: "The user's password (hashed)",
-            minLength: 8,
-          },
-          profile: {
-            type: "object",
-            title: "User Profile",
-            description: "Additional profile information",
-            properties: {
-              fullName: {
-                type: "string",
-                title: "Full Name",
-                description: "The user's full name",
-              },
-              birthDate: {
-                type: "string",
-                title: "Birth Date",
-                description: "The user's birth date",
-                format: "date",
-              },
-              bio: {
-                type: "string",
-                title: "Biography",
-                description: "A short biography of the user",
-                maxLength: 500,
-              },
-              location: {
-                type: "object",
-                title: "Location",
-                description: "The user's location",
-                properties: {
-                  country: {
-                    type: "string",
-                    title: "Country",
-                    description: "The user's country of residence",
-                  },
-                  city: {
-                    type: "string",
-                    title: "City",
-                    description: "The user's city of residence",
-                  },
-                },
-              },
-            },
-            required: ["fullName"],
-          },
-          settings: {
-            type: "object",
-            title: "User Settings",
-            description: "User preferences and settings",
-            properties: {
-              theme: {
-                type: "string",
-                title: "Theme",
-                description: "The user's preferred theme",
-                enum: ["light", "dark", "system"],
-              },
-              notifications: {
-                type: "boolean",
-                title: "Notifications",
-                description: "Whether the user wants to receive notifications",
-              },
-              language: {
-                type: "string",
-                title: "Language",
-                description: "The user's preferred language",
-                default: "en",
-              },
-            },
-          },
+            title: "Birth Date",
+            description: "The user's birth date",
+            format: "date"
+          }
         },
-        required: ["username", "email", "password", "profile"],
-      },
+        required: ["fullName"]
+      }
     },
-    required: ["$schema", "$id", "prev", "author", "version", "properties"],
-    additionalProperties: false,
+    required: ["schema_id", "username", "email", "profile"]
   };
 }
 
@@ -295,7 +185,7 @@ async function insertSchema(context, operations, schema, isMetaSchema = false) {
   if (!calcCIDResult.data?.success) {
     throw new Error(
       "Failed to calculate CID: " +
-        (calcCIDResult.data?.error || "Unknown error")
+      (calcCIDResult.data?.error || "Unknown error")
     );
   }
 
@@ -335,43 +225,30 @@ export default createOperation.mutation({
   rbac: {
     requireMatchAll: ["admin"],
   },
-  handler: async ({ input, context, operations }) => {
+  handler: async ({ context }) => {
     try {
-      // Check if the database is empty
-      const { count, error: countError } = await context.supabase
+      const randomSchema = generateRandomSchema();
+
+      // Insert the schema and get its ID
+      const { data, error } = await context.supabase
         .from("db")
-        .select("*", { count: "exact", head: true });
+        .insert({ json: randomSchema })
+        .select();
 
-      if (countError) {
-        throw new Error("Failed to check database: " + countError.message);
-      }
-
-      let insertedData;
-
-      if (count === 0) {
-        // If the database is empty, insert the metaSchema
-        insertedData = await insertSchema(
-          context,
-          operations,
-          metaSchema,
-          true
-        );
-      } else {
-        // Otherwise, insert a random schema
-        const randomObject = generateRandomObject();
-        insertedData = await insertSchema(context, operations, randomObject);
+      if (error) {
+        throw new Error("Database insert error: " + error.message);
       }
 
       return {
         success: true,
-        insertedData,
+        insertedData: data[0]
       };
     } catch (error) {
-      console.error("Unexpected error in insertDB:", error);
+      console.error("Error in insertDB:", error);
       return {
         success: false,
         error: "Unexpected error",
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error)
       };
     }
   },
