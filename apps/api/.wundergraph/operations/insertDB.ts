@@ -1,6 +1,7 @@
 import { createOperation, z } from "../generated/wundergraph.factory";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
+import { v4 as uuidv4 } from 'uuid';
 
 // Initialize Ajv with formats
 const ajv = new Ajv({
@@ -56,15 +57,19 @@ export default createOperation.mutation({
         throw new Error("User not authenticated");
       }
 
+      // Generate a new variation ID for new items
+      const variation = uuidv4();
+
       // If this is an object, validate it against its schema
       if (input.type === 'object') {
-        const { data: schemaData, error: schemaError } = await context.supabase
+        let schemaData;
+        const { data: activeSchema, error: schemaError } = await context.supabase
           .from("db")
           .select("json")
           .eq("id", input.schema)
           .single();
 
-        if (schemaError || !schemaData) {
+        if (schemaError || !activeSchema) {
           // Try to find schema in archive if not in active db
           const { data: archivedSchema, error: archiveError } = await context.supabase
             .from("db_archive")
@@ -76,6 +81,8 @@ export default createOperation.mutation({
             throw new Error("Failed to fetch schema for validation");
           }
           schemaData = archivedSchema;
+        } else {
+          schemaData = activeSchema;
         }
 
         try {
@@ -145,7 +152,6 @@ export default createOperation.mutation({
         }
       }
 
-      // Insert new version
       const { data, error } = await context.supabase
         .from("db")
         .insert({
@@ -153,7 +159,7 @@ export default createOperation.mutation({
           author: user.customClaims.id,
           schema: input.schema,
           version: 1,
-          prev: null // New items don't have previous versions
+          prev: null
         })
         .select();
 
@@ -166,7 +172,7 @@ export default createOperation.mutation({
         insertedData: data[0]
       };
     } catch (error) {
-      console.error(`Error in insertDB (${input.type}):`, error);
+      console.error("Error in insertDB:", error);
       return {
         success: false,
         error: "Unexpected error",

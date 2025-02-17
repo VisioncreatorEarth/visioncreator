@@ -7,6 +7,7 @@ interface DBItem {
   author_name: string;
   schema: string;
   version: number;
+  variation: string;
   created_at: string;
   prev: string | null;
   is_archived?: boolean;
@@ -23,7 +24,8 @@ export default createOperation.query({
       .from("db")
       .select(`
         *,
-        profiles (
+        profiles!db_author_fkey (
+          id,
           name
         )
       `);
@@ -32,43 +34,51 @@ export default createOperation.query({
       throw new Error(`Database query error: ${activeError.message}`);
     }
 
-    // Get all referenced schema IDs
-    const schemaIds = new Set(activeData.map(item => item.schema));
+    // Get archived versions in a separate query
+    const { data: archivedData } = await context.supabase
+      .from("db_archive")
+      .select(`
+        *,
+        profiles!db_archive_author_fkey (
+          id,
+          name
+        )
+      `);
 
-    // For schemas not found in active data, look in archive
-    const missingSchemas = Array.from(schemaIds).filter(
-      id => !activeData.find(item => item.id === id)
-    );
-
-    let allItems = [...activeData];
-
-    if (missingSchemas.length > 0) {
-      const { data: archivedSchemas } = await context.supabase
-        .from("db_archive")
-        .select(`
-          *,
-          profiles (
-            name
-          )
-        `)
-        .in("id", missingSchemas);
-
-      if (archivedSchemas) {
-        allItems = [...allItems, ...archivedSchemas];
+    // Group archived versions by variation
+    const archivedByVariation = (archivedData || []).reduce((acc, item) => {
+      if (!acc[item.variation]) {
+        acc[item.variation] = [];
       }
-    }
-
-    return {
-      db: allItems.map(item => ({
+      acc[item.variation].push({
         id: item.id,
         json: typeof item.json === "string" ? JSON.parse(item.json) : item.json,
         author: item.author,
         author_name: item.profiles?.name || 'Unknown User',
         schema: item.schema,
         version: item.version,
+        variation: item.variation,
         prev: item.prev,
         created_at: item.created_at,
-        is_archived: 'archived_at' in item
+        is_archived: true,
+        archived_at: item.archived_at
+      });
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    return {
+      db: activeData.map(item => ({
+        id: item.id,
+        json: typeof item.json === "string" ? JSON.parse(item.json) : item.json,
+        author: item.author,
+        author_name: item.profiles?.name || 'Unknown User',
+        schema: item.schema,
+        version: item.version,
+        variation: item.variation,
+        prev: item.prev,
+        created_at: item.created_at,
+        is_archived: false,
+        archived_versions: archivedByVariation[item.variation] || []
       }))
     };
   },

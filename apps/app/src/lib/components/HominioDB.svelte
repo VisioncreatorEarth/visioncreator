@@ -2,6 +2,9 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
 
+	// Add me prop
+	export let me: any; // Update type according to your me object structure
+
 	interface DBItem {
 		id: string;
 		json: any;
@@ -12,6 +15,9 @@
 		created_at: string;
 		prev: string | null;
 		is_archived?: boolean;
+		archived_at?: string;
+		archived_versions?: DBItem[];
+		variation: string;
 	}
 
 	interface SchemaProperty {
@@ -33,7 +39,7 @@
 		email: string;
 		profile: {
 			fullName: string;
-			birthDate: string;
+			birthDate: string | null;
 		};
 	}
 
@@ -73,6 +79,9 @@
 	const editDBMutation = createMutation({
 		operationName: 'editDB'
 	});
+
+	// Add state for archived versions
+	let archivedVersions: DBItem[] = [];
 
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
@@ -360,35 +369,40 @@
 		}
 	}
 
-	async function handleCreateObject() {
-		if (!selectedItem?.id) return;
+	async function handleCreateObject(event: Event) {
+		event.preventDefault();
+		console.log('[HominioDB] Creating object with form data:', formData);
 
 		try {
-			console.log('[HominioDB] Creating object with form data:', formData);
-
-			// Pre-process form data to handle dates properly
+			// Create a clean object that matches the schema
 			const processedFormData = {
-				...formData,
+				username: formData.username.trim(),
+				email: formData.email.trim(),
 				profile: {
-					...formData.profile,
-					birthDate: formatDateForSubmission(formData.profile.birthDate)
+					fullName: formData.profile.fullName.trim(),
+					birthDate: formData.profile.birthDate || null
 				}
 			};
 
-			// Add title based on display_field if available
-			if (selectedItem.json.display_field && processedFormData[selectedItem.json.display_field]) {
-				processedFormData.title = processedFormData[selectedItem.json.display_field];
+			// Add any schema-specific metadata
+			if (selectedItem?.json.display_field) {
+				const displayValue = processedFormData[selectedItem.json.display_field];
+				if (displayValue) {
+					processedFormData.title = displayValue;
+				}
 			}
 
 			const result = await $insertDBMutation.mutateAsync({
 				json: processedFormData,
 				type: 'object',
-				schema: selectedItem.id
+				schema: selectedItem?.id || ''
 			});
 
 			if (result?.success) {
 				message = { text: 'Object created successfully!', type: 'success' };
+				await $dbQuery.refetch();
 				showCreateModal = false;
+				// Reset form
 				formData = {
 					username: '',
 					email: '',
@@ -397,9 +411,13 @@
 						birthDate: ''
 					}
 				};
-				await $dbQuery.refetch();
 			} else {
-				message = { text: `Failed: ${result?.details || 'Unknown error'}`, type: 'error' };
+				message = {
+					text: `Failed to create object: ${
+						result?.details ? JSON.stringify(result.details) : 'Unknown error'
+					}`,
+					type: 'error'
+				};
 				console.error('[HominioDB] Failed to create object:', result?.details);
 			}
 		} catch (error) {
@@ -594,113 +612,123 @@
 	<!-- Right side: Detail view -->
 	<div class="flex-1 p-4 overflow-x-auto">
 		{#if selectedItem}
-			<div class="flex flex-col">
-				<!-- Add edit controls -->
-				<div class="flex justify-end gap-2 mb-4">
-					{#if !isEditing}
-						<button
-							class="px-4 py-2 text-white rounded-lg bg-primary-500 hover:bg-primary-600"
-							on:click={startEditing}
-						>
-							Edit
-						</button>
-					{:else}
-						<button
-							class="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
-							on:click={cancelEditing}
-						>
-							Cancel
-						</button>
-						<button
-							class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
-							on:click={saveChanges}
-						>
-							Save
+			<div class="flex">
+				<!-- First column: metadata -->
+				<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
+					<!-- Title and description if available -->
+					<div class="mb-4">
+						<div class="flex items-center justify-between">
+							{#if selectedItem.json.title}
+								<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
+							{/if}
+						</div>
+						{#if selectedItem.json.description}
+							<span class="text-sm text-surface-800 dark:text-tertiary-500">
+								{selectedItem.json.description}
+							</span>
+						{/if}
+					</div>
+
+					<!-- Create Object Button -->
+					{#if isSchema(selectedItem)}
+						<button class="w-full mb-4 btn variant-filled-primary" on:click={openCreateModal}>
+							Create Object
 						</button>
 					{/if}
-				</div>
 
-				<div class="flex">
-					<!-- First column: normal props -->
-					<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
-						<!-- Title and description if available -->
-						<div class="mb-4">
-							<div class="flex items-center justify-between">
-								{#if selectedItem.json.title}
-									<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
-								{/if}
+					<!-- Metadata Section -->
+					<div class="grid gap-4">
+						<!-- Schema Information -->
+						{#if schemaDetails}
+							<div class="flex flex-col">
+								<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
+								<button
+									class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
+									on:click={() => loadSchema(selectedItem.schema)}
+								>
+									{schemaDetails.title}
+								</button>
 							</div>
-							{#if selectedItem.json.description}
-								<span class="text-sm text-surface-800 dark:text-tertiary-500">
-									{selectedItem.json.description}
-								</span>
-							{/if}
-						</div>
-
-						<!-- Create Object Button -->
-						{#if isSchema(selectedItem)}
-							<button class="w-full mb-4 btn variant-filled-primary" on:click={openCreateModal}>
-								Create Object
-							</button>
 						{/if}
 
-						<!-- Metadata Section - All with consistent styling -->
-						<div class="grid gap-4">
-							<!-- Schema Information -->
-							{#if schemaDetails}
+						<!-- Author Information -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
+							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
+								{selectedItem.author_name || 'Unknown User'}
+							</span>
+							<span class="text-xs text-surface-600 dark:text-surface-400">
+								{selectedItem.author}
+							</span>
+						</div>
+
+						<!-- Version -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
+							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+								v{selectedItem.version}
+							</span>
+						</div>
+
+						<!-- Variation ID -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Variation</span>
+							<span class="text-sm font-mono text-tertiary-800 dark:text-tertiary-200">
+								{selectedItem.variation}
+							</span>
+						</div>
+
+						<!-- Created Date -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
+							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+								{new Date(selectedItem.created_at).toLocaleString()}
+							</span>
+						</div>
+
+						<!-- Other Metadata -->
+						{#each ['$id', 'prev'] as key}
+							{#if selectedItem.json[key] !== undefined}
 								<div class="flex flex-col">
-									<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
-									<button
-										class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
-										on:click={() => loadSchema(selectedItem.schema)}
-									>
-										{schemaDetails.title}
-									</button>
+									<span class="text-xs text-surface-500 dark:text-surface-400">
+										{key}
+									</span>
+									<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+										{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
+									</span>
 								</div>
 							{/if}
-
-							<!-- Author Information -->
-							<div class="flex flex-col">
-								<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
-								<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
-									{selectedItem.author_name}
-								</span>
-								<span class="text-xs text-surface-600 dark:text-surface-400">
-									{selectedItem.author}
-								</span>
-							</div>
-
-							<!-- Version -->
-							<div class="flex flex-col">
-								<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
-								<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-									v{selectedItem.version}
-								</span>
-							</div>
-
-							<!-- Created Date -->
-							<div class="flex flex-col">
-								<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
-								<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-									{new Date(selectedItem.created_at).toLocaleString()}
-								</span>
-							</div>
-
-							<!-- Other Metadata -->
-							{#each ['$id', 'prev'] as key}
-								{#if selectedItem.json[key] !== undefined}
-									<div class="flex flex-col">
-										<span class="text-xs text-surface-500 dark:text-surface-400">
-											{key}
-										</span>
-										<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-											{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
-										</span>
-									</div>
-								{/if}
-							{/each}
-						</div>
+						{/each}
 					</div>
+				</div>
+
+				<!-- Middle column: Properties -->
+				<div class="flex-1 p-4">
+					<!-- Edit controls -->
+					<div class="flex justify-end gap-2 mb-4">
+						{#if !isEditing}
+							<button
+								class="px-4 py-2 text-white rounded-lg bg-primary-500 hover:bg-primary-600"
+								on:click={startEditing}
+							>
+								Edit
+							</button>
+						{:else}
+							<button
+								class="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
+								on:click={cancelEditing}
+							>
+								Cancel
+							</button>
+							<button
+								class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
+								on:click={saveChanges}
+							>
+								Save
+							</button>
+						{/if}
+					</div>
+
 					<Properties
 						properties={getPropertiesToRender(selectedItem)}
 						{expandedProperties}
@@ -709,6 +737,100 @@
 						on:valueChange={handleValueChange}
 					/>
 				</div>
+
+				<!-- Right column: Version History -->
+				{#if selectedItem}
+					<div class="w-64 p-4 border-l border-surface-300-600-token">
+						<div class="flex flex-col mb-4">
+							<h3 class="text-lg font-semibold">Version History</h3>
+							{#if selectedItem.is_archived}
+								<button
+									class="mt-2 px-2 py-1 text-sm text-center rounded bg-warning-100 hover:bg-warning-200 dark:bg-warning-900 dark:hover:bg-warning-800"
+									on:click={() => {
+										if ($dbQuery.data?.db) {
+											const currentVersion = $dbQuery.data.db.find(
+												(item) => item.variation === selectedItem.variation && !item.is_archived
+											);
+											if (currentVersion) {
+												selectedItem = currentVersion;
+												expandedProperties = [];
+											}
+										}
+									}}
+								>
+									Return to Current Version
+								</button>
+							{/if}
+						</div>
+
+						<div class="space-y-2">
+							<!-- All Versions (including current) -->
+							{#if selectedItem}
+								<!-- Current Version -->
+								<button
+									class="w-full p-2 text-left transition-colors rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
+									class:bg-primary-100={!selectedItem.is_archived}
+									class:dark:bg-primary-900={!selectedItem.is_archived}
+									on:click={() => {
+										if ($dbQuery.data?.db) {
+											const currentVersion = $dbQuery.data.db.find(
+												(item) => item.variation === selectedItem.variation && !item.is_archived
+											);
+											if (currentVersion) {
+												selectedItem = currentVersion;
+												expandedProperties = [];
+											}
+										}
+									}}
+								>
+									<div class="flex items-center justify-between">
+										<div>
+											<span class="text-sm font-semibold">Current v{selectedItem.version}</span>
+											<div class="text-xs text-surface-600">
+												{new Date(selectedItem.created_at).toLocaleString()}
+											</div>
+											<div class="mt-1 text-xs text-surface-500">
+												by {selectedItem.author_name}
+											</div>
+										</div>
+										{#if !selectedItem.is_archived}
+											<span class="text-xs text-surface-500">(viewing)</span>
+										{/if}
+									</div>
+								</button>
+
+								<!-- Previous Versions -->
+								{#if selectedItem.archived_versions?.length > 0}
+									{#each selectedItem.archived_versions.sort((a, b) => b.version - a.version) as version}
+										<button
+											class="w-full p-2 text-left transition-colors rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
+											class:bg-surface-200={version.id === selectedItem.id}
+											on:click={() => {
+												selectedItem = version;
+												expandedProperties = [];
+											}}
+										>
+											<div class="flex items-center justify-between">
+												<div>
+													<span class="text-sm font-semibold">v{version.version}</span>
+													<div class="text-xs text-surface-600">
+														{new Date(version.created_at).toLocaleString()}
+													</div>
+													<div class="mt-1 text-xs text-surface-500">
+														by {version.author_name}
+													</div>
+												</div>
+												{#if version.id === selectedItem.id}
+													<span class="text-xs text-surface-500">(viewing)</span>
+												{/if}
+											</div>
+										</button>
+									{/each}
+								{/if}
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<p class="text-xl text-center">Select an item from the list to view details</p>
@@ -772,7 +894,6 @@
 							Minimum 3 characters • Maximum 20 characters • Only letters, numbers, underscore and
 							dash
 						</p>
-						<p class="mt-1 text-xs text-error-500">Required field</p>
 					</div>
 
 					<!-- Email -->
@@ -781,68 +902,54 @@
 							Email <span class="text-error-500">*</span>
 						</label>
 						<input type="email" id="email" class="input" bind:value={formData.email} required />
-						<p class="mt-1 text-xs text-warning-500">Must be a valid email address</p>
-						<p class="mt-1 text-xs text-error-500">Required field</p>
 					</div>
 
 					<!-- Profile -->
 					<div class="mb-4">
-						<h3 class="mb-2 text-lg font-semibold">
-							Profile <span class="text-error-500">*</span>
-						</h3>
-						<div class="pl-4 border-l border-surface-300-600-token">
-							<!-- Full Name -->
-							<div class="mb-4">
-								<label for="fullName" class="block mb-1 text-sm font-medium">
-									Full Name <span class="text-error-500">*</span>
-								</label>
-								<input
-									type="text"
-									id="fullName"
-									class="input"
-									bind:value={formData.profile.fullName}
-									required
-								/>
-								<p class="mt-1 text-xs text-error-500">Required field</p>
-							</div>
+						<h3 class="mb-2 text-lg font-semibold">Profile</h3>
 
-							<!-- Birth Date -->
-							<div class="mb-4">
-								<label for="birthDate" class="block mb-1 text-sm font-medium">Birth Date</label>
-								<input
-									type="date"
-									id="birthDate"
-									bind:value={formData.profile.birthDate}
-									class="w-full input"
-									on:change={(e) => {
-										// Ensure proper date format
-										const date = e.target.value;
-										if (date) {
-											formData.profile.birthDate = new Date(date).toISOString().split('T')[0];
-										} else {
-											formData.profile.birthDate = '';
-										}
-									}}
-								/>
-							</div>
+						<!-- Full Name -->
+						<div class="mb-4">
+							<label for="fullName" class="block mb-1 text-sm font-medium">
+								Full Name <span class="text-error-500">*</span>
+							</label>
+							<input
+								type="text"
+								id="fullName"
+								class="input"
+								bind:value={formData.profile.fullName}
+								required
+							/>
+						</div>
+
+						<!-- Birth Date -->
+						<div class="mb-4">
+							<label for="birthDate" class="block mb-1 text-sm font-medium"> Birth Date </label>
+							<input
+								type="date"
+								id="birthDate"
+								class="input"
+								bind:value={formData.profile.birthDate}
+							/>
 						</div>
 					</div>
+
+					<div class="flex justify-end gap-2">
+						<button
+							type="button"
+							class="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
+							on:click={closeModal}
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
+						>
+							Create
+						</button>
+					</div>
 				{/if}
-				<div class="flex justify-end gap-2 mt-6">
-					<button
-						type="button"
-						class="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
-						on:click={closeModal}
-					>
-						Cancel
-					</button>
-					<button
-						type="submit"
-						class="px-4 py-2 text-white rounded-lg bg-primary-500 hover:bg-primary-600"
-					>
-						Create
-					</button>
-				</div>
 			</form>
 		</div>
 	</div>
