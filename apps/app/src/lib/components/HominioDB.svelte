@@ -32,6 +32,7 @@
 		pattern?: string;
 		properties?: Record<string, SchemaProperty>;
 		required?: string[];
+		nullable?: boolean;
 	}
 
 	interface FormData {
@@ -100,12 +101,23 @@
 					description: "The user's chosen username",
 					minLength: 3,
 					maxLength: 20,
-					pattern: '^[a-zA-Z0-9_-]+$'
+					pattern: '^[\\w-]+$',
+					errorMessage: {
+						pattern: 'Username can only contain letters, numbers, underscore and dash',
+						minLength: 'Username must be at least 3 characters long',
+						maxLength: 'Username cannot exceed 20 characters'
+					}
 				},
 				email: {
 					type: 'string',
 					title: 'Email',
-					description: "The user's email address"
+					description: "The user's email address",
+					format: 'email',
+					pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
+					errorMessage: {
+						format: 'Please enter a valid email address',
+						pattern: 'Please enter a valid email address'
+					}
 				},
 				profile: {
 					type: 'object',
@@ -115,18 +127,39 @@
 						fullName: {
 							type: 'string',
 							title: 'Full Name',
-							description: "The user's full name"
+							description: "The user's full name",
+							minLength: 2,
+							maxLength: 100,
+							pattern: "^[A-Za-zÀ-ÖØ-öø-ÿ\\s'-]+$",
+							errorMessage: {
+								pattern: 'Full name can only contain letters, spaces, hyphens and apostrophes',
+								minLength: 'Full name must be at least 2 characters long',
+								maxLength: 'Full name cannot exceed 100 characters'
+							}
 						},
 						birthDate: {
 							type: 'string',
 							title: 'Birth Date',
-							description: "The user's birth date"
+							description: "The user's birth date",
+							format: 'date',
+							nullable: true,
+							errorMessage: {
+								format: 'Please enter a valid date'
+							},
+							validate: {
+								minDate: '1900-01-01',
+								maxDate: new Date().toISOString().split('T')[0],
+								errorMessage: {
+									minDate: 'Birth date cannot be before 1900',
+									maxDate: 'Birth date cannot be in the future'
+								}
+							}
 						}
 					},
 					required: ['fullName']
 				}
 			},
-			required: ['username', 'profile']
+			required: ['username', 'email', 'profile']
 		};
 	}
 
@@ -360,12 +393,14 @@
 	}
 
 	// Helper function to format date to ISO format
-	function formatDateForSubmission(date: string): string | null {
+	function formatDateForSubmission(date: string | null): string | null {
 		if (!date) return null;
 		try {
-			// Convert to YYYY-MM-DD format
-			const d = new Date(date);
-			return d.toISOString().split('T')[0];
+			// Date input returns YYYY-MM-DD format, just validate it's a valid date
+			const [year, month, day] = date.split('-').map(Number);
+			const d = new Date(year, month - 1, day);
+			if (isNaN(d.getTime())) return null;
+			return date; // Return original YYYY-MM-DD format
 		} catch {
 			return null;
 		}
@@ -373,18 +408,35 @@
 
 	async function handleCreateObject(event: Event) {
 		event.preventDefault();
-		console.log('[HominioDB] Creating object with form data:', formData);
+
+		if (!selectedItem?.id) return;
 
 		try {
+			console.log('[HominioDB] Creating object with form data:', formData);
+
 			// Create a clean object that matches the schema
 			const processedFormData = {
 				username: formData.username.trim(),
 				email: formData.email.trim(),
 				profile: {
 					fullName: formData.profile.fullName.trim(),
-					birthDate: formData.profile.birthDate || null
+					birthDate: formData.profile.birthDate
+						? formatDateForSubmission(formData.profile.birthDate)
+						: null
 				}
 			};
+
+			// Validate against schema
+			const validationErrors = validateAgainstSchema(processedFormData, selectedItem.json);
+			if (validationErrors.length > 0) {
+				message = {
+					text: `Validation failed: ${validationErrors
+						.map((e) => `${e.field}: ${e.message}`)
+						.join(', ')}`,
+					type: 'error'
+				};
+				return;
+			}
 
 			// Add any schema-specific metadata
 			if (selectedItem?.json.display_field) {
@@ -410,7 +462,7 @@
 					email: '',
 					profile: {
 						fullName: '',
-						birthDate: ''
+						birthDate: null
 					}
 				};
 			} else {
@@ -543,6 +595,108 @@
 				type: 'error'
 			};
 		}
+	}
+
+	interface ValidationError {
+		field: string;
+		message: string;
+	}
+
+	function validateAgainstSchema(data: any, schema: any): ValidationError[] {
+		const errors: ValidationError[] = [];
+
+		function validateField(value: any, fieldSchema: any, path: string) {
+			if (fieldSchema.required && value === undefined) {
+				errors.push({
+					field: path,
+					message: `${fieldSchema.title || path} is required`
+				});
+				return;
+			}
+
+			if ((value === null || value === '') && !fieldSchema.required) return;
+
+			switch (fieldSchema.type) {
+				case 'string':
+					if (fieldSchema.minLength && value.length < fieldSchema.minLength) {
+						errors.push({
+							field: path,
+							message:
+								fieldSchema.errorMessage?.minLength || `Minimum length is ${fieldSchema.minLength}`
+						});
+					}
+					if (fieldSchema.maxLength && value.length > fieldSchema.maxLength) {
+						errors.push({
+							field: path,
+							message:
+								fieldSchema.errorMessage?.maxLength || `Maximum length is ${fieldSchema.maxLength}`
+						});
+					}
+					if (fieldSchema.pattern && !new RegExp(fieldSchema.pattern).test(value)) {
+						errors.push({
+							field: path,
+							message: fieldSchema.errorMessage?.pattern || `Invalid format`
+						});
+					}
+					if (fieldSchema.format === 'email') {
+						const emailRegex = new RegExp(
+							fieldSchema.pattern || '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+						);
+						if (!emailRegex.test(value)) {
+							errors.push({
+								field: path,
+								message: fieldSchema.errorMessage?.format || 'Invalid email format'
+							});
+						}
+					}
+					if (fieldSchema.format === 'date') {
+						if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+							errors.push({
+								field: path,
+								message: fieldSchema.errorMessage?.format || 'Invalid date format'
+							});
+							return;
+						}
+						const [year, month, day] = value.split('-').map(Number);
+						const date = new Date(year, month - 1, day);
+						if (isNaN(date.getTime())) {
+							errors.push({
+								field: path,
+								message: fieldSchema.errorMessage?.format || 'Invalid date'
+							});
+							return;
+						}
+						if (fieldSchema.validate) {
+							const { minDate, maxDate } = fieldSchema.validate;
+							if (minDate && date < new Date(minDate)) {
+								errors.push({
+									field: path,
+									message:
+										fieldSchema.validate.errorMessage?.minDate || `Date cannot be before ${minDate}`
+								});
+							}
+							if (maxDate && date > new Date(maxDate)) {
+								errors.push({
+									field: path,
+									message:
+										fieldSchema.validate.errorMessage?.maxDate || `Date cannot be after ${maxDate}`
+								});
+							}
+						}
+					}
+					break;
+				case 'object':
+					if (fieldSchema.properties) {
+						Object.entries(fieldSchema.properties).forEach(([key, propSchema]) => {
+							validateField(value[key], propSchema, path ? `${path}.${key}` : key);
+						});
+					}
+					break;
+			}
+		}
+
+		validateField(data, schema, '');
+		return errors;
 	}
 </script>
 
@@ -680,7 +834,7 @@
 						</div>
 
 						<Properties
-							properties={getPropertiesToRender(selectedItem)}
+							properties={selectedItem?.json}
 							{expandedProperties}
 							on:toggleProperty={handleToggleProperty}
 							on:valueChange={handleValueChange}
@@ -828,7 +982,7 @@
 							required
 							minlength="3"
 							maxlength="20"
-							pattern="^[a-zA-Z0-9_-]+$"
+							pattern="[\w-]+"
 						/>
 						<p class="mt-1 text-xs text-warning-500">
 							Minimum 3 characters • Maximum 20 characters • Only letters, numbers, underscore and
@@ -858,6 +1012,7 @@
 								id="fullName"
 								class="input"
 								bind:value={formData.profile.fullName}
+								pattern="[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+"
 								required
 							/>
 						</div>

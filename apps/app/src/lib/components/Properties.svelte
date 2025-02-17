@@ -6,6 +6,7 @@
 		value: any;
 		isObj: boolean;
 		path: string;
+		isRequired: boolean;
 	}
 
 	export let properties: Record<string, any>;
@@ -38,11 +39,23 @@
 	}
 
 	function renderProperties(properties: any, path: string[] = []) {
-		return Object.entries(properties).map(([key, value]) => ({
+		let propsToRender = properties;
+		let requiredFields: string[] = [];
+
+		if (path.length === 0 && properties.type === 'object') {
+			propsToRender = properties.properties;
+			requiredFields = properties.required || [];
+		} else if (properties.type === 'object') {
+			propsToRender = properties.properties;
+			requiredFields = properties.required || [];
+		}
+
+		return Object.entries(propsToRender).map(([key, value]) => ({
 			key,
 			value,
 			isObj: typeof value === 'object' && value !== null,
-			path: [...path, key].join('.')
+			path: [...path, key].join('.'),
+			isRequired: requiredFields.includes(key)
 		}));
 	}
 
@@ -97,6 +110,9 @@
 					<span class="ml-1 text-sm font-semibold truncate text-surface-700 dark:text-surface-300">
 						{prop.key}
 					</span>
+					{#if prop.isRequired}
+						<span class="ml-1 text-xs text-error-500">*</span>
+					{/if}
 					{#if prop.isObj}
 						<button
 							class="ml-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
