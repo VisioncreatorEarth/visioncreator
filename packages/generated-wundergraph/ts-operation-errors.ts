@@ -9,7 +9,6 @@ export type OperationErrors = {
 	addItemsToShoppingList: AddItemsToShoppingListErrors;
 	askClaude: AskClaudeErrors;
 	askHominio: AskHominioErrors;
-	calculateCID: CalculateCIDErrors;
 	checkCapabilities: CheckCapabilitiesErrors;
 	checkInvestmentEligibility: CheckInvestmentEligibilityErrors;
 	createInvite: CreateInviteErrors;
@@ -84,7 +83,6 @@ export type AskHominioErrors =
 	| OperationUltravoxInitializationError
 	| OperationUltravoxAuthenticationError
 	| ClientOperationErrors;
-export type CalculateCIDErrors = ClientOperationErrors;
 export type CheckCapabilitiesErrors = ClientOperationErrors;
 export type CheckInvestmentEligibilityErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;

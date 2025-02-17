@@ -16,3 +16,12 @@ export interface Capability {
         name: string;
     };
 }
+
+export interface DBItem {
+    id: string;
+    json: any;
+    author: string;
+    version: number;
+    created_at: string;
+    updated_at: string;
+}

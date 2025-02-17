@@ -2,135 +2,16 @@ import { createOperation, z } from "../generated/wundergraph.factory";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 
+// Initialize Ajv with formats
 const ajv = new Ajv();
 addFormats(ajv);
-
-// IMPORTANT !!! IMPORTANT !!! IMPORTANT
-// Please always exchange the $cid of our schema $id with the generated one from our db, when udpating the metaschema.
-// IMPORTANT !!! IMPORTANT !!! IMPORTANT
-
-const metaSchema = {
-  $id: "https://alpha.ipfs.homin.io/QmPSYA3hz2HEpWgai9DkcM2YG5Yf17WBgbYeYYtF8duqF8",
-  $schema: "http://json-schema.org/draft-07/schema#",
-  type: "object",
-  title: "Meta Schema",
-  description: "A schema for defining other schemas",
-  properties: {
-    $id: {
-      type: "string",
-      format: "uri",
-      description: "The unique identifier for this schema",
-    },
-    $schema: {
-      type: "string",
-      format: "uri",
-      description: "The JSON Schema version being used",
-    },
-    type: {
-      type: "string",
-      enum: [
-        "object",
-        "array",
-        "string",
-        "number",
-        "integer",
-        "boolean",
-        "null",
-      ],
-      description: "The type of the schema",
-    },
-    author: {
-      type: "string",
-      description: "The author of the schema",
-    },
-    prev: {
-      type: ["string", "null"],
-      format: "uri",
-      description: "The previous version of this schema, if any",
-    },
-    version: {
-      type: "integer",
-      minimum: 0,
-      description: "The version number of this schema",
-    },
-    title: {
-      type: "string",
-      description: "The title of the schema",
-    },
-    description: {
-      type: "string",
-      description: "A description of the schema",
-    },
-    properties: {
-      type: "object",
-      additionalProperties: {
-        type: "object",
-        properties: {
-          type: {
-            type: ["string", "array"],
-            items: {
-              type: "string",
-              enum: [
-                "object",
-                "array",
-                "string",
-                "number",
-                "integer",
-                "boolean",
-                "null",
-              ],
-            },
-            minItems: 1,
-            uniqueItems: true,
-          },
-          title: { type: "string" },
-          description: { type: "string" },
-          minimum: { type: "number" },
-          maximum: { type: "number" },
-          pattern: { type: "string" },
-          properties: { $ref: "#/properties/properties" },
-          required: {
-            type: "array",
-            items: { type: "string" },
-            uniqueItems: true,
-          },
-        },
-        required: ["type", "title", "description"],
-      },
-    },
-    required: {
-      type: "array",
-      items: { type: "string" },
-      uniqueItems: true,
-      description: "The required properties for this schema",
-    },
-    additionalProperties: {
-      type: "boolean",
-      description: "Whether additional properties are allowed",
-    },
-  },
-  required: [
-    "$schema",
-    "$id",
-    "prev",
-    "author",
-    "version",
-    "title",
-    "description",
-    "properties",
-    "required",
-  ],
-  additionalProperties: false,
-};
 
 function generateRandomSchema() {
   return {
     type: "object",
-    schema_id: "00000000-0000-0000-0000-000000000001", // References root meta schema
+    schema_id: "00000000-0000-0000-0000-000000000001",
     title: `User Schema ${Math.floor(Math.random() * 10000)}`,
     description: `Schema for user profile data ${Math.random()}`,
-    version: 1,
-    author: "HominioAlpha",
     properties: {
       schema_id: {
         type: "string",
@@ -176,63 +57,48 @@ function generateRandomSchema() {
   };
 }
 
-async function insertSchema(context, operations, schema, isMetaSchema = false) {
-  const calcCIDResult = await operations.mutate({
-    operationName: "calculateCID",
-    input: { json: schema },
-  });
-
-  if (!calcCIDResult.data?.success) {
-    throw new Error(
-      "Failed to calculate CID: " +
-      (calcCIDResult.data?.error || "Unknown error")
-    );
-  }
-
-  const schemaWithId = calcCIDResult.data.json;
-
-  if (!isMetaSchema) {
-    const validate = ajv.compile(metaSchema);
-    const valid = validate(schemaWithId);
-
-    if (!valid) {
-      throw new Error("Validation error: " + ajv.errorsText(validate.errors));
-    }
-  } else {
-    // For metaSchema, we'll just validate it as a valid JSON Schema
-    try {
-      ajv.compile(schemaWithId);
-    } catch (error) {
-      throw new Error("Invalid JSON Schema: " + error.message);
-    }
-  }
-
-  const { data, error } = await context.supabase
+async function validateAgainstMetaSchema(schema: any, context: any) {
+  // Fetch the meta schema from the database
+  const { data: metaSchemaData, error: metaSchemaError } = await context.supabase
     .from("db")
-    .insert({ json: schemaWithId })
-    .select();
+    .select("json")
+    .eq("id", "00000000-0000-0000-0000-000000000001")
+    .single();
 
-  if (error) {
-    throw new Error("Database insert error: " + error.message);
+  if (metaSchemaError) {
+    throw new Error("Failed to fetch meta schema: " + metaSchemaError.message);
   }
 
-  return data[0];
+  const validate = ajv.compile(metaSchemaData.json);
+  const valid = validate(schema);
+
+  if (!valid) {
+    throw new Error("Validation error: " + ajv.errorsText(validate.errors));
+  }
 }
 
 export default createOperation.mutation({
   input: z.object({}),
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["admin"],
+    requireMatchAll: ["authenticated", "admin"],
   },
-  handler: async ({ context }) => {
+  handler: async ({ context, user }) => {
     try {
+      if (!user?.customClaims?.id) {
+        throw new Error("User not authenticated");
+      }
+
       const randomSchema = generateRandomSchema();
 
-      // Insert the schema and get its ID
+      // Insert the schema with version and author
       const { data, error } = await context.supabase
         .from("db")
-        .insert({ json: randomSchema })
+        .insert({
+          json: randomSchema,
+          author: user.customClaims.id,
+          version: 1
+        })
         .select();
 
       if (error) {

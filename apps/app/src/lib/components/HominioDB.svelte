@@ -386,8 +386,10 @@
 					>
 						<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
 						<p class="text-xs truncate text-tertiary-400">
-							{item.json.type} • {item.json.author || 'Unknown'}
-							{#if item.json.version}• v{item.json.version}{/if}
+							{item.json.type} • v{item.version} • Created by {item.author}
+							<span class="text-xs text-surface-500">
+								({new Date(item.created_at).toLocaleDateString()})
+							</span>
 						</p>
 					</li>
 				{/each}
@@ -427,7 +429,7 @@
 							</span>
 						</div>
 					{/if}
-					{#each ['$id', 'author', 'version', 'prev'] as key}
+					{#each ['$id', 'prev'] as key}
 						{#if selectedItem.json[key] !== undefined}
 							<div class="flex flex-col mb-2">
 								<span class="text-xs text-surface-500 dark:text-surface-400">
@@ -439,6 +441,24 @@
 							</div>
 						{/if}
 					{/each}
+					<div class="flex flex-col mb-2">
+						<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
+						<span class="text-xs text-surface-700 dark:text-tertiary-400">
+							{selectedItem.version}
+						</span>
+					</div>
+					<div class="flex flex-col mb-2">
+						<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
+						<span class="text-xs text-surface-700 dark:text-tertiary-400">
+							{selectedItem.author}
+						</span>
+					</div>
+					<div class="flex flex-col mb-2">
+						<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
+						<span class="text-xs text-surface-700 dark:text-tertiary-400">
+							{new Date(selectedItem.created_at).toLocaleString()}
+						</span>
+					</div>
 				</div>
 				<Properties
 					properties={getPropertiesToRender(selectedItem)}

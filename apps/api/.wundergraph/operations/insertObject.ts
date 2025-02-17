@@ -16,43 +16,34 @@ export default createOperation.mutation({
   }),
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["admin"],
+    requireMatchAll: ["authenticated", "admin"],
   },
-  handler: async ({ input, context }) => {
+  handler: async ({ input, context, user }) => {
     try {
-      console.log("[insertObject] Received input:", JSON.stringify(input.object, null, 2));
+      if (!user?.customClaims?.id) {
+        throw new Error("User not authenticated");
+      }
 
       if (!input.object.schema_id) {
         throw new Error("Object must have a schema_id property");
       }
 
-      // Fetch the schema
-      const { data: schemaData, error: schemaError } = await context.supabase
-        .from("db")
-        .select("json")
-        .eq("id", input.object.schema_id)
-        .single();
+      // Insert the object with version and author
+      const newObject = {
+        type: "object",
+        title: `New ${input.object.title} Object`,
+        description: `Object created from ${input.object.title} schema`,
+        schema_id: input.object.schema_id,
+        ...input.object
+      };
 
-      if (schemaError) {
-        console.error("[insertObject] Failed to fetch schema:", schemaError);
-        throw new Error("Failed to fetch schema: " + schemaError.message);
-      }
-
-      console.log("[insertObject] Found schema:", JSON.stringify(schemaData.json, null, 2));
-
-      // Validate the object against its schema
-      const validate = ajv.compile(schemaData.json);
-      const valid = validate(input.object);
-
-      if (!valid) {
-        console.error("[insertObject] Validation errors:", validate.errors);
-        throw new Error("Validation error: " + ajv.errorsText(validate.errors));
-      }
-
-      // Insert the validated object
       const { data, error } = await context.supabase
         .from("db")
-        .insert({ json: input.object })
+        .insert({
+          json: newObject,
+          author: user.customClaims.id,
+          version: 1
+        })
         .select();
 
       if (error) {
