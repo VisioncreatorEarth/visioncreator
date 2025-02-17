@@ -12,7 +12,7 @@ interface DBItem {
 export default createOperation.query({
   requireAuthentication: true,
   rbac: {
-    requireMatchAll: ["authenticated", "admin"],
+    requireMatchAll: ["authenticated"],
   },
   handler: async ({ context }) => {
     try {

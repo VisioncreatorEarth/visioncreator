@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
+	import type { DBItem } from '$lib/types';
 
 	interface SchemaProperty {
 		type: string;
@@ -61,15 +62,76 @@
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
 	}
 
-	async function generateRandomObject() {
+	function generateRandomSchema() {
+		return {
+			type: 'object',
+			schema_id: '00000000-0000-0000-0000-000000000001',
+			title: `User Schema ${Math.floor(Math.random() * 10000)}`,
+			description: `Schema for user profile data ${Math.random()}`,
+			properties: {
+				schema_id: {
+					type: 'string',
+					format: 'uuid',
+					title: 'Schema ID',
+					description: 'Reference to the schema this object conforms to'
+				},
+				username: {
+					type: 'string',
+					title: 'Username',
+					description: "The user's chosen username",
+					minLength: 3,
+					maxLength: 20,
+					pattern: '^[a-zA-Z0-9_-]+$'
+				},
+				email: {
+					type: 'string',
+					title: 'Email',
+					description: "The user's email address",
+					format: 'email'
+				},
+				profile: {
+					type: 'object',
+					title: 'User Profile',
+					description: 'Additional profile information',
+					properties: {
+						fullName: {
+							type: 'string',
+							title: 'Full Name',
+							description: "The user's full name"
+						},
+						birthDate: {
+							type: 'string',
+							title: 'Birth Date',
+							description: "The user's birth date",
+							format: 'date'
+						}
+					},
+					required: ['fullName']
+				}
+			},
+			required: ['schema_id', 'username', 'email', 'profile']
+		};
+	}
+
+	async function handleGenerateSchema() {
 		message = { text: '', type: '' };
-		const result = await $insertDBMutation.mutateAsync({});
-		if (result.success) {
-			message = { text: 'Random object generated successfully!', type: 'success' };
-			await $dbQuery.refetch();
-		} else {
-			message = { text: `Failed: ${result.details}`, type: 'error' };
-			console.error('Failed:', result.details);
+		try {
+			const schema = generateRandomSchema();
+			const result = await $insertDBMutation.mutateAsync({ schema });
+
+			if (result?.success) {
+				message = { text: 'Random schema generated successfully!', type: 'success' };
+				await $dbQuery.refetch();
+			} else {
+				message = { text: `Failed: ${result?.details || 'Unknown error'}`, type: 'error' };
+				console.error('Failed:', result?.details);
+			}
+		} catch (error) {
+			console.error('Error generating schema:', error);
+			message = {
+				text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+				type: 'error'
+			};
 		}
 	}
 
@@ -357,7 +419,7 @@
 <div class="flex h-full text-gray-900 bg-tertiary-100 dark:bg-surface-800 dark:text-white">
 	<!-- Left side: List view -->
 	<div class="w-[300px] p-4 overflow-y-auto border-r border-surface-300-600-token">
-		<button on:click={generateRandomObject} class="mb-4 btn variant-filled-primary">
+		<button on:click={handleGenerateSchema} class="mb-4 btn variant-filled-primary">
 			Generate Schema
 		</button>
 

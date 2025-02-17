@@ -25,3 +25,14 @@ export interface DBItem {
     created_at: string;
     updated_at: string;
 }
+
+export interface InsertDBInput {
+    schema: {
+        type: string;
+        schema_id: string;
+        title: string;
+        description: string;
+        properties: Record<string, any>;
+        required: string[];
+    };
+}
