@@ -11,7 +11,6 @@
 	export let properties: Record<string, any>;
 	export let path: string[] = [];
 	export let expandedProperties: string[] = [];
-	export let isEditing: boolean = false;
 
 	const dispatch = createEventDispatcher<{
 		toggleProperty: { path: string; expanded: boolean };
@@ -51,7 +50,7 @@
 
 	$: {
 		renderedProperties = renderProperties(properties, path);
-		if (!isEditing) {
+		if (!expandedProperties.includes(path.join('.'))) {
 			editedValues = {};
 		}
 	}
@@ -108,7 +107,7 @@
 					{/if}
 				</div>
 
-				{#if isEditing && !prop.isObj}
+				{#if !prop.isObj}
 					<input
 						type={typeof prop.value === 'number' ? 'number' : 'text'}
 						class="input"
@@ -116,8 +115,8 @@
 						on:input={(e) => handleValueChange(prop.key, e.target.value)}
 					/>
 				{:else}
-					<span class="text-xs truncate text-surface-600 dark:text-surface-400">
-						{prop.isObj ? '' : JSON.stringify(prop.value)}
+					<span class="text-xs italic text-surface-500">
+						{Object.keys(prop.value).length} properties
 					</span>
 				{/if}
 			</div>
@@ -129,7 +128,6 @@
 				properties={prop.value}
 				path={[...path, prop.key]}
 				{expandedProperties}
-				{isEditing}
 				on:toggleProperty
 				on:valueChange
 			/>

@@ -71,17 +71,17 @@
 		operationName: 'insertDB'
 	});
 
-	// Add edit mode state
-	let isEditing = false;
-	let editedJson: any = null;
+	// Add state for archived versions
+	let archivedVersions: DBItem[] = [];
 
-	// Add editDB mutation
+	// Remove edit mode state and controls
+	let editedJson: any = null;
+	let hasChanges = false;
+
+	// Add editDB mutation back
 	const editDBMutation = createMutation({
 		operationName: 'editDB'
 	});
-
-	// Add state for archived versions
-	let archivedVersions: DBItem[] = [];
 
 	function sortByTimestamp(a, b) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
@@ -225,8 +225,10 @@
 	}
 
 	$: if (selectedItem) {
-		console.log('HominioDB: Selected item changed, resetting expandedProperties');
+		console.log('HominioDB: Selected item changed, resetting state');
 		expandedProperties = [];
+		editedJson = null;
+		hasChanges = false;
 	}
 
 	// Function to generate form fields based on schema
@@ -510,20 +512,9 @@
 
 		// Set the value at the final position
 		current[lastKey] = value;
+		hasChanges = true;
 
 		console.log('Updated JSON:', editedJson);
-	}
-
-	// Function to start editing
-	function startEditing() {
-		isEditing = true;
-		editedJson = null; // Will be initialized on first change
-	}
-
-	// Function to cancel editing
-	function cancelEditing() {
-		isEditing = false;
-		editedJson = null;
 	}
 
 	// Function to save changes
@@ -539,8 +530,8 @@
 
 			if (result?.success) {
 				message = { text: 'Changes saved successfully!', type: 'success' };
-				isEditing = false;
 				editedJson = null;
+				hasChanges = false;
 				await $dbQuery.refetch();
 			} else {
 				message = { text: `Failed to save: ${result?.details || 'Unknown error'}`, type: 'error' };
@@ -559,7 +550,9 @@
 
 <div class="flex h-full text-gray-900 bg-tertiary-100 dark:bg-surface-800 dark:text-white">
 	<!-- Left side: List view -->
-	<div class="w-[300px] p-4 overflow-y-auto border-r border-surface-300-600-token">
+	<div
+		class="w-[300px] p-4 overflow-y-auto border-r border-surface-300-600-token dark:bg-surface-900"
+	>
 		<button on:click={handleGenerateSchema} class="mb-4 btn variant-filled-primary">
 			Generate Schema
 		</button>
@@ -612,33 +605,29 @@
 	<!-- Right side: Detail view -->
 	<div class="flex-1 p-4 overflow-x-auto">
 		{#if selectedItem}
-			<div class="flex">
-				<!-- First column: metadata -->
-				<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
-					<!-- Title and description if available -->
-					<div class="mb-4">
-						<div class="flex items-center justify-between">
-							{#if selectedItem.json.title}
-								<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
+			<div class="flex flex-col">
+				<!-- Header section with metadata -->
+				<div class="p-6 mb-6 rounded-lg bg-tertiary-50 dark:bg-surface-900">
+					<div class="flex items-start justify-between mb-4">
+						<div>
+							<h2 class="text-2xl font-semibold">{selectedItem.json.title || 'Untitled'}</h2>
+							{#if selectedItem.json.description}
+								<p class="mt-1 text-sm text-surface-600 dark:text-surface-300">
+									{selectedItem.json.description}
+								</p>
 							{/if}
 						</div>
-						{#if selectedItem.json.description}
-							<span class="text-sm text-surface-800 dark:text-tertiary-500">
-								{selectedItem.json.description}
-							</span>
+
+						<!-- Create Object Button -->
+						{#if isSchema(selectedItem)}
+							<button class="btn variant-filled-primary" on:click={openCreateModal}>
+								Create Object
+							</button>
 						{/if}
 					</div>
 
-					<!-- Create Object Button -->
-					{#if isSchema(selectedItem)}
-						<button class="w-full mb-4 btn variant-filled-primary" on:click={openCreateModal}>
-							Create Object
-						</button>
-					{/if}
-
-					<!-- Metadata Section -->
-					<div class="grid gap-4">
-						<!-- Schema Information -->
+					<!-- Metadata Grid -->
+					<div class="grid grid-cols-4 gap-4 mt-4">
 						{#if schemaDetails}
 							<div class="flex flex-col">
 								<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
@@ -651,101 +640,60 @@
 							</div>
 						{/if}
 
-						<!-- Author Information -->
 						<div class="flex flex-col">
 							<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
 							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
-								{selectedItem.author_name || 'Unknown User'}
-							</span>
-							<span class="text-xs text-surface-600 dark:text-surface-400">
-								{selectedItem.author}
+								{selectedItem.author_name}
 							</span>
 						</div>
 
-						<!-- Version -->
-						<div class="flex flex-col">
-							<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
-							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-								v{selectedItem.version}
-							</span>
-						</div>
-
-						<!-- Variation ID -->
 						<div class="flex flex-col">
 							<span class="text-xs text-surface-500 dark:text-surface-400">Variation</span>
-							<span class="text-sm font-mono text-tertiary-800 dark:text-tertiary-200">
+							<span class="font-mono text-sm text-tertiary-800 dark:text-tertiary-200">
 								{selectedItem.variation}
 							</span>
 						</div>
 
-						<!-- Created Date -->
 						<div class="flex flex-col">
 							<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
 							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
 								{new Date(selectedItem.created_at).toLocaleString()}
 							</span>
 						</div>
+					</div>
+				</div>
 
-						<!-- Other Metadata -->
-						{#each ['$id', 'prev'] as key}
-							{#if selectedItem.json[key] !== undefined}
-								<div class="flex flex-col">
-									<span class="text-xs text-surface-500 dark:text-surface-400">
-										{key}
-									</span>
-									<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
-										{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
-									</span>
-								</div>
+				<!-- Main content area -->
+				<div class="flex">
+					<!-- Properties section -->
+					<div class="flex-1 p-4">
+						<!-- Save button -->
+						<div class="flex justify-end mb-4">
+							{#if hasChanges}
+								<button
+									class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
+									on:click={saveChanges}
+								>
+									Save
+								</button>
 							{/if}
-						{/each}
-					</div>
-				</div>
+						</div>
 
-				<!-- Middle column: Properties -->
-				<div class="flex-1 p-4">
-					<!-- Edit controls -->
-					<div class="flex justify-end gap-2 mb-4">
-						{#if !isEditing}
-							<button
-								class="px-4 py-2 text-white rounded-lg bg-primary-500 hover:bg-primary-600"
-								on:click={startEditing}
-							>
-								Edit
-							</button>
-						{:else}
-							<button
-								class="px-4 py-2 rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
-								on:click={cancelEditing}
-							>
-								Cancel
-							</button>
-							<button
-								class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
-								on:click={saveChanges}
-							>
-								Save
-							</button>
-						{/if}
+						<Properties
+							properties={getPropertiesToRender(selectedItem)}
+							{expandedProperties}
+							on:toggleProperty={handleToggleProperty}
+							on:valueChange={handleValueChange}
+						/>
 					</div>
 
-					<Properties
-						properties={getPropertiesToRender(selectedItem)}
-						{expandedProperties}
-						{isEditing}
-						on:toggleProperty={handleToggleProperty}
-						on:valueChange={handleValueChange}
-					/>
-				</div>
-
-				<!-- Right column: Version History -->
-				{#if selectedItem}
+					<!-- Version History sidebar -->
 					<div class="w-64 p-4 border-l border-surface-300-600-token">
 						<div class="flex flex-col mb-4">
 							<h3 class="text-lg font-semibold">Version History</h3>
 							{#if selectedItem.is_archived}
 								<button
-									class="mt-2 px-2 py-1 text-sm text-center rounded bg-warning-100 hover:bg-warning-200 dark:bg-warning-900 dark:hover:bg-warning-800"
+									class="px-2 py-1 mt-2 text-sm text-center rounded bg-warning-100 dark:bg-warning-900 text-warning-800 dark:text-warning-100"
 									on:click={() => {
 										if ($dbQuery.data?.db) {
 											const currentVersion = $dbQuery.data.db.find(
@@ -764,73 +712,65 @@
 						</div>
 
 						<div class="space-y-2">
-							<!-- All Versions (including current) -->
-							{#if selectedItem}
-								<!-- Current Version -->
-								<button
-									class="w-full p-2 text-left transition-colors rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
-									class:bg-primary-100={!selectedItem.is_archived}
-									class:dark:bg-primary-900={!selectedItem.is_archived}
-									on:click={() => {
-										if ($dbQuery.data?.db) {
-											const currentVersion = $dbQuery.data.db.find(
-												(item) => item.variation === selectedItem.variation && !item.is_archived
-											);
-											if (currentVersion) {
-												selectedItem = currentVersion;
-												expandedProperties = [];
-											}
-										}
-									}}
-								>
-									<div class="flex items-center justify-between">
-										<div>
-											<span class="text-sm font-semibold">Current v{selectedItem.version}</span>
-											<div class="text-xs text-surface-600">
-												{new Date(selectedItem.created_at).toLocaleString()}
-											</div>
-											<div class="mt-1 text-xs text-surface-500">
-												by {selectedItem.author_name}
-											</div>
+							<!-- Current Version -->
+							<button
+								class="w-full p-2 text-left rounded-lg {!selectedItem.is_archived
+									? 'bg-primary-100 dark:bg-primary-900'
+									: ''}"
+							>
+								<div class="flex items-center justify-between">
+									<div>
+										<span class="text-sm font-semibold text-primary-900 dark:text-primary-100">
+											Current v{selectedItem.version}
+										</span>
+										<div class="text-xs text-primary-700 dark:text-primary-300">
+											{new Date(selectedItem.created_at).toLocaleString()}
 										</div>
-										{#if !selectedItem.is_archived}
-											<span class="text-xs text-surface-500">(viewing)</span>
-										{/if}
+										<div class="mt-1 text-xs text-primary-600 dark:text-primary-400">
+											by {selectedItem.author_name}
+										</div>
 									</div>
-								</button>
+									{#if !selectedItem.is_archived}
+										<span class="text-xs text-primary-700 dark:text-primary-300">(viewing)</span>
+									{/if}
+								</div>
+							</button>
 
-								<!-- Previous Versions -->
-								{#if selectedItem.archived_versions?.length > 0}
-									{#each selectedItem.archived_versions.sort((a, b) => b.version - a.version) as version}
-										<button
-											class="w-full p-2 text-left transition-colors rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
-											class:bg-surface-200={version.id === selectedItem.id}
-											on:click={() => {
-												selectedItem = version;
-												expandedProperties = [];
-											}}
-										>
-											<div class="flex items-center justify-between">
-												<div>
-													<span class="text-sm font-semibold">v{version.version}</span>
-													<div class="text-xs text-surface-600">
-														{new Date(version.created_at).toLocaleString()}
-													</div>
-													<div class="mt-1 text-xs text-surface-500">
-														by {version.author_name}
-													</div>
+							<!-- Previous Versions -->
+							{#if selectedItem.archived_versions?.length > 0}
+								{#each selectedItem.archived_versions.sort((a, b) => b.version - a.version) as version}
+									<button
+										class="w-full p-2 text-left rounded-lg {version.id === selectedItem.id
+											? 'bg-surface-200 dark:bg-surface-700'
+											: ''} hover:bg-surface-300 dark:hover:bg-surface-600"
+										on:click={() => {
+											selectedItem = version;
+											expandedProperties = [];
+										}}
+									>
+										<div class="flex items-center justify-between">
+											<div>
+												<span class="text-sm font-semibold text-surface-900 dark:text-surface-100">
+													v{version.version}
+												</span>
+												<div class="text-xs text-surface-700 dark:text-surface-300">
+													{new Date(version.created_at).toLocaleString()}
 												</div>
-												{#if version.id === selectedItem.id}
-													<span class="text-xs text-surface-500">(viewing)</span>
-												{/if}
+												<div class="mt-1 text-xs text-surface-600 dark:text-surface-400">
+													by {version.author_name}
+												</div>
 											</div>
-										</button>
-									{/each}
-								{/if}
+											{#if version.id === selectedItem.id}
+												<span class="text-xs text-surface-600 dark:text-surface-400">(viewing)</span
+												>
+											{/if}
+										</div>
+									</button>
+								{/each}
 							{/if}
 						</div>
 					</div>
-				{/if}
+				</div>
 			</div>
 		{:else}
 			<p class="text-xl text-center">Select an item from the list to view details</p>
