@@ -21,6 +21,7 @@ export interface DBItem {
     id: string;
     json: any;
     author: string;
+    author_name: string;
     schema: string;
     version: number;
     created_at: string;

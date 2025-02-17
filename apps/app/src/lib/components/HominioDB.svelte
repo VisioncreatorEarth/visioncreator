@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
-	import type { DBItem } from '$lib/types';
 
 	interface SchemaProperty {
 		type: string;
@@ -63,6 +62,7 @@
 			type: 'object',
 			title: `User Schema ${Math.floor(Math.random() * 10000)}`,
 			description: `Schema for user profile data ${Math.random()}`,
+			display_field: 'email',
 			properties: {
 				username: {
 					type: 'string',
@@ -355,6 +355,11 @@
 				}
 			};
 
+			// Add title based on display_field if available
+			if (selectedItem.json.display_field && processedFormData[selectedItem.json.display_field]) {
+				processedFormData.title = processedFormData[selectedItem.json.display_field];
+			}
+
 			const result = await $insertDBMutation.mutateAsync({
 				json: processedFormData,
 				type: 'object',
@@ -432,6 +437,17 @@
 
 	// Add a reactive statement to get schema details when selectedItem changes
 	$: schemaDetails = selectedItem ? getSchemaDetails(selectedItem.schema) : null;
+
+	function getSchemaDisplayField(item: any): string | null {
+		if (!item.schema || !$dbQuery?.data?.db) return null;
+		const schema = $dbQuery.data.db.find((s) => s.id === item.schema);
+		return schema?.json?.display_field || null;
+	}
+
+	// Helper function to check if an item is a schema
+	function isSchema(item: any): boolean {
+		return item.schema === '00000000-0000-0000-0000-000000000001'; // References meta schema
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -466,12 +482,19 @@
 						class="p-2 cursor-pointer card variant-filled-tertiary-200 dark:variant-filled-surface-700 hover:bg-tertiary-300 dark:hover:bg-surface-600"
 						on:click={() => (selectedItem = item)}
 					>
-						<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
+						{#if isSchema(item)}
+							<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
+						{:else}
+							<h3 class="font-semibold truncate text-md">
+								{#if item.schema && getSchemaDisplayField(item)}
+									{item.json[getSchemaDisplayField(item)] || 'Untitled'}
+								{:else}
+									{item.json.title || 'Untitled'}
+								{/if}
+							</h3>
+						{/if}
 						<p class="text-xs truncate text-tertiary-400">
-							{item.json.type} • v{item.version} • Created by {item.author_name}
-							<span class="text-xs text-surface-500">
-								({new Date(item.created_at).toLocaleDateString()})
-							</span>
+							Author: {item.author_name}
 						</p>
 					</li>
 				{/each}
@@ -487,69 +510,83 @@
 			<div class="flex">
 				<!-- First column: normal props -->
 				<div class="flex flex-col max-w-xs p-4 border-r border-surface-300-600-token">
-					<!-- Title -->
-					<div class="flex items-center justify-between mb-4">
-						<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
-						<button class="btn variant-filled-primary" on:click={openCreateModal}>
+					<!-- Title and description if available -->
+					<div class="mb-4">
+						<div class="flex items-center justify-between">
+							{#if selectedItem.json.title}
+								<h3 class="text-xl font-semibold">{selectedItem.json.title}</h3>
+							{/if}
+						</div>
+						{#if selectedItem.json.description}
+							<span class="text-sm text-surface-800 dark:text-tertiary-500">
+								{selectedItem.json.description}
+							</span>
+						{/if}
+					</div>
+
+					<!-- Create Object Button -->
+					{#if isSchema(selectedItem)}
+						<button class="w-full mb-4 btn variant-filled-primary" on:click={openCreateModal}>
 							Create Object
 						</button>
-					</div>
-
-					<!-- Description -->
-					<span class="mb-4 text-sm text-surface-800 dark:text-tertiary-500">
-						{selectedItem.json.description}
-					</span>
-
-					<!-- Schema Information -->
-					{#if schemaDetails}
-						<div
-							class="flex flex-col mb-4 p-2 rounded bg-tertiary-200 dark:bg-surface-700 cursor-pointer hover:bg-tertiary-300 dark:hover:bg-surface-600"
-							on:click={() => loadSchema(selectedItem.schema)}
-						>
-							<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
-							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
-								{schemaDetails.title}
-							</span>
-						</div>
 					{/if}
 
-					<!-- Version -->
-					<div class="flex flex-col mb-2">
-						<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
-						<span class="text-xs text-surface-700 dark:text-tertiary-400">
-							v{selectedItem.version}
-						</span>
-					</div>
-
-					<!-- Author Information -->
-					<div class="flex flex-col mb-4 p-2 rounded bg-tertiary-200 dark:bg-surface-700">
-						<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
-						<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
-							{selectedItem.author_name}
-						</span>
-					</div>
-
-					<!-- Created Date -->
-					<div class="flex flex-col mb-2">
-						<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
-						<span class="text-xs text-surface-700 dark:text-tertiary-400">
-							{new Date(selectedItem.created_at).toLocaleString()}
-						</span>
-					</div>
-
-					<!-- Other Metadata -->
-					{#each ['$id', 'prev'] as key}
-						{#if selectedItem.json[key] !== undefined}
-							<div class="flex flex-col mb-2">
-								<span class="text-xs text-surface-500 dark:text-surface-400">
-									{key}
-								</span>
-								<span class="text-xs text-surface-700 dark:text-tertiary-400">
-									{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
-								</span>
+					<!-- Metadata Section - All with consistent styling -->
+					<div class="grid gap-4">
+						<!-- Schema Information -->
+						{#if schemaDetails}
+							<div class="flex flex-col">
+								<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
+								<button
+									class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
+									on:click={() => loadSchema(selectedItem.schema)}
+								>
+									{schemaDetails.title}
+								</button>
 							</div>
 						{/if}
-					{/each}
+
+						<!-- Author Information -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
+							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
+								{selectedItem.author_name}
+							</span>
+							<span class="text-xs text-surface-600 dark:text-surface-400">
+								{selectedItem.author}
+							</span>
+						</div>
+
+						<!-- Version -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Version</span>
+							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+								v{selectedItem.version}
+							</span>
+						</div>
+
+						<!-- Created Date -->
+						<div class="flex flex-col">
+							<span class="text-xs text-surface-500 dark:text-surface-400">Created</span>
+							<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+								{new Date(selectedItem.created_at).toLocaleString()}
+							</span>
+						</div>
+
+						<!-- Other Metadata -->
+						{#each ['$id', 'prev'] as key}
+							{#if selectedItem.json[key] !== undefined}
+								<div class="flex flex-col">
+									<span class="text-xs text-surface-500 dark:text-surface-400">
+										{key}
+									</span>
+									<span class="text-sm text-tertiary-800 dark:text-tertiary-200">
+										{key === '$id' ? truncateCID(selectedItem.json[key]) : selectedItem.json[key]}
+									</span>
+								</div>
+							{/if}
+						{/each}
+					</div>
 				</div>
 				<Properties
 					properties={getPropertiesToRender(selectedItem)}
@@ -660,7 +697,7 @@
 									type="date"
 									id="birthDate"
 									bind:value={formData.profile.birthDate}
-									class="input w-full"
+									class="w-full input"
 									on:change={(e) => {
 										// Ensure proper date format
 										const date = e.target.value;

@@ -9,7 +9,7 @@ create table "public"."db" (
     "created_at" timestamptz not null default now(),
     "updated_at" timestamptz not null default now(),
     constraint "db_pkey" primary key ("id"),
-    constraint "db_author_fkey" foreign key ("author") references auth.users(id) on delete set null
+    constraint "db_author_fkey" foreign key ("author") references profiles(id) on delete set null
 );
 
 -- Set the root schema ID
@@ -36,6 +36,11 @@ INSERT INTO "public"."db" (id, json, author, version, schema) VALUES
       "type": "string",
       "title": "Description", 
       "description": "A description of the schema"
+    },
+    "display_field": {
+      "type": "string",
+      "title": "Display Field",
+      "description": "The field to use for displaying the object"
     },
     "properties": {
       "type": "object",
@@ -77,38 +82,6 @@ create policy "service_role_all"
   using (true)
   with check (true);
 
--- Allow authenticated users to read all records
-create policy "authenticated_users_read"
-  on "public"."db"
-  as permissive
-  for select
-  to authenticated
-  using (true);
-
--- Allow users to create their own records
-create policy "users_create_own"
-  on "public"."db"
-  as permissive
-  for insert
-  to authenticated
-  with check (author = auth.uid());
-
--- Allow users to update their own records
-create policy "users_update_own"
-  on "public"."db"
-  as permissive
-  for update
-  to authenticated
-  using (author = auth.uid())
-  with check (author = auth.uid());
-
--- Allow users to delete their own records
-create policy "users_delete_own"
-  on "public"."db"
-  as permissive
-  for delete
-  to authenticated
-  using (author = auth.uid());
 
 -- Create updated_at trigger
 create or replace function public.handle_updated_at()
