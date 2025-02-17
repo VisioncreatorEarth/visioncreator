@@ -300,12 +300,40 @@
 		schemaInfo = null;
 	}
 
-	function loadSchema(schemaId: string) {
+	// Update loadSchema to handle automatic version switching
+	async function loadSchema(schemaId: string, autoLoadCurrent: boolean = false) {
 		console.log('Loading schema:', schemaId);
-		const schema = $dbQuery.data.db.find((item) => item.id === schemaId);
-		if (schema) {
-			selectedItem = schema;
+
+		// If autoLoadCurrent is true, first try to find the current version
+		if (autoLoadCurrent) {
+			const currentSchema = $dbQuery.data?.db.find((item) =>
+				item.archived_versions?.some((v) => v.id === schemaId)
+			);
+			if (currentSchema) {
+				selectedItem = currentSchema;
+				expandedProperties = [];
+				return;
+			}
+		}
+
+		// Regular schema loading logic
+		const activeSchema = $dbQuery.data?.db.find((item) => item.id === schemaId);
+		if (activeSchema) {
+			selectedItem = activeSchema;
 			expandedProperties = [];
+			return;
+		}
+
+		// Check archived schemas
+		const archivedSchema = $dbQuery.data?.db.find((item) =>
+			item.archived_versions?.some((version) => version.id === schemaId)
+		);
+		if (archivedSchema) {
+			const version = archivedSchema.archived_versions?.find((v) => v.id === schemaId);
+			if (version) {
+				selectedItem = version;
+				expandedProperties = [];
+			}
 		}
 	}
 
@@ -591,14 +619,34 @@
 
 	function getSchemaDetails(schemaId: string | null) {
 		if (!schemaId || !$dbQuery?.data?.db) return null;
-		const schema = $dbQuery.data.db.find((item) => item.id === schemaId);
-		if (schema) {
+
+		// First check active schemas
+		const activeSchema = $dbQuery.data.db.find((item) => item.id === schemaId);
+		if (activeSchema) {
 			return {
-				title: schema.json.title,
-				description: schema.json.description,
-				version: schema.version
+				title: activeSchema.json.title,
+				description: activeSchema.json.description,
+				version: activeSchema.version,
+				is_archived: false,
+				id: activeSchema.id
 			};
 		}
+
+		// Then check archived versions
+		for (const item of $dbQuery.data.db) {
+			const archivedVersion = item.archived_versions?.find((v) => v.id === schemaId);
+			if (archivedVersion) {
+				return {
+					title: archivedVersion.json.title,
+					description: archivedVersion.json.description,
+					version: archivedVersion.version,
+					is_archived: true,
+					id: archivedVersion.id,
+					current_version_id: item.id // Store the current version's ID
+				};
+			}
+		}
+
 		return null;
 	}
 
@@ -822,6 +870,21 @@
 			};
 		}
 	}
+
+	// Update the getAllVersions function
+	function getAllVersions(item: DBItem) {
+		if (!$dbQuery?.data?.db) return [];
+
+		// Find the active record for this variation
+		const activeRecord = $dbQuery.data.db.find((record) => record.variation === item.variation);
+
+		if (!activeRecord) return [];
+
+		// Return all versions: current version + archived versions
+		return [activeRecord, ...(activeRecord.archived_versions || [])].sort(
+			(a, b) => b.version - a.version
+		);
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -1036,22 +1099,42 @@
 
 					<!-- Metadata Grid -->
 					<div class="grid grid-cols-4 gap-4 mt-4">
+						<!-- Add archived badge if viewing archived version -->
+						{#if selectedItem?.is_archived}
+							<div class="col-span-4 mb-2">
+								<span
+									class="px-2 py-1 text-xs font-semibold rounded-full bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-200"
+								>
+									Archived Version {selectedItem.version}
+								</span>
+							</div>
+						{/if}
+
 						{#if schemaDetails}
 							<div class="flex flex-col">
 								<span class="text-xs text-surface-500 dark:text-surface-400">Schema</span>
-								<button
-									class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
-									on:click={() => loadSchema(selectedItem.schema)}
-								>
-									{schemaDetails.title}
-								</button>
+								<div class="flex items-center gap-2">
+									<button
+										class="text-sm font-semibold text-left text-tertiary-800 dark:text-tertiary-200 hover:underline"
+										on:click={() => loadSchema(schemaDetails.id)}
+									>
+										{schemaDetails.title}
+									</button>
+									{#if schemaDetails.is_archived}
+										<span
+											class="px-1.5 py-0.5 text-xs rounded-full bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-200"
+										>
+											Archived v{schemaDetails.version}
+										</span>
+									{/if}
+								</div>
 							</div>
 						{/if}
 
 						<div class="flex flex-col">
 							<span class="text-xs text-surface-500 dark:text-surface-400">Author</span>
 							<span class="text-sm font-semibold text-tertiary-800 dark:text-tertiary-200">
-								{selectedItem.author_name}
+								{selectedItem?.author_name}
 							</span>
 						</div>
 
@@ -1097,85 +1180,38 @@
 
 					<!-- Version History sidebar -->
 					<div class="w-64 p-4 border-l border-surface-300-600-token">
-						<div class="flex flex-col mb-4">
-							<h3 class="text-lg font-semibold">Version History</h3>
-							{#if selectedItem.is_archived}
-								<button
-									class="px-2 py-1 mt-2 text-sm text-center rounded bg-warning-100 dark:bg-warning-900 text-warning-800 dark:text-warning-100"
-									on:click={() => {
-										if ($dbQuery.data?.db) {
-											const currentVersion = $dbQuery.data.db.find(
-												(item) => item.variation === selectedItem.variation && !item.is_archived
-											);
-											if (currentVersion) {
-												selectedItem = currentVersion;
-												expandedProperties = [];
-											}
-										}
-									}}
-								>
-									Return to Current Version
-								</button>
-							{/if}
-						</div>
+						<h3 class="mb-4 text-lg font-semibold">Version History</h3>
 
 						<div class="space-y-2">
-							<!-- Current Version -->
-							<button
-								class="w-full p-2 text-left rounded-lg {!selectedItem.is_archived
-									? 'bg-primary-100 dark:bg-primary-900'
-									: ''}"
-							>
-								<div class="flex items-center justify-between">
-									<div>
-										<span class="text-sm font-semibold text-primary-900 dark:text-primary-100">
-											Current v{selectedItem.version}
-										</span>
-										<div class="text-xs text-primary-700 dark:text-primary-300">
-											{new Date(selectedItem.created_at).toLocaleString()}
-										</div>
-										<div class="mt-1 text-xs text-primary-600 dark:text-primary-400">
-											by {selectedItem.author_name}
-										</div>
-									</div>
-									{#if !selectedItem.is_archived}
-										<span class="text-xs text-primary-700 dark:text-primary-300">(viewing)</span>
-									{/if}
-								</div>
-							</button>
-
-							<!-- Previous Versions -->
-							{#if selectedItem.archived_versions?.length > 0}
-								{#each selectedItem.archived_versions.sort((a, b) => b.version - a.version) as version}
-									<button
-										class="w-full p-2 text-left rounded-lg {version.id === selectedItem.id
-											? 'bg-surface-200 dark:bg-surface-700'
-											: ''} hover:bg-surface-300 dark:hover:bg-surface-600"
-										on:click={() => {
-											selectedItem = version;
-											expandedProperties = [];
-										}}
-									>
-										<div class="flex items-center justify-between">
-											<div>
-												<span class="text-sm font-semibold text-surface-900 dark:text-surface-100">
-													v{version.version}
-												</span>
-												<div class="text-xs text-surface-700 dark:text-surface-300">
-													{new Date(version.created_at).toLocaleString()}
-												</div>
-												<div class="mt-1 text-xs text-surface-600 dark:text-surface-400">
-													by {version.author_name}
-												</div>
+							<!-- All Versions -->
+							{#each getAllVersions(selectedItem).sort((a, b) => b.version - a.version) as version}
+								<button
+									class="w-full p-2 text-left rounded-lg {version.id === selectedItem.id
+										? 'bg-surface-200 dark:bg-surface-700'
+										: 'hover:bg-surface-100 dark:hover:bg-surface-800'}"
+									on:click={() => {
+										selectedItem = version;
+										expandedProperties = [];
+									}}
+								>
+									<div class="flex items-center justify-between">
+										<div>
+											<span class="text-sm font-semibold">
+												Version {version.version}
+											</span>
+											<div class="text-xs text-surface-600 dark:text-surface-300">
+												{new Date(version.created_at).toLocaleString()}
 											</div>
-											{#if version.id === selectedItem.id}
-												<span class="text-xs text-surface-600 dark:text-surface-400">(viewing)</span
-												>
-											{/if}
+											<div class="mt-1 text-xs text-surface-500 dark:text-surface-400">
+												by {version.author_name}
+											</div>
 										</div>
-									</button>
-								{/each}
-							{/if}
+										{#if version.id === selectedItem.id}
+											<span class="text-xs text-surface-600 dark:text-surface-300">(viewing)</span>
+										{/if}
+									</div>
+								</button>
+							{/each}
 						</div>
 					</div>
 				</div>
