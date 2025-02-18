@@ -69,6 +69,7 @@
 	import SchemaForm from './SchemaForm.svelte';
 	import JsonEditor from './JsonEditor.svelte';
 	import SchemaInstances from './SchemaInstances.svelte';
+	import VersionsAside from './VersionsAside.svelte';
 
 	// Add me prop
 	export let me: any; // Update type according to your me object structure
@@ -165,9 +166,6 @@
 	let isEditingDescription = false;
 	let editedTitle = '';
 	let editedDescription = '';
-
-	// Add state for active tab
-	let activeTab: 'versions' | 'variations' = 'versions';
 
 	// Add state for content tab
 	let contentTab: 'instances' | 'properties' | 'json' = 'properties';
@@ -456,7 +454,7 @@
 		console.log('Value changed:', { path, value, hasChanges, editedJson }); // Debug log
 	}
 
-	// Update the saveChanges function to handle version updates
+	// Update the saveChanges function to maintain version selection
 	async function saveChanges() {
 		if (!selectedItem?.id || !editedJson) return;
 
@@ -471,20 +469,51 @@
 			if (result?.success) {
 				await $dbQuery.refetch();
 
+				// Only update selectedItem if we're editing a schema
 				if ($dbQuery.data?.db) {
 					if (isSchema(selectedItem)) {
 						const updatedItem = $dbQuery.data.db.find(
 							(item) => item.json.title === editedJson.title
 						);
 						if (updatedItem) {
-							selectedItem = updatedItem;
+							selectedItem = {
+								...updatedItem,
+								id: String(updatedItem.id),
+								author: String(updatedItem.author),
+								author_name: String(updatedItem.author_name),
+								schema: String(updatedItem.schema),
+								version: Number(updatedItem.version),
+								variation: String(updatedItem.variation),
+								prev: updatedItem.prev ? String(updatedItem.prev) : null,
+								created_at: String(updatedItem.created_at)
+							};
 						}
 					} else {
-						const updatedItem = $dbQuery.data.db.find(
+						// For non-schema items, find the specific version we want to show
+						const currentItem = $dbQuery.data.db.find(
 							(item) => item.variation === selectedItem?.variation
 						);
-						if (updatedItem) {
-							selectedItem = updatedItem;
+
+						if (currentItem?.archived_versions) {
+							// Find the version that matches our current version number
+							const targetVersion = currentItem.archived_versions.find(
+								(v) => v.version === selectedItem.version
+							);
+
+							if (targetVersion) {
+								selectedItem = {
+									...targetVersion,
+									id: String(targetVersion.id),
+									author: String(targetVersion.author),
+									author_name: String(targetVersion.author_name),
+									schema: String(targetVersion.schema),
+									version: Number(targetVersion.version),
+									variation: String(targetVersion.variation),
+									prev: targetVersion.prev ? String(targetVersion.prev) : null,
+									created_at: String(targetVersion.created_at),
+									is_archived: true
+								};
+							}
 						}
 					}
 				}
@@ -517,17 +546,6 @@
 				}`,
 				type: 'error'
 			};
-		}
-	}
-
-	// Add reactive statement to handle version updates
-	$: if ($dbQuery.data?.db && selectedItem) {
-		// Keep the selected item in sync with the latest version
-		const currentVersion = $dbQuery.data.db.find(
-			(item) => item.variation === selectedItem.variation
-		);
-		if (currentVersion && currentVersion.id !== selectedItem.id) {
-			selectedItem = currentVersion;
 		}
 	}
 
@@ -1245,75 +1263,58 @@
 	</div>
 
 	<!-- Right aside for versions and variations -->
-	<aside class="border-l w-80 border-surface-300-600-token bg-surface-100 dark:bg-surface-800">
-		<!-- Tabs -->
-		<div class="border-b border-surface-300-600-token">
-			<div class="flex">
-				<button
-					class="px-4 py-2 text-sm font-medium {activeTab === 'versions'
-						? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
-						: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
-					on:click={() => (activeTab = 'versions')}
-				>
-					Versions
-				</button>
-				<button
-					class="px-4 py-2 text-sm font-medium {activeTab === 'variations'
-						? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
-						: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
-					on:click={() => (activeTab = 'variations')}
-				>
-					Variations
-				</button>
-			</div>
-		</div>
+	<VersionsAside
+		{selectedItem}
+		dbData={$dbQuery.data?.db || []}
+		on:versionSelect={async ({ detail }) => {
+			console.log('Version selected in HominioDB:', detail); // Debug log
 
-		<!-- Tab content -->
-		<div class="p-4">
-			{#if activeTab === 'versions'}
-				<!-- Versions list -->
-				<div class="space-y-2">
-					{#if selectedItem}
-						{#each getAllVersions(selectedItem).sort((a, b) => b.version - a.version) as version}
-							<button
-								class="w-full p-2 text-left rounded-lg {version.id === selectedItem.id
-									? 'bg-surface-200 dark:bg-surface-700'
-									: 'hover:bg-surface-100 dark:hover:bg-surface-800'}"
-								on:click={() => {
-									selectedItem = version;
-									expandedProperties = [];
-								}}
-							>
-								<div class="flex items-center justify-between">
-									<div>
-										<span class="text-sm font-semibold">Version {version.version}</span>
-										<div class="text-xs text-surface-600 dark:text-surface-300">
-											{new Date(version.created_at).toLocaleString()}
-										</div>
-										<div class="mt-1 text-xs text-surface-500 dark:text-surface-400">
-											by {version.author_name}
-										</div>
-									</div>
-									{#if version.id === selectedItem.id}
-										<span class="text-xs text-surface-600 dark:text-surface-300">(viewing)</span>
-									{/if}
-								</div>
-							</button>
-						{/each}
-					{:else}
-						<p class="text-sm text-surface-500 dark:text-surface-400">
-							Select an item to view its versions
-						</p>
-					{/if}
-				</div>
-			{:else}
-				<!-- Variations list (placeholder for now) -->
-				<div class="p-4 text-sm text-surface-600 dark:text-surface-400">
-					Variations coming soon...
-				</div>
-			{/if}
-		</div>
-	</aside>
+			if (detail.item) {
+				// First, reset all state
+				editedJson = null;
+				hasChanges = false;
+				isEditingTitle = false;
+				isEditingDescription = false;
+				expandedProperties = [];
+
+				// Force a complete reset of selectedItem
+				selectedItem = null;
+
+				// Wait for the next tick
+				await new Promise((resolve) => setTimeout(resolve, 0));
+
+				// Create a new reference with explicit type conversions
+				const newItem = {
+					id: String(detail.item.id),
+					json: detail.item.json,
+					author: String(detail.item.author),
+					author_name: String(detail.item.author_name),
+					schema: String(detail.item.schema),
+					version: Number(detail.item.version),
+					variation: String(detail.item.variation),
+					prev: detail.item.prev ? String(detail.item.prev) : null,
+					created_at: String(detail.item.created_at),
+					is_archived: Boolean(detail.item.is_archived),
+					archived_versions: Array.isArray(detail.item.archived_versions)
+						? detail.item.archived_versions
+						: []
+				};
+
+				// Set the new item
+				selectedItem = newItem;
+
+				// Force content tab update
+				if (isSchema(newItem)) {
+					contentTab = 'instances';
+				} else {
+					contentTab = 'properties';
+				}
+
+				// Force a re-render of the Properties component
+				expandedProperties = [...expandedProperties];
+			}
+		}}
+	/>
 </div>
 
 <!-- Custom Modal -->
