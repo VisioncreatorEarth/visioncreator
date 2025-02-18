@@ -25,6 +25,32 @@ ajv.addFormat("date", {
 
 addFormats(ajv);
 
+// Create a separate validator instance for schemas with x-relation
+const relationAjv = new Ajv({
+  strict: false,
+  allErrors: true,
+  coerceTypes: true,
+  useDefaults: true,
+  validateFormats: true
+});
+
+addFormats(relationAjv);
+
+// Add x-relation keyword only to the relation validator
+relationAjv.addKeyword({
+  keyword: 'x-relation',
+  modifying: true,
+  compile: (schema: any) => {
+    return (data: any) => {
+      // For relation fields, accept either a string (ID) or an object
+      if (schema && typeof data === 'string') {
+        return true; // Accept string IDs for relation fields
+      }
+      return true; // Default to true and let the type validation handle other cases
+    };
+  }
+});
+
 // Generic schema interface that can handle any JSON Schema
 interface JSONSchema {
   type: string;
@@ -39,6 +65,20 @@ interface JSONSchema {
   format?: string;
   default?: any;
   [key: string]: any; // Allow any additional properties
+}
+
+interface SchemaProperty {
+  type: string;
+  title?: string;
+  description?: string;
+  format?: string;
+  properties?: Record<string, SchemaProperty>;
+  required?: boolean;
+  'x-relation'?: {
+    schemaId: string;
+  };
+  additionalProperties?: boolean;
+  [key: string]: any;
 }
 
 export default createOperation.mutation({
@@ -88,128 +128,69 @@ export default createOperation.mutation({
         try {
           const schema = schemaData.json as JSONSchema;
 
-          // Enhanced processValue function to handle all JSON Schema formats
-          const processValue = (value: any, propertySchema: any): any => {
-            // Handle null/undefined/empty values
-            if (value === null || value === undefined || value === '') {
-              // If the field is nullable and not required, return null
-              if (propertySchema.nullable && !propertySchema.required) {
-                return null;
-              }
-              // For required fields, keep empty string if string type
-              return propertySchema.required && propertySchema.type === 'string' ? '' : null;
-            }
+          // Check if schema has any x-relation fields
+          const hasRelations = Object.values(schema.properties || {}).some(
+            (prop: any) => prop.type === 'object' && prop['x-relation']
+          );
 
-            // Type coercion based on schema type
-            switch (propertySchema.type) {
-              case 'string':
-                // Handle specific string formats
-                if (propertySchema.format) {
-                  switch (propertySchema.format) {
-                    case 'date':
-                      try {
-                        const date = new Date(value);
-                        return date.toISOString().split('T')[0];
-                      } catch {
-                        return null;
-                      }
-                    case 'date-time':
-                      try {
-                        const date = new Date(value);
-                        return date.toISOString();
-                      } catch {
-                        return null;
-                      }
-                    case 'email':
-                      return String(value).toLowerCase().trim();
-                    // Add other format handlers as needed
-                  }
-                }
-                return String(value);
-
-              case 'number':
-                const num = Number(value);
-                return isNaN(num) ? null : num;
-
-              case 'integer':
-                const int = parseInt(value);
-                return isNaN(int) ? null : int;
-
-              case 'boolean':
-                if (typeof value === 'string') {
-                  return value.toLowerCase() === 'true';
-                }
-                return Boolean(value);
-
-              case 'array':
-                if (!Array.isArray(value)) {
-                  return propertySchema.required ? [] : null;
-                }
-                // Process each array item according to items schema
-                if (propertySchema.items) {
-                  return value.map(item => processValue(item, propertySchema.items));
-                }
-                return value;
-
-              default:
-                return value;
-            }
-          };
-
-          // Enhanced processObject function with better nested object handling
-          const processObject = (obj: any, schemaProps: any): any => {
-            const result: any = {};
-
-            // First, handle all defined properties in schema
-            for (const [key, propSchema] of Object.entries(schemaProps)) {
-              if (obj.hasOwnProperty(key)) {
-                if (propSchema.type === 'object' && propSchema.properties) {
-                  result[key] = processObject(obj[key] || {}, propSchema.properties);
+          // For schemas with relations, modify the schema to accept string IDs
+          if (hasRelations) {
+            const modifiedSchema = {
+              ...schema,
+              properties: Object.entries(schema.properties || {}).reduce((acc, [key, prop]: [string, any]) => {
+                if (prop.type === 'object' && prop['x-relation']) {
+                  // For relation fields, accept either string or object
+                  acc[key] = {
+                    oneOf: [
+                      { type: 'string', format: 'uuid' },
+                      { type: 'object' }
+                    ],
+                    'x-relation': prop['x-relation']
+                  };
                 } else {
-                  result[key] = processValue(obj[key], propSchema);
+                  acc[key] = prop;
                 }
-              } else if (propSchema.required) {
-                // Handle required properties that are missing
-                result[key] = propSchema.type === 'object' && propSchema.properties
-                  ? processObject({}, propSchema.properties)
-                  : processValue(null, propSchema);
-              }
-            }
-
-            // Handle additional properties if allowed
-            if (schemaProps.additionalProperties !== false) {
-              for (const [key, value] of Object.entries(obj)) {
-                if (!schemaProps.hasOwnProperty(key)) {
-                  result[key] = value;
-                }
-              }
-            }
-
-            return result;
-          };
-
-          // Process the input data
-          const processedJson = processObject(input.json, schema.properties || {});
-
-          // Validate using ajv
-          const validate = ajv.compile(schema);
-          const valid = validate(processedJson);
-
-          if (!valid) {
-            return {
-              success: false,
-              error: "Validation failed",
-              details: validate.errors?.map(err => ({
-                field: err.instancePath.slice(1),
-                message: err.message,
-                keyword: err.keyword,
-                params: err.params
-              }))
+                return acc;
+              }, {} as Record<string, any>)
             };
+
+            // Use the modified schema for validation
+            const validate = relationAjv.compile(modifiedSchema);
+            const valid = validate(input.json);
+
+            if (!valid) {
+              return {
+                success: false,
+                error: "Validation failed",
+                details: validate.errors?.map(err => ({
+                  field: err.instancePath.slice(1),
+                  message: err.message,
+                  keyword: err.keyword,
+                  params: err.params
+                }))
+              };
+            }
+          } else {
+            // For regular schemas without relations, use normal validation
+            const validate = ajv.compile(schema);
+            const valid = validate(input.json);
+
+            if (!valid) {
+              return {
+                success: false,
+                error: "Validation failed",
+                details: validate.errors?.map(err => ({
+                  field: err.instancePath.slice(1),
+                  message: err.message,
+                  keyword: err.keyword,
+                  params: err.params
+                }))
+              };
+            }
           }
 
           // Use processed data
-          input.json = processedJson;
+          input.json = input.json;
         } catch (validationError) {
           console.error("Validation error:", validationError);
           return {

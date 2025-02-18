@@ -45,20 +45,28 @@ export interface SchemaProperty {
     title?: string;
     description?: string;
     format?: string;
-    properties?: Record<string, SchemaProperty>;
-    required?: string[];
     pattern?: string;
-    minLength?: number;
-    maxLength?: number;
     minimum?: number;
     maximum?: number;
+    minLength?: number;
+    maxLength?: number;
+    required?: string[];
+    nullable?: boolean;
+    properties?: Record<string, SchemaProperty>;
+    items?: SchemaProperty;
+    errorMessage?: Record<string, string>;
+    validate?: Record<string, any>;
+    'x-relation'?: {
+        type: 'single' | 'multiple';
+        schemaId: string;
+    };
 }
 
 export interface Schema {
     type: string;
-    title: string;
+    title?: string;
     description?: string;
-    properties: Record<string, SchemaProperty>;
     required?: string[];
+    properties: Record<string, SchemaProperty>;
     display_field?: string;
 }

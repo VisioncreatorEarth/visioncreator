@@ -46,6 +46,7 @@
 	export let schema: DBItem;
 	export let instances: DBItem[] = [];
 	export let selectedInstance: DBItem | null = null;
+	export let dbData: DBItem[] = []; // Add this to receive database items for schema lookups
 
 	const dispatch = createEventDispatcher<{
 		select: { instance: DBItem };
@@ -56,6 +57,24 @@
 
 	// Get primary fields from schema (excluding metadata)
 	$: primaryFields = getPrimaryFields(schema?.json?.properties || {});
+
+	// Function to get schema display field
+	function getSchemaDisplayField(schemaId: string): string | null {
+		const schema = dbData.find((item) => item.id === schemaId);
+		return schema?.json?.display_field || null;
+	}
+
+	// Function to get schema details
+	function getSchemaDetails(
+		schemaId: string
+	): { title: string; displayField: string | null } | null {
+		const schema = dbData.find((item) => item.id === schemaId);
+		if (!schema) return null;
+		return {
+			title: schema.json.title || 'Untitled Schema',
+			displayField: schema.json.display_field || null
+		};
+	}
 
 	function getPrimaryFields(properties: Record<string, any>) {
 		const fields: any[] = [];
@@ -127,11 +146,41 @@
 	}
 
 	function getNestedValue(obj: any, path: string) {
-		return path.split('.').reduce((o, i) => (o ? o[i] : null), obj?.json || {});
+		// Get the raw value from the nested path
+		const value = path.split('.').reduce((o, i) => (o ? o[i] : null), obj?.json || {});
+
+		// Get the property schema to check if it's a relation field
+		const propSchema = path.split('.').reduce((schema, part) => {
+			return schema?.properties?.[part] || null;
+		}, schema?.json);
+
+		// For relation fields, return the UUID directly
+		if (propSchema?.type === 'object' && propSchema['x-relation']) {
+			return value; // Return the UUID directly for relation fields
+		}
+
+		return value;
 	}
 
-	function formatValue(value: any, type: string): string {
+	function formatValue(value: any, type: string, path: string): string {
 		if (value === null || value === undefined) return '-';
+
+		// Get the property schema to check if it's a relation field
+		const propSchema = path.split('.').reduce((schema, part) => {
+			return schema?.properties?.[part] || null;
+		}, schema?.json);
+
+		// For relation fields, find the referenced instance in dbData
+		if (propSchema?.type === 'object' && propSchema['x-relation']) {
+			const referencedInstance = dbData.find((instance) => instance.id === value);
+			if (referencedInstance) {
+				const displayField = getSchemaDisplayField(referencedInstance.schema);
+				const displayValue = displayField ? referencedInstance.json[displayField] : 'Untitled';
+				return displayValue;
+			}
+			return value || '-';
+		}
+
 		if (type === 'date') return new Date(value).toLocaleDateString();
 		if (typeof value === 'object') return JSON.stringify(value);
 		return String(value);
@@ -211,12 +260,16 @@
 								{#if field.isGroup}
 									{#each field.fields as subField}
 										<td class="px-4 py-2 text-sm">
-											{formatValue(getNestedValue(instance, subField.path), subField.type)}
+											{formatValue(
+												getNestedValue(instance, subField.path),
+												subField.type,
+												subField.path
+											)}
 										</td>
 									{/each}
 								{:else}
 									<td class="px-4 py-2 text-sm">
-										{formatValue(getNestedValue(instance, field.path), field.type)}
+										{formatValue(getNestedValue(instance, field.path), field.type, field.path)}
 									</td>
 								{/if}
 							{/each}

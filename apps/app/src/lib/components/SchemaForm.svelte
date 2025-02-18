@@ -3,6 +3,7 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	export let schema: Schema;
+	export let dbData: any[] = []; // Add this to receive database items for relations
 
 	const dispatch = createEventDispatcher<{
 		submit: { formData: Record<string, any> };
@@ -10,19 +11,38 @@
 	}>();
 
 	let formData: Record<string, any> = {};
+	let searchQueries: Record<string, string> = {};
+	let dropdownOpen: Record<string, boolean> = {};
 
 	// Initialize form data when schema changes, but preserve existing values
 	$: if (schema?.properties) {
+		const initialData = initializeObjectData(schema.properties);
 		formData = {
-			...initializeObjectData(schema.properties),
-			...formData
+			...initialData,
+			...Object.fromEntries(
+				Object.entries(formData).map(([key, value]) => {
+					const prop = schema.properties[key];
+					// Ensure relation fields stay as strings
+					if (prop?.type === 'object' && prop['x-relation']) {
+						return [key, typeof value === 'string' ? value : null];
+					}
+					return [key, value];
+				})
+			)
 		};
 	}
 
 	function initializeObjectData(properties: Record<string, SchemaProperty>) {
 		return Object.entries(properties).reduce((acc, [key, prop]) => {
-			if (prop.type === 'object' && prop.properties) {
-				acc[key] = initializeObjectData(prop.properties);
+			if (prop.type === 'object') {
+				if (prop['x-relation']) {
+					// For relation fields, initialize with null and ensure it stays as a string
+					acc[key] = formData[key] || null;
+					searchQueries[key] = '';
+					dropdownOpen[key] = false;
+				} else if (prop.properties) {
+					acc[key] = initializeObjectData(prop.properties);
+				}
 			} else {
 				switch (prop.type) {
 					case 'string':
@@ -43,15 +63,61 @@
 		}, {} as Record<string, any>);
 	}
 
+	function getRelationInstances(schemaId: string, searchQuery: string = '') {
+		if (!dbData) return [];
+
+		const instances = dbData.filter((item) => item.schema === schemaId && !item.is_archived);
+		if (!searchQuery) return instances;
+
+		return instances.filter((instance) => {
+			const displayField = getSchemaDisplayField(instance.schema);
+			const displayValue = displayField ? instance.json[displayField] : instance.json.title;
+			return displayValue?.toLowerCase().includes(searchQuery.toLowerCase());
+		});
+	}
+
+	function getSchemaDisplayField(schemaId: string): string | null {
+		const schema = dbData.find((item) => item.id === schemaId);
+		return schema?.json?.display_field || null;
+	}
+
+	function getInstanceDisplayValue(instance: any): string {
+		const displayField = getSchemaDisplayField(instance.schema);
+		return displayField ? instance.json[displayField] : instance.json.title || 'Untitled';
+	}
+
 	function handleSubmit() {
+		console.log('Form Data before processing:', formData);
 		const processedData = processFormData(schema.properties, formData);
+		console.log('Form Data after processing:', processedData);
 		dispatch('submit', { formData: processedData });
 	}
 
 	function processFormData(properties: Record<string, SchemaProperty>, data: Record<string, any>) {
 		return Object.entries(properties).reduce((acc, [key, prop]) => {
-			if (prop.type === 'object' && prop.properties) {
-				acc[key] = processFormData(prop.properties, data[key]);
+			if (prop.type === 'object') {
+				if (prop['x-relation']) {
+					// For relation fields, ensure we store the ID as a string
+					// If it's already a string, use it directly
+					if (typeof data[key] === 'string') {
+						acc[key] = data[key];
+					}
+					// If it's an object with numeric keys (split string), join it back
+					else if (
+						data[key] &&
+						typeof data[key] === 'object' &&
+						!Array.isArray(data[key]) &&
+						Object.keys(data[key]).every((k) => !isNaN(Number(k)))
+					) {
+						acc[key] = Object.values(data[key]).join('');
+					}
+					// Otherwise, set to null
+					else {
+						acc[key] = null;
+					}
+				} else if (prop.properties) {
+					acc[key] = processFormData(prop.properties, data[key] || {});
+				}
 			} else if (prop.type === 'number' || prop.type === 'integer') {
 				acc[key] = data[key] ? Number(data[key]) : null;
 			} else {
@@ -64,145 +130,197 @@
 	function handleCancel() {
 		dispatch('cancel');
 	}
+
+	// Handle clicking outside of dropdown
+	function handleClickOutside(event: MouseEvent, key: string) {
+		const target = event.target as HTMLElement;
+		if (!target.closest(`#relation-${key}`)) {
+			dropdownOpen[key] = false;
+		}
+	}
+
+	// Add event listener for clicking outside
+	onMount(() => {
+		document.addEventListener('click', (e) => {
+			Object.keys(dropdownOpen).forEach((key) => {
+				handleClickOutside(e, key);
+			});
+		});
+
+		return () => {
+			document.removeEventListener('click', (e) => {
+				Object.keys(dropdownOpen).forEach((key) => {
+					handleClickOutside(e, key);
+				});
+			});
+		};
+	});
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="flex flex-col space-y-4">
-	<div class="flex-1">
-		{#if schema?.properties}
-			{#each Object.entries(schema.properties) as [key, prop] (key)}
-				{#if prop.type === 'object' && prop.properties}
-					<div class="p-4 space-y-4 border rounded-lg border-surface-300-600-token">
-						<h3 class="mb-2 text-sm font-medium">{prop.title || key}</h3>
-						{#each Object.entries(prop.properties) as [subKey, subProp] (subKey)}
-							<div class="mb-4">
-								<label for={`${key}.${subKey}`} class="block mb-1 text-sm font-medium">
-									{subProp.title || subKey}
-									{#if prop.required?.includes(subKey)}
-										<span class="text-error-500">*</span>
-									{/if}
-								</label>
+<div class="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/50">
+	<div
+		class="relative w-full max-w-2xl max-h-[90vh] bg-surface-100 dark:bg-surface-800 rounded-lg flex flex-col"
+	>
+		<div class="p-6 border-b border-surface-300-600-token">
+			<h2 class="text-xl font-semibold">+ Add New {schema.title}</h2>
+		</div>
 
-								{#if subProp.type === 'string'}
-									{#if subProp.format === 'email'}
-										<input
-											type="email"
-											id={`${key}.${subKey}`}
-											class="input"
-											bind:value={formData[key][subKey]}
-											required={prop.required?.includes(subKey)}
-										/>
-									{:else if subProp.format === 'date'}
-										<input
-											type="date"
-											id={`${key}.${subKey}`}
-											class="input"
-											bind:value={formData[key][subKey]}
-											required={prop.required?.includes(subKey)}
-										/>
-									{:else}
-										<input
-											type="text"
-											id={`${key}.${subKey}`}
-											class="input"
-											bind:value={formData[key][subKey]}
-											required={prop.required?.includes(subKey)}
-										/>
-									{/if}
-								{:else if subProp.type === 'number' || subProp.type === 'integer'}
+		<form on:submit|preventDefault={handleSubmit} class="flex flex-col flex-1 overflow-hidden">
+			<!-- Scrollable content area -->
+			<div class="flex-1 p-6 overflow-y-auto">
+				{#if schema?.properties}
+					{#each Object.entries(schema.properties) as [key, prop] (key)}
+						<div class="mb-6">
+							<label for={key} class="block mb-2 text-sm font-medium">
+								{prop.title || key}
+								{#if schema.required?.includes(key)}
+									<span class="text-error-500">*</span>
+								{/if}
+							</label>
+
+							{#if prop['x-relation']}
+								<div class="relative" id="relation-{key}">
 									<input
-										type="number"
-										id={`${key}.${subKey}`}
-										class="input"
-										bind:value={formData[key][subKey]}
-										required={prop.required?.includes(subKey)}
+										type="text"
+										id={key}
+										class="w-full p-2 border rounded-lg bg-surface-200 dark:bg-surface-700 border-surface-300-600-token"
+										placeholder="Search..."
+										bind:value={searchQueries[key]}
+										on:focus={() => (dropdownOpen[key] = true)}
+										readonly
 									/>
-								{:else if subProp.type === 'boolean'}
+									{#if formData[key]}
+										<div class="mt-1 text-xs text-surface-600 dark:text-surface-400">
+											Selected ID: {formData[key]}
+										</div>
+									{/if}
+									{#if dropdownOpen[key]}
+										<div
+											class="absolute z-[100] w-full mt-1 bg-surface-100 dark:bg-surface-800 border border-surface-300-600-token rounded-lg shadow-lg overflow-y-auto max-h-48"
+										>
+											{#each getRelationInstances(prop['x-relation'].schemaId, searchQueries[key]) as instance}
+												<button
+													type="button"
+													class="w-full px-4 py-2 text-left hover:bg-surface-200 dark:hover:bg-surface-700"
+													on:click={() => {
+														console.log('Selected instance:', instance);
+														// Store the ID directly as a string and prevent it from being split
+														const id = String(instance.id);
+														formData = {
+															...formData,
+															[key]: id
+														};
+														console.log(`Set formData[${key}] to:`, formData[key]);
+														searchQueries[key] = getInstanceDisplayValue(instance);
+														dropdownOpen[key] = false;
+													}}
+												>
+													<div>{getInstanceDisplayValue(instance)}</div>
+													<div class="text-xs text-surface-600 dark:text-surface-400">
+														ID: {instance.id}
+													</div>
+												</button>
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{:else if prop.type === 'object' && prop.properties}
+								<div class="p-4 border rounded-lg border-surface-300-600-token">
+									<h3 class="mb-4 text-sm font-medium">{prop.title || key}</h3>
+									{#each Object.entries(prop.properties) as [subKey, subProp] (subKey)}
+										<div class="mb-4">
+											<label for={`${key}.${subKey}`} class="block mb-2 text-sm font-medium">
+												{subProp.title || subKey}
+												{#if prop.required?.includes(subKey)}
+													<span class="text-error-500">*</span>
+												{/if}
+											</label>
+
+											{#if subProp.type === 'string'}
+												{#if subProp.format === 'email'}
+													<input
+														type="email"
+														id={`${key}.${subKey}`}
+														class="w-full p-2 border rounded-lg bg-surface-200 dark:bg-surface-700 border-surface-300-600-token"
+														bind:value={formData[key][subKey]}
+														required={prop.required?.includes(subKey)}
+													/>
+												{:else}
+													<input
+														type="text"
+														id={`${key}.${subKey}`}
+														class="w-full p-2 border rounded-lg bg-surface-200 dark:bg-surface-700 border-surface-300-600-token"
+														bind:value={formData[key][subKey]}
+														required={prop.required?.includes(subKey)}
+													/>
+												{/if}
+											{/if}
+
+											{#if subProp.description}
+												<p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
+													{subProp.description}
+												</p>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{:else if prop.type === 'string'}
+								{#if prop.format === 'email'}
 									<input
-										type="checkbox"
-										id={`${key}.${subKey}`}
-										class="checkbox"
-										bind:checked={formData[key][subKey]}
-										required={prop.required?.includes(subKey)}
+										type="email"
+										id={key}
+										class="w-full p-2 border rounded-lg bg-surface-200 dark:bg-surface-700 border-surface-300-600-token"
+										bind:value={formData[key]}
+										required={schema.required?.includes(key)}
+									/>
+								{:else}
+									<input
+										type="text"
+										id={key}
+										class="w-full p-2 border rounded-lg bg-surface-200 dark:bg-surface-700 border-surface-300-600-token"
+										bind:value={formData[key]}
+										required={schema.required?.includes(key)}
 									/>
 								{/if}
-
-								{#if subProp.description}
-									<p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
-										{subProp.description}
-									</p>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{:else}
-					<div class="mb-4">
-						<label for={key} class="block mb-1 text-sm font-medium">
-							{prop.title || key}
-							{#if schema.required?.includes(key)}
-								<span class="text-error-500">*</span>
 							{/if}
-						</label>
 
-						{#if prop.type === 'string'}
-							{#if prop.format === 'email'}
-								<input
-									type="email"
-									id={key}
-									class="input"
-									bind:value={formData[key]}
-									required={schema.required?.includes(key)}
-								/>
-							{:else if prop.format === 'date'}
-								<input
-									type="date"
-									id={key}
-									class="input"
-									bind:value={formData[key]}
-									required={schema.required?.includes(key)}
-								/>
-							{:else}
-								<input
-									type="text"
-									id={key}
-									class="input"
-									bind:value={formData[key]}
-									required={schema.required?.includes(key)}
-								/>
+							{#if prop.description}
+								<p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
+									{prop.description}
+								</p>
 							{/if}
-						{:else if prop.type === 'number' || prop.type === 'integer'}
-							<input
-								type="number"
-								id={key}
-								class="input"
-								bind:value={formData[key]}
-								required={schema.required?.includes(key)}
-							/>
-						{:else if prop.type === 'boolean'}
-							<input
-								type="checkbox"
-								id={key}
-								class="checkbox"
-								bind:checked={formData[key]}
-								required={schema.required?.includes(key)}
-							/>
-						{/if}
-
-						{#if prop.description}
-							<p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
-								{prop.description}
-							</p>
-						{/if}
-					</div>
+						</div>
+					{/each}
 				{/if}
-			{/each}
-		{/if}
-	</div>
+			</div>
 
-	<!-- Footer buttons - Now always visible -->
-	<div class="flex justify-end gap-2 mt-6 pt-4 border-t border-surface-300-600-token">
-		<button type="button" class="btn variant-filled-surface btn-sm" on:click={handleCancel}>
-			Cancel
-		</button>
-		<button type="submit" class="btn variant-filled-primary btn-sm">Create</button>
+			<!-- Footer buttons - now properly fixed -->
+			<div class="p-6 border-t border-surface-300-600-token bg-surface-100 dark:bg-surface-800">
+				<div class="flex justify-end gap-2">
+					<button
+						type="button"
+						class="px-4 py-2 text-sm font-medium rounded-lg bg-surface-300 dark:bg-surface-600 hover:bg-surface-400 dark:hover:bg-surface-500"
+						on:click={handleCancel}
+					>
+						Cancel
+					</button>
+					<button
+						type="submit"
+						class="px-4 py-2 text-sm font-medium text-white rounded-lg bg-primary-500 hover:bg-primary-600"
+					>
+						Create
+					</button>
+				</div>
+			</div>
+		</form>
 	</div>
-</form>
+</div>
+
+<style lang="postcss">
+	:global(.input) {
+		@apply p-2 rounded border border-surface-300-600-token bg-tertiary-100;
+	}
+	:global(.checkbox) {
+		@apply w-4 h-4 rounded border border-surface-300-600-token;
+	}
+</style>

@@ -241,23 +241,9 @@
 	function generateRandomSchema() {
 		return {
 			type: 'object',
-			title: `User Schema ${Math.floor(Math.random() * 10000)}`,
-			description: `Schema for user profile data ${Math.random()}`,
-			display_field: 'email',
+			title: 'Profile',
+			required: ['email', 'profile'],
 			properties: {
-				username: {
-					type: 'string',
-					title: 'Username',
-					description: "The user's chosen username",
-					minLength: 3,
-					maxLength: 20,
-					pattern: '^[\\w-]+$',
-					errorMessage: {
-						pattern: 'Username can only contain letters, numbers, underscore and dash',
-						minLength: 'Username must be at least 3 characters long',
-						maxLength: 'Username cannot exceed 20 characters'
-					}
-				},
 				email: {
 					type: 'string',
 					title: 'Email',
@@ -269,6 +255,7 @@
 						pattern: 'Please enter a valid email address'
 					}
 				},
+
 				profile: {
 					type: 'object',
 					title: 'User Profile',
@@ -286,30 +273,12 @@
 								minLength: 'Full name must be at least 2 characters long',
 								maxLength: 'Full name cannot exceed 100 characters'
 							}
-						},
-						birthDate: {
-							type: 'string',
-							title: 'Birth Date',
-							description: "The user's birth date",
-							format: 'date',
-							nullable: true,
-							errorMessage: {
-								format: 'Please enter a valid date'
-							},
-							validate: {
-								minDate: '1900-01-01',
-								maxDate: new Date().toISOString().split('T')[0],
-								errorMessage: {
-									minDate: 'Birth date cannot be before 1900',
-									maxDate: 'Birth date cannot be in the future'
-								}
-							}
 						}
 					},
 					required: ['fullName']
 				}
 			},
-			required: ['username', 'email', 'profile']
+			display_field: 'email'
 		};
 	}
 
@@ -829,16 +798,47 @@
 		try {
 			console.log('[HominioDB] Creating object with form data:', event.detail.formData);
 
+			// Process the form data to ensure relation fields are handled correctly
+			const processedData = Object.entries(event.detail.formData).reduce((acc, [key, value]) => {
+				const propertySchema = selectedItem?.json?.properties?.[key];
+
+				// Handle relation fields
+				if (propertySchema?.type === 'object' && propertySchema['x-relation']) {
+					// If it's already a string UUID, use it directly
+					if (typeof value === 'string') {
+						acc[key] = value;
+					}
+					// If it's an object with numeric keys (split string), join it
+					else if (
+						value &&
+						typeof value === 'object' &&
+						!Array.isArray(value) &&
+						Object.keys(value).every((k) => !isNaN(Number(k)))
+					) {
+						acc[key] = Object.values(value).join('');
+					}
+					// If it's null or invalid, set to null
+					else {
+						acc[key] = null;
+					}
+				} else {
+					acc[key] = value;
+				}
+				return acc;
+			}, {} as Record<string, any>);
+
 			// Add any schema-specific metadata
 			if (selectedItem?.json.display_field) {
-				const displayValue = event.detail.formData[selectedItem.json.display_field];
+				const displayValue = processedData[selectedItem.json.display_field];
 				if (displayValue) {
-					event.detail.formData.title = displayValue;
+					processedData.title = displayValue;
 				}
 			}
 
+			console.log('[HominioDB] Processed data:', processedData);
+
 			const result = await $insertDBMutation.mutateAsync({
-				json: event.detail.formData,
+				json: processedData,
 				type: 'object',
 				schema: selectedItem?.id || ''
 			});
@@ -1211,8 +1211,13 @@
 									<Properties
 										properties={getPropertiesToRender(selectedItem)}
 										{expandedProperties}
+										isSchemaEditor={isSchema(selectedItem)}
+										dbData={$dbQuery.data?.db || []}
 										on:toggleProperty={handleToggleProperty}
 										on:valueChange={handleValueChange}
+										on:schemaClick={({ detail }) => {
+											loadSchema(detail.schemaId);
+										}}
 									/>
 								</div>
 							{:else if contentTab === 'json'}
@@ -1245,6 +1250,7 @@
 										schema={selectedItem}
 										instances={getInstances($dbQuery.data.db, selectedItem.id)}
 										selectedInstance={selectedItem && !isSchema(selectedItem) ? selectedItem : null}
+										dbData={$dbQuery.data?.db || []}
 										on:select={({ detail }) => {
 											selectedItem = detail.instance;
 											selectedInstance = detail.instance;
@@ -1443,6 +1449,7 @@
 
 			<SchemaForm
 				schema={selectedItem.json}
+				dbData={$dbQuery.data?.db || []}
 				on:submit={handleCreateObject}
 				on:cancel={closeCreateObjectModal}
 			/>
@@ -1452,7 +1459,7 @@
 
 <style lang="postcss">
 	:global(.input) {
-		@apply p-2 rounded border border-surface-300-600-token bg-tertiary-100 dark:bg-surface-700;
+		@apply p-2 rounded border border-surface-300-600-token bg-tertiary-100;
 	}
 	:global(.checkbox) {
 		@apply w-4 h-4 rounded border border-surface-300-600-token;
