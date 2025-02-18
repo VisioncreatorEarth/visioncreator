@@ -67,6 +67,7 @@
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
 	import SchemaForm from './SchemaForm.svelte';
+	import JsonEditor from './JsonEditor.svelte';
 
 	// Add me prop
 	export let me: any; // Update type according to your me object structure
@@ -110,8 +111,18 @@
 		};
 	}
 
-	// Create the query directly
-	const dbQuery = createQuery({
+	// Add type for query result
+	interface DBQueryResult {
+		db: DBItem[];
+	}
+
+	// Update type definitions
+	interface Queries {
+		queryDB: DBQueryResult;
+	}
+
+	// Update query creation with proper type
+	const dbQuery = createQuery<keyof Queries>({
 		operationName: 'queryDB',
 		enabled: true
 	});
@@ -163,11 +174,62 @@
 	// Add state for content tab
 	let contentTab: 'properties' | 'json' = 'properties';
 
-	// Add state for JSON editing
-	let editedJsonText = '';
-	let jsonEditError = '';
+	// Add handleKeydown function back
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			if (showCreateModal) {
+				closeModal();
+			}
+			isEditingTitle = false;
+			isEditingDescription = false;
+		}
+	}
 
-	function sortByTimestamp(a, b) {
+	// Update loadSchema function with proper type assertions
+	async function loadSchema(schemaId: string, autoLoadCurrent: boolean = false) {
+		console.log('Loading schema:', schemaId);
+
+		if (!$dbQuery.data?.db) return;
+
+		// If autoLoadCurrent is true, first try to find the current version
+		if (autoLoadCurrent) {
+			const currentSchema = $dbQuery.data.db.find((item) =>
+				(item as DBItem).archived_versions?.some((v) => v.id === schemaId)
+			) as DBItem | undefined;
+
+			if (currentSchema) {
+				selectedItem = currentSchema;
+				expandedProperties = [];
+				return;
+			}
+		}
+
+		// Regular schema loading logic
+		const activeSchema = $dbQuery.data.db.find((item) => (item as DBItem).id === schemaId) as
+			| DBItem
+			| undefined;
+
+		if (activeSchema) {
+			selectedItem = activeSchema;
+			expandedProperties = [];
+			return;
+		}
+
+		// Check archived schemas
+		const archivedSchema = $dbQuery.data.db.find((item) =>
+			(item as DBItem).archived_versions?.some((version) => version.id === schemaId)
+		) as DBItem | undefined;
+
+		if (archivedSchema) {
+			const version = archivedSchema.archived_versions?.find((v) => v.id === schemaId);
+			if (version) {
+				selectedItem = version;
+				expandedProperties = [];
+			}
+		}
+	}
+
+	function sortByTimestamp(a: any, b: any) {
 		return new Date(b.json.timestamp || 0).getTime() - new Date(a.json.timestamp || 0).getTime();
 	}
 
@@ -312,294 +374,18 @@
 		schemaInfo = null;
 	}
 
-	// Update loadSchema to handle automatic version switching
-	async function loadSchema(schemaId: string, autoLoadCurrent: boolean = false) {
-		console.log('Loading schema:', schemaId);
-
-		// If autoLoadCurrent is true, first try to find the current version
-		if (autoLoadCurrent) {
-			const currentSchema = $dbQuery.data?.db.find((item) =>
-				item.archived_versions?.some((v) => v.id === schemaId)
-			);
-			if (currentSchema) {
-				selectedItem = currentSchema;
-				expandedProperties = [];
-				return;
-			}
-		}
-
-		// Regular schema loading logic
-		const activeSchema = $dbQuery.data?.db.find((item) => item.id === schemaId);
-		if (activeSchema) {
-			selectedItem = activeSchema;
-			expandedProperties = [];
-			return;
-		}
-
-		// Check archived schemas
-		const archivedSchema = $dbQuery.data?.db.find((item) =>
-			item.archived_versions?.some((version) => version.id === schemaId)
-		);
-		if (archivedSchema) {
-			const version = archivedSchema.archived_versions?.find((v) => v.id === schemaId);
-			if (version) {
-				selectedItem = version;
-				expandedProperties = [];
-			}
-		}
+	// Add closeModal function
+	function closeModal() {
+		showCreateModal = false;
 	}
 
-	function handleToggleProperty(event: CustomEvent<{ path: string; expanded: boolean }>) {
-		const { path, expanded } = event.detail;
-
-		if (expanded) {
-			const pathParts = path.split('.');
-			const parentPath = pathParts.slice(0, -1).join('.');
-			expandedProperties = expandedProperties.filter((p) => {
-				const pParts = p.split('.');
-				return p === path || pParts.length !== pathParts.length || !p.startsWith(parentPath);
-			});
-
-			expandedProperties = [...expandedProperties, path];
-		} else {
-			expandedProperties = expandedProperties.filter(
-				(p) => p !== path && !p.startsWith(path + '.')
-			);
-		}
-	}
-
-	$: if (selectedItem) {
-		console.log('HominioDB: Selected item changed, resetting state');
-		expandedProperties = [];
-		editedJson = null;
-		hasChanges = false;
-	}
-
-	// Function to generate form fields based on schema
-	function generateFormFields(properties: Record<string, SchemaProperty>, parentKey = ''): string {
-		return Object.entries(properties)
-			.map(([key, prop]) => {
-				const fullKey = parentKey ? `${parentKey}.${key}` : key;
-				const isRequired = properties.required?.includes(key);
-				const requiredAttr = isRequired ? 'required' : '';
-
-				if (prop.type === 'object' && prop.properties) {
-					return `
-						<div class="mb-4">
-							<h3 class="mb-2 text-lg font-semibold">
-								${prop.title || key}
-								${isRequired ? '<span class="text-error-500">*</span>' : ''}
-							</h3>
-							<div class="pl-4 border-l border-surface-300-600-token">
-								${generateFormFields(prop.properties, key)}
-							</div>
-						</div>
-					`;
-				}
-
-				let input = '';
-				const validationAttrs = [
-					requiredAttr,
-					prop.minLength ? `minlength="${prop.minLength}"` : '',
-					prop.maxLength ? `maxlength="${prop.maxLength}"` : '',
-					prop.pattern ? `pattern="${prop.pattern}"` : '',
-					prop.minimum ? `min="${prop.minimum}"` : '',
-					prop.maximum ? `max="${prop.maximum}"` : ''
-				]
-					.filter(Boolean)
-					.join(' ');
-
-				switch (prop.type) {
-					case 'string':
-						if (prop.format === 'date') {
-							input = `<input 
-								type="date" 
-								id="${fullKey}" 
-								name="${fullKey}" 
-								class="input" 
-								${validationAttrs}
-								bind:value={formData.${key}}
-							>`;
-						} else if (prop.format === 'email') {
-							input = `<input 
-								type="email" 
-								id="${fullKey}" 
-								name="${fullKey}" 
-								class="input" 
-								${validationAttrs}
-								bind:value={formData.${key}}
-							>`;
-						} else {
-							input = `<input 
-								type="text" 
-								id="${fullKey}" 
-								name="${fullKey}" 
-								class="input" 
-								${validationAttrs}
-								bind:value={formData.${key}}
-							>`;
-						}
-						break;
-					case 'number':
-					case 'integer':
-						input = `<input 
-							type="number" 
-							id="${fullKey}" 
-							name="${fullKey}" 
-							class="input" 
-							${validationAttrs}
-							bind:value={formData.${key}}
-						>`;
-						break;
-					case 'boolean':
-						input = `<input 
-							type="checkbox" 
-							id="${fullKey}" 
-							name="${fullKey}" 
-							class="checkbox" 
-							${validationAttrs}
-							bind:checked={formData.${key}}
-						>`;
-						break;
-					default:
-						input = `<input 
-							type="text" 
-							id="${fullKey}" 
-							name="${fullKey}" 
-							class="input" 
-							${validationAttrs}
-							bind:value={formData.${key}}
-						>`;
-				}
-
-				const validationHints = [
-					prop.minLength ? `Minimum ${prop.minLength} characters` : '',
-					prop.maxLength ? `Maximum ${prop.maxLength} characters` : '',
-					prop.pattern ? `Must match pattern: ${prop.pattern}` : '',
-					prop.format ? `Must be a valid ${prop.format}` : ''
-				].filter(Boolean);
-
-				return `
-					<div class="mb-4">
-						<label for="${fullKey}" class="block mb-1 text-sm font-medium">
-							${prop.title || key}
-							${isRequired ? '<span class="text-error-500">*</span>' : ''}
-						</label>
-						${input}
-						${
-							prop.description
-								? `<p class="mt-1 text-xs text-surface-600-300-token">${prop.description}</p>`
-								: ''
-						}
-						${
-							validationHints.length > 0
-								? `<p class="mt-1 text-xs text-warning-500">${validationHints.join(' • ')}</p>`
-								: ''
-						}
-						${isRequired ? `<p class="mt-1 text-xs text-error-500">Required field</p>` : ''}
-					</div>
-				`;
-			})
-			.join('');
-	}
-
-	// Helper function to format date to ISO format
-	function formatDateForSubmission(date: string | null): string | null {
-		if (!date) return null;
-		try {
-			// Date input returns YYYY-MM-DD format, just validate it's a valid date
-			const [year, month, day] = date.split('-').map(Number);
-			const d = new Date(year, month - 1, day);
-			if (isNaN(d.getTime())) return null;
-			return date; // Return original YYYY-MM-DD format
-		} catch {
-			return null;
-		}
-	}
-
-	async function handleCreateObject({ detail }: CustomEvent<{ formData: Record<string, any> }>) {
-		if (!selectedItem?.id) return;
-
-		try {
-			console.log('[HominioDB] Creating object with form data:', detail.formData);
-
-			// Validate against schema
-			const validationErrors = validateAgainstSchema(detail.formData, selectedItem.json);
-			if (validationErrors.length > 0) {
-				message = {
-					text: `Validation failed: ${validationErrors
-						.map((e) => `${e.field}: ${e.message}`)
-						.join(', ')}`,
-					type: 'error'
-				};
-				return;
-			}
-
-			// Add any schema-specific metadata
-			if (selectedItem?.json.display_field) {
-				const displayValue = detail.formData[selectedItem.json.display_field];
-				if (displayValue) {
-					detail.formData.title = displayValue;
-				}
-			}
-
-			const result = await $insertDBMutation.mutateAsync({
-				json: detail.formData,
-				type: 'object',
-				schema: selectedItem?.id || ''
-			});
-
-			if (result?.success) {
-				message = { text: 'Object created successfully!', type: 'success' };
-				await $dbQuery.refetch();
-				showCreateObjectModal = false;
-				// Reset form
-				formData = {
-					username: '',
-					email: '',
-					profile: {
-						fullName: '',
-						birthDate: null
-					}
-				};
-			} else {
-				message = {
-					text: `Failed to create object: ${
-						result?.details ? JSON.stringify(result.details) : 'Unknown error'
-					}`,
-					type: 'error'
-				};
-				console.error('[HominioDB] Failed to create object:', result?.details);
-			}
-		} catch (error) {
-			console.error('[HominioDB] Error creating object:', error);
-			message = {
-				text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-				type: 'error'
-			};
-		}
-	}
-
-	function closeCreateObjectModal() {
-		showCreateObjectModal = false;
-	}
-
-	// Update handleKeydown to handle editing escapes
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
-			if (showCreateModal) {
-				closeModal();
-			}
-			isEditingTitle = false;
-			isEditingDescription = false;
-		}
-	}
-
+	// Update getSchemaDetails function with proper types
 	function getSchemaDetails(schemaId: string | null) {
 		if (!schemaId || !$dbQuery?.data?.db) return null;
 
-		// First check active schemas
-		const activeSchema = $dbQuery.data.db.find((item) => item.id === schemaId);
+		const dbItems = $dbQuery.data.db as DBItem[];
+		const activeSchema = dbItems.find((item) => item.id === schemaId);
+
 		if (activeSchema) {
 			return {
 				title: activeSchema.json.title,
@@ -610,8 +396,7 @@
 			};
 		}
 
-		// Then check archived versions
-		for (const item of $dbQuery.data.db) {
+		for (const item of dbItems) {
 			const archivedVersion = item.archived_versions?.find((v) => v.id === schemaId);
 			if (archivedVersion) {
 				return {
@@ -620,7 +405,7 @@
 					version: archivedVersion.version,
 					is_archived: true,
 					id: archivedVersion.id,
-					current_version_id: item.id // Store the current version's ID
+					current_version_id: item.id
 				};
 			}
 		}
@@ -631,15 +416,18 @@
 	// Add a reactive statement to get schema details when selectedItem changes
 	$: schemaDetails = selectedItem ? getSchemaDetails(selectedItem.schema) : null;
 
-	function getSchemaDisplayField(item: any): string | null {
+	// Update getSchemaDisplayField with proper type handling
+	function getSchemaDisplayField(item: DBItem): string | null {
 		if (!item.schema || !$dbQuery?.data?.db) return null;
-		const schema = $dbQuery.data.db.find((s) => s.id === item.schema);
+		const schema = $dbQuery.data.db.find((s) => (s as DBItem).id === item.schema) as
+			| DBItem
+			| undefined;
 		return schema?.json?.display_field || null;
 	}
 
 	// Helper function to check if an item is a schema
-	function isSchema(item: any): boolean {
-		return item.schema === '00000000-0000-0000-0000-000000000001'; // References meta schema
+	function isSchema(item: DBItem): boolean {
+		return item.schema === '00000000-0000-0000-0000-000000000001';
 	}
 
 	// Update handleValueChange to match the event format
@@ -667,23 +455,6 @@
 		hasChanges = true;
 
 		console.log('Value changed:', { path, value, hasChanges, editedJson }); // Debug log
-	}
-
-	// Function to handle JSON text changes
-	function handleJsonEdit(event: Event) {
-		const textarea = event.target as HTMLTextAreaElement;
-		editedJsonText = textarea.value;
-
-		try {
-			const parsed = JSON.parse(editedJsonText);
-
-			// If validation passes or no schema exists
-			editedJson = parsed;
-			hasChanges = true;
-			jsonEditError = '';
-		} catch (error) {
-			jsonEditError = 'Invalid JSON format';
-		}
 	}
 
 	// Update the saveChanges function to include validation
@@ -868,15 +639,14 @@
 	}
 
 	// Update the getAllVersions function with null checks
-	function getAllVersions(item: DBItem | null) {
+	function getAllVersions(item: DBItem | null): DBItem[] {
 		if (!item || !$dbQuery?.data?.db) return [];
 
-		// Find the active record for this variation
-		const activeRecord = $dbQuery.data.db.find((record) => record.variation === item.variation);
+		const dbItems = $dbQuery.data.db as DBItem[];
+		const activeRecord = dbItems.find((record) => record.variation === item.variation);
 
 		if (!activeRecord) return [];
 
-		// Return all versions: current version + archived versions
 		return [activeRecord, ...(activeRecord.archived_versions || [])].sort(
 			(a, b) => b.version - a.version
 		);
@@ -884,7 +654,7 @@
 
 	// Update JSON text when tab or item changes
 	$: if (selectedItem && contentTab === 'json') {
-		editedJsonText = JSON.stringify(selectedItem.json, null, 2);
+		// This is now handled by the JsonEditor component
 	}
 
 	// Add helper functions
@@ -955,6 +725,91 @@
 			};
 		}
 	}
+
+	// Add helper function to get display value
+	function getDisplayValue(item: DBItem): string {
+		const displayField = getSchemaDisplayField(item);
+		if (item.schema && displayField && typeof displayField === 'string') {
+			return item.json[displayField] || 'Untitled';
+		}
+		return item.json.title || 'Untitled';
+	}
+
+	// Add missing handleToggleProperty function
+	function handleToggleProperty(event: CustomEvent<{ path: string; expanded: boolean }>) {
+		const { path, expanded } = event.detail;
+
+		if (expanded) {
+			const pathParts = path.split('.');
+			const parentPath = pathParts.slice(0, -1).join('.');
+			expandedProperties = expandedProperties.filter((p) => {
+				const pParts = p.split('.');
+				return p === path || pParts.length !== pathParts.length || !p.startsWith(parentPath);
+			});
+
+			expandedProperties = [...expandedProperties, path];
+		} else {
+			expandedProperties = expandedProperties.filter(
+				(p) => p !== path && !p.startsWith(path + '.')
+			);
+		}
+	}
+
+	// Add missing functions
+	function closeCreateObjectModal() {
+		showCreateObjectModal = false;
+	}
+
+	async function handleCreateObject(event: CustomEvent<{ formData: Record<string, any> }>) {
+		if (!selectedItem?.id) return;
+
+		try {
+			console.log('[HominioDB] Creating object with form data:', event.detail.formData);
+
+			// Add any schema-specific metadata
+			if (selectedItem?.json.display_field) {
+				const displayValue = event.detail.formData[selectedItem.json.display_field];
+				if (displayValue) {
+					event.detail.formData.title = displayValue;
+				}
+			}
+
+			const result = await $insertDBMutation.mutateAsync({
+				json: event.detail.formData,
+				type: 'object',
+				schema: selectedItem?.id || ''
+			});
+
+			if (result?.success) {
+				message = { text: 'Object created successfully!', type: 'success' };
+				await $dbQuery.refetch();
+				showCreateObjectModal = false;
+				// Reset form
+				formData = {
+					username: '',
+					email: '',
+					profile: {
+						fullName: '',
+						birthDate: null
+					}
+				};
+			} else {
+				message = {
+					text: `Failed to create object: ${
+						result?.details ? JSON.stringify(result.details) : 'Unknown error'
+					}`,
+					type: 'error'
+				};
+				console.error('[HominioDB] Failed to create object:', result?.details);
+			}
+		} catch (error) {
+			console.error('[HominioDB] Error creating object:', error);
+			message = {
+				text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+				type: 'error'
+			};
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -1002,11 +857,7 @@
 									<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
 								{:else}
 									<h3 class="font-semibold truncate text-md">
-										{#if item.schema && getSchemaDisplayField(item)}
-											{item.json[getSchemaDisplayField(item)] || 'Untitled'}
-										{:else}
-											{item.json.title || 'Untitled'}
-										{/if}
+										{getDisplayValue(item)}
 									</h3>
 								{/if}
 								<p class="text-xs truncate text-tertiary-400">
@@ -1072,10 +923,8 @@
 											<h2 class="text-2xl font-semibold">
 												{#if isSchema(selectedItem)}
 													{selectedItem.json.title || 'Untitled'}
-												{:else if selectedItem.schema && getSchemaDisplayField(selectedItem)}
-													{selectedItem.json[getSchemaDisplayField(selectedItem)] || 'Untitled'}
 												{:else}
-													{selectedItem.json.title || 'Untitled'}
+													{getDisplayValue(selectedItem)}
 												{/if}
 											</h2>
 											<button
@@ -1281,22 +1130,20 @@
 									/>
 								</div>
 							{:else}
-								<div
-									class="h-[calc(100vh-400px)] overflow-y-auto p-4 font-mono text-sm bg-surface-100 dark:bg-surface-800 rounded-lg"
-								>
-									<textarea
-										class="w-full h-full p-0 font-mono text-sm bg-transparent border-none resize-none focus:ring-0"
-										value={editedJsonText}
-										on:input={handleJsonEdit}
-										spellcheck="false"
+								<div class="h-[calc(100vh-400px)] overflow-y-auto">
+									<JsonEditor
+										json={selectedItem?.json}
+										on:save={({ detail }) => {
+											editedJson = detail.json;
+											saveChanges();
+										}}
+										on:change={({ detail }) => {
+											if (detail.isValid) {
+												editedJson = detail.json;
+												hasChanges = true;
+											}
+										}}
 									/>
-									{#if jsonEditError}
-										<div
-											class="p-2 mt-2 text-sm whitespace-pre-wrap rounded-lg text-error-500 bg-error-100 dark:bg-error-900"
-										>
-											{jsonEditError}
-										</div>
-									{/if}
 								</div>
 							{/if}
 						</div>
@@ -1513,7 +1360,7 @@
 	</div>
 {/if}
 
-<style>
+<style lang="postcss">
 	:global(.input) {
 		@apply p-2 rounded border border-surface-300-600-token bg-tertiary-100 dark:bg-surface-700;
 	}

@@ -1,94 +1,121 @@
-import { createOperation, z } from '../../generated/wundergraph.factory';
+import { createOperation, z } from '../generated/wundergraph.factory';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
-const ajv = new Ajv({ allErrors: true });
+// Add interfaces for type safety
+interface DBItem {
+    id: string;
+    schema: string;
+    json: Record<string, any>;
+}
+
+interface SchemaData {
+    json: {
+        type: string;
+        properties: Record<string, any>;
+        required?: string[];
+        [key: string]: any;
+    };
+}
+
+// Initialize Ajv with formats
+const ajv = new Ajv({
+    strict: false,
+    allErrors: true,
+    coerceTypes: true,
+    useDefaults: true,
+    validateFormats: true
+});
+
+// Add custom date format validation
+ajv.addFormat("date", {
+    validate: (dateStr: string) => {
+        if (!dateStr) return true; // Allow empty/null values
+        const regex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!regex.test(dateStr)) return false;
+        const date = new Date(dateStr);
+        return date instanceof Date && !isNaN(date.getTime());
+    }
+});
+
 addFormats(ajv);
 
 export default createOperation.mutation({
     input: z.object({
-        id: z.string(),
+        id: z.string().uuid(),
         json: z.any(),
     }),
     requireAuthentication: true,
     rbac: {
         requireMatchAll: ["authenticated"],
     },
-    handler: async ({ input, operations }) => {
+    handler: async ({ input, context }) => {
         try {
-            // First get the current record to archive
-            const currentRecord = await operations.query({
-                operationName: 'queryDB',
-                input: { id: input.id }
-            });
+            // First, get the current item to find its schema
+            const { data: currentItem, error: fetchError } = await context.supabase
+                .from("db")
+                .select("schema")
+                .eq("id", input.id)
+                .single();
 
-            if (!currentRecord?.data?.db?.[0]) {
-                return {
-                    success: false,
-                    details: 'Record not found'
-                };
+            if (fetchError || !currentItem) {
+                throw new Error("Failed to fetch current item");
             }
 
-            const record = currentRecord.data.db[0];
+            const currentDBItem = currentItem as DBItem;
 
-            // Get the schema if it exists
-            if (record.schema) {
-                const schemaResult = await operations.query({
-                    operationName: 'queryDB',
-                    input: { id: record.schema }
-                });
+            // Get the schema for validation
+            let schemaData: SchemaData;
+            const { data: activeSchema, error: schemaError } = await context.supabase
+                .from("db")
+                .select("json")
+                .eq("id", currentDBItem.schema)
+                .single();
 
-                const schema = schemaResult?.data?.db?.[0]?.json;
-                if (schema) {
-                    // Validate against schema
-                    const validate = ajv.compile(schema);
-                    const valid = validate(input.json);
+            if (schemaError || !activeSchema) {
+                // Try to find schema in archive if not in active db
+                const { data: archivedSchema, error: archiveError } = await context.supabase
+                    .from("db_archive")
+                    .select("json")
+                    .eq("id", currentDBItem.schema)
+                    .single();
 
-                    if (!valid) {
-                        return {
-                            success: false,
-                            details: `Schema validation failed: ${ajv.errorsText(validate.errors)}`
-                        };
-                    }
+                if (archiveError || !archivedSchema) {
+                    throw new Error("Failed to fetch schema for validation");
                 }
+                schemaData = archivedSchema as SchemaData;
+            } else {
+                schemaData = activeSchema as SchemaData;
             }
 
-            // Archive current version
-            const archiveResult = await operations.mutation({
-                operationName: 'archiveDB',
-                input: { id: record.id }
-            });
+            // Validate against schema
+            const validate = ajv.compile(schemaData.json);
+            const valid = validate(input.json);
 
-            if (!archiveResult?.data?.archive_db?.[0]) {
+            if (!valid) {
                 return {
                     success: false,
-                    details: 'Failed to archive current version'
+                    error: "Validation failed",
+                    details: validate.errors?.map(err => ({
+                        field: err.instancePath.slice(1),
+                        message: err.message,
+                        keyword: err.keyword,
+                        params: err.params
+                    }))
                 };
             }
 
-            // Create new version
-            const insertResult = await operations.mutation({
-                operationName: 'insertDB',
-                input: {
-                    json: input.json,
-                    author: record.author,
-                    schema: record.schema,
-                    version: record.version + 1,
-                    variation: record.variation,
-                    prev: record.id
-                }
+            // If validation passes, proceed with the update
+            const { data: result, error } = await context.supabase.rpc('update_db_version', {
+                p_id: input.id,
+                p_json: input.json
             });
 
-            if (!insertResult?.data?.insert_db?.[0]) {
-                return {
-                    success: false,
-                    details: 'Failed to create new version'
-                };
-            }
+            if (error) throw error;
 
             return {
                 success: true,
-                details: 'Successfully updated record'
+                updatedData: result
             };
         } catch (error) {
             console.error("Error in editDB:", error);

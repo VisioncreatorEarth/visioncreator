@@ -88,47 +88,110 @@ export default createOperation.mutation({
         try {
           const schema = schemaData.json as JSONSchema;
 
-          // Process input data to handle null/undefined/empty values
+          // Enhanced processValue function to handle all JSON Schema formats
           const processValue = (value: any, propertySchema: any): any => {
+            // Handle null/undefined/empty values
             if (value === null || value === undefined || value === '') {
-              // Handle date fields specially
-              if (propertySchema.title === 'Birth Date') {
+              // If the field is nullable and not required, return null
+              if (propertySchema.nullable && !propertySchema.required) {
                 return null;
               }
-              // For required fields, keep empty string, otherwise null
-              return propertySchema.required ? '' : null;
+              // For required fields, keep empty string if string type
+              return propertySchema.required && propertySchema.type === 'string' ? '' : null;
             }
 
-            // Handle date values
-            if (propertySchema.title === 'Birth Date') {
-              try {
-                const date = new Date(value);
-                return date.toISOString().split('T')[0];
-              } catch {
-                return null;
-              }
-            }
+            // Type coercion based on schema type
+            switch (propertySchema.type) {
+              case 'string':
+                // Handle specific string formats
+                if (propertySchema.format) {
+                  switch (propertySchema.format) {
+                    case 'date':
+                      try {
+                        const date = new Date(value);
+                        return date.toISOString().split('T')[0];
+                      } catch {
+                        return null;
+                      }
+                    case 'date-time':
+                      try {
+                        const date = new Date(value);
+                        return date.toISOString();
+                      } catch {
+                        return null;
+                      }
+                    case 'email':
+                      return String(value).toLowerCase().trim();
+                    // Add other format handlers as needed
+                  }
+                }
+                return String(value);
 
-            return value;
+              case 'number':
+                const num = Number(value);
+                return isNaN(num) ? null : num;
+
+              case 'integer':
+                const int = parseInt(value);
+                return isNaN(int) ? null : int;
+
+              case 'boolean':
+                if (typeof value === 'string') {
+                  return value.toLowerCase() === 'true';
+                }
+                return Boolean(value);
+
+              case 'array':
+                if (!Array.isArray(value)) {
+                  return propertySchema.required ? [] : null;
+                }
+                // Process each array item according to items schema
+                if (propertySchema.items) {
+                  return value.map(item => processValue(item, propertySchema.items));
+                }
+                return value;
+
+              default:
+                return value;
+            }
           };
 
+          // Enhanced processObject function with better nested object handling
           const processObject = (obj: any, schemaProps: any): any => {
             const result: any = {};
-            for (const [key, value] of Object.entries(obj)) {
-              const propSchema = schemaProps[key] || {};
-              if (typeof value === 'object' && value !== null && propSchema.properties) {
-                result[key] = processObject(value, propSchema.properties);
-              } else {
-                result[key] = processValue(value, propSchema);
+
+            // First, handle all defined properties in schema
+            for (const [key, propSchema] of Object.entries(schemaProps)) {
+              if (obj.hasOwnProperty(key)) {
+                if (propSchema.type === 'object' && propSchema.properties) {
+                  result[key] = processObject(obj[key] || {}, propSchema.properties);
+                } else {
+                  result[key] = processValue(obj[key], propSchema);
+                }
+              } else if (propSchema.required) {
+                // Handle required properties that are missing
+                result[key] = propSchema.type === 'object' && propSchema.properties
+                  ? processObject({}, propSchema.properties)
+                  : processValue(null, propSchema);
               }
             }
+
+            // Handle additional properties if allowed
+            if (schemaProps.additionalProperties !== false) {
+              for (const [key, value] of Object.entries(obj)) {
+                if (!schemaProps.hasOwnProperty(key)) {
+                  result[key] = value;
+                }
+              }
+            }
+
             return result;
           };
 
           // Process the input data
           const processedJson = processObject(input.json, schema.properties || {});
 
-          // Validate
+          // Validate using ajv
           const validate = ajv.compile(schema);
           const valid = validate(processedJson);
 
@@ -136,7 +199,12 @@ export default createOperation.mutation({
             return {
               success: false,
               error: "Validation failed",
-              details: validate.errors
+              details: validate.errors?.map(err => ({
+                field: err.instancePath.slice(1),
+                message: err.message,
+                keyword: err.keyword,
+                params: err.params
+              }))
             };
           }
 
