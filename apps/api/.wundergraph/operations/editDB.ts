@@ -25,23 +25,69 @@ const ajv = new Ajv({
     coerceTypes: true,
     useDefaults: true,
     validateFormats: true,
-    removeAdditional: false, // Allow additional properties not in schema
-    validateSchema: true, // Validate schemas themselves
+    removeAdditional: false,
+    validateSchema: true,
 });
 
 // Add standard formats
 addFormats(ajv);
 
-// Add custom keywords for extended validation
+// Add x-relation keyword for handling relation fields
 ajv.addKeyword({
-    keyword: 'validateIf',
-    type: 'object',
-    validate: (schema: any, data: any, parentSchema: any) => {
-        // Conditional validation based on other fields
-        return true; // Implement conditional logic if needed
-    },
-    errors: true
+    keyword: 'x-relation',
+    modifying: true,
+    compile: (schema: any) => {
+        return (data: any) => {
+            // For relation fields, accept either a string (ID) or an object or null
+            if (schema && (typeof data === 'string' || data === null)) {
+                return true;
+            }
+            return true; // Default to true and let the type validation handle other cases
+        };
+    }
 });
+
+// Function to modify schema to handle relation fields at any nesting level
+function modifySchemaForRelations(schema: any): any {
+    if (!schema || typeof schema !== 'object') return schema;
+
+    // Clone the schema to avoid modifying the original
+    const modifiedSchema = { ...schema };
+
+    if (modifiedSchema.properties) {
+        modifiedSchema.properties = Object.entries(modifiedSchema.properties).reduce(
+            (acc, [key, prop]: [string, any]) => {
+                if (prop.type === 'object') {
+                    if (prop['x-relation']) {
+                        // For relation fields, accept either string or object
+                        acc[key] = {
+                            oneOf: [
+                                { type: 'string', format: 'uuid' },
+                                { type: 'object' },
+                                { type: 'null' }
+                            ],
+                            'x-relation': prop['x-relation']
+                        };
+                    } else if (prop.properties) {
+                        // Recursively process nested objects
+                        acc[key] = {
+                            ...prop,
+                            properties: modifySchemaForRelations(prop).properties
+                        };
+                    } else {
+                        acc[key] = prop;
+                    }
+                } else {
+                    acc[key] = prop;
+                }
+                return acc;
+            },
+            {} as Record<string, any>
+        );
+    }
+
+    return modifiedSchema;
+}
 
 export default createOperation.mutation({
     input: z.object({
@@ -102,10 +148,18 @@ export default createOperation.mutation({
                                         ]
                                     },
                                     nullable: { type: 'boolean' },
-                                    properties: { type: 'object' }, // For nested objects
-                                    items: { type: 'object' }, // For arrays
+                                    properties: { type: 'object' },
+                                    items: { type: 'object' },
                                     errorMessage: { type: 'object' },
-                                    validate: { type: 'object' } // For custom validation rules
+                                    validate: { type: 'object' },
+                                    'x-relation': {
+                                        type: 'object',
+                                        properties: {
+                                            schemaId: { type: 'string', format: 'uuid' },
+                                            type: { type: 'string', enum: ['single', 'multiple'] }
+                                        },
+                                        required: ['schemaId']
+                                    }
                                 }
                             }
                         },
@@ -159,8 +213,11 @@ export default createOperation.mutation({
                     schemaData = activeSchema as SchemaData;
                 }
 
-                // Validate against the object's schema
-                const validate = ajv.compile(schemaData.json);
+                // Modify the schema to handle relation fields at any nesting level
+                const modifiedSchema = modifySchemaForRelations(schemaData.json);
+
+                // Validate against the modified schema
+                const validate = ajv.compile(modifiedSchema);
                 const valid = validate(input.json);
 
                 if (!valid) {

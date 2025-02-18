@@ -41,7 +41,25 @@
 					searchQueries[key] = '';
 					dropdownOpen[key] = false;
 				} else if (prop.properties) {
-					acc[key] = initializeObjectData(prop.properties);
+					// Initialize nested object with empty object
+					acc[key] = formData[key] || {};
+					// Process each nested property
+					Object.entries(prop.properties).forEach(([subKey, subProp]) => {
+						if (subProp.type === 'object' && subProp['x-relation']) {
+							const nestedKey = `${key}.${subKey}`;
+							// Initialize nested relation field
+							if (!acc[key][subKey]) {
+								acc[key][subKey] = null;
+							}
+							searchQueries[nestedKey] = '';
+							dropdownOpen[nestedKey] = false;
+						} else {
+							// Initialize other nested fields with appropriate default values
+							if (!(subKey in acc[key])) {
+								acc[key][subKey] = '';
+							}
+						}
+					});
 				}
 			} else {
 				switch (prop.type) {
@@ -98,30 +116,47 @@
 			if (prop.type === 'object') {
 				if (prop['x-relation']) {
 					// For relation fields, ensure we store the ID as a string
-					// If it's already a string, use it directly
 					if (typeof data[key] === 'string') {
 						acc[key] = data[key];
-					}
-					// If it's an object with numeric keys (split string), join it back
-					else if (
+					} else if (
 						data[key] &&
 						typeof data[key] === 'object' &&
 						!Array.isArray(data[key]) &&
 						Object.keys(data[key]).every((k) => !isNaN(Number(k)))
 					) {
 						acc[key] = Object.values(data[key]).join('');
-					}
-					// Otherwise, set to null
-					else {
+					} else {
 						acc[key] = null;
 					}
 				} else if (prop.properties) {
-					acc[key] = processFormData(prop.properties, data[key] || {});
+					// Always initialize nested objects
+					acc[key] = {};
+
+					// Process each property in the nested object
+					Object.entries(prop.properties).forEach(([subKey, subProp]) => {
+						if (subProp.type === 'object' && subProp['x-relation']) {
+							// Handle nested relation
+							acc[key][subKey] = data[key]?.[subKey] || null;
+						} else {
+							// Handle other nested fields
+							acc[key][subKey] = data[key]?.[subKey] || '';
+						}
+					});
+
+					// Check if any required fields are present
+					if (prop.required?.length) {
+						const hasRequiredFields = prop.required.every(
+							(field) => acc[key][field] !== null && acc[key][field] !== ''
+						);
+						if (!hasRequiredFields) {
+							console.warn(`Missing required fields in ${key}:`, prop.required);
+						}
+					}
 				}
 			} else if (prop.type === 'number' || prop.type === 'integer') {
 				acc[key] = data[key] ? Number(data[key]) : null;
 			} else {
-				acc[key] = data[key];
+				acc[key] = data[key] || '';
 			}
 			return acc;
 		}, {} as Record<string, any>);
@@ -236,7 +271,62 @@
 												{/if}
 											</label>
 
-											{#if subProp.type === 'string'}
+											{#if subProp.type === 'object' && subProp['x-relation']}
+												<div class="relative" id="relation-{key}.{subKey}">
+													<input
+														type="text"
+														id={`${key}.${subKey}`}
+														class="w-full p-2 border rounded-lg bg-surface-200 dark:bg-surface-700 border-surface-300-600-token"
+														placeholder="Search..."
+														bind:value={searchQueries[`${key}.${subKey}`]}
+														on:focus={() => {
+															dropdownOpen[`${key}.${subKey}`] = true;
+															// Initialize the nested object if it doesn't exist
+															if (!formData[key]) {
+																formData[key] = {};
+															}
+														}}
+														readonly
+													/>
+													{#if formData[key]?.[subKey]}
+														<div class="mt-1 text-xs text-surface-600 dark:text-surface-400">
+															Selected ID: {formData[key][subKey]}
+														</div>
+													{/if}
+													{#if dropdownOpen[`${key}.${subKey}`]}
+														<div
+															class="absolute z-[100] w-full mt-1 bg-surface-100 dark:bg-surface-800 border border-surface-300-600-token rounded-lg shadow-lg overflow-y-auto max-h-48"
+														>
+															{#each getRelationInstances(subProp['x-relation'].schemaId, searchQueries[`${key}.${subKey}`]) as instance}
+																<button
+																	type="button"
+																	class="w-full px-4 py-2 text-left hover:bg-surface-200 dark:hover:bg-surface-700"
+																	on:click={() => {
+																		const id = String(instance.id);
+																		// Ensure we preserve other fields in the nested object
+																		formData = {
+																			...formData,
+																			[key]: {
+																				...formData[key],
+																				[subKey]: id
+																			}
+																		};
+																		console.log(`Set nested formData[${key}][${subKey}] to:`, id);
+																		searchQueries[`${key}.${subKey}`] =
+																			getInstanceDisplayValue(instance);
+																		dropdownOpen[`${key}.${subKey}`] = false;
+																	}}
+																>
+																	<div>{getInstanceDisplayValue(instance)}</div>
+																	<div class="text-xs text-surface-600 dark:text-surface-400">
+																		ID: {instance.id}
+																	</div>
+																</button>
+															{/each}
+														</div>
+													{/if}
+												</div>
+											{:else if subProp.type === 'string'}
 												{#if subProp.format === 'email'}
 													<input
 														type="email"

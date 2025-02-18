@@ -51,6 +51,21 @@ relationAjv.addKeyword({
   }
 });
 
+// Add custom keywords for extended validation
+ajv.addKeyword({
+  keyword: 'x-relation',
+  modifying: true,
+  compile: (schema: any) => {
+    return (data: any) => {
+      // For relation fields, accept either a string (ID) or an object
+      if (schema && (typeof data === 'string' || data === null)) {
+        return true; // Accept string IDs or null for relation fields
+      }
+      return true; // Default to true and let the type validation handle other cases
+    };
+  }
+});
+
 // Generic schema interface that can handle any JSON Schema
 interface JSONSchema {
   type: string;
@@ -79,6 +94,47 @@ interface SchemaProperty {
   };
   additionalProperties?: boolean;
   [key: string]: any;
+}
+
+function modifySchemaForRelations(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema;
+
+  // Clone the schema to avoid modifying the original
+  const modifiedSchema = { ...schema };
+
+  if (modifiedSchema.properties) {
+    modifiedSchema.properties = Object.entries(modifiedSchema.properties).reduce(
+      (acc, [key, prop]: [string, any]) => {
+        if (prop.type === 'object') {
+          if (prop['x-relation']) {
+            // For relation fields, accept either string or object
+            acc[key] = {
+              oneOf: [
+                { type: 'string', format: 'uuid' },
+                { type: 'object' },
+                { type: 'null' }
+              ],
+              'x-relation': prop['x-relation']
+            };
+          } else if (prop.properties) {
+            // Recursively process nested objects
+            acc[key] = {
+              ...prop,
+              properties: modifySchemaForRelations(prop).properties
+            };
+          } else {
+            acc[key] = prop;
+          }
+        } else {
+          acc[key] = prop;
+        }
+        return acc;
+      },
+      {} as Record<string, any>
+    );
+  }
+
+  return modifiedSchema;
 }
 
 export default createOperation.mutation({
@@ -128,69 +184,25 @@ export default createOperation.mutation({
         try {
           const schema = schemaData.json as JSONSchema;
 
-          // Check if schema has any x-relation fields
-          const hasRelations = Object.values(schema.properties || {}).some(
-            (prop: any) => prop.type === 'object' && prop['x-relation']
-          );
+          // Modify the schema to handle relation fields
+          const modifiedSchema = modifySchemaForRelations(schema);
 
-          // For schemas with relations, modify the schema to accept string IDs
-          if (hasRelations) {
-            const modifiedSchema = {
-              ...schema,
-              properties: Object.entries(schema.properties || {}).reduce((acc, [key, prop]: [string, any]) => {
-                if (prop.type === 'object' && prop['x-relation']) {
-                  // For relation fields, accept either string or object
-                  acc[key] = {
-                    oneOf: [
-                      { type: 'string', format: 'uuid' },
-                      { type: 'object' }
-                    ],
-                    'x-relation': prop['x-relation']
-                  };
-                } else {
-                  acc[key] = prop;
-                }
-                return acc;
-              }, {} as Record<string, any>)
+          // Use the modified schema for validation
+          const validate = ajv.compile(modifiedSchema);
+          const valid = validate(input.json);
+
+          if (!valid) {
+            return {
+              success: false,
+              error: "Validation failed",
+              details: validate.errors?.map(err => ({
+                field: err.instancePath.slice(1),
+                message: err.message,
+                keyword: err.keyword,
+                params: err.params
+              }))
             };
-
-            // Use the modified schema for validation
-            const validate = relationAjv.compile(modifiedSchema);
-            const valid = validate(input.json);
-
-            if (!valid) {
-              return {
-                success: false,
-                error: "Validation failed",
-                details: validate.errors?.map(err => ({
-                  field: err.instancePath.slice(1),
-                  message: err.message,
-                  keyword: err.keyword,
-                  params: err.params
-                }))
-              };
-            }
-          } else {
-            // For regular schemas without relations, use normal validation
-            const validate = ajv.compile(schema);
-            const valid = validate(input.json);
-
-            if (!valid) {
-              return {
-                success: false,
-                error: "Validation failed",
-                details: validate.errors?.map(err => ({
-                  field: err.instancePath.slice(1),
-                  message: err.message,
-                  keyword: err.keyword,
-                  params: err.params
-                }))
-              };
-            }
           }
-
-          // Use processed data
-          input.json = input.json;
         } catch (validationError) {
           console.error("Validation error:", validationError);
           return {

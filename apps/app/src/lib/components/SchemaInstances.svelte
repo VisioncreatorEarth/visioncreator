@@ -204,7 +204,7 @@
 				<thead>
 					<tr class="border-b border-surface-300-600-token">
 						<th
-							class="px-4 py-2 text-sm font-medium text-left text-surface-600 dark:text-surface-400"
+							class="px-4 py-2 text-sm font-medium text-center text-surface-600 dark:text-surface-400"
 						>
 							{schema.json.properties[displayField]?.title || 'Name'}
 						</th>
@@ -212,13 +212,13 @@
 							{#if field.isGroup}
 								<th
 									colspan={field.fields.length}
-									class="px-4 py-2 text-sm font-medium text-left text-surface-600 dark:text-surface-400 bg-tertiary-100 dark:bg-surface-800"
+									class="px-4 py-2 text-sm font-medium text-center text-surface-600 dark:text-surface-400 bg-tertiary-100 dark:bg-surface-800"
 								>
 									{field.title}
 								</th>
 							{:else}
 								<th
-									class="px-4 py-2 text-sm font-medium text-left text-surface-600 dark:text-surface-400"
+									class="px-4 py-2 text-sm font-medium text-center text-surface-600 dark:text-surface-400"
 								>
 									{field.title}
 								</th>
@@ -233,7 +233,7 @@
 							{#if field.isGroup}
 								{#each field.fields as subField}
 									<th
-										class="px-4 py-2 text-sm font-medium text-left text-surface-500 dark:text-surface-400"
+										class="px-4 py-2 text-sm font-medium text-center text-surface-500 dark:text-surface-400"
 									>
 										{subField.title}
 									</th>
