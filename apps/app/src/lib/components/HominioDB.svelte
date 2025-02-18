@@ -66,6 +66,7 @@
 
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import Properties from './Properties.svelte';
+	import SchemaForm from './SchemaForm.svelte';
 
 	// Add me prop
 	export let me: any; // Update type according to your me object structure
@@ -120,6 +121,7 @@
 	let schemaInfo = null;
 	let expandedProperties: string[] = [];
 	let showCreateModal = false;
+	let showCreateObjectModal = false;
 	let formData: FormData = {
 		username: '',
 		email: '',
@@ -515,28 +517,14 @@
 		}
 	}
 
-	async function handleCreateObject(event: Event) {
-		event.preventDefault();
-
+	async function handleCreateObject({ detail }: CustomEvent<{ formData: Record<string, any> }>) {
 		if (!selectedItem?.id) return;
 
 		try {
-			console.log('[HominioDB] Creating object with form data:', formData);
-
-			// Create a clean object that matches the schema
-			const processedFormData = {
-				username: formData.username.trim(),
-				email: formData.email.trim(),
-				profile: {
-					fullName: formData.profile.fullName.trim(),
-					birthDate: formData.profile.birthDate
-						? formatDateForSubmission(formData.profile.birthDate)
-						: null
-				}
-			};
+			console.log('[HominioDB] Creating object with form data:', detail.formData);
 
 			// Validate against schema
-			const validationErrors = validateAgainstSchema(processedFormData, selectedItem.json);
+			const validationErrors = validateAgainstSchema(detail.formData, selectedItem.json);
 			if (validationErrors.length > 0) {
 				message = {
 					text: `Validation failed: ${validationErrors
@@ -549,14 +537,14 @@
 
 			// Add any schema-specific metadata
 			if (selectedItem?.json.display_field) {
-				const displayValue = processedFormData[selectedItem.json.display_field];
+				const displayValue = detail.formData[selectedItem.json.display_field];
 				if (displayValue) {
-					processedFormData.title = displayValue;
+					detail.formData.title = displayValue;
 				}
 			}
 
 			const result = await $insertDBMutation.mutateAsync({
-				json: processedFormData,
+				json: detail.formData,
 				type: 'object',
 				schema: selectedItem?.id || ''
 			});
@@ -564,7 +552,7 @@
 			if (result?.success) {
 				message = { text: 'Object created successfully!', type: 'success' };
 				await $dbQuery.refetch();
-				showCreateModal = false;
+				showCreateObjectModal = false;
 				// Reset form
 				formData = {
 					username: '',
@@ -592,28 +580,8 @@
 		}
 	}
 
-	function openCreateModal() {
-		formData = {
-			username: '',
-			email: '',
-			profile: {
-				fullName: '',
-				birthDate: ''
-			}
-		};
-		showCreateModal = true;
-	}
-
-	function closeModal() {
-		showCreateModal = false;
-		formData = {
-			username: '',
-			email: '',
-			profile: {
-				fullName: '',
-				birthDate: ''
-			}
-		};
+	function closeCreateObjectModal() {
+		showCreateObjectModal = false;
 	}
 
 	// Update handleKeydown to handle editing escapes
@@ -918,6 +886,75 @@
 	$: if (selectedItem && contentTab === 'json') {
 		editedJsonText = JSON.stringify(selectedItem.json, null, 2);
 	}
+
+	// Add helper functions
+	async function createAddressSchema() {
+		const addressSchema = {
+			type: 'object',
+			title: 'Address',
+			description: 'Physical address information',
+			properties: {
+				street: {
+					type: 'string',
+					title: 'Street',
+					description: 'Street address including house number'
+				},
+				city: {
+					type: 'string',
+					title: 'City',
+					description: 'City name'
+				},
+				state: {
+					type: 'string',
+					title: 'State/Province',
+					description: 'State or province name'
+				},
+				postalCode: {
+					type: 'string',
+					title: 'Postal Code',
+					pattern: '^[0-9]{5}(-[0-9]{4})?$',
+					description: 'ZIP or postal code'
+				},
+				country: {
+					type: 'string',
+					title: 'Country',
+					description: 'Country name'
+				}
+			},
+			required: ['street', 'city', 'postalCode', 'country'],
+			display_field: 'street'
+		};
+
+		try {
+			// Find the meta schema (schema for schemas)
+			const metaSchema = $dbQuery.data?.db.find(
+				(item) => item.json.title === 'Meta Schema' && !item.is_archived
+			);
+
+			if (!metaSchema) {
+				throw new Error('Meta schema not found');
+			}
+
+			const result = await $insertDBMutation.mutateAsync({
+				json: addressSchema,
+				type: 'schema',
+				schema: metaSchema.id // Add the required schema parameter
+			});
+
+			if (result?.success) {
+				await $dbQuery.refetch();
+				message = { text: 'Address schema created successfully!', type: 'success' };
+			}
+		} catch (error) {
+			console.error('Error creating address schema:', error);
+			message = {
+				text: `Error creating address schema: ${
+					error instanceof Error ? error.message : String(error)
+				}`,
+				type: 'error'
+			};
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -929,9 +966,14 @@
 		<div class="flex h-full">
 			<!-- Left sidebar with list -->
 			<div class="w-64 p-4 border-r border-surface-300-600-token">
-				<button on:click={handleGenerateSchema} class="mb-4 btn variant-filled-primary">
-					Generate Schema
-				</button>
+				<div class="flex flex-col gap-2 p-4">
+					<button class="btn variant-filled-primary btn-sm" on:click={handleGenerateSchema}>
+						Add User Schema
+					</button>
+					<button class="btn variant-filled-primary btn-sm" on:click={createAddressSchema}>
+						Add Address Schema
+					</button>
+				</div>
 
 				{#if message.text}
 					<div
@@ -1125,7 +1167,10 @@
 
 							<!-- Create Object Button -->
 							{#if isSchema(selectedItem)}
-								<button class="btn variant-filled-primary" on:click={openCreateModal}>
+								<button
+									class="btn variant-filled-primary"
+									on:click={() => (showCreateObjectModal = true)}
+								>
 									Create Object
 								</button>
 							{/if}
@@ -1247,7 +1292,7 @@
 									/>
 									{#if jsonEditError}
 										<div
-											class="mt-2 p-2 text-sm text-error-500 bg-error-100 dark:bg-error-900 rounded-lg whitespace-pre-wrap"
+											class="p-2 mt-2 text-sm whitespace-pre-wrap rounded-lg text-error-500 bg-error-100 dark:bg-error-900"
 										>
 											{jsonEditError}
 										</div>
@@ -1264,7 +1309,7 @@
 	</div>
 
 	<!-- Right aside for versions and variations -->
-	<aside class="w-80 border-l border-surface-300-600-token bg-surface-100 dark:bg-surface-800">
+	<aside class="border-l w-80 border-surface-300-600-token bg-surface-100 dark:bg-surface-800">
 		<!-- Tabs -->
 		<div class="border-b border-surface-300-600-token">
 			<div class="flex">
@@ -1449,6 +1494,21 @@
 					</div>
 				{/if}
 			</form>
+		</div>
+	</div>
+{/if}
+
+<!-- Add the modal for creating objects -->
+{#if showCreateObjectModal && selectedItem}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+		<div class="w-full max-w-2xl p-6 rounded-lg bg-surface-100 dark:bg-surface-800">
+			<h2 class="mb-4 text-xl font-semibold">Create {selectedItem.json.title}</h2>
+
+			<SchemaForm
+				schema={selectedItem.json}
+				on:submit={handleCreateObject}
+				on:cancel={closeCreateObjectModal}
+			/>
 		</div>
 	</div>
 {/if}

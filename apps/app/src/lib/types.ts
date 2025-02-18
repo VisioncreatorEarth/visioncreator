@@ -38,3 +38,27 @@ export interface InsertDBInput {
         required: string[];
     };
 }
+
+// First, let's properly define our Schema types
+export interface SchemaProperty {
+    type: string;
+    title?: string;
+    description?: string;
+    format?: string;
+    properties?: Record<string, SchemaProperty>;
+    required?: string[];
+    pattern?: string;
+    minLength?: number;
+    maxLength?: number;
+    minimum?: number;
+    maximum?: number;
+}
+
+export interface Schema {
+    type: string;
+    title: string;
+    description?: string;
+    properties: Record<string, SchemaProperty>;
+    required?: string[];
+    display_field?: string;
+}
