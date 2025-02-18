@@ -68,6 +68,7 @@
 	import Properties from './Properties.svelte';
 	import SchemaForm from './SchemaForm.svelte';
 	import JsonEditor from './JsonEditor.svelte';
+	import SchemaInstances from './SchemaInstances.svelte';
 
 	// Add me prop
 	export let me: any; // Update type according to your me object structure
@@ -128,6 +129,7 @@
 	});
 
 	let selectedItem: DBItem | null = null;
+	let selectedInstance: DBItem | null = null;
 	let message = { text: '', type: '' };
 	let schemaInfo = null;
 	let expandedProperties: string[] = [];
@@ -141,10 +143,6 @@
 			birthDate: ''
 		}
 	};
-
-	// Debug logs
-	$: console.log('dbQuery:', $dbQuery);
-	$: if ($dbQuery?.data) console.log('query data:', $dbQuery.data);
 
 	const insertDBMutation = createMutation({
 		operationName: 'insertDB'
@@ -172,7 +170,16 @@
 	let activeTab: 'versions' | 'variations' = 'versions';
 
 	// Add state for content tab
-	let contentTab: 'properties' | 'json' = 'properties';
+	let contentTab: 'instances' | 'properties' | 'json' = 'properties';
+
+	// Add reactive statement to set default tab
+	$: if (selectedItem) {
+		if (isSchema(selectedItem)) {
+			contentTab = 'instances';
+		} else {
+			contentTab = 'properties';
+		}
+	}
 
 	// Add handleKeydown function back
 	function handleKeydown(event: KeyboardEvent) {
@@ -354,18 +361,10 @@
 		return null;
 	}
 
-	// Add this helper function to ensure we always pass valid properties
+	// Update this helper function to ensure we always pass valid properties
 	function getPropertiesToRender(item: any) {
-		if (!item?.json) return {};
-
-		// If it's a schema, return its properties definition
-		if (item.json.properties) {
-			return item.json.properties;
-		}
-
-		// If it's an object instance, return its property values
-		const { type, title, description, author, version, schema_id, ...rest } = item.json;
-		return rest || {};
+		if (!item) return {};
+		return item.json || {};
 	}
 
 	$: if (selectedItem && selectedItem.json.$schema) {
@@ -462,18 +461,17 @@
 		if (!selectedItem?.id || !editedJson) return;
 
 		try {
+			console.log('Attempting to save changes:', JSON.stringify(editedJson, null, 2));
+
 			const result = await $editDBMutation.mutateAsync({
 				id: selectedItem.id,
 				json: editedJson
 			});
 
 			if (result?.success) {
-				// Refetch the data
 				await $dbQuery.refetch();
 
-				// Find the new version in the updated data
 				if ($dbQuery.data?.db) {
-					// For schema items, find by title to ensure we get the latest version
 					if (isSchema(selectedItem)) {
 						const updatedItem = $dbQuery.data.db.find(
 							(item) => item.json.title === editedJson.title
@@ -482,7 +480,6 @@
 							selectedItem = updatedItem;
 						}
 					} else {
-						// For regular items, find by variation to get the latest version
 						const updatedItem = $dbQuery.data.db.find(
 							(item) => item.variation === selectedItem?.variation
 						);
@@ -495,16 +492,29 @@
 				editedJson = null;
 				hasChanges = false;
 				message = { text: 'Changes saved successfully!', type: 'success' };
+				console.log('Save successful:', result);
 			} else {
-				message = {
-					text: `Failed to save changes: ${result?.details || 'Unknown error'}`,
-					type: 'error'
-				};
+				// Improved error handling with detailed logging
+				let errorMessage = 'Failed to save changes';
+				if (result?.details) {
+					console.error('Save validation failed:', JSON.stringify(result.details, null, 2));
+					if (Array.isArray(result.details)) {
+						errorMessage = result.details.map((err) => `${err.field}: ${err.message}`).join('\n');
+					} else {
+						errorMessage = JSON.stringify(result.details, null, 2);
+					}
+				} else if (result?.error) {
+					console.error('Save error:', JSON.stringify(result.error, null, 2));
+					errorMessage = JSON.stringify(result.error, null, 2);
+				}
+				message = { text: errorMessage, type: 'error' };
 			}
 		} catch (error) {
 			console.error('Error saving changes:', error);
 			message = {
-				text: `Error saving changes: ${error instanceof Error ? error.message : String(error)}`,
+				text: `Error saving changes: ${
+					error instanceof Error ? error.message : JSON.stringify(error, null, 2)
+				}`,
 				type: 'error'
 			};
 		}
@@ -854,6 +864,20 @@
 			};
 		}
 	}
+
+	// Add function to filter schemas and instances
+	function getSchemas(items: DBItem[]): DBItem[] {
+		return items.filter(isSchema);
+	}
+
+	function getInstances(items: DBItem[], schemaId: string): DBItem[] {
+		return items.filter((item) => item.schema === schemaId && !isSchema(item));
+	}
+
+	// Add a reactive statement to ensure we're on properties tab for non-schema items
+	$: if (selectedItem && !isSchema(selectedItem)) {
+		contentTab = 'properties';
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -866,11 +890,17 @@
 			<!-- Left sidebar with list -->
 			<div class="w-64 p-4 border-r border-surface-300-600-token">
 				<div class="flex flex-col gap-2 p-4">
-					<button class="btn variant-filled-primary btn-sm" on:click={handleGenerateSchema}>
-						Add User Schema
+					<button
+						class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-sm"
+						on:click={handleGenerateSchema}
+					>
+						+ Add User Schema
 					</button>
-					<button class="btn variant-filled-primary btn-sm" on:click={createAddressSchema}>
-						Add Address Schema
+					<button
+						class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-sm"
+						on:click={createAddressSchema}
+					>
+						+ Add Address Schema
 					</button>
 				</div>
 
@@ -892,18 +922,12 @@
 					<p class="text-error-400">Error loading schemas: {$dbQuery.error.message}</p>
 				{:else if $dbQuery.data?.db}
 					<ul class="space-y-4">
-						{#each $dbQuery.data.db.sort(sortByTimestamp) as item}
+						{#each getSchemas($dbQuery.data.db).sort(sortByTimestamp) as item}
 							<li
 								class="p-2 cursor-pointer card variant-filled-tertiary-200 dark:variant-filled-surface-700 hover:bg-tertiary-300 dark:hover:bg-surface-600"
 								on:click={() => (selectedItem = item)}
 							>
-								{#if isSchema(item)}
-									<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
-								{:else}
-									<h3 class="font-semibold truncate text-md">
-										{getDisplayValue(item)}
-									</h3>
-								{/if}
+								<h3 class="font-semibold truncate text-md">{item.json.title}</h3>
 								<p class="text-xs truncate text-tertiary-400">
 									Author: {item.author_name}
 								</p>
@@ -1057,16 +1081,6 @@
 									</button>
 								{/if}
 							</div>
-
-							<!-- Create Object Button -->
-							{#if isSchema(selectedItem)}
-								<button
-									class="btn variant-filled-primary"
-									on:click={() => (showCreateObjectModal = true)}
-								>
-									Create Object
-								</button>
-							{/if}
 						</div>
 					</div>
 
@@ -1131,6 +1145,16 @@
 						<!-- Add tabs -->
 						<div class="mb-4 border-b border-surface-300-600-token">
 							<div class="flex">
+								{#if selectedItem && isSchema(selectedItem)}
+									<button
+										class="px-4 py-2 text-sm font-medium {contentTab === 'instances'
+											? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
+											: 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-200'}"
+										on:click={() => (contentTab = 'instances')}
+									>
+										Instances
+									</button>
+								{/if}
 								<button
 									class="px-4 py-2 text-sm font-medium {contentTab === 'properties'
 										? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400'
@@ -1167,13 +1191,13 @@
 							{#if contentTab === 'properties'}
 								<div class="h-[calc(100vh-400px)] overflow-y-auto">
 									<Properties
-										properties={selectedItem?.json}
+										properties={getPropertiesToRender(selectedItem)}
 										{expandedProperties}
 										on:toggleProperty={handleToggleProperty}
 										on:valueChange={handleValueChange}
 									/>
 								</div>
-							{:else}
+							{:else if contentTab === 'json'}
 								<div class="h-[calc(100vh-400px)] overflow-y-auto">
 									<JsonEditor
 										json={selectedItem?.json}
@@ -1186,6 +1210,27 @@
 												editedJson = detail.json;
 												hasChanges = true;
 											}
+										}}
+									/>
+								</div>
+							{:else if contentTab === 'instances' && selectedItem && $dbQuery.data?.db}
+								<div class="h-[calc(100vh-400px)] overflow-y-auto">
+									<div class="mb-4">
+										<button
+											class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-sm"
+											on:click={() => (showCreateObjectModal = true)}
+										>
+											+ Add New
+										</button>
+									</div>
+									<SchemaInstances
+										schema={selectedItem}
+										instances={getInstances($dbQuery.data.db, selectedItem.id)}
+										selectedInstance={selectedItem && !isSchema(selectedItem) ? selectedItem : null}
+										on:select={({ detail }) => {
+											selectedItem = detail.instance;
+											selectedInstance = detail.instance;
+											contentTab = 'properties';
 										}}
 									/>
 								</div>
@@ -1393,7 +1438,7 @@
 {#if showCreateObjectModal && selectedItem}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="w-full max-w-2xl p-6 rounded-lg bg-surface-100 dark:bg-surface-800">
-			<h2 class="mb-4 text-xl font-semibold">Create {selectedItem.json.title}</h2>
+			<h2 class="mb-4 text-xl font-semibold">+ Add New {selectedItem.json.title}</h2>
 
 			<SchemaForm
 				schema={selectedItem.json}

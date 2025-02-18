@@ -92,7 +92,15 @@ export default createOperation.mutation({
                                     maximum: { type: 'number' },
                                     minLength: { type: 'integer', minimum: 0 },
                                     maxLength: { type: 'integer', minimum: 0 },
-                                    required: { type: 'boolean' },
+                                    required: {
+                                        oneOf: [
+                                            { type: 'boolean' },
+                                            {
+                                                type: 'array',
+                                                items: { type: 'string' }
+                                            }
+                                        ]
+                                    },
                                     nullable: { type: 'boolean' },
                                     properties: { type: 'object' }, // For nested objects
                                     items: { type: 'object' }, // For arrays
@@ -118,10 +126,11 @@ export default createOperation.mutation({
                         success: false,
                         error: "Schema validation failed",
                         details: validate.errors?.map(err => ({
-                            field: err.instancePath.slice(1),
+                            field: err.instancePath.slice(1) || 'root',
                             message: err.message,
                             keyword: err.keyword,
-                            params: err.params
+                            params: err.params,
+                            schemaPath: err.schemaPath
                         }))
                     };
                 }
@@ -159,10 +168,11 @@ export default createOperation.mutation({
                         success: false,
                         error: "Validation failed",
                         details: validate.errors?.map(err => ({
-                            field: err.instancePath.slice(1),
+                            field: err.instancePath.slice(1) || 'root',
                             message: err.message,
                             keyword: err.keyword,
-                            params: err.params
+                            params: err.params,
+                            schemaPath: err.schemaPath
                         }))
                     };
                 }
@@ -174,7 +184,10 @@ export default createOperation.mutation({
                 p_json: input.json
             });
 
-            if (error) throw error;
+            if (error) {
+                console.error("Database error in editDB:", error);
+                throw new Error(`Database error: ${error.message}`);
+            }
 
             return {
                 success: true,
