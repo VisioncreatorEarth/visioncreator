@@ -457,7 +457,7 @@
 		console.log('Value changed:', { path, value, hasChanges, editedJson }); // Debug log
 	}
 
-	// Update the saveChanges function to include validation
+	// Update the saveChanges function to handle version updates
 	async function saveChanges() {
 		if (!selectedItem?.id || !editedJson) return;
 
@@ -468,7 +468,30 @@
 			});
 
 			if (result?.success) {
+				// Refetch the data
 				await $dbQuery.refetch();
+
+				// Find the new version in the updated data
+				if ($dbQuery.data?.db) {
+					// For schema items, find by title to ensure we get the latest version
+					if (isSchema(selectedItem)) {
+						const updatedItem = $dbQuery.data.db.find(
+							(item) => item.json.title === editedJson.title
+						);
+						if (updatedItem) {
+							selectedItem = updatedItem;
+						}
+					} else {
+						// For regular items, find by variation to get the latest version
+						const updatedItem = $dbQuery.data.db.find(
+							(item) => item.variation === selectedItem?.variation
+						);
+						if (updatedItem) {
+							selectedItem = updatedItem;
+						}
+					}
+				}
+
 				editedJson = null;
 				hasChanges = false;
 				message = { text: 'Changes saved successfully!', type: 'success' };
@@ -484,6 +507,17 @@
 				text: `Error saving changes: ${error instanceof Error ? error.message : String(error)}`,
 				type: 'error'
 			};
+		}
+	}
+
+	// Add reactive statement to handle version updates
+	$: if ($dbQuery.data?.db && selectedItem) {
+		// Keep the selected item in sync with the latest version
+		const currentVersion = $dbQuery.data.db.find(
+			(item) => item.variation === selectedItem.variation
+		);
+		if (currentVersion && currentVersion.id !== selectedItem.id) {
+			selectedItem = currentVersion;
 		}
 	}
 
@@ -760,6 +794,7 @@
 		showCreateObjectModal = false;
 	}
 
+	// Update the handleCreateObject function to switch to the new item after creation
 	async function handleCreateObject(event: CustomEvent<{ formData: Record<string, any> }>) {
 		if (!selectedItem?.id) return;
 
@@ -783,6 +818,15 @@
 			if (result?.success) {
 				message = { text: 'Object created successfully!', type: 'success' };
 				await $dbQuery.refetch();
+
+				// Switch to the newly created item
+				if ($dbQuery.data?.db && result.insertedData) {
+					const newItem = $dbQuery.data.db.find((item) => item.id === result.insertedData.id);
+					if (newItem) {
+						selectedItem = newItem;
+					}
+				}
+
 				showCreateObjectModal = false;
 				// Reset form
 				formData = {
