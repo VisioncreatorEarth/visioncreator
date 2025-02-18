@@ -273,6 +273,14 @@
 								minLength: 'Full name must be at least 2 characters long',
 								maxLength: 'Full name cannot exceed 100 characters'
 							}
+						},
+						address: {
+							type: 'object',
+							title: 'Address',
+							'x-relation': {
+								type: 'single',
+								schemaId: '286825b6-f1ce-41af-bfb7-2262a5faa10d'
+							}
 						}
 					},
 					required: ['fullName']
