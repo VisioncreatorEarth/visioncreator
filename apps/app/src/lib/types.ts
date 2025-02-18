@@ -60,6 +60,7 @@ export interface SchemaProperty {
         type: 'single' | 'multiple';
         schemaId: string;
     };
+    enum?: string[];
 }
 
 export interface Schema {
