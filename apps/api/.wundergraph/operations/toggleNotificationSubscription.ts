@@ -22,7 +22,6 @@ export default createOperation.mutation({
     }),
     handler: async ({ input, context }) => {
         const { userId, proposalId } = input;
-        console.log('Toggle subscription for:', { userId, proposalId });
 
         try {
             // First, get or create the notification context
@@ -32,7 +31,6 @@ export default createOperation.mutation({
                 .eq('proposal_id', proposalId)
                 .single() as { data: NotificationContext | null; error: { code: string } | null };
 
-            console.log('Context query result:', { contextData, contextError });
 
             if (contextError && contextError.code !== 'PGRST116') {
                 throw new Error('Failed to get notification context');
@@ -49,7 +47,6 @@ export default createOperation.mutation({
                     .select('id')
                     .single() as { data: NotificationContext | null; error: any };
 
-                console.log('New context result:', { newContext, createError });
 
                 if (createError || !newContext) {
                     throw new Error('Failed to create notification context');
@@ -68,14 +65,12 @@ export default createOperation.mutation({
                 .select('id')
                 .eq('context_id', contextId) as { data: Notification[] | null; error: any };
 
-            console.log('Notifications query result:', { notifications, notificationsError });
 
             if (notificationsError) {
                 throw new Error('Failed to get notifications');
             }
 
             if (!notifications || notifications.length === 0) {
-                console.log('No notifications found for context');
                 // Create a default notification for the context
                 const { data: newNotification, error: createNotifError } = await context.supabase
                     .from('notifications')
@@ -87,7 +82,6 @@ export default createOperation.mutation({
                     .select('id')
                     .single() as { data: Notification | null; error: any };
 
-                console.log('Created new notification:', { newNotification, createNotifError });
 
                 if (createNotifError || !newNotification) {
                     throw new Error('Failed to create notification');
@@ -115,14 +109,12 @@ export default createOperation.mutation({
                 .eq('recipient_id', userId)
                 .in('notification_id', notifications.map(n => n.id)) as { data: NotificationRecipient[] | null; error: any };
 
-            console.log('Existing subscriptions:', { existingSubscriptions, subError });
 
             if (subError) {
                 throw new Error('Failed to check existing subscriptions');
             }
 
             if (existingSubscriptions && existingSubscriptions.length > 0) {
-                console.log('Unsubscribing user');
                 // User is already subscribed, so unsubscribe
                 const { error: deleteError } = await context.supabase
                     .from('notification_recipients')
@@ -136,7 +128,6 @@ export default createOperation.mutation({
 
                 return { subscribed: false };
             } else {
-                console.log('Subscribing user');
                 // Subscribe user to all notifications
                 const subscriptions = notifications.map(notification => ({
                     recipient_id: userId,
