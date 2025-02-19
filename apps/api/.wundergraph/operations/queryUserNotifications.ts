@@ -1,29 +1,40 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
 
+interface Message {
+    id: string;
+    content: string;
+    created_at: string;
+}
+
+interface Profile {
+    id: string;
+    name: string;
+}
+
+interface Proposal {
+    id: string;
+    title: string;
+}
+
+interface NotificationContext {
+    proposal: Proposal;
+}
+
+interface Notification {
+    id: string;
+    created_at: string;
+    message: Message;
+    sender: Profile;
+    context: NotificationContext;
+}
+
 interface NotificationRecipient {
     id: string;
     is_read: boolean;
     read_at: string | null;
     created_at: string;
-    notifications: {
-        id: string;
-        created_at: string;
-        messages: {
-            id: string;
-            content: string;
-            created_at: string;
-        };
-        sender: {
-            id: string;
-            name: string;
-        };
-        context: {
-            proposal: {
-                id: string;
-                title: string;
-            };
-        };
-    };
+    notification_id: string;
+    notification: Notification;
 }
 
 export default createOperation.query({
@@ -36,9 +47,8 @@ export default createOperation.query({
             return { notifications: [] };
         }
 
-        console.log('Starting notification query for user:', userId);
 
-        // Get notifications with all related data in a single query
+        // Get only unread notifications with all related data in a single query
         const { data: notifications, error: notificationsError } = await context.supabase
             .from('notification_recipients')
             .select(`
@@ -46,20 +56,22 @@ export default createOperation.query({
                 is_read,
                 read_at,
                 created_at,
-                notifications (
+                notification_id,
+                notification:notifications!inner (
                     id,
                     created_at,
-                    messages (
+                    message_id,
+                    message:messages!inner (
                         id,
                         content,
                         created_at
                     ),
-                    sender:profiles (
+                    sender:profiles!inner (
                         id,
                         name
                     ),
-                    context:notification_contexts (
-                        proposal:proposals (
+                    context:notification_contexts!inner (
+                        proposal:proposals!inner (
                             id,
                             title
                         )
@@ -67,11 +79,9 @@ export default createOperation.query({
                 )
             `)
             .eq('recipient_id', userId)
+            .eq('is_read', false)
             .order('created_at', { ascending: false })
-            .limit(50) as {
-                data: NotificationRecipient[] | null;
-                error: any
-            };
+            .limit(50) as { data: NotificationRecipient[] | null; error: any };
 
         if (notificationsError) {
             console.error('Error fetching notifications:', notificationsError);
@@ -85,13 +95,12 @@ export default createOperation.query({
         // Transform the data to match the expected format
         const transformedNotifications = notifications.map(recipient => ({
             id: recipient.id,
-            notification_id: recipient.notifications.id,
-            message: recipient.notifications.messages,
-            sender: recipient.notifications.sender,
-            proposal: recipient.notifications.context.proposal,
+            message: recipient.notification.message,
+            sender: recipient.notification.sender,
+            proposal: recipient.notification.context.proposal,
             is_read: recipient.is_read,
             read_at: recipient.read_at,
-            created_at: recipient.notifications.created_at
+            created_at: recipient.notification.created_at
         }));
 
         return {
