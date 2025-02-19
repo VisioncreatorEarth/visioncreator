@@ -2,20 +2,15 @@
 HOW THIS NOTIFICATION SYSTEM WORKS:
 
 1. Core Concepts:
-   - All users are automatically subscribed to all proposals
-   - Notifications are created when messages are posted in proposals
-   - Simple notification model focused on proposal messages
-   - Read status tracking per user
+   - Users can subscribe/unsubscribe/resubscribe to proposals at any time
+   - Notifications are only generated for events during active subscription periods
+   - Each subscription tracks when it started
+   - System handles resubscription by creating new recipient records
 
 2. Tables Structure:
    - notification_contexts: Links notifications to proposals
    - notifications: Stores message notifications
-   - notification_recipients: Tracks who received each notification and read status
-
-3. Current Implementation:
-   - Automatic subscription to all proposals
-   - Message notifications in proposal contexts
-   - Read status tracking
+   - notification_recipients: Tracks active subscriptions and notifications
 */
 
 -- Create notification contexts table
@@ -30,22 +25,27 @@ CREATE TABLE notification_contexts (
 CREATE TABLE notifications (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     context_id UUID NOT NULL REFERENCES notification_contexts(id),
-    message_id UUID NOT NULL REFERENCES messages(id),
+    message_id UUID REFERENCES messages(id),
     sender_id UUID NOT NULL REFERENCES profiles(id),
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Create notification recipients table
+-- Create notification recipients table with subscription tracking
 CREATE TABLE notification_recipients (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    notification_id UUID NOT NULL REFERENCES notifications(id),
+    notification_id UUID REFERENCES notifications(id),
+    context_id UUID NOT NULL REFERENCES notification_contexts(id),
     recipient_id UUID NOT NULL REFERENCES profiles(id),
     is_read BOOLEAN DEFAULT false,
     read_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE (notification_id, recipient_id)
+    subscribed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add a unique constraint only for subscription records (where notification_id is null)
+CREATE UNIQUE INDEX idx_unique_subscription ON notification_recipients (context_id, recipient_id) 
+WHERE notification_id IS NULL;
 
 -- Add indexes
 CREATE INDEX idx_notification_contexts_proposal ON notification_contexts(proposal_id);
@@ -55,7 +55,9 @@ CREATE INDEX idx_notifications_sender ON notifications(sender_id);
 CREATE INDEX idx_notifications_created ON notifications(created_at);
 CREATE INDEX idx_notification_recipients_recipient ON notification_recipients(recipient_id);
 CREATE INDEX idx_notification_recipients_notification ON notification_recipients(notification_id);
+CREATE INDEX idx_notification_recipients_context ON notification_recipients(context_id);
 CREATE INDEX idx_notification_recipients_read_status ON notification_recipients(recipient_id, is_read);
+CREATE INDEX idx_notification_recipients_subscription ON notification_recipients(recipient_id, subscribed_at);
 
 -- Add triggers for updated_at
 CREATE TRIGGER notification_contexts_updated_at
@@ -121,11 +123,15 @@ BEGIN
         )
         RETURNING id INTO v_notification_id;
 
-        -- Add all users as recipients
-        INSERT INTO notification_recipients (notification_id, recipient_id)
-        SELECT v_notification_id, id
-        FROM profiles
-        WHERE id != NEW.sender_id;  -- Don't notify the sender
+        -- Add notification for subscribed users
+        -- This creates a new notification_recipient record for this specific notification
+        INSERT INTO notification_recipients (notification_id, context_id, recipient_id, subscribed_at)
+        SELECT DISTINCT v_notification_id, v_context_id, nr.recipient_id, nr.subscribed_at
+        FROM notification_recipients nr
+        WHERE nr.context_id = v_context_id
+        AND nr.recipient_id != NEW.sender_id  -- Don't notify the sender
+        AND nr.subscribed_at <= NEW.created_at  -- Only notify if subscribed before message
+        AND nr.notification_id IS NULL;  -- Only get the subscription records, not notification records
     END IF;
 
     RETURN NEW;

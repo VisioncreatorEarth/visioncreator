@@ -20,24 +20,19 @@ interface Profile {
     name: string | null;
 }
 
-interface DBNotificationContext {
+interface NotificationContext {
     id: string;
     proposal_id: string;
 }
 
 interface NotificationRecipient {
-    id: string;
-    notification_id: string;
-}
-
-interface DBNotification {
-    id: string;
     context_id: string;
 }
 
-interface NotificationContext {
-    id: string;
-    proposal_id: string;
+interface SubscriptionContext {
+    context: {
+        proposal_id: string;
+    };
 }
 
 interface Proposal {
@@ -126,50 +121,23 @@ export default createOperation.query({
 
         if (userId) {
             try {
-                // First get all notification recipients for the user
-                const { data: recipients, error: recipientsError } = await context.supabase
+                // Get all subscribed proposals for the user
+                const { data: subscriptions, error: subError } = await context.supabase
                     .from('notification_recipients')
-                    .select('id, notification_id')
-                    .eq('recipient_id', userId);
+                    .select(`
+                        context:notification_contexts!inner (
+                            proposal_id
+                        )
+                    `)
+                    .eq('recipient_id', userId) as { data: SubscriptionContext[] | null; error: any };
 
-                if (recipientsError) throw recipientsError;
-                if (!recipients || recipients.length === 0) {
-                    // No subscriptions found, continue with empty map
-                    console.log('No notification recipients found for user:', userId);
-                } else {
-                    // Get notifications for these recipients
-                    const notificationIds = (recipients as NotificationRecipient[])
-                        .map(r => r.notification_id);
-
-                    const { data: notifications, error: notificationsError } = await context.supabase
-                        .from('notifications')
-                        .select('id, context_id')
-                        .in('id', notificationIds);
-
-                    if (notificationsError) throw notificationsError;
-                    if (!notifications || notifications.length === 0) {
-                        console.log('No notifications found for recipients');
-                    } else {
-                        // Get contexts for these notifications
-                        const contextIds = (notifications as DBNotification[])
-                            .map(n => n.context_id);
-
-                        const { data: contexts, error: contextsError } = await context.supabase
-                            .from('notification_contexts')
-                            .select('id, proposal_id')
-                            .in('id', contextIds);
-
-                        if (contextsError) throw contextsError;
-                        if (!contexts || contexts.length === 0) {
-                            console.log('No contexts found for notifications');
-                        } else {
-                            // Create subscription map from proposal IDs
-                            subscriptionMap = new Map(
-                                (contexts as NotificationContext[])
-                                    .map(ctx => [ctx.proposal_id, true])
-                            );
-                        }
-                    }
+                if (subError) {
+                    console.error('Error fetching subscriptions:', subError);
+                } else if (subscriptions && subscriptions.length > 0) {
+                    // Create subscription map from proposal IDs
+                    subscriptionMap = new Map(
+                        subscriptions.map(sub => [sub.context.proposal_id, true])
+                    );
                 }
             } catch (error) {
                 console.error('Error fetching subscription status:', error);
