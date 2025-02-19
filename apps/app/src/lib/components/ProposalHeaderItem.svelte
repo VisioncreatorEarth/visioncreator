@@ -208,7 +208,18 @@ HOW THIS COMPONENT WORKS:
 	$: currentVoter = userData ? proposal.voters.find((v) => v.id === userData.id) : undefined;
 	$: currentVotes = currentVoter?.votes || 0;
 
-	// Handle subscription toggle
+	// Add subscription state handling
+	$: {
+		if ($toggleSubscriptionMutation.isSuccess && $toggleSubscriptionMutation.data) {
+			proposal = {
+				...proposal,
+				isSubscribed: $toggleSubscriptionMutation.data.subscribed
+			};
+			$toggleSubscriptionMutation.reset();
+		}
+	}
+
+	// Update handleSubscriptionToggle
 	async function handleSubscriptionToggle(e: Event) {
 		e.stopPropagation();
 		if (!userData?.id) return;
@@ -230,6 +241,20 @@ HOW THIS COMPONENT WORKS:
 		class="items-center justify-between hidden w-32 py-6 pl-6 border-r md:flex border-surface-700/50"
 	>
 		<div class="flex items-center gap-3">
+			{#if userData}
+				<button
+					class="absolute top-0 left-0 flex items-center justify-center px-3 py-1.5 transition-colors rounded-br-lg disabled:opacity-50 disabled:cursor-not-allowed {proposal.isSubscribed
+						? 'bg-success-500/10 hover:bg-success-500/20'
+						: 'bg-warning-500/10 hover:bg-warning-500/20'}"
+					on:click={handleSubscriptionToggle}
+					disabled={$toggleSubscriptionMutation.isLoading}
+				>
+					<Icon
+						icon={proposal.isSubscribed ? 'heroicons:bell' : 'heroicons:bell-slash'}
+						class="w-5 h-5 {proposal.isSubscribed ? 'text-success-400' : 'text-warning-400'}"
+					/>
+				</button>
+			{/if}
 			<div class="relative text-center">
 				<div class="flex items-center justify-center">
 					<p class="text-4xl font-bold text-tertiary-100">
@@ -321,34 +346,34 @@ HOW THIS COMPONENT WORKS:
 		<!-- First Row: Title and Tags -->
 		<div class="flex flex-col p-2 bg-surface-800/95">
 			<div class="flex items-start justify-between">
-				<h3 class="flex-1 mr-4 text-base font-semibold truncate text-tertiary-100">
+				{#if userData}
+					<button
+						class="flex items-center justify-center px-3 py-1.5 -ml-2 transition-colors rounded-br-lg disabled:opacity-50 disabled:cursor-not-allowed {proposal.isSubscribed
+							? 'bg-success-500/10 hover:bg-success-500/20'
+							: 'bg-warning-500/10 hover:bg-warning-500/20'}"
+						on:click={handleSubscriptionToggle}
+						disabled={$toggleSubscriptionMutation.isLoading}
+					>
+						<Icon
+							icon={proposal.isSubscribed ? 'heroicons:bell' : 'heroicons:bell-slash'}
+							class="w-5 h-5 {proposal.isSubscribed ? 'text-success-400' : 'text-warning-400'}"
+						/>
+					</button>
+				{/if}
+				<h3 class="flex-1 text-base font-semibold truncate text-tertiary-100">
 					{proposal.title}
 				</h3>
-				<div class="flex items-center gap-2">
-					{#if userData}
-						<button
-							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-							on:click={handleSubscriptionToggle}
-							disabled={$toggleSubscriptionMutation.isLoading}
-						>
-							<Icon
-								icon={proposal.isSubscribed ? 'heroicons:bell' : 'heroicons:bell-slash'}
-								class="w-5 h-5 text-tertiary-300"
-							/>
-						</button>
-					{/if}
-					{#if proposal.tags && proposal.tags.length > 0}
-						<div class="flex gap-1 shrink-0">
-							{#each proposal.tags as tag}
-								<div
-									class="px-1.5 py-0.5 text-[10px] font-medium rounded-lg bg-tertiary-500/10 text-tertiary-300"
-								>
-									{tag}
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
+				{#if proposal.tags && proposal.tags.length > 0}
+					<div class="flex gap-1 ml-2 shrink-0">
+						{#each proposal.tags as tag}
+							<div
+								class="px-1.5 py-0.5 text-[10px] font-medium rounded-lg bg-tertiary-500/10 text-tertiary-300"
+							>
+								{tag}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		</div>
 
@@ -508,18 +533,6 @@ HOW THIS COMPONENT WORKS:
 						{tag}
 					</div>
 				{/each}
-			{/if}
-			{#if userData}
-				<button
-					class="flex items-center justify-center px-2 py-1 transition-colors rounded-b-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
-					on:click|stopPropagation={handleSubscriptionToggle}
-					disabled={$toggleSubscriptionMutation.isLoading}
-				>
-					<Icon
-						icon={proposal.isSubscribed ? 'heroicons:bell' : 'heroicons:bell-slash'}
-						class="w-4 h-4 text-tertiary-300"
-					/>
-				</button>
 			{/if}
 			<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20">
 				<Icon icon={getStateIcon(proposal.state)} class="w-4 h-4 {getStateColor(proposal.state)}" />
