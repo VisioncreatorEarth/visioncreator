@@ -6,6 +6,9 @@ HOW THIS NOTIFICATION SYSTEM WORKS:
    - Notifications are generated for:
      * New messages in proposals
      * New votes (upvotes and downvotes)
+   - Auto-subscription on interaction:
+     * Writing a message
+     * Voting (up/down)
    - Each subscription tracks when it started
    - System handles resubscription by creating new recipient records
 
@@ -226,6 +229,74 @@ CREATE TRIGGER create_proposal_notification_context_trigger
     AFTER INSERT ON proposals
     FOR EACH ROW
     EXECUTE FUNCTION create_proposal_notification_context();
+
+-- Function to auto-subscribe users on interaction
+CREATE OR REPLACE FUNCTION auto_subscribe_on_interaction()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_context_id UUID;
+    v_proposal_id UUID;
+    v_user_id UUID;
+BEGIN
+    -- Determine proposal_id and user_id based on trigger source
+    IF TG_TABLE_NAME = 'messages' THEN
+        IF NEW.context_type = 'proposal' THEN
+            v_proposal_id := NEW.context_id;
+            v_user_id := NEW.sender_id;
+        ELSE
+            RETURN NEW;
+        END IF;
+    ELSIF TG_TABLE_NAME = 'token_transactions' THEN
+        -- Only subscribe on stake (upvote), not on unstake
+        IF NEW.transaction_type = 'stake' AND NEW.proposal_id IS NOT NULL THEN
+            v_proposal_id := NEW.proposal_id;
+            v_user_id := NEW.from_user_id;
+        ELSE
+            RETURN NEW;
+        END IF;
+    END IF;
+
+    -- Get or create notification context
+    SELECT id INTO v_context_id
+    FROM notification_contexts
+    WHERE proposal_id = v_proposal_id;
+
+    IF v_context_id IS NULL THEN
+        INSERT INTO notification_contexts (proposal_id)
+        VALUES (v_proposal_id)
+        RETURNING id INTO v_context_id;
+    END IF;
+
+    -- Create subscription if it doesn't exist
+    INSERT INTO notification_recipients (
+        context_id,
+        recipient_id,
+        subscribed_at
+    )
+    VALUES (
+        v_context_id,
+        v_user_id,
+        CURRENT_TIMESTAMP
+    )
+    ON CONFLICT (context_id, recipient_id) 
+    WHERE notification_id IS NULL 
+    DO NOTHING;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create triggers for auto-subscription
+CREATE TRIGGER auto_subscribe_on_message_trigger
+    AFTER INSERT ON messages
+    FOR EACH ROW
+    EXECUTE FUNCTION auto_subscribe_on_interaction();
+
+CREATE TRIGGER auto_subscribe_on_vote_trigger
+    AFTER INSERT ON token_transactions
+    FOR EACH ROW
+    WHEN (NEW.transaction_type IN ('stake', 'unstake') AND NEW.proposal_id IS NOT NULL)
+    EXECUTE FUNCTION auto_subscribe_on_interaction();
 
 -- Grant access to service role
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
