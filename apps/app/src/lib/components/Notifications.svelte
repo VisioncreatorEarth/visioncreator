@@ -4,14 +4,15 @@ HOW THIS COMPONENT WORKS:
 1. Overview:
    This component handles the notification system:
    - Displays unread notifications in a Tinder-like carousel
+   - Shows different types of notifications (messages, votes)
    - Swipe right to mark as read
    - Swipe left to view later (skip)
    - Shows newest notifications first
    - Real-time updates via polling
-   - Immediate UI feedback for actions
 
 2. Features:
    - Tinder-style card interface
+   - Different icons for different notification types
    - Swipe/button interactions
    - Real-time notification updates (5s polling)
    - Avatar integration
@@ -27,11 +28,8 @@ HOW THIS COMPONENT WORKS:
 	interface NotificationData {
 		notifications: Array<{
 			id: string;
-			message: {
-				id: string;
-				content: string;
-				created_at: string;
-			};
+			content: string;
+			type: 'message' | 'vote_up' | 'vote_down';
 			sender: {
 				id: string;
 				name: string | null;
@@ -43,6 +41,11 @@ HOW THIS COMPONENT WORKS:
 			is_read: boolean;
 			read_at: string | null;
 			created_at: string;
+			metadata: {
+				transaction_type?: string;
+				amount?: number;
+				proposal_id?: string;
+			};
 		}>;
 	}
 
@@ -89,6 +92,34 @@ HOW THIS COMPONENT WORKS:
 			design: { highlight },
 			size: 'sm' as const
 		};
+	}
+
+	// Helper function to get notification icon
+	function getNotificationIcon(type: 'message' | 'vote_up' | 'vote_down') {
+		switch (type) {
+			case 'message':
+				return 'heroicons:chat-bubble-left-text';
+			case 'vote_up':
+				return 'heroicons:arrow-up-circle';
+			case 'vote_down':
+				return 'heroicons:arrow-down-circle';
+			default:
+				return 'heroicons:bell';
+		}
+	}
+
+	// Helper function to get notification icon color class
+	function getNotificationIconColor(type: 'message' | 'vote_up' | 'vote_down') {
+		switch (type) {
+			case 'message':
+				return 'text-primary-400';
+			case 'vote_up':
+				return 'text-success-400';
+			case 'vote_down':
+				return 'text-warning-400';
+			default:
+				return 'text-tertiary-400';
+		}
 	}
 
 	$: notifications = $notificationsQuery.data?.notifications || [];
@@ -140,16 +171,22 @@ HOW THIS COMPONENT WORKS:
 						<!-- Content -->
 						<div class="flex-1 min-w-0">
 							<div class="flex items-baseline justify-between gap-2">
-								<p class="text-sm font-medium text-tertiary-100 dark:text-surface-100">
-									{currentNotification.sender.name || 'Unknown User'}
-								</p>
+								<div class="flex items-center gap-2">
+									<p class="text-sm font-medium text-tertiary-100 dark:text-surface-100">
+										{currentNotification.sender.name || 'Unknown User'}
+									</p>
+									<Icon
+										icon={getNotificationIcon(currentNotification.type)}
+										class="w-4 h-4 {getNotificationIconColor(currentNotification.type)}"
+									/>
+								</div>
 								<span class="text-xs text-tertiary-300 dark:text-surface-300">
 									{new Date(currentNotification.created_at).toLocaleString()}
 								</span>
 							</div>
 
 							<p class="mt-3 text-sm text-tertiary-200 dark:text-surface-200">
-								{currentNotification.message.content}
+								{currentNotification.content}
 							</p>
 
 							<div class="mt-4">

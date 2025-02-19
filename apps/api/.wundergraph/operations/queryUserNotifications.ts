@@ -23,9 +23,15 @@ interface NotificationContext {
 interface Notification {
     id: string;
     created_at: string;
-    message: Message;
+    message?: Message;
     sender: Profile;
     context: NotificationContext;
+    notification_type: 'message' | 'vote_up' | 'vote_down';
+    metadata: {
+        transaction_type?: string;
+        amount?: number;
+        proposal_id?: string;
+    };
 }
 
 interface NotificationRecipient {
@@ -33,7 +39,6 @@ interface NotificationRecipient {
     is_read: boolean;
     read_at: string | null;
     created_at: string;
-    notification_id: string;
     notification: Notification;
 }
 
@@ -47,7 +52,6 @@ export default createOperation.query({
             return { notifications: [] };
         }
 
-
         // Get only unread notifications with all related data in a single query
         const { data: notifications, error: notificationsError } = await context.supabase
             .from('notification_recipients')
@@ -56,12 +60,12 @@ export default createOperation.query({
                 is_read,
                 read_at,
                 created_at,
-                notification_id,
                 notification:notifications!inner (
                     id,
                     created_at,
-                    message_id,
-                    message:messages!inner (
+                    notification_type,
+                    metadata,
+                    message:messages (
                         id,
                         content,
                         created_at
@@ -92,16 +96,36 @@ export default createOperation.query({
             return { notifications: [] };
         }
 
-        // Transform the data to match the expected format
-        const transformedNotifications = notifications.map(recipient => ({
-            id: recipient.id,
-            message: recipient.notification.message,
-            sender: recipient.notification.sender,
-            proposal: recipient.notification.context.proposal,
-            is_read: recipient.is_read,
-            read_at: recipient.read_at,
-            created_at: recipient.notification.created_at
-        }));
+        // Transform the data to match the expected format and generate appropriate content
+        const transformedNotifications = notifications.map(recipient => {
+            const notification = recipient.notification;
+            let content = '';
+
+            // Generate appropriate content based on notification type
+            switch (notification.notification_type) {
+                case 'message':
+                    content = notification.message?.content || '';
+                    break;
+                case 'vote_up':
+                    content = `voted on proposal "${notification.context.proposal.title}"`;
+                    break;
+                case 'vote_down':
+                    content = `removed their vote from proposal "${notification.context.proposal.title}"`;
+                    break;
+            }
+
+            return {
+                id: recipient.id,
+                content,
+                sender: notification.sender,
+                proposal: notification.context.proposal,
+                is_read: recipient.is_read,
+                read_at: recipient.read_at,
+                created_at: notification.created_at,
+                type: notification.notification_type,
+                metadata: notification.metadata
+            };
+        });
 
         return {
             notifications: transformedNotifications
