@@ -6,9 +6,10 @@ HOW THIS COMPONENT WORKS:
    - Displays unread notifications in a Tinder-like carousel
    - Shows different types of notifications (messages, votes)
    - Swipe right to mark as read
-   - Swipe left to view later (skip)
+   - Swipe left to snooze/skip for later
    - Shows newest notifications first
    - Real-time updates via polling
+   - Maintains proper notification state
 
 2. Features:
    - Tinder-style card interface
@@ -17,6 +18,7 @@ HOW THIS COMPONENT WORKS:
    - Real-time notification updates (5s polling)
    - Avatar integration
    - Responsive design
+   - Proper state management for skipped notifications
 -->
 
 <script lang="ts">
@@ -24,6 +26,7 @@ HOW THIS COMPONENT WORKS:
 	import Avatar from './Avatar.svelte';
 	import Icon from '@iconify/svelte';
 	import { fade, fly } from 'svelte/transition';
+	import { writable } from 'svelte/store';
 
 	interface NotificationData {
 		notifications: Array<{
@@ -49,7 +52,7 @@ HOW THIS COMPONENT WORKS:
 		}>;
 	}
 
-	// Setup notifications query
+	// Setup notifications query with proper typing
 	const notificationsQuery = createQuery({
 		operationName: 'queryUserNotifications' as const,
 		enabled: true,
@@ -61,7 +64,11 @@ HOW THIS COMPONENT WORKS:
 		operationName: 'markNotificationsRead'
 	});
 
-	let currentIndex = 0;
+	// Store for skipped notification IDs
+	const skippedNotifications = writable<Set<string>>(new Set());
+
+	// Store for current notification index
+	const currentIndex = writable(0);
 
 	// Add function to handle mark as read
 	async function handleMarkAsRead(notification: any) {
@@ -70,8 +77,15 @@ HOW THIS COMPONENT WORKS:
 				await $markNotificationsReadMutation.mutateAsync({
 					notificationIds: [notification.id]
 				});
+
 				// Move to next notification
-				currentIndex++;
+				currentIndex.update((n) => n + 1);
+
+				// Reset if we've reached the end
+				if ($currentIndex >= activeNotifications.length) {
+					currentIndex.set(0);
+				}
+
 				// Immediately refetch notifications
 				await $notificationsQuery.refetch();
 			} catch (error) {
@@ -80,9 +94,21 @@ HOW THIS COMPONENT WORKS:
 		}
 	}
 
-	// Add function to handle skip
-	function handleSkip() {
-		currentIndex++;
+	// Add function to handle skip/snooze
+	function handleSkip(notification: any) {
+		// Add to skipped set
+		skippedNotifications.update((set) => {
+			set.add(notification.id);
+			return set;
+		});
+
+		// Move to next notification
+		currentIndex.update((n) => n + 1);
+
+		// Reset if we've reached the end
+		if ($currentIndex >= activeNotifications.length) {
+			currentIndex.set(0);
+		}
 	}
 
 	// Helper function to get avatar props
@@ -122,9 +148,27 @@ HOW THIS COMPONENT WORKS:
 		}
 	}
 
-	$: notifications = $notificationsQuery.data?.notifications || [];
-	$: currentNotification = notifications[currentIndex];
-	$: hasMore = currentIndex < notifications.length;
+	// Reactive declarations for notification handling
+	$: allNotifications = $notificationsQuery.data?.notifications || [];
+
+	// Filter out skipped notifications
+	$: activeNotifications = allNotifications.filter((n) => !$skippedNotifications.has(n.id));
+
+	// Get current notification
+	$: currentNotification = activeNotifications[$currentIndex];
+
+	// Check if there are more notifications
+	$: hasMore = activeNotifications.length > 0;
+
+	// Reset index if it's out of bounds
+	$: if ($currentIndex >= activeNotifications.length && activeNotifications.length > 0) {
+		currentIndex.set(0);
+	}
+
+	// Reset skipped notifications when all notifications are processed
+	$: if (activeNotifications.length === 0 && $skippedNotifications.size > 0) {
+		skippedNotifications.set(new Set());
+	}
 </script>
 
 <section
@@ -135,8 +179,11 @@ HOW THIS COMPONENT WORKS:
 			Recent Notifications
 		</h3>
 		<div class="text-sm text-tertiary-300 dark:text-surface-300">
-			{#if notifications.length > 0}
-				{currentIndex + 1} of {notifications.length}
+			{#if activeNotifications.length > 0}
+				{$currentIndex + 1} of {activeNotifications.length}
+				{#if $skippedNotifications.size > 0}
+					<span class="ml-2 text-warning-400">({$skippedNotifications.size} snoozed)</span>
+				{/if}
 			{/if}
 		</div>
 	</header>
@@ -153,11 +200,23 @@ HOW THIS COMPONENT WORKS:
 					Failed to load notifications: {$notificationsQuery.error.message}
 				</p>
 			</div>
-		{:else if !notifications.length}
+		{:else if !hasMore}
 			<div class="p-4 text-center">
-				<p class="text-tertiary-200 dark:text-surface-200">No unread notifications</p>
+				<p class="text-tertiary-200 dark:text-surface-200">
+					{allNotifications.length === 0 ? 'No unread notifications' : 'No more notifications'}
+				</p>
+				{#if $skippedNotifications.size > 0}
+					<button
+						class="mt-4 btn variant-ghost-warning"
+						on:click={() => skippedNotifications.set(new Set())}
+					>
+						Show {$skippedNotifications.size} snoozed notification{$skippedNotifications.size !== 1
+							? 's'
+							: ''}
+					</button>
+				{/if}
 			</div>
-		{:else if hasMore}
+		{:else if currentNotification}
 			<div class="relative" in:fly={{ x: 300, duration: 300 }} out:fly={{ x: -300, duration: 300 }}>
 				<div
 					class="p-6 transition-all duration-300 border rounded-lg bg-tertiary-500/10 dark:bg-surface-800/30 border-tertiary-500/20 dark:border-surface-600/20"
@@ -201,7 +260,7 @@ HOW THIS COMPONENT WORKS:
 					<div class="flex justify-center gap-4 mt-6">
 						<button
 							class="flex items-center justify-center w-12 h-12 transition-all duration-200 border rounded-full hover:scale-110 bg-warning-500/10 border-warning-500/20 hover:bg-warning-500/20"
-							on:click={handleSkip}
+							on:click={() => handleSkip(currentNotification)}
 						>
 							<Icon icon="heroicons:clock" class="w-6 h-6 text-warning-400" />
 						</button>
@@ -214,10 +273,6 @@ HOW THIS COMPONENT WORKS:
 						</button>
 					</div>
 				</div>
-			</div>
-		{:else}
-			<div class="p-4 text-center" in:fade>
-				<p class="text-tertiary-200 dark:text-surface-200">No more notifications</p>
 			</div>
 		{/if}
 	</div>
