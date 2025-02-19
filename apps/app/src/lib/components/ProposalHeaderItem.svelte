@@ -29,6 +29,7 @@ HOW THIS COMPONENT WORKS:
 	import type { Proposal } from '$lib/types/proposals';
 	import { fade, fly } from 'svelte/transition';
 	import { onDestroy } from 'svelte';
+	import { createMutation } from '$lib/wundergraph';
 
 	// Define VoterInfo interface
 	interface VoterInfo {
@@ -40,7 +41,10 @@ HOW THIS COMPONENT WORKS:
 	}
 
 	// Props with proper typing
-	export let proposal: Proposal & { voters: VoterInfo[] };
+	export let proposal: Proposal & {
+		voters: VoterInfo[];
+		isSubscribed: boolean;
+	};
 	export let userData: { id: string; name: string; onboarded: boolean } | null;
 	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
 	export let canUnstakeVote: (proposal: Proposal, voter?: VoterInfo) => boolean;
@@ -59,6 +63,11 @@ HOW THIS COMPONENT WORKS:
 	export let onDecision: (proposalId: string, decision: 'veto' | 'pass') => void;
 	export let isAdmin: (userId: string) => boolean;
 	export let getTimeAgo: (date: string) => string;
+
+	// Add toggle subscription mutation
+	const toggleSubscriptionMutation = createMutation({
+		operationName: 'toggleNotificationSubscription' as const
+	});
 
 	// State thresholds for progress bars
 	const STATE_THRESHOLDS = {
@@ -198,6 +207,21 @@ HOW THIS COMPONENT WORKS:
 	// Get current voter info directly from proposal
 	$: currentVoter = userData ? proposal.voters.find((v) => v.id === userData.id) : undefined;
 	$: currentVotes = currentVoter?.votes || 0;
+
+	// Handle subscription toggle
+	async function handleSubscriptionToggle(e: Event) {
+		e.stopPropagation();
+		if (!userData?.id) return;
+
+		try {
+			await $toggleSubscriptionMutation.mutateAsync({
+				proposalId: proposal.id,
+				userId: userData.id
+			});
+		} catch (error) {
+			console.error('Failed to toggle subscription:', error);
+		}
+	}
 </script>
 
 <div class="relative flex flex-col md:flex-row md:items-stretch">
@@ -300,17 +324,31 @@ HOW THIS COMPONENT WORKS:
 				<h3 class="flex-1 mr-4 text-base font-semibold truncate text-tertiary-100">
 					{proposal.title}
 				</h3>
-				{#if proposal.tags && proposal.tags.length > 0}
-					<div class="flex gap-1 shrink-0">
-						{#each proposal.tags as tag}
-							<div
-								class="px-1.5 py-0.5 text-[10px] font-medium rounded-lg bg-tertiary-500/10 text-tertiary-300"
-							>
-								{tag}
-							</div>
-						{/each}
-					</div>
-				{/if}
+				<div class="flex items-center gap-2">
+					{#if userData}
+						<button
+							class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+							on:click={handleSubscriptionToggle}
+							disabled={$toggleSubscriptionMutation.isLoading}
+						>
+							<Icon
+								icon={proposal.isSubscribed ? 'heroicons:bell' : 'heroicons:bell-slash'}
+								class="w-5 h-5 text-tertiary-300"
+							/>
+						</button>
+					{/if}
+					{#if proposal.tags && proposal.tags.length > 0}
+						<div class="flex gap-1 shrink-0">
+							{#each proposal.tags as tag}
+								<div
+									class="px-1.5 py-0.5 text-[10px] font-medium rounded-lg bg-tertiary-500/10 text-tertiary-300"
+								>
+									{tag}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 
@@ -470,6 +508,18 @@ HOW THIS COMPONENT WORKS:
 						{tag}
 					</div>
 				{/each}
+			{/if}
+			{#if userData}
+				<button
+					class="flex items-center justify-center px-2 py-1 transition-colors rounded-b-lg hover:bg-tertiary-500/20 disabled:opacity-50 disabled:cursor-not-allowed bg-tertiary-500/10"
+					on:click|stopPropagation={handleSubscriptionToggle}
+					disabled={$toggleSubscriptionMutation.isLoading}
+				>
+					<Icon
+						icon={proposal.isSubscribed ? 'heroicons:bell' : 'heroicons:bell-slash'}
+						class="w-4 h-4 text-tertiary-300"
+					/>
+				</button>
 			{/if}
 			<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-bl-lg bg-surface-900/20">
 				<Icon icon={getStateIcon(proposal.state)} class="w-4 h-4 {getStateColor(proposal.state)}" />

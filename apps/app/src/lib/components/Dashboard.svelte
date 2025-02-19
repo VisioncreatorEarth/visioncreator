@@ -1,8 +1,56 @@
 <script lang="ts">
 	import { createMutation, createQuery } from '$lib/wundergraph';
 	import { onMount } from 'svelte';
+	import Avatar from './Avatar.svelte';
+
 	export let me;
 	const query = $me.query;
+
+	interface NotificationData {
+		notifications: Array<{
+			id: string;
+			message: {
+				id: string;
+				content: string;
+				created_at: string;
+			};
+			sender: {
+				id: string;
+				name: string | null;
+				avatar_url: string | null;
+			};
+			proposal: {
+				id: string;
+				title: string;
+			};
+			is_read: boolean;
+			read_at: string | null;
+			created_at: string;
+		}>;
+	}
+
+	// Setup notifications query
+	const notificationsQuery = createQuery({
+		operationName: 'queryUserNotifications' as const,
+		enabled: true,
+		refetchInterval: 5000
+	});
+
+	// Debug logging for notifications query state
+	$: console.log('Notifications Query State:', {
+		isLoading: $notificationsQuery.isLoading,
+		isError: !!$notificationsQuery.error,
+		error: $notificationsQuery.error,
+		data: $notificationsQuery.data
+	});
+
+	// Debug logging for notifications data
+	$: if ($notificationsQuery.data) {
+		console.log('Received notifications:', {
+			count: $notificationsQuery.data.notifications?.length,
+			notifications: $notificationsQuery.data.notifications
+		});
+	}
 
 	const FIBONACCI_MILESTONES = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144];
 	const TOTAL_FOUNDERS = 144;
@@ -53,6 +101,35 @@
 	});
 
 	let mailSent = false;
+
+	// Add markNotificationsRead mutation
+	const markNotificationsReadMutation = createMutation({
+		operationName: 'markNotificationsRead'
+	});
+
+	// Add function to handle notification click
+	async function handleNotificationClick(notification: any) {
+		if (!notification.is_read) {
+			try {
+				await $markNotificationsReadMutation.mutateAsync({
+					notificationIds: [notification.id]
+				});
+				// Refetch notifications to update UI
+				await $notificationsQuery.refetch();
+			} catch (error) {
+				console.error('Error marking notification as read:', error);
+			}
+		}
+	}
+
+	// Helper function to get avatar props
+	function getAvatarProps(seed: string, highlight = false) {
+		return {
+			data: { seed },
+			design: { highlight },
+			size: 'sm' as const
+		};
+	}
 
 	async function handleRequestDetails() {
 		try {
@@ -157,7 +234,7 @@ Chielo, Yvonne and Samuel
 					{#if !mailSent}
 						<!-- CTA Button -->
 						<button
-							class=" btn bg-gradient-to-br variant-gradient-secondary-primary btn-md"
+							class="btn bg-gradient-to-br variant-gradient-secondary-primary btn-md"
 							on:click={handleRequestDetails}
 							disabled={$sendMailMutation.isLoading}
 						>
@@ -207,6 +284,84 @@ Chielo, Yvonne and Samuel
 							</div>
 						</div>
 					{/if}
+
+					<!-- Notifications Section -->
+					<div class="w-full max-w-2xl mt-8">
+						<div class="space-y-4">
+							<h3 class="text-xl font-semibold text-tertiary-100 dark:text-surface-100">
+								Recent Notifications
+							</h3>
+
+							<!-- Notifications Query -->
+							{#if $notificationsQuery.isLoading}
+								<div class="flex items-center justify-center p-4">
+									<div class="text-tertiary-200 dark:text-surface-200">
+										Loading notifications...
+									</div>
+								</div>
+							{:else if $notificationsQuery.error}
+								<div class="p-4 border rounded-lg bg-red-500/10 border-red-500/20">
+									<p class="text-red-500">
+										Failed to load notifications: {$notificationsQuery.error.message}
+									</p>
+								</div>
+							{:else if !$notificationsQuery.data?.notifications?.length}
+								<div
+									class="p-4 text-center border rounded-lg bg-tertiary-500/10 dark:bg-surface-800/50 border-tertiary-500/20 dark:border-surface-600/20"
+								>
+									<p class="text-tertiary-200 dark:text-surface-200">No notifications yet</p>
+								</div>
+							{:else}
+								<div class="space-y-2">
+									{#each $notificationsQuery.data.notifications as notification}
+										<div
+											class="p-4 transition-colors border rounded-lg hover:bg-tertiary-500/5 dark:hover:bg-surface-800/50 bg-tertiary-500/10 dark:bg-surface-800/30 border-tertiary-500/20 dark:border-surface-600/20 cursor-pointer"
+											class:opacity-75={notification.is_read}
+											on:click={() => handleNotificationClick(notification)}
+										>
+											<div class="flex items-start gap-4">
+												<!-- Avatar -->
+												<div class="flex-shrink-0">
+													<Avatar me={getAvatarProps(notification.sender.id)} />
+												</div>
+
+												<!-- Content -->
+												<div class="flex-1 min-w-0">
+													<div class="flex items-baseline justify-between gap-2">
+														<p class="text-sm font-medium text-tertiary-100 dark:text-surface-100">
+															{notification.sender.name || 'Unknown User'}
+														</p>
+														<span class="text-xs text-tertiary-300 dark:text-surface-300">
+															{new Date(notification.created_at).toLocaleString()}
+														</span>
+													</div>
+
+													<p class="mt-1 text-sm text-tertiary-200 dark:text-surface-200">
+														{notification.message.content}
+													</p>
+
+													<div class="mt-2">
+														<span
+															class="text-xs font-medium text-tertiary-300 dark:text-surface-300"
+														>
+															in proposal: {notification.proposal.title}
+														</span>
+													</div>
+												</div>
+
+												<!-- Unread indicator -->
+												{#if !notification.is_read}
+													<div class="flex-shrink-0">
+														<div class="w-2 h-2 rounded-full bg-tertiary-300 dark:bg-surface-200" />
+													</div>
+												{/if}
+											</div>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
