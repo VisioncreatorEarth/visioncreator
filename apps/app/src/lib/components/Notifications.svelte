@@ -3,15 +3,17 @@ HOW THIS COMPONENT WORKS:
 
 1. Overview:
    This component handles the notification system:
-   - Displays unread notifications from the database
-   - Handles real-time updates via polling
-   - Manages read/unread state
-   - Shows avatars and message details
-   - Provides immediate UI feedback
+   - Displays unread notifications in a Tinder-like carousel
+   - Swipe right to mark as read
+   - Swipe left to view later (skip)
+   - Shows newest notifications first
+   - Real-time updates via polling
+   - Immediate UI feedback for actions
 
 2. Features:
+   - Tinder-style card interface
+   - Swipe/button interactions
    - Real-time notification updates (5s polling)
-   - Click to mark as read with immediate refetch
    - Avatar integration
    - Responsive design
 -->
@@ -19,6 +21,8 @@ HOW THIS COMPONENT WORKS:
 <script lang="ts">
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Avatar from './Avatar.svelte';
+	import Icon from '@iconify/svelte';
+	import { fade, fly } from 'svelte/transition';
 
 	interface NotificationData {
 		notifications: Array<{
@@ -54,20 +58,28 @@ HOW THIS COMPONENT WORKS:
 		operationName: 'markNotificationsRead'
 	});
 
-	// Add function to handle notification click
-	async function handleNotificationClick(notification: any) {
+	let currentIndex = 0;
+
+	// Add function to handle mark as read
+	async function handleMarkAsRead(notification: any) {
 		if (!notification.is_read) {
 			try {
 				await $markNotificationsReadMutation.mutateAsync({
 					notificationIds: [notification.id]
 				});
-
+				// Move to next notification
+				currentIndex++;
 				// Immediately refetch notifications
 				await $notificationsQuery.refetch();
 			} catch (error) {
 				console.error('Error marking notification as read:', error);
 			}
 		}
+	}
+
+	// Add function to handle skip
+	function handleSkip() {
+		currentIndex++;
 	}
 
 	// Helper function to get avatar props
@@ -78,19 +90,28 @@ HOW THIS COMPONENT WORKS:
 			size: 'sm' as const
 		};
 	}
+
+	$: notifications = $notificationsQuery.data?.notifications || [];
+	$: currentNotification = notifications[currentIndex];
+	$: hasMore = currentIndex < notifications.length;
 </script>
 
 <section
-	class="w-full space-y-4 bg-tertiary-500/10 dark:bg-surface-800/50 rounded-lg p-6 border border-tertiary-500/20 dark:border-surface-600/20"
+	class="w-full p-6 space-y-4 border rounded-lg bg-tertiary-500/10 dark:bg-surface-800/50 border-tertiary-500/20 dark:border-surface-600/20"
 >
-	<header>
+	<header class="flex items-center justify-between">
 		<h3 class="text-xl font-semibold text-tertiary-100 dark:text-surface-100">
 			Recent Notifications
 		</h3>
+		<div class="text-sm text-tertiary-300 dark:text-surface-300">
+			{#if notifications.length > 0}
+				{currentIndex + 1} of {notifications.length}
+			{/if}
+		</div>
 	</header>
 
 	<!-- Notifications Content -->
-	<div class="space-y-4">
+	<div class="relative min-h-[200px]">
 		{#if $notificationsQuery.isLoading}
 			<div class="flex items-center justify-center p-4">
 				<div class="text-tertiary-200 dark:text-surface-200">Loading notifications...</div>
@@ -101,54 +122,65 @@ HOW THIS COMPONENT WORKS:
 					Failed to load notifications: {$notificationsQuery.error.message}
 				</p>
 			</div>
-		{:else if !$notificationsQuery.data?.notifications?.length}
+		{:else if !notifications.length}
 			<div class="p-4 text-center">
 				<p class="text-tertiary-200 dark:text-surface-200">No unread notifications</p>
 			</div>
-		{:else}
-			<div class="space-y-2">
-				{#each $notificationsQuery.data.notifications as notification}
-					<div
-						class="p-4 transition-colors border rounded-lg hover:bg-tertiary-500/5 dark:hover:bg-surface-800/50 bg-tertiary-500/10 dark:bg-surface-800/30 border-tertiary-500/20 dark:border-surface-600/20 cursor-pointer"
-						on:click={() => handleNotificationClick(notification)}
-					>
-						<div class="flex items-start gap-4">
-							<!-- Avatar -->
-							<div class="flex-shrink-0">
-								<Avatar me={getAvatarProps(notification.sender.id)} />
-							</div>
+		{:else if hasMore}
+			<div class="relative" in:fly={{ x: 300, duration: 300 }} out:fly={{ x: -300, duration: 300 }}>
+				<div
+					class="p-6 transition-all duration-300 border rounded-lg bg-tertiary-500/10 dark:bg-surface-800/30 border-tertiary-500/20 dark:border-surface-600/20"
+				>
+					<div class="flex items-start gap-4">
+						<!-- Avatar -->
+						<div class="flex-shrink-0">
+							<Avatar me={getAvatarProps(currentNotification.sender.id)} />
+						</div>
 
-							<!-- Content -->
-							<div class="flex-1 min-w-0">
-								<div class="flex items-baseline justify-between gap-2">
-									<p class="text-sm font-medium text-tertiary-100 dark:text-surface-100">
-										{notification.sender.name || 'Unknown User'}
-									</p>
-									<span class="text-xs text-tertiary-300 dark:text-surface-300">
-										{new Date(notification.created_at).toLocaleString()}
-									</span>
-								</div>
-
-								<p class="mt-1 text-sm text-tertiary-200 dark:text-surface-200">
-									{notification.message.content}
+						<!-- Content -->
+						<div class="flex-1 min-w-0">
+							<div class="flex items-baseline justify-between gap-2">
+								<p class="text-sm font-medium text-tertiary-100 dark:text-surface-100">
+									{currentNotification.sender.name || 'Unknown User'}
 								</p>
-
-								<div class="mt-2">
-									<span class="text-xs font-medium text-tertiary-300 dark:text-surface-300">
-										in proposal: {notification.proposal.title}
-									</span>
-								</div>
+								<span class="text-xs text-tertiary-300 dark:text-surface-300">
+									{new Date(currentNotification.created_at).toLocaleString()}
+								</span>
 							</div>
 
-							<!-- Unread indicator -->
-							{#if !notification.is_read}
-								<div class="flex-shrink-0">
-									<div class="w-2 h-2 rounded-full bg-tertiary-300 dark:bg-surface-200" />
-								</div>
-							{/if}
+							<p class="mt-3 text-sm text-tertiary-200 dark:text-surface-200">
+								{currentNotification.message.content}
+							</p>
+
+							<div class="mt-4">
+								<span class="text-xs font-medium text-tertiary-300 dark:text-surface-300">
+									in proposal: {currentNotification.proposal.title}
+								</span>
+							</div>
 						</div>
 					</div>
-				{/each}
+
+					<!-- Action Buttons -->
+					<div class="flex justify-center gap-4 mt-6">
+						<button
+							class="flex items-center justify-center w-12 h-12 transition-all duration-200 border rounded-full hover:scale-110 bg-warning-500/10 border-warning-500/20 hover:bg-warning-500/20"
+							on:click={handleSkip}
+						>
+							<Icon icon="heroicons:clock" class="w-6 h-6 text-warning-400" />
+						</button>
+
+						<button
+							class="flex items-center justify-center w-12 h-12 transition-all duration-200 border rounded-full hover:scale-110 bg-success-500/10 border-success-500/20 hover:bg-success-500/20"
+							on:click={() => handleMarkAsRead(currentNotification)}
+						>
+							<Icon icon="heroicons:check" class="w-6 h-6 text-success-400" />
+						</button>
+					</div>
+				</div>
+			</div>
+		{:else}
+			<div class="p-4 text-center" in:fade>
+				<p class="text-tertiary-200 dark:text-surface-200">No more notifications</p>
 			</div>
 		{/if}
 	</div>

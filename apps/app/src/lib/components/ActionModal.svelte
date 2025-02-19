@@ -2,6 +2,8 @@
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import Icon from '@iconify/svelte';
+	import { createQuery } from '$lib/wundergraph';
 	import TabMenu from './TabMenu.svelte';
 	import ActionButtons from './ActionButtons.svelte';
 	import Newsletter from './Newsletter.svelte';
@@ -15,6 +17,7 @@
 	import ProposalDetailView from './ProposalDetailView.svelte';
 	import { view as defaultView } from '$lib/views/Default';
 	import ProposalProfile from './ProposalProfile.svelte';
+	import Notifications from './Notifications.svelte';
 
 	export let session: any;
 	export let supabase: any;
@@ -43,7 +46,8 @@
 		| 'menu'
 		| 'legal-and-privacy-policy'
 		| 'custom-view'
-		| 'aside-view' = 'menu';
+		| 'aside-view'
+		| 'notifications' = 'menu';
 
 	// Add component mapping
 	const COMPONENT_MAP = {
@@ -51,6 +55,13 @@
 		Default: ComposeView,
 		ProposalProfile: ProposalProfile
 	};
+
+	// Setup notifications query for the badge
+	const notificationsQuery = createQuery({
+		operationName: 'queryUserNotifications' as const,
+		enabled: true,
+		refetchInterval: 5000
+	});
 
 	// Add helper to parse URL props
 	function parseUrlProps(propsString: string | null): Record<string, string> {
@@ -136,7 +147,14 @@
 	}
 
 	function toggleModal(
-		type?: 'login' | 'signup' | 'menu' | 'legal-and-privacy-policy' | 'custom-view' | 'aside-view'
+		type?:
+			| 'login'
+			| 'signup'
+			| 'menu'
+			| 'legal-and-privacy-policy'
+			| 'custom-view'
+			| 'aside-view'
+			| 'notifications'
 	) {
 		if (!type) {
 			if (currentModalType === 'custom-view') {
@@ -461,10 +479,17 @@
 		{#if $page.url.pathname !== '/me' || $page.url.searchParams.get('view') === 'Proposals'}
 			<!-- Right Nav Pill - Ghost Style -->
 			<button
-				class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
-				on:click={() => goto('/me', { replaceState: true })}
+				class="relative flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full shadow-lg btn-ghost variant-ghost-secondary hover:variant-ghost-primary"
+				on:click={() => toggleModal('notifications')}
 			>
-				<Icon icon="heroicons:home" class="w-5 h-5" />
+				<Icon icon="heroicons:bell" class="w-5 h-5" />
+				{#if $notificationsQuery.data?.notifications?.length > 0}
+					<div
+						class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full -top-1 -right-1 bg-error-500 text-white border-error-400"
+					>
+						{$notificationsQuery.data.notifications.length}
+					</div>
+				{/if}
 			</button>
 		{/if}
 	{:else if !isModalOpen}
@@ -488,12 +513,17 @@
 			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col overflow-hidden mb-[3rem] mx-2 md:mx-0"
 			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
-			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy'}
+			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy' ||
+				currentModalType === 'notifications'}
 			class:h-[80vh]={currentModalType === 'custom-view'}
 			class:md:h-[90vh]={currentModalType === 'custom-view' || currentModalType === 'aside-view'}
 			on:click={handleContentClick}
 		>
-			{#if currentModalType === 'login' || currentModalType === 'signup'}
+			{#if currentModalType === 'notifications'}
+				<div class="relative p-4 overflow-y-auto">
+					<Notifications />
+				</div>
+			{:else if currentModalType === 'login' || currentModalType === 'signup'}
 				<div class="relative flex flex-col">
 					<Auth modalType={currentModalType} {supabase} />
 				</div>
