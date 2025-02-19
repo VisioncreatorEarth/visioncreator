@@ -142,7 +142,7 @@ This is the dashboard area of the proposals view that:
 			</div>
 
 			<!-- Metrics Grid -->
-			<div class="flex justify-end gap-1 sm:gap-4">
+			<div class="flex justify-end gap-1 sm:gap-4 pr-3">
 				<!-- Add group class and click handler -->
 				<div 
 					class="group relative cursor-pointer"
