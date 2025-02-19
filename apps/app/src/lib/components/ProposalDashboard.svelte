@@ -155,11 +155,10 @@ This is the dashboard area of the proposals view that:
 						border border-surface-400/20"></div>
 					
 					<!-- Existing metrics content -->
-					<div class="relative flex gap-1 sm:gap-4 p-1 sm:p-2">
+					<div class="relative flex gap-0 p-1 sm:p-2">
 						<!-- Total VCs -->
-						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-								<span class="invisible px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs">000</span>
+						<div class="flex flex-col items-end mr-2 w-8 sm:w-12">
+							<div class="flex justify-end w-full">
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">VCs</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
@@ -168,30 +167,18 @@ This is the dashboard area of the proposals view that:
 						</div>
 
 						<!-- TP -->
-						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-								<span
-									class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
-								>
-									+{tokenPriceIncrease}%
-								</span>
+						<div class="flex flex-col items-end mr-2 w-20 sm:w-24">
+							<div class="flex justify-end w-full">
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm"
-									>/t</span
-								>
+								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm">/t</span>
 							</p>
 						</div>
 
 						<!-- POOL -->
-						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-								<span
-									class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-secondary-500/10 text-secondaryw-400"
-								>
-									{eurePercentage}% / {vcePercentage}%
-								</span>
+						<div class="flex flex-col items-end w-20 sm:w-24">
+							<div class="flex justify-end w-full">
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
