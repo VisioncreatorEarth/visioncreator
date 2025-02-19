@@ -196,7 +196,7 @@ This is the dashboard area of the proposals view that:
 {#if isMetricsModalOpen}
 	<!-- Backdrop with click handler -->
 	<div 
-		class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+		class="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
 		on:click={() => toggleMetricsModal(false)}
 	></div>
 	
