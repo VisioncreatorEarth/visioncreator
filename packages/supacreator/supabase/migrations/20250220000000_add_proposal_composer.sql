@@ -3,15 +3,15 @@ CREATE TABLE composites (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     description TEXT,
-    schema_id UUID NOT NULL,
-    instance_id UUID NOT NULL,
+    compose_id UUID NOT NULL,  -- Main production/master version
+    variations UUID[] DEFAULT ARRAY[]::UUID[],  -- Array of alternative variation IDs
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Add index for better query performance
-CREATE INDEX idx_composites_schema ON composites(schema_id);
-CREATE INDEX idx_composites_instance ON composites(instance_id);
+CREATE INDEX idx_composites_compose ON composites(compose_id);
+CREATE INDEX idx_composites_variations ON composites USING GIN(variations);
 
 -- Add proposal composer field to proposals table
 ALTER TABLE proposals
@@ -26,10 +26,12 @@ REFERENCES composites(id);
 -- Add index for the compose field
 CREATE INDEX idx_proposals_compose ON proposals(compose);
 
--- Add comment explaining the field
-COMMENT ON COLUMN proposals.compose IS 'Reference to a composite that contains both schema and instance data for this proposal';
+-- Add comment explaining the fields
+COMMENT ON COLUMN proposals.compose IS 'Reference to a composite that contains instance data for this proposal';
+COMMENT ON COLUMN composites.compose_id IS 'The main production/master version of the content';
+COMMENT ON COLUMN composites.variations IS 'Array of alternative variation IDs, similar to git branches';
 
--- Create function to handle db versioning with composite references
+-- Create function to handle db version with composite references
 CREATE OR REPLACE FUNCTION handle_db_version_with_composites()
 RETURNS trigger AS $$
 DECLARE
@@ -39,7 +41,8 @@ BEGIN
     -- Check if this entry is referenced by any composites
     IF EXISTS (
         SELECT 1 FROM composites 
-        WHERE schema_id = OLD.id OR instance_id = OLD.id
+        WHERE compose_id = OLD.id 
+        OR OLD.id = ANY(variations)
     ) THEN
         -- For referenced entries, we:
         -- 1. Keep the old version in db_archive (for composite references)
@@ -130,22 +133,26 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION validate_composite_references()
 RETURNS trigger AS $$
 BEGIN
-    -- Check if schema exists in either active or archive
+    -- Check if main compose_id exists
     IF NOT EXISTS (
-        SELECT 1 FROM db WHERE id = NEW.schema_id
+        SELECT 1 FROM db WHERE id = NEW.compose_id
         UNION
-        SELECT 1 FROM db_archive WHERE id = NEW.schema_id
+        SELECT 1 FROM db_archive WHERE id = NEW.compose_id
     ) THEN
-        RAISE EXCEPTION 'Schema with ID % not found in db or archive', NEW.schema_id;
+        RAISE EXCEPTION 'Main compose_id % not found in db or archive', NEW.compose_id;
     END IF;
 
-    -- Check if instance exists in either active or archive
-    IF NOT EXISTS (
-        SELECT 1 FROM db WHERE id = NEW.instance_id
-        UNION
-        SELECT 1 FROM db_archive WHERE id = NEW.instance_id
+    -- Check if all variation IDs exist
+    IF EXISTS (
+        SELECT 1
+        FROM unnest(NEW.variations) AS variation_id
+        WHERE NOT EXISTS (
+            SELECT 1 FROM db WHERE id = variation_id
+            UNION
+            SELECT 1 FROM db_archive WHERE id = variation_id
+        )
     ) THEN
-        RAISE EXCEPTION 'Instance with ID % not found in db or archive', NEW.instance_id;
+        RAISE EXCEPTION 'One or more variation IDs not found in db or archive';
     END IF;
 
     RETURN NEW;
@@ -158,7 +165,32 @@ CREATE TRIGGER validate_composite_refs
     FOR EACH ROW
     EXECUTE FUNCTION validate_composite_references();
 
--- Insert a markdown schema based on the meta schema
+-- Create function to get composite data with all variations
+CREATE OR REPLACE FUNCTION get_composite_data(p_composite_id uuid)
+RETURNS TABLE (
+    id uuid,
+    title text,
+    description text,
+    instance_json jsonb,
+    variations_json jsonb[]
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.id,
+        c.title,
+        c.description,
+        (SELECT get_db_entry(c.compose_id)) as instance_json,
+        ARRAY(
+            SELECT get_db_entry(variation_id)
+            FROM unnest(c.variations) AS variation_id
+        ) as variations_json
+    FROM composites c
+    WHERE c.id = p_composite_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Insert the markdown schema first
 INSERT INTO db (id, json, author, schema, version, variation) VALUES 
 ('11111111-1111-1111-1111-111111111111', 
 '{
@@ -181,11 +213,12 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
 '11111111-1111-1111-1111-111111111111'   -- Unique variation ID
 );
 
--- Insert an instance of the markdown schema
+-- Insert main instance (master) of the markdown schema
 INSERT INTO db (id, json, author, schema, version, variation) VALUES 
 ('22222222-2222-2222-2222-222222222222', 
 '{
-  "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version"
+  "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version",
+  "schema": "11111111-1111-1111-1111-111111111111"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '11111111-1111-1111-1111-111111111111',  -- References the markdown schema
@@ -193,13 +226,42 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
 '22222222-2222-2222-2222-222222222222'   -- Unique variation ID
 );
 
--- Create a composite linking the schema and instance
-INSERT INTO composites (id, title, description, schema_id, instance_id) VALUES 
+-- Insert a variation of the instance
+INSERT INTO db (id, json, author, schema, version, variation) VALUES 
+('22222222-2222-2222-2222-222222222223', 
+'{
+  "content": "# Alternative Content\n\nThis is a variation of the markdown content.\n\n## Additional Features\n- Different content structure\n- Alternative approach\n- Experimental features",
+  "schema": "11111111-1111-1111-1111-111111111111"
+}'::jsonb,
+'00000000-0000-0000-0000-000000000001',  -- System user
+'11111111-1111-1111-1111-111111111111',  -- References the markdown schema
+1,  -- Initial version
+'22222222-2222-2222-2222-222222222223'   -- Variation ID
+);
+
+-- Insert another variation of the instance with different variation ID
+INSERT INTO db (id, json, author, schema, version, variation) VALUES 
+('22222222-2222-2222-2222-222222222224', 
+'{
+  "content": "# Vision Creator Platform\n\nA revolutionary platform for collaborative vision development.\n\n## Core Concepts\n- Vision as Code\n- Collaborative Decision Making\n- Transparent Evolution\n- Community-Driven Development\n\n## How It Works\n1. Create Proposals\n2. Discuss & Refine\n3. Vote & Implement\n4. Track Progress",
+  "schema": "11111111-1111-1111-1111-111111111111"
+}'::jsonb,
+'00000000-0000-0000-0000-000000000001',  -- System user
+'11111111-1111-1111-1111-111111111111',  -- References the markdown schema
+1,  -- Initial version
+'33333333-3333-3333-3333-333333333333'   -- Different variation ID for clustering
+);
+
+-- Create a composite linking to the instance with multiple variations
+INSERT INTO composites (id, title, description, compose_id, variations) VALUES 
 ('33333333-3333-3333-3333-333333333333',
 'Markdown Content Composite',
 'A composite for storing and versioning markdown content',
-'11111111-1111-1111-1111-111111111111',  -- Schema ID
-'22222222-2222-2222-2222-222222222222'   -- Instance ID
+'22222222-2222-2222-2222-222222222222',   -- Main/master instance ID
+ARRAY[
+    '22222222-2222-2222-2222-222222222223',  -- First variation ID
+    '22222222-2222-2222-2222-222222222224'   -- Second variation ID
+]::UUID[]
 );
 
 -- Create default Visioncreator Platform proposal
@@ -251,26 +313,4 @@ GRANT ALL ON TABLE composites TO service_role;
 CREATE POLICY "service_role_policy" ON composites
     FOR ALL TO service_role
     USING (true)
-    WITH CHECK (true);
-
--- Create function to get composite data with versioning support
-CREATE OR REPLACE FUNCTION get_composite_data(p_composite_id uuid)
-RETURNS TABLE (
-    id uuid,
-    title text,
-    description text,
-    schema_json jsonb,
-    instance_json jsonb
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        c.id,
-        c.title,
-        c.description,
-        (SELECT get_db_entry(c.schema_id)) as schema_json,
-        (SELECT get_db_entry(c.instance_id)) as instance_json
-    FROM composites c
-    WHERE c.id = p_composite_id;
-END;
-$$ LANGUAGE plpgsql; 
+    WITH CHECK (true); 

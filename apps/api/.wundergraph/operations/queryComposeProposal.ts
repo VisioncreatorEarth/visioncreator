@@ -1,30 +1,24 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
 
-interface SchemaJson {
-    type: string;
-    title: string;
-    description: string;
-    properties: Record<string, unknown>;
-    required?: string[];
-}
-
 interface InstanceJson {
     [key: string]: unknown;
+    content?: string;
+    schema?: string;
 }
 
 interface ComposeData {
     title: string;
     description: string;
-    schema: SchemaJson;
-    instance: InstanceJson;
+    instance_json: InstanceJson;
+    variations_json: InstanceJson[];
 }
 
 interface CompositeData {
     id: string;
     title: string;
     description: string;
-    schema_id: string;
-    instance_id: string;
+    compose_id: string;
+    variations: string[];
 }
 
 interface ProposalWithComposite {
@@ -36,6 +30,9 @@ export default createOperation.query({
         proposalId: z.string()
     }),
     handler: async ({ context, input }): Promise<{ compose_data: ComposeData | null }> => {
+        console.log('=== Starting queryComposeProposal ===');
+        console.log('Input proposalId:', input.proposalId);
+
         // Get the proposal's composite
         const { data: proposal, error: proposalError } = await context.supabase
             .from('proposals')
@@ -44,54 +41,115 @@ export default createOperation.query({
                     id,
                     title,
                     description,
-                    schema_id,
-                    instance_id
+                    compose_id,
+                    variations
                 )
             `)
             .eq('id', input.proposalId)
             .single() as { data: ProposalWithComposite | null; error: any };
 
         if (proposalError || !proposal?.compose) {
+            console.log('Error or no compose data found:', proposalError);
             return { compose_data: null };
         }
 
-        // Get both schema and instance data
-        const { data: dbEntries, error: dbError } = await context.supabase
+        console.log('Found composite:', proposal.compose);
+        console.log('Variations array in composite:', proposal.compose.variations);
+
+        // Get instance data
+        const { data: dbEntry, error: dbError } = await context.supabase
             .from('db')
-            .select('id, json')
-            .in('id', [proposal.compose.schema_id, proposal.compose.instance_id]);
+            .select('json')
+            .eq('id', proposal.compose.compose_id)
+            .single();
 
+        let mainInstance: InstanceJson;
         if (dbError) {
-            throw new Error(`Failed to fetch db entries: ${dbError.message}`);
-        }
-
-        // Create a map for quick lookup
-        const dbMap = new Map(dbEntries.map(entry => [entry.id, entry.json]));
-
-        // If not found in active db, try archive
-        const missingIds = [proposal.compose.schema_id, proposal.compose.instance_id]
-            .filter(id => !dbMap.has(id));
-
-        if (missingIds.length > 0) {
-            const { data: archivedEntries, error: archiveError } = await context.supabase
+            console.log('Main instance not found in active db, checking archive');
+            // If not found in active db, try archive
+            const { data: archivedEntry, error: archiveError } = await context.supabase
                 .from('db_archive')
-                .select('id, json')
-                .in('id', missingIds);
+                .select('json')
+                .eq('id', proposal.compose.compose_id)
+                .single();
 
-            if (!archiveError && archivedEntries) {
-                archivedEntries.forEach(entry => {
-                    dbMap.set(entry.id, entry.json);
-                });
+            if (archiveError || !archivedEntry) {
+                console.error('Failed to fetch main db entry:', dbError);
+                throw new Error(`Failed to fetch main db entry: ${dbError.message}`);
             }
+
+            mainInstance = archivedEntry.json as InstanceJson;
+        } else {
+            mainInstance = dbEntry.json as InstanceJson;
         }
 
-        return {
+        console.log('Main instance:', mainInstance);
+
+        // Initialize variations as empty array
+        let variations: InstanceJson[] = [];
+
+        if (proposal.compose.variations && proposal.compose.variations.length > 0) {
+            console.log('Found variations to fetch:', proposal.compose.variations.length);
+            console.log('Variation IDs:', proposal.compose.variations);
+
+            // First try active db
+            const { data: variationEntries, error: variationsError } = await context.supabase
+                .from('db')
+                .select('id, json')
+                .in('id', proposal.compose.variations);
+
+            console.log('Active DB variations result:', {
+                entries: variationEntries?.length || 0,
+                error: variationsError
+            });
+
+            if (!variationsError && variationEntries) {
+                const variationMap = new Map(variationEntries.map(entry => [entry.id, entry.json]));
+                console.log('Created variation map with keys:', Array.from(variationMap.keys()));
+
+                // Check archive for any missing variations
+                const missingIds = proposal.compose.variations.filter(id => !variationMap.has(id));
+                if (missingIds.length > 0) {
+                    console.log('Checking archive for missing variations:', missingIds);
+
+                    const { data: archivedVariations } = await context.supabase
+                        .from('db_archive')
+                        .select('id, json')
+                        .in('id', missingIds);
+
+                    console.log('Archived variations found:', archivedVariations?.length || 0);
+
+                    if (archivedVariations) {
+                        archivedVariations.forEach(entry => variationMap.set(entry.id, entry.json));
+                    }
+                }
+
+                // Maintain order of variations as stored in the array
+                variations = proposal.compose.variations
+                    .map(id => variationMap.get(id))
+                    .filter((json): json is InstanceJson => json !== undefined);
+
+                console.log('Final variations array length:', variations.length);
+            }
+        } else {
+            console.log('No variations found in composite');
+        }
+
+        const result = {
             compose_data: {
                 title: proposal.compose.title,
                 description: proposal.compose.description,
-                schema: dbMap.get(proposal.compose.schema_id) as SchemaJson,
-                instance: dbMap.get(proposal.compose.instance_id) as InstanceJson
+                instance_json: mainInstance,
+                variations_json: variations  // This should always be an array
             }
         };
+
+        console.log('=== Final response structure ===');
+        console.log('Title:', result.compose_data.title);
+        console.log('Description:', result.compose_data.description);
+        console.log('Has instance_json:', !!result.compose_data.instance_json);
+        console.log('Variations count:', result.compose_data.variations_json.length);
+
+        return result;
     }
 }); 
