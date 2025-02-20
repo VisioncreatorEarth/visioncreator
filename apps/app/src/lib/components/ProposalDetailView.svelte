@@ -378,7 +378,7 @@ HOW THIS COMPONENT WORKS:
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{:else if $activeTab === 'compose'}
-					<div class="flex-1 overflow-y-auto">
+					<div class="flex-1 overflow-y-auto w-full">
 						<div class="flex flex-col">
 							<!-- Tabs -->
 							<div class="flex gap-2 px-6 pt-6 border-b border-surface-700/50">
@@ -431,8 +431,8 @@ HOW THIS COMPONENT WORKS:
 				{/if}
 			</div>
 
-			<!-- Right Metadata - Only on Desktop -->
-			{#if !isMobileView}
+			<!-- Right Metadata - Only on Desktop and not in compose tab -->
+			{#if !isMobileView && $activeTab !== 'compose'}
 				<div
 					class="hidden md:block overflow-y-auto border-l border-surface-700/50 {getStateBgColor(
 						proposal.state

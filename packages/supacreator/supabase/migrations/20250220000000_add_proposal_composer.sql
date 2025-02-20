@@ -229,12 +229,12 @@ A collaborative platform for creating, sharing, and evolving visions together.
 - Composable data structures
 - Version control for knowledge
 - Real-time updates and notifications',
-    'accepted',  -- Set as accepted by default
+    'idea',  -- Set as accepted by default
     0,          -- Initial votes
     0,          -- Initial tokens staked
     NOW(),
     NOW(),
-    ARRAY['platform', 'collaboration', 'vision']::text[],
+    ARRAY['product']::text[],
     '33333333-3333-3333-3333-333333333333'  -- Link to our composite
 );
 
