@@ -129,20 +129,20 @@ This is the dashboard area of the proposals view that:
 <!-- Add keydown event listener to window -->
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="w-full border-b bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
-	<div class="max-w-5xl mx-auto">
-		<div class="flex items-center justify-between p-4">
+<div class="w-full border-b-[0.5px] bg-surface-800/50 backdrop-blur-sm border-surface-700/50">
+	<div class="max-w-5xl mx-auto -mb-2.5">
+		<div class="flex items-center justify-between p-1 sm:p-2">
 			<!-- Company Branding -->
-			<div class="flex items-center gap-4 pr-6 border-r border-surface-700/50">
-				<img src="/logo.png" alt="Visioncreator Logo" class="w-9 h-9 sm:w-10 sm:h-10" />
+			<div class="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4 border-r border-surface-700/50">
+				<img src="/logo.png" alt="Visioncreator Logo" class="w-6 h-6 sm:w-8 sm:h-8" />
 				<div class="hidden sm:block">
-					<h2 class="text-2xl font-semibold text-tertiary-100">Visioncreator</h2>
-					<p class="text-sm text-tertiary-300">Community Contribution Pool</p>
+					<h2 class="text-xl font-semibold text-tertiary-100">Visioncreator</h2>
+					<p class="text-xs text-tertiary-300">Community Contribution Pool</p>
 				</div>
 			</div>
 
 			<!-- Metrics Grid -->
-			<div class="flex justify-end gap-3 sm:gap-6">
+			<div class="flex justify-end gap-1 sm:gap-4 pr-3">
 				<!-- Add group class and click handler -->
 				<div 
 					class="group relative cursor-pointer"
@@ -155,11 +155,10 @@ This is the dashboard area of the proposals view that:
 						border border-surface-400/20"></div>
 					
 					<!-- Existing metrics content -->
-					<div class="relative flex gap-3 sm:gap-6 p-4">
+					<div class="relative flex gap-0 p-1 sm:p-2">
 						<!-- Total VCs -->
-						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-								<span class="invisible px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs">000</span>
+						<div class="flex flex-col items-end mr-2 w-8 sm:w-12">
+							<div class="flex justify-end w-full">
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">VCs</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
@@ -168,30 +167,18 @@ This is the dashboard area of the proposals view that:
 						</div>
 
 						<!-- TP -->
-						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-								<span
-									class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-success-500/10 text-success-400"
-								>
-									+{tokenPriceIncrease}%
-								</span>
+						<div class="flex flex-col items-end mr-2 w-20 sm:w-24">
+							<div class="flex justify-end w-full">
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm"
-									>/t</span
-								>
+								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm">/t</span>
 							</p>
 						</div>
 
 						<!-- POOL -->
-						<div class="flex flex-col items-end gap-0.5 sm:gap-1">
-							<div class="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
-								<span
-									class="px-1 sm:px-1.5 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-secondary-500/10 text-secondaryw-400"
-								>
-									{eurePercentage}% / {vcePercentage}%
-								</span>
+						<div class="flex flex-col items-end w-20 sm:w-24">
+							<div class="flex justify-end w-full">
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
@@ -209,7 +196,7 @@ This is the dashboard area of the proposals view that:
 {#if isMetricsModalOpen}
 	<!-- Backdrop with click handler -->
 	<div 
-		class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+		class="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40"
 		on:click={() => toggleMetricsModal(false)}
 	></div>
 	
