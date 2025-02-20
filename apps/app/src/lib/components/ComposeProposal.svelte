@@ -7,13 +7,13 @@ HOW THIS COMPONENT WORKS:
    - Shows markdown content with preview
    - Displays JSON schema in readable format
    - Shows instance data in JSON format
-   - Provides split view comparison for edit requests
+   - Provides split view comparison for edit requests with highlighted changes
    - Handles edit request approvals and rejections
 
 2. Features:
    - Left-aligned tab navigation between content, schema, and JSON views
    - JSON view as default display
-   - Side-by-side split view for version comparison
+   - Side-by-side split view for version comparison with diff highlighting
    - Edit request tracking with version history
    - Responsive design that works in both desktop and mobile layouts
 -->
@@ -25,6 +25,8 @@ HOW THIS COMPONENT WORKS:
 	import Icon from '@iconify/svelte';
 	import { fade } from 'svelte/transition';
 	import EditRequests from './EditRequests.svelte';
+	import type { Change } from 'diff';
+	import { diffWords, diffJson } from 'diff';
 
 	// Props
 	export let proposalId: string;
@@ -52,11 +54,98 @@ HOW THIS COMPONENT WORKS:
 		return typeof content === 'string' ? content : '';
 	}
 
+	// Helper function to compute and highlight diffs
+	function computeDiff(oldStr: string, newStr: string): { html: string; hasChanges: boolean } {
+		const changes = diffWords(oldStr, newStr);
+		let html = '';
+		let hasChanges = false;
+
+		changes.forEach((part: Change) => {
+			const color = part.added
+				? 'bg-green-400/20 text-green-300'
+				: part.removed
+				? 'bg-red-400/20 text-red-300'
+				: '';
+
+			if (part.added || part.removed) {
+				hasChanges = true;
+				html += `<span class="px-1 rounded ${color}">${part.value}</span>`;
+			} else {
+				html += part.value;
+			}
+		});
+
+		return { html, hasChanges };
+	}
+
+	// Helper function to compute JSON diff with better formatting
+	function computeJsonDiff(oldJson: any, newJson: any): { html: string; hasChanges: boolean } {
+		const changes = diffJson(oldJson, newJson);
+		let html = '';
+		let hasChanges = false;
+		let indentLevel = 0;
+		const indentSize = 2;
+
+		changes.forEach((part: Change) => {
+			const lines = part.value.split('\n');
+			const color = part.added
+				? 'bg-green-400/20 text-green-300'
+				: part.removed
+				? 'bg-red-400/20 text-red-300'
+				: '';
+
+			if (part.added || part.removed) {
+				hasChanges = true;
+			}
+
+			lines.forEach((line: string, i: number) => {
+				// Handle indentation
+				if (line.includes('}') || line.includes(']')) {
+					indentLevel--;
+				}
+
+				const indent = ' '.repeat(Math.max(0, indentLevel * indentSize));
+				const formattedLine = indent + line.trim();
+
+				if (formattedLine.length > 0) {
+					if (part.added || part.removed) {
+						html += `<span class="block px-1 rounded ${color}">${formattedLine}</span>`;
+					} else {
+						html += `<span class="block">${formattedLine}</span>`;
+					}
+					if (i < lines.length - 1) {
+						html += '\n';
+					}
+				}
+
+				// Adjust indent level for next line
+				if (line.includes('{') || line.includes('[')) {
+					indentLevel++;
+				}
+			});
+		});
+
+		return { html, hasChanges };
+	}
+
 	// Handle edit request selection
 	function handleRequestSelect({ detail }: CustomEvent<{ request: any }>) {
 		selectedRequest = detail.request;
 		activeComposeTab.set('json'); // Switch to JSON view when selecting an edit request
 	}
+
+	// Compute diffs based on request type
+	$: diffResult = selectedRequest
+		? selectedRequest.changes.content
+			? computeDiff(
+					getContent(selectedRequest.previousVersion.content),
+					getContent(selectedRequest.changes.content)
+			  )
+			: computeJsonDiff(
+					selectedRequest.previousVersion.schema || selectedRequest.previousVersion.instance,
+					selectedRequest.changes.schema || selectedRequest.changes.instance
+			  )
+		: { html: '', hasChanges: false };
 </script>
 
 <div class="flex flex-1 overflow-hidden bg-surface-700">
@@ -117,20 +206,33 @@ HOW THIS COMPONENT WORKS:
 						</div>
 						<div class="p-4 overflow-y-auto">
 							<pre class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{formatJSON(
-									selectedRequest.previousVersion
+									selectedRequest.previousVersion.content ||
+										selectedRequest.previousVersion.schema ||
+										selectedRequest.previousVersion.instance
 								)}</pre>
 						</div>
 					</div>
 
-					<!-- New Version -->
+					<!-- New Version with Diff Highlighting -->
 					<div class="overflow-hidden">
 						<div class="p-4 border-b border-surface-700/50">
-							<h4 class="text-sm font-medium text-tertiary-100">New Version</h4>
+							<div class="flex items-center justify-between">
+								<h4 class="text-sm font-medium text-tertiary-100">New Version</h4>
+								<div class="flex items-center gap-4">
+									<div class="flex items-center gap-2">
+										<span class="inline-block w-3 h-3 rounded bg-green-400/20" />
+										<span class="text-xs text-tertiary-300">Added</span>
+									</div>
+									<div class="flex items-center gap-2">
+										<span class="inline-block w-3 h-3 rounded bg-red-400/20" />
+										<span class="text-xs text-tertiary-300">Removed</span>
+									</div>
+								</div>
+							</div>
 						</div>
 						<div class="p-4 overflow-y-auto">
-							<pre class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{formatJSON(
-									selectedRequest.changes
-								)}</pre>
+							<pre
+								class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{@html diffResult.html}</pre>
 						</div>
 					</div>
 				</div>
