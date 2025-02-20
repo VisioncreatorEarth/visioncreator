@@ -23,7 +23,6 @@ HOW THIS COMPONENT WORKS:
 	import { writable } from 'svelte/store';
 	import { createQuery } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
-	import { fade } from 'svelte/transition';
 	import EditRequests from './EditRequests.svelte';
 	import type { Change } from 'diff';
 	import { diffWords, diffJson } from 'diff';
@@ -205,7 +204,7 @@ HOW THIS COMPONENT WORKS:
 							</button>
 						</div>
 						<div class="p-4 overflow-y-auto">
-							<pre class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{formatJSON(
+							<pre class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
 									selectedRequest.previousVersion.content ||
 										selectedRequest.previousVersion.schema ||
 										selectedRequest.previousVersion.instance
@@ -232,7 +231,7 @@ HOW THIS COMPONENT WORKS:
 						</div>
 						<div class="p-4 overflow-y-auto">
 							<pre
-								class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{@html diffResult.html}</pre>
+								class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{@html diffResult.html}</pre>
 						</div>
 					</div>
 				</div>
@@ -245,16 +244,16 @@ HOW THIS COMPONENT WORKS:
 								{@html marked(getContent($composeQuery.data.compose_data.instance.content))}
 							</div>
 						{:else}
-							<pre class="p-4 text-sm font-mono text-tertiary-200 whitespace-pre-wrap">{formatJSON(
+							<pre class="p-4 font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
 									$composeQuery.data.compose_data.instance
 								)}</pre>
 						{/if}
 					{:else if $activeComposeTab === 'schema'}
-						<pre class="p-4 text-sm font-mono text-tertiary-200 whitespace-pre-wrap">{formatJSON(
+						<pre class="p-4 font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
 								$composeQuery.data.compose_data.schema
 							)}</pre>
 					{:else if $activeComposeTab === 'json'}
-						<pre class="p-4 text-sm font-mono text-tertiary-200 whitespace-pre-wrap">{formatJSON(
+						<pre class="p-4 font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
 								$composeQuery.data.compose_data.instance
 							)}</pre>
 					{/if}
@@ -268,7 +267,7 @@ HOW THIS COMPONENT WORKS:
 	</div>
 
 	<!-- Right Aside: Edit Requests -->
-	<div class="w-80 border-l border-surface-700/50 bg-surface-700">
+	<div class="border-l w-80 border-surface-700/50 bg-surface-700">
 		<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
 			<h3 class="text-sm font-medium text-tertiary-100">Edit Requests</h3>
 			<button
