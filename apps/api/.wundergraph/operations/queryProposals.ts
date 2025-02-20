@@ -35,6 +35,13 @@ interface SubscriptionContext {
     };
 }
 
+interface DBVersion {
+    id: string;
+    json: any;
+    version: number;
+    variation: string;
+}
+
 interface Proposal {
     id: string;
     title: string;
@@ -64,49 +71,74 @@ interface Proposal {
     };
 }
 
-interface LatestVersion {
-    id: string;
-    variation: string;
-    version: number;
-    json: any;
-}
-
 export default createOperation.query({
     handler: async ({ context, user }): Promise<{ proposals: Proposal[] }> => {
         const userId = user?.customClaims?.id;
 
-        // First get the latest version for each variation
-        const { data: latestVersions } = await context.supabase.rpc('get_latest_versions') as { data: LatestVersion[] | null };
-
-        // Get all proposals with optional compose data using left join
+        // Get all proposals first
         const { data: proposals, error } = await context.supabase
             .from('proposals')
             .select(`
                 *,
                 responsible:profiles!proposals_responsible_fkey(id, name),
-                author:profiles!proposals_author_fkey(id, name),
-                compose_data:db!proposals_compose_fkey(
-                    id,
-                    json,
-                    version,
-                    variation
-                )
+                author:profiles!proposals_author_fkey(id, name)
             `);
 
         if (error) {
             throw new Error(`Failed to fetch proposals: ${error.message}`);
         }
 
-        // Filter compose_data to only include latest versions if they exist
-        const proposalsWithFilteredComposeData = (proposals as any[]).map(proposal => ({
-            ...proposal,
-            compose_data: proposal.compose_data ? {
-                id: proposal.compose_data.id,
-                json: proposal.compose_data.json,
-                version: proposal.compose_data.version,
-                variation: proposal.compose_data.variation
-            } : null
-        }));
+        // Get compose data from both active and archived versions
+        const composeIds = proposals
+            .map(p => p.compose)
+            .filter((id): id is string => id !== null);
+
+        if (composeIds.length > 0) {
+            // Get active versions
+            const { data: activeVersions, error: activeError } = await context.supabase
+                .from('db')
+                .select('id, json, version, variation')
+                .in('id', composeIds);
+
+            if (activeError) {
+                throw new Error(`Failed to fetch active versions: ${activeError.message}`);
+            }
+
+            // Get archived versions
+            const { data: archivedVersions, error: archiveError } = await context.supabase
+                .from('db_archive')
+                .select('id, json, version, variation')
+                .in('id', composeIds);
+
+            if (archiveError) {
+                throw new Error(`Failed to fetch archived versions: ${archiveError.message}`);
+            }
+
+            // Type assertion for database responses
+            const typedActiveVersions = (activeVersions || []) as DBVersion[];
+            const typedArchivedVersions = (archivedVersions || []) as DBVersion[];
+
+            // Combine all versions into a map with proper typing
+            const composeDataMap = new Map<string, DBVersion>();
+            [...typedActiveVersions, ...typedArchivedVersions].forEach(version => {
+                composeDataMap.set(version.id, version);
+            });
+
+            // Add compose data to proposals
+            proposals.forEach(proposal => {
+                if (proposal.compose && typeof proposal.compose === 'string') {
+                    const composeData = composeDataMap.get(proposal.compose);
+                    if (composeData) {
+                        proposal.compose_data = {
+                            id: composeData.id,
+                            json: composeData.json,
+                            version: composeData.version,
+                            variation: composeData.variation
+                        };
+                    }
+                }
+            });
+        }
 
         // Get all votes and profiles in one go
         const { data: allVotes, error: votesError } = await context.supabase
@@ -182,18 +214,12 @@ export default createOperation.query({
         }
 
         // Combine proposals with their voters and subscription status
-        const proposalsWithVoters = (proposalsWithFilteredComposeData as any[]).map(proposal => ({
+        const proposalsWithVoters = (proposals as any[]).map(proposal => ({
             ...proposal,
             voters: votesByProposal[proposal.id] || [],
             isSubscribed: subscriptionMap.get(proposal.id) || false,
             responsible: proposal.responsible?.id || null,
-            author: proposal.author?.id || null,
-            compose_data: proposal.compose_data ? {
-                id: proposal.compose_data.id,
-                json: proposal.compose_data.json,
-                version: proposal.compose_data.version,
-                variation: proposal.compose_data.variation
-            } : null
+            author: proposal.author?.id || null
         })) as Proposal[];
 
         return {
