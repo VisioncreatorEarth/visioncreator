@@ -7,8 +7,8 @@ HOW THIS COMPONENT WORKS:
    - Shows markdown content with preview
    - Displays JSON schema in readable format
    - Shows instance data in JSON format
-   - Displays edit requests in a git-like fashion
-   - Provides split view comparison for version changes
+   - Provides split view comparison for edit requests
+   - Handles edit request approvals and rejections
 
 2. Features:
    - Left-aligned tab navigation between content, schema, and JSON views
@@ -24,6 +24,7 @@ HOW THIS COMPONENT WORKS:
 	import { createQuery } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
 	import { fade } from 'svelte/transition';
+	import EditRequests from './EditRequests.svelte';
 
 	// Props
 	export let proposalId: string;
@@ -39,34 +40,7 @@ HOW THIS COMPONENT WORKS:
 	});
 
 	// Store for selected edit request
-	const selectedEditRequest = writable<null | {
-		id: string;
-		title: string;
-		createdAt: string;
-		author: string;
-		changes: any;
-		previousVersion: any;
-	}>(null);
-
-	// Mock edit requests data (replace with real data later)
-	const mockEditRequests = [
-		{
-			id: '1',
-			title: 'Update project goals',
-			createdAt: '2024-02-20T10:00:00Z',
-			author: 'Alice',
-			changes: { content: '# Updated Goals\n\nNew project goals...' },
-			previousVersion: { content: '# Goals\n\nProject goals...' }
-		},
-		{
-			id: '2',
-			title: 'Fix typos in description',
-			createdAt: '2024-02-19T15:30:00Z',
-			author: 'Bob',
-			changes: { content: '# Description\n\nFixed content...' },
-			previousVersion: { content: '# Description\n\nOriginal content...' }
-		}
-	];
+	let selectedRequest: any = null;
 
 	// Helper function to format JSON for display
 	function formatJSON(json: any): string {
@@ -78,20 +52,10 @@ HOW THIS COMPONENT WORKS:
 		return typeof content === 'string' ? content : '';
 	}
 
-	// Helper function to format date
-	function formatDate(date: string): string {
-		return new Date(date).toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	}
-
 	// Handle edit request selection
-	function handleEditRequestSelect(editRequest: any) {
-		selectedEditRequest.set(editRequest);
+	function handleRequestSelect({ detail }: CustomEvent<{ request: any }>) {
+		selectedRequest = detail.request;
+		activeComposeTab.set('json'); // Switch to JSON view when selecting an edit request
 	}
 </script>
 
@@ -137,32 +101,37 @@ HOW THIS COMPONENT WORKS:
 				<p class="text-red-400">Error loading compose data</p>
 			</div>
 		{:else if $composeQuery.data?.compose_data}
-			{#if $selectedEditRequest}
+			{#if selectedRequest}
 				<!-- Split View -->
-				<div class="flex flex-1 overflow-hidden" transition:fade={{ duration: 200 }}>
+				<div class="grid flex-1 grid-cols-2 divide-x divide-surface-700/50">
 					<!-- Previous Version -->
-					<div class="flex-1 overflow-y-auto border-r border-surface-700/50">
+					<div class="overflow-hidden">
 						<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
 							<h4 class="text-sm font-medium text-tertiary-100">Previous Version</h4>
 							<button
-								class="text-xs text-tertiary-300 hover:text-tertiary-200"
-								on:click={() => selectedEditRequest.set(null)}
+								class="p-1 transition-colors rounded-lg hover:bg-surface-700/50"
+								on:click={() => (selectedRequest = null)}
 							>
-								<Icon icon="heroicons:x-mark" class="w-4 h-4" />
+								<Icon icon="heroicons:x-mark" class="w-4 h-4 text-tertiary-300" />
 							</button>
 						</div>
-						<pre class="p-4 text-sm font-mono text-tertiary-200 whitespace-pre-wrap">{formatJSON(
-								$selectedEditRequest.previousVersion
-							)}</pre>
+						<div class="p-4 overflow-y-auto">
+							<pre class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{formatJSON(
+									selectedRequest.previousVersion
+								)}</pre>
+						</div>
 					</div>
+
 					<!-- New Version -->
-					<div class="flex-1 overflow-y-auto">
-						<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
+					<div class="overflow-hidden">
+						<div class="p-4 border-b border-surface-700/50">
 							<h4 class="text-sm font-medium text-tertiary-100">New Version</h4>
 						</div>
-						<pre class="p-4 text-sm font-mono text-tertiary-200 whitespace-pre-wrap">{formatJSON(
-								$selectedEditRequest.changes
-							)}</pre>
+						<div class="p-4 overflow-y-auto">
+							<pre class="text-sm font-mono whitespace-pre-wrap text-tertiary-200">{formatJSON(
+									selectedRequest.changes
+								)}</pre>
+						</div>
 					</div>
 				</div>
 			{:else}
@@ -210,25 +179,11 @@ HOW THIS COMPONENT WORKS:
 
 		<!-- Edit Requests List -->
 		<div class="overflow-y-auto">
-			{#each mockEditRequests as editRequest (editRequest.id)}
-				<button
-					class="flex flex-col w-full gap-1 p-4 text-left transition-colors border-b hover:bg-surface-700/50 border-surface-700/50 {$selectedEditRequest?.id ===
-					editRequest.id
-						? 'bg-surface-700/50'
-						: ''}"
-					on:click={() => handleEditRequestSelect(editRequest)}
-				>
-					<div class="flex items-center justify-between">
-						<span class="text-sm font-medium text-tertiary-100">{editRequest.title}</span>
-						<span class="text-xs text-tertiary-400">#{editRequest.id}</span>
-					</div>
-					<div class="flex items-center gap-2 text-xs text-tertiary-300">
-						<span>{editRequest.author}</span>
-						<span>•</span>
-						<span>{formatDate(editRequest.createdAt)}</span>
-					</div>
-				</button>
-			{/each}
+			<EditRequests
+				{proposalId}
+				selectedRequestId={selectedRequest?.id}
+				on:select={handleRequestSelect}
+			/>
 		</div>
 	</div>
 </div>

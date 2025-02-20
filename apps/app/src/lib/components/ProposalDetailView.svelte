@@ -44,6 +44,7 @@ HOW THIS COMPONENT WORKS:
 		getStateLabel,
 		getStateColor
 	} from '$lib/utils/proposalStateColors';
+	import { getTimeAgo } from '$lib/utils/dateUtils';
 	import { writable } from 'svelte/store';
 
 	// Only require these props
@@ -102,31 +103,6 @@ HOW THIS COMPONENT WORKS:
 		} catch (error) {
 			console.error('Failed to update vote:', error);
 		}
-	}
-
-	// Helper functions that aren't imported
-	function getTimeAgo(date: string): string {
-		const now = new Date();
-		const past = new Date(date);
-		const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
-
-		const intervals = {
-			y: 31536000,
-			m: 2592000,
-			w: 604800,
-			d: 86400,
-			h: 3600,
-			min: 60
-		};
-
-		for (const [unit, seconds] of Object.entries(intervals)) {
-			const interval = Math.floor(diffInSeconds / seconds);
-			if (interval >= 1) {
-				return `${interval}${unit} ago`;
-			}
-		}
-
-		return 'just now';
 	}
 
 	// Update handleDecision function to use the store properly
