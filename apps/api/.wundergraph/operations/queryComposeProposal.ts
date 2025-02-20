@@ -1,6 +1,6 @@
 import { createOperation, z } from '../generated/wundergraph.factory';
 
-interface InstanceJson {
+interface ComposeJson {
     [key: string]: unknown;
     content?: string;
     schema?: string;
@@ -9,8 +9,9 @@ interface InstanceJson {
 interface ComposeData {
     title: string;
     description: string;
-    instance_json: InstanceJson;
-    variations_json: InstanceJson[];
+    compose_json: ComposeJson;
+    variations_json: ComposeJson[];
+    compose_id: string;
 }
 
 interface CompositeData {
@@ -49,14 +50,14 @@ export default createOperation.query({
             return { compose_data: null };
         }
 
-        // Get instance data
+        // Get compose data
         const { data: dbEntry, error: dbError } = await context.supabase
             .from('db')
             .select('json')
             .eq('id', proposal.compose.compose_id)
             .single();
 
-        let mainInstance: InstanceJson;
+        let mainCompose: ComposeJson;
         if (dbError) {
             // If not found in active db, try archive
             const { data: archivedEntry, error: archiveError } = await context.supabase
@@ -66,16 +67,16 @@ export default createOperation.query({
                 .single();
 
             if (archiveError || !archivedEntry) {
-                throw new Error(`Failed to fetch main db entry: ${dbError.message}`);
+                throw new Error(`Failed to fetch compose entry: ${dbError.message}`);
             }
 
-            mainInstance = archivedEntry.json as InstanceJson;
+            mainCompose = archivedEntry.json as ComposeJson;
         } else {
-            mainInstance = dbEntry.json as InstanceJson;
+            mainCompose = dbEntry.json as ComposeJson;
         }
 
         // Initialize variations as empty array
-        let variations: InstanceJson[] = [];
+        let variations: ComposeJson[] = [];
 
         if (proposal.compose.variations && proposal.compose.variations.length > 0) {
             // First try active db
@@ -103,7 +104,7 @@ export default createOperation.query({
                 // Maintain order of variations as stored in the array
                 variations = proposal.compose.variations
                     .map(id => variationMap.get(id))
-                    .filter((json): json is InstanceJson => json !== undefined);
+                    .filter((json): json is ComposeJson => json !== undefined);
             }
         }
 
@@ -111,8 +112,9 @@ export default createOperation.query({
             compose_data: {
                 title: proposal.compose.title,
                 description: proposal.compose.description,
-                instance_json: mainInstance,
-                variations_json: variations
+                compose_json: mainCompose,
+                variations_json: variations,
+                compose_id: proposal.compose.compose_id
             }
         };
     }

@@ -5,14 +5,14 @@ HOW THIS COMPONENT WORKS:
    This component handles the compose functionality for proposals:
    - Displays and manages content, JSON, and variations tabs
    - Shows markdown content with preview
-   - Shows instance data in JSON format
+   - Shows instance data in JSON format with editing capabilities
    - Shows list of variations with their content
    - Provides split view comparison for edit requests with highlighted changes
    - Handles edit request approvals and rejections
 
 2. Features:
    - Left-aligned tab navigation between content, JSON, and variations views
-   - JSON view as default display
+   - JSON view as default display with editing support
    - Side-by-side split view for version comparison with diff highlighting
    - Edit request tracking with version history
    - Responsive design that works in both desktop and mobile layouts
@@ -21,9 +21,10 @@ HOW THIS COMPONENT WORKS:
 <script lang="ts">
 	import { marked } from 'marked';
 	import { writable } from 'svelte/store';
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
 	import EditRequests from './EditRequests.svelte';
+	import JsonEditor from './JsonEditor.svelte';
 	import type { Change } from 'diff';
 	import { diffWords, diffJson } from 'diff';
 
@@ -33,12 +34,48 @@ HOW THIS COMPONENT WORKS:
 	// Create a store for the compose tab - default to JSON
 	const activeComposeTab = writable<'content' | 'json' | 'variations'>('json');
 
-	// Create query for compose data
-	const composeQuery = createQuery({
+	// Add TypeScript interfaces to match backend
+	interface ComposeJson {
+		[key: string]: unknown;
+		content?: string;
+		schema?: string;
+	}
+
+	interface ComposeData {
+		title: string;
+		description: string;
+		compose_json: ComposeJson;
+		variations_json: ComposeJson[];
+		compose_id: string;
+	}
+
+	interface CompositeData {
+		id: string;
+		title: string;
+		description: string;
+		compose_id: string;
+		variations: string[];
+	}
+
+	interface ProposalWithComposite {
+		compose: CompositeData;
+	}
+
+	// Create query for compose data with proper typing
+	const composeQuery = createQuery<{ compose_data: ComposeData | null }>({
 		operationName: 'queryComposeProposal',
 		input: { proposalId },
 		enabled: true
 	});
+
+	// Create mutation for editing
+	const editDBMutation = createMutation({
+		operationName: 'editDB'
+	});
+
+	// State for editing with proper typing
+	let editedJson: ComposeJson | null = null;
+	let hasChanges = false;
 
 	// Store for selected edit request
 	let selectedRequest: any = null;
@@ -56,8 +93,8 @@ HOW THIS COMPONENT WORKS:
 		return typeof content === 'string' ? content : '';
 	}
 
-	// Helper function to safely get variations array
-	function getVariations(data: any): any[] {
+	// Helper function to safely get variations array with proper typing
+	function getVariations(data: { compose_data: ComposeData | null } | undefined): ComposeJson[] {
 		if (!data?.compose_data?.variations_json) {
 			return [];
 		}
@@ -151,6 +188,136 @@ HOW THIS COMPONENT WORKS:
 	function handleVariationSelect(variation: any) {
 		selectedVariation = variation;
 		selectedRequest = null;
+	}
+
+	// Update the JsonEditor handlers with proper typing
+	function handleJsonEditorSave(event: CustomEvent<{ json: ComposeJson }>) {
+		console.log('[ComposeProposal] JsonEditor save event:', event.detail);
+		try {
+			if (!$composeQuery.data?.compose_data?.compose_json) {
+				console.error('[ComposeProposal] No compose JSON available');
+				return;
+			}
+
+			// Get the original JSON structure
+			const originalJson = $composeQuery.data.compose_data.compose_json;
+			console.log('[ComposeProposal] Original JSON structure:', originalJson);
+
+			// Create a new JSON object that preserves all fields
+			editedJson = {
+				...originalJson,
+				// Only update content and schema, preserve all other fields
+				content: event.detail.json.content || originalJson.content,
+				schema: event.detail.json.schema || originalJson.schema,
+				// Preserve these important fields if they exist
+				version: originalJson.version,
+				prev: originalJson.prev,
+				author: originalJson.author,
+				created_at: originalJson.created_at,
+				variation: originalJson.variation,
+				title: originalJson.title,
+				description: originalJson.description
+			};
+
+			console.log('[ComposeProposal] Prepared editedJson with all fields:', editedJson);
+			saveChanges();
+		} catch (error) {
+			console.error('[ComposeProposal] Error in handleJsonEditorSave:', error);
+		}
+	}
+
+	function handleJsonEditorChange(event: CustomEvent<{ json: ComposeJson; isValid: boolean }>) {
+		console.log('[ComposeProposal] JsonEditor change event:', event.detail);
+		try {
+			if (event.detail.isValid && $composeQuery.data?.compose_data?.compose_json) {
+				// Get the original JSON structure
+				const originalJson = $composeQuery.data.compose_data.compose_json;
+				console.log('[ComposeProposal] Original JSON structure:', originalJson);
+
+				// Create a new JSON object that preserves all fields
+				editedJson = {
+					...originalJson,
+					// Only update content and schema, preserve all other fields
+					content: event.detail.json.content || originalJson.content,
+					schema: event.detail.json.schema || originalJson.schema,
+					// Preserve these important fields if they exist
+					version: originalJson.version,
+					prev: originalJson.prev,
+					author: originalJson.author,
+					created_at: originalJson.created_at,
+					variation: originalJson.variation,
+					title: originalJson.title,
+					description: originalJson.description
+				};
+
+				console.log('[ComposeProposal] Updated editedJson with all fields:', editedJson);
+				hasChanges = true;
+			}
+		} catch (error) {
+			console.error('[ComposeProposal] Error in handleJsonEditorChange:', error);
+		}
+	}
+
+	// Save changes function aligned with backend types
+	async function saveChanges() {
+		console.log('[ComposeProposal] Starting saveChanges...');
+		console.log('[ComposeProposal] Current compose data:', $composeQuery.data?.compose_data);
+		console.log('[ComposeProposal] Edited JSON:', editedJson);
+
+		if (!editedJson || !$composeQuery.data?.compose_data) {
+			console.error('[ComposeProposal] Missing required data:', {
+				editedJson: !!editedJson,
+				composeData: !!$composeQuery.data?.compose_data
+			});
+			return;
+		}
+
+		try {
+			const compose_id = $composeQuery.data.compose_data.compose_id;
+
+			if (!compose_id) {
+				console.error('[ComposeProposal] No compose_id found');
+				return;
+			}
+
+			// Get the original JSON structure to ensure we preserve all fields
+			const originalJson = $composeQuery.data.compose_data.compose_json;
+
+			// Create the final JSON structure for saving
+			const saveJson = {
+				content: editedJson.content,
+				schema: editedJson.schema || originalJson.schema
+			};
+
+			console.log('[ComposeProposal] Attempting to save changes:', {
+				id: compose_id,
+				json: saveJson
+			});
+
+			// Use editDB to update the content
+			const result = await $editDBMutation.mutateAsync({
+				id: compose_id,
+				json: saveJson
+			});
+
+			console.log('[ComposeProposal] Save result:', result);
+
+			if (result?.success) {
+				console.log('[ComposeProposal] Save successful, refetching data...');
+				await $composeQuery.refetch();
+				editedJson = null;
+				hasChanges = false;
+			} else {
+				console.error('[ComposeProposal] Failed to save changes:', result?.details);
+				const errorMessage = Array.isArray(result?.details)
+					? result.details.map((d) => `${d.field}: ${d.message}`).join(', ')
+					: result?.details || 'Unknown error occurred';
+				throw new Error(errorMessage);
+			}
+		} catch (error) {
+			console.error('[ComposeProposal] Error in saveChanges:', error);
+			throw error;
+		}
 	}
 
 	// Compute diffs based on request type
@@ -266,13 +433,13 @@ HOW THIS COMPONENT WORKS:
 							</button>
 						</div>
 						<div class="p-4 overflow-y-auto">
-							{#if $composeQuery.data.compose_data.instance_json?.content}
+							{#if $composeQuery.data.compose_data.compose_json?.content}
 								<div class="prose prose-invert max-w-none">
-									{@html marked(getContent($composeQuery.data.compose_data.instance_json.content))}
+									{@html marked(getContent($composeQuery.data.compose_data.compose_json.content))}
 								</div>
 							{:else}
 								<pre class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-										$composeQuery.data.compose_data.instance_json
+										$composeQuery.data.compose_data.compose_json
 									)}</pre>
 							{/if}
 						</div>
@@ -300,19 +467,36 @@ HOW THIS COMPONENT WORKS:
 				<!-- Regular Content -->
 				<div class="flex-1 overflow-y-auto">
 					{#if $activeComposeTab === 'content'}
-						{#if $composeQuery.data.compose_data.instance_json?.content}
+						{#if $composeQuery.data.compose_data.compose_json?.content}
 							<div class="p-6 prose prose-invert max-w-none">
-								{@html marked(getContent($composeQuery.data.compose_data.instance_json.content))}
+								{@html marked(getContent($composeQuery.data.compose_data.compose_json.content))}
 							</div>
 						{:else}
 							<pre class="p-4 font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-									$composeQuery.data.compose_data.instance_json
+									$composeQuery.data.compose_data.compose_json
 								)}</pre>
 						{/if}
 					{:else if $activeComposeTab === 'json'}
-						<pre class="p-4 font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-								$composeQuery.data.compose_data.instance_json
-							)}</pre>
+						<div class="flex flex-col h-full">
+							<!-- Save button -->
+							<div class="flex justify-end p-4">
+								{#if hasChanges}
+									<button
+										class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
+										on:click={saveChanges}
+									>
+										Save Changes
+									</button>
+								{/if}
+							</div>
+							<div class="flex-1 overflow-y-auto">
+								<JsonEditor
+									json={$composeQuery.data.compose_data.compose_json}
+									on:save={handleJsonEditorSave}
+									on:change={handleJsonEditorChange}
+								/>
+							</div>
+						</div>
 					{:else if $activeComposeTab === 'variations'}
 						<div class="p-4 space-y-4">
 							<h3 class="text-lg font-medium text-tertiary-100">Available Variations</h3>
@@ -339,7 +523,7 @@ HOW THIS COMPONENT WORKS:
 										</div>
 									</button>
 								{:else}
-									<div class="p-4 text-center text-tertiary-300 bg-surface-700/50 rounded-lg">
+									<div class="p-4 text-center rounded-lg text-tertiary-300 bg-surface-700/50">
 										No variations available
 									</div>
 								{/each}
@@ -356,7 +540,7 @@ HOW THIS COMPONENT WORKS:
 	</div>
 
 	<!-- Right Aside: Edit Requests -->
-	<div class="border-l w-80 border-surface-700/50 bg-surface-700">
+	<div class="border-l w-80 border-surface-700">
 		<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
 			<h3 class="text-sm font-medium text-tertiary-100">Edit Requests</h3>
 			<button

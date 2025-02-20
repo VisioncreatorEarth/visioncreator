@@ -98,23 +98,67 @@ export default createOperation.mutation({
     rbac: {
         requireMatchAll: ["authenticated"],
     },
-    handler: async ({ input, context }) => {
+    handler: async ({ input, context, user }) => {
+        if (!user?.customClaims?.id) {
+            throw new Error("User not authenticated or missing ID");
+        }
+
         try {
+            console.log('[editDB] Starting edit operation with input:', {
+                id: input.id,
+                jsonKeys: typeof input.json === 'object' && input.json ? Object.keys(input.json) : []
+            });
+
             // First, get the current item to find its schema
-            const { data: currentItem, error: fetchError } = await context.supabase
+            let currentItem;
+            let fetchError;
+            let isArchived = false;
+
+            // Try active db first
+            const activeResult = await context.supabase
                 .from("db")
                 .select("schema, json")
                 .eq("id", input.id)
                 .single();
 
+            if (activeResult.error || !activeResult.data) {
+                console.log('[editDB] Item not found in active db, checking archive');
+                // Try archive if not found in active
+                const archiveResult = await context.supabase
+                    .from("db_archive")
+                    .select("schema, json")
+                    .eq("id", input.id)
+                    .single();
+
+                currentItem = archiveResult.data;
+                fetchError = archiveResult.error;
+                isArchived = true;
+            } else {
+                currentItem = activeResult.data;
+                fetchError = activeResult.error;
+            }
+
             if (fetchError || !currentItem) {
+                console.error('[editDB] Failed to fetch current item:', {
+                    error: fetchError,
+                    id: input.id,
+                    checkedLocations: ['db', 'db_archive']
+                });
                 throw new Error("Failed to fetch current item");
             }
+
+            console.log('[editDB] Successfully fetched current item:', {
+                schema: currentItem.schema,
+                jsonKeys: typeof currentItem.json === 'object' && currentItem.json ? Object.keys(currentItem.json) : [],
+                isArchived
+            });
 
             const currentDBItem = currentItem as DBItem;
 
             // Special handling for schema updates (meta-schema)
             if (currentDBItem.schema === '00000000-0000-0000-0000-000000000001') {
+                console.log('[editDB] Processing schema update (meta-schema)');
+
                 // For schema updates, validate against meta-schema
                 const metaSchema = {
                     type: 'object',
@@ -176,6 +220,9 @@ export default createOperation.mutation({
                 const valid = validate(input.json);
 
                 if (!valid) {
+                    console.error('[editDB] Schema validation failed:', {
+                        errors: validate.errors
+                    });
                     return {
                         success: false,
                         error: "Schema validation failed",
@@ -188,7 +235,9 @@ export default createOperation.mutation({
                         }))
                     };
                 }
+                console.log('[editDB] Schema validation passed');
             } else {
+                console.log('[editDB] Processing regular item update');
                 // For regular objects, get their schema for validation
                 let schemaData: SchemaData;
                 const { data: activeSchema, error: schemaError } = await context.supabase
@@ -198,6 +247,7 @@ export default createOperation.mutation({
                     .single();
 
                 if (schemaError || !activeSchema) {
+                    console.log('[editDB] Schema not found in active db, checking archive');
                     // Try to find schema in archive if not in active db
                     const { data: archivedSchema, error: archiveError } = await context.supabase
                         .from("db_archive")
@@ -206,12 +256,24 @@ export default createOperation.mutation({
                         .single();
 
                     if (archiveError || !archivedSchema) {
+                        console.error('[editDB] Failed to fetch schema for validation:', {
+                            activeError: schemaError,
+                            archiveError: archiveError,
+                            schemaId: currentDBItem.schema
+                        });
                         throw new Error("Failed to fetch schema for validation");
                     }
                     schemaData = archivedSchema as SchemaData;
+                    console.log('[editDB] Found schema in archive');
                 } else {
                     schemaData = activeSchema as SchemaData;
+                    console.log('[editDB] Found schema in active db');
                 }
+
+                console.log('[editDB] Validating against schema:', {
+                    schemaType: schemaData.json.type,
+                    schemaProperties: Object.keys(schemaData.json.properties || {})
+                });
 
                 // Modify the schema to handle relation fields at any nesting level
                 const modifiedSchema = modifySchemaForRelations(schemaData.json);
@@ -221,6 +283,9 @@ export default createOperation.mutation({
                 const valid = validate(input.json);
 
                 if (!valid) {
+                    console.error('[editDB] Validation failed:', {
+                        errors: validate.errors
+                    });
                     return {
                         success: false,
                         error: "Validation failed",
@@ -233,25 +298,86 @@ export default createOperation.mutation({
                         }))
                     };
                 }
+                console.log('[editDB] Validation passed');
             }
 
-            // If validation passes, proceed with the update
+            // If the item is archived, create a new active version with a new variation ID
+            if (isArchived) {
+                console.log('[editDB] Creating new active version for archived item');
+                const newId = crypto.randomUUID();
+                const newVariationId = crypto.randomUUID();
+
+                // Keep only the actual data in the json field, not system fields
+                const newJson = { ...input.json };
+                // Remove any system fields from json if they were accidentally included
+                delete newJson.version;
+                delete newJson.prev;
+                delete newJson.variation;
+                delete newJson.created_at;
+                delete newJson.author;
+                delete newJson.schema;
+
+                console.log('[editDB] Inserting new version:', {
+                    id: newId,
+                    variationId: newVariationId,
+                    prev: input.id
+                });
+
+                const { data: insertResult, error: insertError } = await context.supabase
+                    .from('db')
+                    .insert({
+                        id: newId,
+                        json: newJson,
+                        schema: currentDBItem.schema,
+                        author: user.customClaims.id,
+                        version: 1,  // Let database default handle this
+                        variation: newVariationId,
+                        prev: input.id
+                        // created_at will be handled by database default
+                    })
+                    .select()
+                    .single();
+
+                if (insertError) {
+                    console.error('[editDB] Failed to insert new version:', insertError);
+                    throw new Error(`Failed to create new version: ${insertError.message}`);
+                }
+
+                console.log('[editDB] Successfully created new version');
+                return {
+                    success: true,
+                    updatedData: insertResult
+                };
+            }
+
+            // For active items, proceed with normal update
+            // Remove system fields from json before update
+            const cleanJson = { ...input.json };
+            delete cleanJson.version;
+            delete cleanJson.prev;
+            delete cleanJson.variation;
+            delete cleanJson.created_at;
+            delete cleanJson.author;
+            delete cleanJson.schema;
+
+            console.log('[editDB] Calling update_db_version procedure with cleaned json');
             const { data: result, error } = await context.supabase.rpc('update_db_version', {
                 p_id: input.id,
-                p_json: input.json
+                p_json: cleanJson
             });
 
             if (error) {
-                console.error("Database error in editDB:", error);
+                console.error('[editDB] Database error:', error);
                 throw new Error(`Database error: ${error.message}`);
             }
 
+            console.log('[editDB] Update successful');
             return {
                 success: true,
                 updatedData: result
             };
         } catch (error) {
-            console.error("Error in editDB:", error);
+            console.error('[editDB] Unexpected error:', error);
             return {
                 success: false,
                 error: "Unexpected error",

@@ -217,8 +217,7 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
 INSERT INTO db (id, json, author, schema, version, variation) VALUES 
 ('22222222-2222-2222-2222-222222222222', 
 '{
-  "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version",
-  "schema": "11111111-1111-1111-1111-111111111111"
+  "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '11111111-1111-1111-1111-111111111111',  -- References the markdown schema
@@ -230,8 +229,7 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
 INSERT INTO db (id, json, author, schema, version, variation) VALUES 
 ('22222222-2222-2222-2222-222222222223', 
 '{
-  "content": "# Alternative Content\n\nThis is a variation of the markdown content.\n\n## Additional Features\n- Different content structure\n- Alternative approach\n- Experimental features",
-  "schema": "11111111-1111-1111-1111-111111111111"
+  "content": "# Alternative Content\n\nThis is a variation of the markdown content.\n\n## Additional Features\n- Different content structure\n- Alternative approach\n- Experimental features"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '11111111-1111-1111-1111-111111111111',  -- References the markdown schema
@@ -243,8 +241,7 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
 INSERT INTO db (id, json, author, schema, version, variation) VALUES 
 ('22222222-2222-2222-2222-222222222224', 
 '{
-  "content": "# Vision Creator Platform\n\nA revolutionary platform for collaborative vision development.\n\n## Core Concepts\n- Vision as Code\n- Collaborative Decision Making\n- Transparent Evolution\n- Community-Driven Development\n\n## How It Works\n1. Create Proposals\n2. Discuss & Refine\n3. Vote & Implement\n4. Track Progress",
-  "schema": "11111111-1111-1111-1111-111111111111"
+  "content": "# Vision Creator Platform\n\nA revolutionary platform for collaborative vision development.\n\n## Core Concepts\n- Vision as Code\n- Collaborative Decision Making\n- Transparent Evolution\n- Community-Driven Development\n\n## How It Works\n1. Create Proposals\n2. Discuss & Refine\n3. Vote & Implement\n4. Track Progress"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '11111111-1111-1111-1111-111111111111',  -- References the markdown schema
