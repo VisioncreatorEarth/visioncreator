@@ -19,26 +19,37 @@ const EditRequestInput = z.object({
 });
 
 export default createOperation.mutation({
-    input: EditRequestInput,
-    handler: async ({ input }) => {
-        // In a real implementation, this would update the database
-        // For now, just return a success response with the mock updated data
-        return {
-            success: true,
-            editRequest: {
-                id: input.id,
-                title: input.title,
-                description: input.description,
-                createdAt: new Date().toISOString(),
-                author: {
-                    id: '1', // Mock user ID
-                    name: 'Current User'
-                },
-                changes: input.changes,
-                previousVersion: input.previousVersion,
-                status: 'pending',
-                proposalId: input.proposalId
+    input: z.object({
+        id: z.string(),
+        action: z.enum(['approve', 'reject'])
+    }),
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated"],
+    },
+    handler: async ({ input, context }): Promise<{ success: boolean; patchRequest: any }> => {
+        try {
+            // Call the appropriate database function based on the action
+            const { data: result, error } = await context.supabase
+                .rpc(input.action === 'approve' ? 'approve_patch_request' : 'reject_patch_request', {
+                    p_patch_request_id: input.id
+                });
+
+            if (error) {
+                console.error(`Error ${input.action}ing patch request:`, error);
+                throw new Error(`Failed to ${input.action} patch request: ${error.message}`);
             }
-        };
+
+            return {
+                success: true,
+                patchRequest: result
+            };
+        } catch (error) {
+            console.error(`Unexpected error ${input.action}ing patch request:`, error);
+            return {
+                success: false,
+                patchRequest: null
+            };
+        }
     }
 }); 

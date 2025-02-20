@@ -68,6 +68,13 @@ HOW THIS COMPONENT WORKS:
 		enabled: true
 	});
 
+	// Create query for edit requests
+	const editRequestsQuery = createQuery({
+		operationName: 'queryEditRequests',
+		input: { proposalId },
+		enabled: true
+	});
+
 	// Create mutation for editing
 	const editDBMutation = createMutation({
 		operationName: 'editDB'
@@ -304,7 +311,7 @@ HOW THIS COMPONENT WORKS:
 
 			if (result?.success) {
 				console.log('[ComposeProposal] Save successful, refetching data...');
-				await $composeQuery.refetch();
+				await Promise.all([$composeQuery.refetch(), $editRequestsQuery.refetch()]);
 				editedJson = null;
 				hasChanges = false;
 			} else {
@@ -478,17 +485,6 @@ HOW THIS COMPONENT WORKS:
 						{/if}
 					{:else if $activeComposeTab === 'json'}
 						<div class="flex flex-col h-full">
-							<!-- Save button -->
-							<div class="flex justify-end p-4">
-								{#if hasChanges}
-									<button
-										class="px-4 py-2 text-white rounded-lg bg-success-500 hover:bg-success-600"
-										on:click={saveChanges}
-									>
-										Save Changes
-									</button>
-								{/if}
-							</div>
 							<div class="flex-1 overflow-y-auto">
 								<JsonEditor
 									json={$composeQuery.data.compose_data.compose_json}

@@ -10,98 +10,203 @@ interface EditRequest {
         name: string;
     };
     changes: {
-        content?: string;
+        content?: string | null;
         schema?: any;
         instance?: any;
+        version?: number;
+        variation?: string;
+        created_at?: string;
     };
     previousVersion: {
-        content?: string;
+        content?: string | null;
         schema?: any;
         instance?: any;
+        version?: number;
+        variation?: string;
+        created_at?: string;
     };
     status: 'pending' | 'approved' | 'rejected';
     proposalId: string;
 }
 
-// Mock data for development
-const mockEditRequests: EditRequest[] = [
-    {
-        id: '1',
-        title: 'Update project goals',
-        description: 'Refined the project goals to better reflect current direction',
-        createdAt: '2024-02-20T10:00:00Z',
-        author: {
-            id: '1',
-            name: 'Alice'
-        },
-        changes: {
-            content: '# Updated Goals\n\nNew project goals with refined objectives...'
-        },
-        previousVersion: {
-            content: '# Goals\n\nOriginal project goals...'
-        },
-        status: 'pending',
-        proposalId: '44444444-4444-4444-4444-444444444444'
-    },
-    {
-        id: '2',
-        title: 'Fix typos in description',
-        description: 'Corrected several typos in the main description',
-        createdAt: '2024-02-19T15:30:00Z',
-        author: {
-            id: '2',
-            name: 'Bob'
-        },
-        changes: {
-            content: '# Description\n\nFixed content with corrected spelling...'
-        },
-        previousVersion: {
-            content: '# Description\n\nOriginal content with typos...'
-        },
-        status: 'approved',
-        proposalId: '44444444-4444-4444-4444-444444444444'
-    },
-    {
-        id: '3',
-        title: 'Update schema structure',
-        description: 'Modified schema to include new fields',
-        createdAt: '2024-02-18T09:15:00Z',
-        author: {
-            id: '3',
-            name: 'Charlie'
-        },
-        changes: {
-            schema: {
-                type: 'object',
-                properties: {
-                    newField: { type: 'string' }
-                }
-            }
-        },
-        previousVersion: {
-            schema: {
-                type: 'object',
-                properties: {}
-            }
-        },
-        status: 'rejected',
-        proposalId: '44444444-4444-4444-4444-444444444444'
-    }
-];
+interface ProposalData {
+    compose: {
+        id: string;
+    };
+}
+
+interface VersionData {
+    id: string;
+    json: Record<string, any>;
+    variation: string;
+    version: number;
+    created_at: string;
+}
+
+interface RawVersionData {
+    id: unknown;
+    json: unknown;
+    variation: unknown;
+    version: unknown;
+    created_at: unknown;
+}
 
 export default createOperation.query({
     input: z.object({
-        proposalId: z.string()
+        proposalId: z.string(),
+        status: z.enum(['pending', 'approved', 'rejected']).optional()
     }),
-    handler: async ({ input }): Promise<{ editRequests: EditRequest[] }> => {
-        // In a real implementation, this would query the database
-        // For now, return mock data filtered by proposalId
-        const filteredRequests = mockEditRequests.filter(
-            request => request.proposalId === input.proposalId
-        );
+    requireAuthentication: true,
+    rbac: {
+        requireMatchAll: ["authenticated"],
+    },
+    handler: async ({ input, context }): Promise<{ editRequests: EditRequest[] }> => {
+        try {
+            // First, get the composite ID for the proposal
+            const { data: proposal, error: proposalError } = await context.supabase
+                .from('proposals')
+                .select('compose:composites(id)')
+                .eq('id', input.proposalId)
+                .single() as { data: ProposalData | null; error: any };
 
-        return {
-            editRequests: filteredRequests
-        };
+            if (proposalError || !proposal?.compose?.id) {
+                console.error('[queryEditRequests] Error fetching proposal:', proposalError);
+                return { editRequests: [] };
+            }
+
+            const compositeId = proposal.compose.id;
+
+            // Now get patch requests for this composite
+            let query = context.supabase
+                .from('patch_requests')
+                .select(`
+                    id,
+                    title,
+                    description,
+                    status,
+                    created_at,
+                    author_info:profiles!patch_requests_author_fkey(id, name),
+                    old_version_id,
+                    new_version_id,
+                    composite:composites!patch_requests_composite_id_fkey(id)
+                `)
+                .eq('composite_id', compositeId)
+                .order('created_at', { ascending: false });
+
+            // Apply status filter if provided
+            if (input.status) {
+                query = query.eq('status', input.status);
+            }
+
+            const { data: patchRequests, error: requestsError } = await query;
+
+            if (requestsError) {
+                console.error('[queryEditRequests] Error fetching patch requests:', requestsError);
+                throw new Error('Failed to fetch patch requests');
+            }
+
+            // Get all version IDs
+            const versionIds = (patchRequests || []).reduce((acc: string[], req) => {
+                if (req.old_version_id && typeof req.old_version_id === 'string') acc.push(req.old_version_id);
+                if (req.new_version_id && typeof req.new_version_id === 'string') acc.push(req.new_version_id);
+                return acc;
+            }, []);
+
+            // Create a map to store all versions
+            const versionsMap = new Map<string, VersionData>();
+
+            // First, try to get versions from active db
+            const { data: dbVersions } = await context.supabase
+                .from('db')
+                .select('id, json, variation, version, created_at')
+                .in('id', versionIds);
+
+            // Add active versions to the map
+            (dbVersions || []).forEach((v: RawVersionData) => {
+                if (
+                    v?.id &&
+                    typeof v.id === 'string' &&
+                    typeof v.variation === 'string' &&
+                    typeof v.version === 'number' &&
+                    typeof v.created_at === 'string'
+                ) {
+                    versionsMap.set(v.id, {
+                        id: v.id,
+                        json: v.json as Record<string, any>,
+                        variation: v.variation,
+                        version: v.version,
+                        created_at: v.created_at
+                    });
+                }
+            });
+
+            // Get remaining versions from archive
+            const remainingIds = versionIds.filter(id => !versionsMap.has(id));
+            if (remainingIds.length > 0) {
+                const { data: archiveVersions } = await context.supabase
+                    .from('db_archive')
+                    .select('id, json, variation, version, created_at')
+                    .in('id', remainingIds);
+
+                // Add archived versions to the map
+                (archiveVersions || []).forEach((v: RawVersionData) => {
+                    if (
+                        v?.id &&
+                        typeof v.id === 'string' &&
+                        typeof v.variation === 'string' &&
+                        typeof v.version === 'number' &&
+                        typeof v.created_at === 'string'
+                    ) {
+                        versionsMap.set(v.id, {
+                            id: v.id,
+                            json: v.json as Record<string, any>,
+                            variation: v.variation,
+                            version: v.version,
+                            created_at: v.created_at
+                        });
+                    }
+                });
+            }
+
+            // Transform the data into the expected format
+            const editRequests: EditRequest[] = (patchRequests || []).map((request: any) => {
+                const oldVersion = request.old_version_id ? versionsMap.get(request.old_version_id) : null;
+                const newVersion = request.new_version_id ? versionsMap.get(request.new_version_id) : null;
+
+                return {
+                    id: request.id,
+                    title: request.title || '',
+                    description: request.description || '',
+                    createdAt: request.created_at,
+                    author: {
+                        id: request.author_info?.id || '',
+                        name: request.author_info?.name || 'Unknown'
+                    },
+                    changes: {
+                        content: newVersion?.json?.content || undefined,
+                        schema: newVersion?.json?.schema,
+                        instance: newVersion?.json,
+                        version: newVersion?.version,
+                        variation: newVersion?.variation,
+                        created_at: newVersion?.created_at
+                    },
+                    previousVersion: {
+                        content: oldVersion?.json?.content || undefined,
+                        schema: oldVersion?.json?.schema,
+                        instance: oldVersion?.json,
+                        version: oldVersion?.version,
+                        variation: oldVersion?.variation,
+                        created_at: oldVersion?.created_at
+                    },
+                    status: request.status || 'pending',
+                    proposalId: input.proposalId
+                };
+            });
+
+            return { editRequests };
+        } catch (error) {
+            console.error('[queryEditRequests] Unexpected error:', error);
+            throw error;
+        }
     }
 }); 

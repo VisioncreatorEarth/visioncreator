@@ -2,7 +2,7 @@
 HOW THIS COMPONENT WORKS:
 
 1. Overview:
-   This component displays a list of edit requests in a compact sidebar format:
+   This component displays a list of edit requests (patch requests) in a compact sidebar format:
    - Shows request title, author, and timestamp
    - Displays status badges with appropriate colors
    - Handles selection of requests for main view comparison
@@ -18,7 +18,7 @@ HOW THIS COMPONENT WORKS:
 -->
 
 <script lang="ts">
-	import { createQuery } from '$lib/wundergraph';
+	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { getTimeAgo } from '$lib/utils/dateUtils';
 	import { createEventDispatcher } from 'svelte';
 	import Icon from '@iconify/svelte';
@@ -38,6 +38,18 @@ HOW THIS COMPONENT WORKS:
 		input: { proposalId },
 		enabled: true,
 		refetchInterval: 5000 // Refresh every 5 seconds
+	});
+
+	// Create query for compose data
+	const composeQuery = createQuery({
+		operationName: 'queryComposeProposal',
+		input: { proposalId },
+		enabled: true
+	});
+
+	// Mutations for approving/rejecting requests
+	const updateEditRequestMutation = createMutation({
+		operationName: 'updateEditRequest'
 	});
 
 	// Helper function to get status color
@@ -71,14 +83,38 @@ HOW THIS COMPONENT WORKS:
 
 	// Handle request approval
 	async function handleApprove(requestId: string) {
-		// TODO: Implement approval mutation
-		console.log('Approving request:', requestId);
+		try {
+			const result = await $updateEditRequestMutation.mutateAsync({
+				id: requestId,
+				action: 'approve'
+			});
+
+			if (result?.success) {
+				await Promise.all([$editRequestsQuery.refetch(), $composeQuery.refetch()]);
+			} else {
+				console.error('Failed to approve request');
+			}
+		} catch (error) {
+			console.error('Error approving request:', error);
+		}
 	}
 
 	// Handle request rejection
 	async function handleReject(requestId: string) {
-		// TODO: Implement rejection mutation
-		console.log('Rejecting request:', requestId);
+		try {
+			const result = await $updateEditRequestMutation.mutateAsync({
+				id: requestId,
+				action: 'reject'
+			});
+
+			if (result?.success) {
+				await Promise.all([$editRequestsQuery.refetch(), $composeQuery.refetch()]);
+			} else {
+				console.error('Failed to reject request');
+			}
+		} catch (error) {
+			console.error('Error rejecting request:', error);
+		}
 	}
 </script>
 
@@ -106,6 +142,24 @@ HOW THIS COMPONENT WORKS:
 						<p class="mt-1 text-xs text-tertiary-300">
 							{request.author.name} • {getTimeAgo(request.createdAt)}
 						</p>
+						<div class="mt-2 space-y-1">
+							<p class="text-xs text-tertiary-400">
+								From: v{request.previousVersion.version || '?'}
+								{#if request.previousVersion.variation && request.changes.variation && request.previousVersion.variation !== request.changes.variation}
+									<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
+										Variation: {request.previousVersion.variation.slice(0, 8)}
+									</span>
+								{/if}
+							</p>
+							<p class="text-xs text-tertiary-400">
+								To: v{request.changes.version || '?'}
+								{#if request.previousVersion.variation && request.changes.variation && request.previousVersion.variation !== request.changes.variation}
+									<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
+										New Variation: {request.changes.variation.slice(0, 8)}
+									</span>
+								{/if}
+							</p>
+						</div>
 					</div>
 					<div class="flex items-center gap-2">
 						<span
