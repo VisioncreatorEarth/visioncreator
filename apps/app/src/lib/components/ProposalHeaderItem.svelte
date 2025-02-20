@@ -26,26 +26,14 @@ HOW THIS COMPONENT WORKS:
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import Avatar from './Avatar.svelte';
-	import type { Proposal } from '$lib/types/proposals';
+	import type { Proposal, VoterInfo, User } from '$lib/types/proposals';
 	import { fade, fly } from 'svelte/transition';
 	import { onDestroy } from 'svelte';
 	import { createMutation } from '$lib/wundergraph';
 
-	// Define VoterInfo interface
-	interface VoterInfo {
-		id: string;
-		name: string | null;
-		votes: number;
-		tokens: number;
-		tokens_staked_vce?: number;
-	}
-
 	// Props with proper typing
-	export let proposal: Proposal & {
-		voters: VoterInfo[];
-		isSubscribed: boolean;
-	};
-	export let userData: { id: string; name: string; onboarded: boolean } | null;
+	export let proposal: Proposal;
+	export let userData: User | null;
 	export let canVote: (proposal: Proposal, currentVotes: number) => boolean;
 	export let canUnstakeVote: (proposal: Proposal, voter?: VoterInfo) => boolean;
 	export let getVoteDisplay: (
@@ -57,10 +45,10 @@ HOW THIS COMPONENT WORKS:
 		nextCost: number;
 		unstakeReturn: number;
 	};
-	export let onVote: (proposalId: string, isIncrease: boolean) => void;
+	export let onVote: (proposalId: string, isIncrease: boolean) => Promise<void>;
 	export let userTokens: number;
 	export let getNextVoteCost: (currentVotes: number) => number;
-	export let onDecision: (proposalId: string, decision: 'veto' | 'pass') => void;
+	export let onDecision: (proposalId: string, decision: 'veto' | 'pass') => Promise<void>;
 	export let isAdmin: (userId: string) => boolean;
 	export let getTimeAgo: (date: string) => string;
 
@@ -232,6 +220,11 @@ HOW THIS COMPONENT WORKS:
 		} catch (error) {
 			console.error('Failed to toggle subscription:', error);
 		}
+	}
+
+	// Handle decision with proper typing
+	async function handleDecisionClick(decision: 'veto' | 'pass') {
+		await onDecision(proposal.id, decision);
 	}
 </script>
 
@@ -432,7 +425,7 @@ HOW THIS COMPONENT WORKS:
 				{#if userData?.id === '00000000-0000-0000-0000-000000000001'}
 					<div class="flex justify-end gap-2">
 						<button
-							on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
+							on:click|stopPropagation={() => handleDecisionClick('veto')}
 							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
 						>
 							<div class="flex items-center gap-2">
@@ -441,7 +434,7 @@ HOW THIS COMPONENT WORKS:
 							</div>
 						</button>
 						<button
-							on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
+							on:click|stopPropagation={() => handleDecisionClick('pass')}
 							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
 						>
 							<div class="flex items-center gap-2">
@@ -547,7 +540,7 @@ HOW THIS COMPONENT WORKS:
 				{#if userData?.id === '00000000-0000-0000-0000-000000000001'}
 					<div class="flex justify-end gap-2">
 						<button
-							on:click|stopPropagation={() => onDecision(proposal.id, 'veto')}
+							on:click|stopPropagation={() => handleDecisionClick('veto')}
 							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-error-300 hover:bg-error-500/20 bg-error-500/10"
 						>
 							<div class="flex items-center gap-2">
@@ -556,7 +549,7 @@ HOW THIS COMPONENT WORKS:
 							</div>
 						</button>
 						<button
-							on:click|stopPropagation={() => onDecision(proposal.id, 'pass')}
+							on:click|stopPropagation={() => handleDecisionClick('pass')}
 							class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-success-300 hover:bg-success-500/20 bg-success-500/10"
 						>
 							<div class="flex items-center gap-2">

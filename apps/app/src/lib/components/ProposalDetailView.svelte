@@ -61,10 +61,10 @@ HOW THIS COMPONENT WORKS:
 
 	// Reactive declarations for proposal data
 	$: proposal = $proposalQuery.data?.proposals.find((p) => p.id === proposalId);
-	$: userId = $userQuery.data?.id;
+	$: userId = $userQuery.data?.id as string;
 	$: userTokensQuery = createQuery({
 		operationName: 'getUserTokens',
-		input: { userId: userId || '' },
+		input: { userId },
 		enabled: !!userId,
 		refetchInterval: 500
 	});
@@ -80,6 +80,7 @@ HOW THIS COMPONENT WORKS:
 
 	// Create a store for the detail tab
 	const activeTab = writable<'details' | 'info' | 'chat' | 'compose'>('details');
+	const activeComposeTab = writable<'content' | 'schema'>('content');
 
 	// Update handleVote function
 	async function handleVote(proposalId: string, isIncrease: boolean) {
@@ -94,7 +95,7 @@ HOW THIS COMPONENT WORKS:
 			});
 
 			if (result?.success) {
-				await Promise.all([proposalQuery.refetch?.(), userTokensQuery.refetch?.()]);
+				await Promise.all([proposalQuery.refetch?.(), userTokensQuery.refetch?.()].filter(Boolean));
 			}
 		} catch (error) {
 			console.error('Failed to update vote:', error);
@@ -201,11 +202,11 @@ HOW THIS COMPONENT WORKS:
 
 	$: authorProfile = $authorProfileQuery.data;
 	$: userData = $userQuery?.data
-		? {
+		? ({
 				id: $userQuery.data.id,
 				name: $userQuery.data.name,
 				onboarded: $userQuery.data.onboarded
-		  }
+		  } as User)
 		: null;
 
 	// Handle mobile view
@@ -378,48 +379,53 @@ HOW THIS COMPONENT WORKS:
 					</div>
 				{:else if $activeTab === 'compose'}
 					<div class="flex-1 overflow-y-auto">
-						<div class="flex flex-col gap-6 p-6">
-							{#if proposal.compose_data?.json}
-								<div class="flex flex-col gap-4">
-									<div class="flex items-center justify-between">
-										<h3 class="text-sm font-medium text-tertiary-300">Database Schema</h3>
-										<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-tertiary-500/10">
-											<Icon icon="mdi:database" class="w-4 h-4 text-tertiary-300" />
-											<span class="text-xs font-medium text-tertiary-300"
-												>v{proposal.compose_data.version}</span
-											>
+						<div class="flex flex-col">
+							<!-- Tabs -->
+							<div class="flex gap-2 px-6 pt-6 border-b border-surface-700/50">
+								<button
+									class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg {$activeComposeTab ===
+									'content'
+										? 'text-tertiary-100 bg-surface-800 border-x border-t border-surface-700/50'
+										: 'text-tertiary-300 hover:text-tertiary-200'}"
+									on:click={() => activeComposeTab.set('content')}
+								>
+									Content
+								</button>
+								<button
+									class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg {$activeComposeTab ===
+									'schema'
+										? 'text-tertiary-100 bg-surface-800 border-x border-t border-surface-700/50'
+										: 'text-tertiary-300 hover:text-tertiary-200'}"
+									on:click={() => activeComposeTab.set('schema')}
+								>
+									Schema
+								</button>
+							</div>
+
+							<!-- Tab Content -->
+							<div class="p-6">
+								{#if $activeComposeTab === 'content'}
+									{#if proposal.compose_data?.instance?.content}
+										<div class="prose prose-invert max-w-none">
+											{@html marked(proposal.compose_data.instance.content)}
 										</div>
-									</div>
-									<div class="p-4 rounded-lg bg-surface-800">
+									{:else}
 										<pre
 											class="p-4 text-sm font-mono rounded bg-surface-900 text-tertiary-200 whitespace-pre-wrap overflow-x-auto">{JSON.stringify(
-												proposal.compose_data.json,
+												proposal.compose_data?.instance || {},
 												null,
 												2
 											)}</pre>
-									</div>
-								</div>
-							{:else}
-								<div class="flex flex-col items-center justify-center gap-4 p-8 text-center">
-									<div
-										class="flex items-center justify-center w-12 h-12 rounded-full bg-tertiary-500/10"
-									>
-										<Icon icon="mdi:database-plus" class="w-6 h-6 text-tertiary-300" />
-									</div>
-									<div>
-										<p class="text-tertiary-300">Please link a schema to this proposal</p>
-										<p class="mt-1 text-sm text-tertiary-400">
-											No database schema is currently linked
-										</p>
-									</div>
-									<button
-										class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg text-tertiary-300 hover:bg-tertiary-500/10 bg-surface-700"
-									>
-										<Icon icon="mdi:link" class="w-5 h-5" />
-										<span>Link Schema</span>
-									</button>
-								</div>
-							{/if}
+									{/if}
+								{:else if $activeComposeTab === 'schema'}
+									<pre
+										class="p-4 text-sm font-mono rounded bg-surface-900 text-tertiary-200 whitespace-pre-wrap overflow-x-auto">{JSON.stringify(
+											proposal.compose_data?.schema || {},
+											null,
+											2
+										)}</pre>
+								{/if}
+							</div>
 						</div>
 					</div>
 				{/if}

@@ -1,5 +1,25 @@
 export type ProposalState = 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
 
+export interface VoterInfo {
+    id: string;
+    name: string | null;
+    votes: number;
+    tokens: number;
+    tokens_staked_vce: number;
+}
+
+export interface SchemaJson {
+    type: string;
+    title: string;
+    description: string;
+    properties: Record<string, unknown>;
+    required?: string[];
+}
+
+export interface InstanceJson {
+    [key: string]: unknown;
+}
+
 export interface Proposal {
     id: string;
     title: string;
@@ -25,21 +45,13 @@ export interface Proposal {
     };
     compose?: string;
     compose_data?: {
-        id: string;
-        json: Record<string, unknown>;
-        version: number;
-        variation: string;
+        title: string;
+        description: string;
+        schema: SchemaJson;
+        instance: InstanceJson;
     };
-    voters?: VoterInfo[];
-    isSubscribed?: boolean;
-}
-
-export interface VoterInfo {
-    id: string;
-    name: string | null;
-    votes: number;
-    tokens: number;
-    tokens_staked_vce: number;
+    voters: VoterInfo[];
+    isSubscribed: boolean;
 }
 
 export interface User {

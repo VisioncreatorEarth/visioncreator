@@ -35,11 +35,18 @@ interface SubscriptionContext {
     };
 }
 
-interface DBVersion {
+interface Composite {
     id: string;
-    json: any;
-    version: number;
-    variation: string;
+    title: string;
+    description: string;
+    schema_id: string;
+    instance_id: string;
+    schema_data: {
+        json: any;
+    };
+    instance_data: {
+        json: any;
+    };
 }
 
 interface Proposal {
@@ -64,10 +71,10 @@ interface Proposal {
     isSubscribed: boolean;
     compose?: string;
     compose_data?: {
-        id: string;
-        json: any;
-        version: number;
-        variation: string;
+        title: string;
+        description: string;
+        schema: any;
+        instance: any;
     };
 }
 
@@ -75,69 +82,24 @@ export default createOperation.query({
     handler: async ({ context, user }): Promise<{ proposals: Proposal[] }> => {
         const userId = user?.customClaims?.id;
 
-        // Get all proposals first
+        // Get all proposals with their composites
         const { data: proposals, error } = await context.supabase
             .from('proposals')
             .select(`
                 *,
                 responsible:profiles!proposals_responsible_fkey(id, name),
-                author:profiles!proposals_author_fkey(id, name)
+                author:profiles!proposals_author_fkey(id, name),
+                composite:composites!proposals_compose_fkey(
+                    id,
+                    title,
+                    description,
+                    schema:db!composites_schema_fkey(json),
+                    instance:db!composites_instance_fkey(json)
+                )
             `);
 
         if (error) {
             throw new Error(`Failed to fetch proposals: ${error.message}`);
-        }
-
-        // Get compose data from both active and archived versions
-        const composeIds = proposals
-            .map(p => p.compose)
-            .filter((id): id is string => id !== null);
-
-        if (composeIds.length > 0) {
-            // Get active versions
-            const { data: activeVersions, error: activeError } = await context.supabase
-                .from('db')
-                .select('id, json, version, variation')
-                .in('id', composeIds);
-
-            if (activeError) {
-                throw new Error(`Failed to fetch active versions: ${activeError.message}`);
-            }
-
-            // Get archived versions
-            const { data: archivedVersions, error: archiveError } = await context.supabase
-                .from('db_archive')
-                .select('id, json, version, variation')
-                .in('id', composeIds);
-
-            if (archiveError) {
-                throw new Error(`Failed to fetch archived versions: ${archiveError.message}`);
-            }
-
-            // Type assertion for database responses
-            const typedActiveVersions = (activeVersions || []) as DBVersion[];
-            const typedArchivedVersions = (archivedVersions || []) as DBVersion[];
-
-            // Combine all versions into a map with proper typing
-            const composeDataMap = new Map<string, DBVersion>();
-            [...typedActiveVersions, ...typedArchivedVersions].forEach(version => {
-                composeDataMap.set(version.id, version);
-            });
-
-            // Add compose data to proposals
-            proposals.forEach(proposal => {
-                if (proposal.compose && typeof proposal.compose === 'string') {
-                    const composeData = composeDataMap.get(proposal.compose);
-                    if (composeData) {
-                        proposal.compose_data = {
-                            id: composeData.id,
-                            json: composeData.json,
-                            version: composeData.version,
-                            variation: composeData.variation
-                        };
-                    }
-                }
-            });
         }
 
         // Get all votes and profiles in one go
@@ -213,13 +175,19 @@ export default createOperation.query({
             }
         }
 
-        // Combine proposals with their voters and subscription status
+        // Combine proposals with their voters, subscription status, and composite data
         const proposalsWithVoters = (proposals as any[]).map(proposal => ({
             ...proposal,
             voters: votesByProposal[proposal.id] || [],
             isSubscribed: subscriptionMap.get(proposal.id) || false,
             responsible: proposal.responsible?.id || null,
-            author: proposal.author?.id || null
+            author: proposal.author?.id || null,
+            compose_data: proposal.composite ? {
+                title: proposal.composite.title,
+                description: proposal.composite.description,
+                schema: proposal.composite.schema?.json,
+                instance: proposal.composite.instance?.json
+            } : undefined
         })) as Proposal[];
 
         return {
