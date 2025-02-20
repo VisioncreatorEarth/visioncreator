@@ -93,13 +93,51 @@ export default createOperation.query({
                     id,
                     title,
                     description,
-                    schema:db!composites_schema_fkey(json),
-                    instance:db!composites_instance_fkey(json)
+                    schema_id,
+                    instance_id
                 )
             `);
 
         if (error) {
             throw new Error(`Failed to fetch proposals: ${error.message}`);
+        }
+
+        // Get all db entries for composites
+        const compositeIds = (proposals as any[])
+            .filter(p => p.composite)
+            .map(p => p.composite);
+
+        const schemaIds = compositeIds.map(c => c.schema_id);
+        const instanceIds = compositeIds.map(c => c.instance_id);
+        const allDbIds = [...new Set([...schemaIds, ...instanceIds])];
+
+        const { data: dbEntries, error: dbError } = await context.supabase
+            .from('db')
+            .select('id, json')
+            .in('id', allDbIds);
+
+        if (dbError) {
+            throw new Error(`Failed to fetch db entries: ${dbError.message}`);
+        }
+
+        // Create a map for quick lookup
+        const dbMap = new Map((dbEntries as any[]).map(entry => [entry.id, entry.json]));
+
+        // If not found in active db, try archive
+        if (allDbIds.length > 0) {
+            const missingIds = allDbIds.filter(id => !dbMap.has(id));
+            if (missingIds.length > 0) {
+                const { data: archivedEntries, error: archiveError } = await context.supabase
+                    .from('db_archive')
+                    .select('id, json')
+                    .in('id', missingIds);
+
+                if (!archiveError && archivedEntries) {
+                    archivedEntries.forEach((entry: any) => {
+                        dbMap.set(entry.id, entry.json);
+                    });
+                }
+            }
         }
 
         // Get all votes and profiles in one go
@@ -185,8 +223,8 @@ export default createOperation.query({
             compose_data: proposal.composite ? {
                 title: proposal.composite.title,
                 description: proposal.composite.description,
-                schema: proposal.composite.schema?.json,
-                instance: proposal.composite.instance?.json
+                schema: dbMap.get(proposal.composite.schema_id),
+                instance: dbMap.get(proposal.composite.instance_id)
             } : undefined
         })) as Proposal[];
 

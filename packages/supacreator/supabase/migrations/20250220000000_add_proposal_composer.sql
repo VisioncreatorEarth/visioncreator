@@ -6,9 +6,7 @@ CREATE TABLE composites (
     schema_id UUID NOT NULL,
     instance_id UUID NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT composites_schema_fkey FOREIGN KEY (schema_id) REFERENCES db(id),
-    CONSTRAINT composites_instance_fkey FOREIGN KEY (instance_id) REFERENCES db(id)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Add index for better query performance
@@ -31,8 +29,134 @@ CREATE INDEX idx_proposals_compose ON proposals(compose);
 -- Add comment explaining the field
 COMMENT ON COLUMN proposals.compose IS 'Reference to a composite that contains both schema and instance data for this proposal';
 
--- Update existing proposals to have null compose field
-UPDATE proposals SET compose = NULL;
+-- Create function to handle db versioning with composite references
+CREATE OR REPLACE FUNCTION handle_db_version_with_composites()
+RETURNS trigger AS $$
+DECLARE
+    v_old_version record;
+    v_new_id uuid;
+BEGIN
+    -- Check if this entry is referenced by any composites
+    IF EXISTS (
+        SELECT 1 FROM composites 
+        WHERE schema_id = OLD.id OR instance_id = OLD.id
+    ) THEN
+        -- For referenced entries, we:
+        -- 1. Keep the old version in db_archive (for composite references)
+        -- 2. Create a new version with new content
+        -- 3. Don't update any composite references
+        
+        -- First archive the old version
+        INSERT INTO db_archive (
+            id,
+            json,
+            author,
+            schema,
+            version,
+            variation,
+            created_at,
+            prev
+        ) VALUES (
+            OLD.id,
+            OLD.json,
+            OLD.author,
+            OLD.schema,
+            OLD.version,
+            OLD.variation,
+            OLD.created_at,
+            OLD.prev
+        );
+
+        -- Create new version with new content
+        INSERT INTO db (
+            id,
+            json,
+            author,
+            schema,
+            version,
+            variation,
+            created_at,
+            prev
+        ) VALUES (
+            gen_random_uuid(),  -- New ID for the new version
+            NEW.json,
+            OLD.author,
+            OLD.schema,
+            OLD.version + 1,
+            OLD.variation,
+            now(),
+            OLD.id
+        );
+        
+        -- Don't actually delete the old version since it's referenced
+        RETURN NULL;
+    END IF;
+    
+    -- For non-referenced entries, proceed with normal update
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Drop and recreate the trigger
+DROP TRIGGER IF EXISTS handle_db_version_composites ON db;
+CREATE TRIGGER handle_db_version_composites
+    BEFORE UPDATE ON db
+    FOR EACH ROW
+    EXECUTE FUNCTION handle_db_version_with_composites();
+
+-- Modify get_db_entry to handle both active and archived entries
+CREATE OR REPLACE FUNCTION get_db_entry(p_id uuid)
+RETURNS jsonb AS $$
+DECLARE
+    v_json jsonb;
+BEGIN
+    -- First try to get from active db
+    SELECT json INTO v_json
+    FROM db
+    WHERE id = p_id;
+
+    -- If not found in active db, try archive
+    IF v_json IS NULL THEN
+        SELECT json INTO v_json
+        FROM db_archive
+        WHERE id = p_id;
+    END IF;
+
+    RETURN v_json;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to validate composite references
+CREATE OR REPLACE FUNCTION validate_composite_references()
+RETURNS trigger AS $$
+BEGIN
+    -- Check if schema exists in either active or archive
+    IF NOT EXISTS (
+        SELECT 1 FROM db WHERE id = NEW.schema_id
+        UNION
+        SELECT 1 FROM db_archive WHERE id = NEW.schema_id
+    ) THEN
+        RAISE EXCEPTION 'Schema with ID % not found in db or archive', NEW.schema_id;
+    END IF;
+
+    -- Check if instance exists in either active or archive
+    IF NOT EXISTS (
+        SELECT 1 FROM db WHERE id = NEW.instance_id
+        UNION
+        SELECT 1 FROM db_archive WHERE id = NEW.instance_id
+    ) THEN
+        RAISE EXCEPTION 'Instance with ID % not found in db or archive', NEW.instance_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for composite validation
+CREATE TRIGGER validate_composite_refs
+    BEFORE INSERT OR UPDATE ON composites
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_composite_references();
 
 -- Insert a markdown schema based on the meta schema
 INSERT INTO db (id, json, author, schema, version, variation) VALUES 
@@ -52,7 +176,7 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
   "required": ["content"]
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
-'00000000-0000-0000-0000-000000000001',  -- Meta schema (using UUID instead of integer)
+'00000000-0000-0000-0000-000000000001',  -- Meta schema
 1,  -- Initial version
 '11111111-1111-1111-1111-111111111111'   -- Unique variation ID
 );
@@ -64,7 +188,7 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
   "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
-'11111111-1111-1111-1111-111111111111',  -- References the markdown schema (using UUID)
+'11111111-1111-1111-1111-111111111111',  -- References the markdown schema
 1,  -- Initial version
 '22222222-2222-2222-2222-222222222222'   -- Unique variation ID
 );
@@ -110,11 +234,11 @@ A collaborative platform for creating, sharing, and evolving visions together.
     0,          -- Initial tokens staked
     NOW(),
     NOW(),
-    ARRAY['startup']::text[],
+    ARRAY['platform', 'collaboration', 'vision']::text[],
     '33333333-3333-3333-3333-333333333333'  -- Link to our composite
 );
 
--- Remove the old update that tried to find HominioDB proposal
+-- Remove any old proposals
 DELETE FROM proposals WHERE title = 'HominioDB: A Collaborative Database for Human Knowledge';
 
 -- Enable RLS
@@ -129,125 +253,24 @@ CREATE POLICY "service_role_policy" ON composites
     USING (true)
     WITH CHECK (true);
 
--- Add trigger to ensure compose references only valid db entries
-CREATE OR REPLACE FUNCTION check_compose_reference()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.compose IS NOT NULL THEN
-        -- Check if the id exists in either db or db_archive table directly
-        IF NOT EXISTS (
-            SELECT 1 FROM db WHERE id = NEW.compose
-            UNION ALL
-            SELECT 1 FROM db_archive WHERE id = NEW.compose
-        ) THEN
-            RAISE EXCEPTION 'Invalid compose reference. Must reference a valid db or archived db id.';
-        END IF;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER check_compose_reference_trigger
-    BEFORE INSERT OR UPDATE ON proposals
-    FOR EACH ROW
-    EXECUTE FUNCTION check_compose_reference();
-
--- Modify the existing update_db_version function to handle proposal references
-CREATE OR REPLACE FUNCTION public.update_db_version(
-    p_id uuid,
-    p_json jsonb
-) RETURNS "public"."db" AS $$
-DECLARE
-    v_old_version "public"."db";
-    v_new_id uuid;
-    v_result "public"."db";
-BEGIN
-    -- Get the current version
-    SELECT * INTO v_old_version 
-    FROM "public"."db" 
-    WHERE id = p_id;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Record with ID % not found', p_id;
-    END IF;
-
-    -- Generate new ID
-    v_new_id := gen_random_uuid();
-
-    -- Create new version first
-    INSERT INTO "public"."db" (
-        id,
-        json,
-        author,
-        schema,
-        version,
-        variation,
-        created_at,
-        prev
-    ) VALUES (
-        v_new_id,
-        p_json,
-        v_old_version.author,
-        v_old_version.schema,
-        v_old_version.version + 1,
-        v_old_version.variation,
-        now(),
-        null  -- Will update this after archiving
-    )
-    RETURNING * INTO v_result;
-
-    -- Archive the old version
-    INSERT INTO public.db_archive (
-        id,
-        json,
-        author,
-        schema,
-        version,
-        variation,
-        created_at,
-        prev
-    ) VALUES (
-        v_old_version.id,
-        v_old_version.json,
-        v_old_version.author,
-        v_old_version.schema,
-        v_old_version.version,
-        v_old_version.variation,
-        v_old_version.created_at,
-        v_old_version.prev
-    );
-
-    -- Update the new version's prev to point to the archived version
-    UPDATE "public"."db"
-    SET prev = v_old_version.id
-    WHERE id = v_new_id;
-
-    -- Finally delete the old version
-    DELETE FROM "public"."db" WHERE id = p_id;
-
-    RETURN v_result;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create function to get latest versions (useful for UI display)
-CREATE OR REPLACE FUNCTION get_latest_versions()
+-- Create function to get composite data with versioning support
+CREATE OR REPLACE FUNCTION get_composite_data(p_composite_id uuid)
 RETURNS TABLE (
     id uuid,
-    variation uuid,
-    version integer,
-    json jsonb
+    title text,
+    description text,
+    schema_json jsonb,
+    instance_json jsonb
 ) AS $$
 BEGIN
     RETURN QUERY
-    WITH latest_versions AS (
-        SELECT DISTINCT ON (variation)
-            id,
-            variation,
-            version,
-            json
-        FROM db
-        ORDER BY variation, version DESC
-    )
-    SELECT * FROM latest_versions;
+    SELECT 
+        c.id,
+        c.title,
+        c.description,
+        (SELECT get_db_entry(c.schema_id)) as schema_json,
+        (SELECT get_db_entry(c.instance_id)) as instance_json
+    FROM composites c
+    WHERE c.id = p_composite_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql; 
