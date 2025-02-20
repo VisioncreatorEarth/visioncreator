@@ -39,6 +39,7 @@ export type OperationErrors = {
 	polarStoreWebhook: PolarStoreWebhookErrors;
 	polarUpdateSubscription: PolarUpdateSubscriptionErrors;
 	queryCallsAndTimeStats: QueryCallsAndTimeStatsErrors;
+	queryComposeProposal: QueryComposeProposalErrors;
 	queryComposer: QueryComposerErrors;
 	queryDB: QueryDBErrors;
 	queryLeaderboard: QueryLeaderboardErrors;
@@ -117,6 +118,7 @@ export type PolarMySubscriptionsErrors = ClientOperationErrors;
 export type PolarStoreWebhookErrors = ClientOperationErrors;
 export type PolarUpdateSubscriptionErrors = ClientOperationErrors;
 export type QueryCallsAndTimeStatsErrors = ClientOperationErrors;
+export type QueryComposeProposalErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;
 export type QueryDBErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;

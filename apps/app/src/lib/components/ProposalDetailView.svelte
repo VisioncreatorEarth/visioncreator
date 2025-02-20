@@ -31,6 +31,7 @@ HOW THIS COMPONENT WORKS:
 	import Messages from './Messages.svelte';
 	import Avatar from './Avatar.svelte';
 	import VideoPlayer from './VideoPlayer.svelte';
+	import ComposeProposal from './ComposeProposal.svelte';
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import { onDestroy, onMount } from 'svelte';
 	import ProposalHeaderItem from './ProposalHeaderItem.svelte';
@@ -80,7 +81,6 @@ HOW THIS COMPONENT WORKS:
 
 	// Create a store for the detail tab
 	const activeTab = writable<'details' | 'info' | 'chat' | 'compose'>('details');
-	const activeComposeTab = writable<'content' | 'schema'>('content');
 
 	// Update handleVote function
 	async function handleVote(proposalId: string, isIncrease: boolean) {
@@ -378,56 +378,7 @@ HOW THIS COMPONENT WORKS:
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
 				{:else if $activeTab === 'compose'}
-					<div class="flex-1 overflow-y-auto w-full">
-						<div class="flex flex-col">
-							<!-- Tabs -->
-							<div class="flex gap-2 px-6 pt-6 border-b border-surface-700/50">
-								<button
-									class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg {$activeComposeTab ===
-									'content'
-										? 'text-tertiary-100 bg-surface-800 border-x border-t border-surface-700/50'
-										: 'text-tertiary-300 hover:text-tertiary-200'}"
-									on:click={() => activeComposeTab.set('content')}
-								>
-									Content
-								</button>
-								<button
-									class="px-4 py-2 text-sm font-medium transition-colors rounded-t-lg {$activeComposeTab ===
-									'schema'
-										? 'text-tertiary-100 bg-surface-800 border-x border-t border-surface-700/50'
-										: 'text-tertiary-300 hover:text-tertiary-200'}"
-									on:click={() => activeComposeTab.set('schema')}
-								>
-									Schema
-								</button>
-							</div>
-
-							<!-- Tab Content -->
-							<div class="p-6">
-								{#if $activeComposeTab === 'content'}
-									{#if proposal.compose_data?.instance?.content}
-										<div class="prose prose-invert max-w-none">
-											{@html marked(proposal.compose_data.instance.content)}
-										</div>
-									{:else}
-										<pre
-											class="p-4 text-sm font-mono rounded bg-surface-900 text-tertiary-200 whitespace-pre-wrap overflow-x-auto">{JSON.stringify(
-												proposal.compose_data?.instance || {},
-												null,
-												2
-											)}</pre>
-									{/if}
-								{:else if $activeComposeTab === 'schema'}
-									<pre
-										class="p-4 text-sm font-mono rounded bg-surface-900 text-tertiary-200 whitespace-pre-wrap overflow-x-auto">{JSON.stringify(
-											proposal.compose_data?.schema || {},
-											null,
-											2
-										)}</pre>
-								{/if}
-							</div>
-						</div>
-					</div>
+					<ComposeProposal proposalId={proposal.id} />
 				{/if}
 			</div>
 
