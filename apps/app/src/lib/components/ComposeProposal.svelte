@@ -46,18 +46,6 @@ HOW THIS COMPONENT WORKS:
 	// Store for selected variation
 	let selectedVariation: any = null;
 
-	// Debug log for compose data
-	$: if ($composeQuery.data?.compose_data) {
-		console.log('=== Compose Query Response ===');
-		console.log('Full response:', $composeQuery.data);
-		console.log('Compose data:', $composeQuery.data.compose_data);
-		console.log(
-			'Has variations_json:',
-			Array.isArray($composeQuery.data.compose_data.variations_json)
-		);
-		console.log('Variations count:', $composeQuery.data.compose_data.variations_json?.length || 0);
-	}
-
 	// Helper function to format JSON for display
 	function formatJSON(json: any): string {
 		return JSON.stringify(json, null, 2);
@@ -70,24 +58,12 @@ HOW THIS COMPONENT WORKS:
 
 	// Helper function to safely get variations array
 	function getVariations(data: any): any[] {
-		console.log('Getting variations from data:', data);
 		if (!data?.compose_data?.variations_json) {
-			console.log('No variations found in data');
 			return [];
 		}
-
-		// Ensure variations_json is always treated as an array
-		const variations = Array.isArray(data.compose_data.variations_json)
+		return Array.isArray(data.compose_data.variations_json)
 			? data.compose_data.variations_json
 			: [];
-
-		console.log('Processed variations array:', {
-			isArray: Array.isArray(variations),
-			length: variations.length,
-			items: variations
-		});
-
-		return variations;
 	}
 
 	// Helper function to compute and highlight diffs
