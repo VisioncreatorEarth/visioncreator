@@ -4,19 +4,34 @@ export interface Proposal {
     id: string;
     title: string;
     author: string;
-    details: string | null;
+    details?: string;
     benefits: string | null;
     pain: string | null;
-    video_id: string | null;
-    state: ProposalState;
+    video_id?: string;
+    state: 'idea' | 'draft' | 'pending' | 'accepted' | 'rejected';
     total_votes: number;
     total_tokens_staked: number;
-    responsible: string | null;
+    total_tokens_staked_vce: number;
+    total_tokens_staked_eure: number;
+    responsible?: string;
     created_at: string;
     updated_at: string;
-    tags?: string[];
-    metadata?: Record<string, string | null>;
     decided_at?: string;
+    tags: string[];
+    metadata?: {
+        benefits?: string;
+        pain?: string;
+        [key: string]: string | undefined;
+    };
+    compose?: string;
+    compose_data?: {
+        id: string;
+        json: Record<string, unknown>;
+        version: number;
+        variation: string;
+    };
+    voters?: VoterInfo[];
+    isSubscribed?: boolean;
 }
 
 export interface VoterInfo {

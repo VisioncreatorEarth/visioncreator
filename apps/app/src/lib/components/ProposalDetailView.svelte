@@ -4,7 +4,7 @@ HOW THIS COMPONENT WORKS:
 1. Overview:
    This component handles the detailed view of a single proposal, including:
    - Basic proposal information display
-   - Navigation between details, metadata, and chat sections
+   - Navigation between details, metadata, chat, and compose sections
    - Responsive layout that adapts to mobile and desktop views
    - Vote management and proposal state transitions
 
@@ -79,7 +79,7 @@ HOW THIS COMPONENT WORKS:
 	});
 
 	// Create a store for the detail tab
-	const activeTab = writable<'details' | 'info' | 'chat'>('details');
+	const activeTab = writable<'details' | 'info' | 'chat' | 'compose'>('details');
 
 	// Update handleVote function
 	async function handleVote(proposalId: string, isIncrease: boolean) {
@@ -223,7 +223,7 @@ HOW THIS COMPONENT WORKS:
 	});
 
 	// Make the nav classes reactive with updated tertiary colors
-	$: getNavClasses = (tabName: 'details' | 'metadata' | 'chat') => {
+	$: getNavClasses = (tabName: 'details' | 'metadata' | 'chat' | 'compose') => {
 		const base =
 			'flex items-center justify-center px-4 py-2 transition-colors rounded-full hover:bg-surface-700/50';
 		const isActive = $activeTab === tabName;
@@ -235,7 +235,7 @@ HOW THIS COMPONENT WORKS:
 	};
 
 	// Handle tab changes with explicit functions
-	function setTab(tab: 'details' | 'info' | 'chat') {
+	function setTab(tab: 'details' | 'info' | 'chat' | 'compose') {
 		activeTab.set(tab);
 	}
 
@@ -246,6 +246,11 @@ HOW THIS COMPONENT WORKS:
 			return `${baseClasses} mb-6`;
 		}
 		return baseClasses;
+	}
+
+	// Helper function to format JSON for display
+	function formatJSON(json: any): string {
+		return JSON.stringify(json, null, 2);
 	}
 </script>
 
@@ -371,6 +376,52 @@ HOW THIS COMPONENT WORKS:
 					<div class="flex flex-col flex-1 h-full">
 						<Messages contextId={proposal.id} contextType="proposal" className="h-full" />
 					</div>
+				{:else if $activeTab === 'compose'}
+					<div class="flex-1 overflow-y-auto">
+						<div class="flex flex-col gap-6 p-6">
+							{#if proposal.compose_data?.json}
+								<div class="flex flex-col gap-4">
+									<div class="flex items-center justify-between">
+										<h3 class="text-sm font-medium text-tertiary-300">Database Schema</h3>
+										<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-tertiary-500/10">
+											<Icon icon="mdi:database" class="w-4 h-4 text-tertiary-300" />
+											<span class="text-xs font-medium text-tertiary-300"
+												>v{proposal.compose_data.version}</span
+											>
+										</div>
+									</div>
+									<div class="p-4 rounded-lg bg-surface-800">
+										<pre
+											class="p-4 text-sm font-mono rounded bg-surface-900 text-tertiary-200 whitespace-pre-wrap overflow-x-auto">{JSON.stringify(
+												proposal.compose_data.json,
+												null,
+												2
+											)}</pre>
+									</div>
+								</div>
+							{:else}
+								<div class="flex flex-col items-center justify-center gap-4 p-8 text-center">
+									<div
+										class="flex items-center justify-center w-12 h-12 rounded-full bg-tertiary-500/10"
+									>
+										<Icon icon="mdi:database-plus" class="w-6 h-6 text-tertiary-300" />
+									</div>
+									<div>
+										<p class="text-tertiary-300">Please link a schema to this proposal</p>
+										<p class="mt-1 text-sm text-tertiary-400">
+											No database schema is currently linked
+										</p>
+									</div>
+									<button
+										class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg text-tertiary-300 hover:bg-tertiary-500/10 bg-surface-700"
+									>
+										<Icon icon="mdi:link" class="w-5 h-5" />
+										<span>Link Schema</span>
+									</button>
+								</div>
+							{/if}
+						</div>
+					</div>
 				{/if}
 			</div>
 
@@ -467,6 +518,17 @@ HOW THIS COMPONENT WORKS:
 						<Icon icon="mdi:information-outline" class="w-5 h-5 mt-1" />
 						<span class="-mt-1 text-[10px]">Info</span>
 					</button>
+
+					<button
+						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
+						'compose'
+							? 'bg-tertiary-300/10 text-tertiary-500'
+							: 'text-tertiary-300 hover:bg-surface-700/50'}"
+						on:click={() => setTab('compose')}
+					>
+						<Icon icon="mdi:pencil-ruler" class="w-5 h-5 mt-1" />
+						<span class="-mt-1 text-[10px]">Compose</span>
+					</button>
 				</div>
 
 				<!-- Right Side Nav Items -->
@@ -500,6 +562,11 @@ HOW THIS COMPONENT WORKS:
 					<button class={getNavClasses('chat')} on:click={() => setTab('chat')}>
 						<Icon icon="mdi:chat-outline" class="w-5 h-5" />
 						<span class="ml-2 text-sm">Chat</span>
+					</button>
+
+					<button class={getNavClasses('compose')} on:click={() => setTab('compose')}>
+						<Icon icon="mdi:pencil-ruler" class="w-5 h-5" />
+						<span class="ml-2 text-sm">Compose</span>
 					</button>
 				</div>
 
