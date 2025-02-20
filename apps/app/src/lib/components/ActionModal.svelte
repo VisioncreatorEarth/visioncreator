@@ -485,7 +485,7 @@
 				<Icon icon="heroicons:bell" class="w-5 h-5" />
 				{#if $notificationsQuery.data?.notifications?.length > 0}
 					<div
-						class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium border rounded-full -top-1 -right-1 bg-error-500 text-white border-error-400"
+						class="absolute flex items-center justify-center w-5 h-5 text-xs font-medium text-white border rounded-full -top-1 -right-1 bg-error-500 border-error-400"
 					>
 						{$notificationsQuery.data.notifications.length}
 					</div>
@@ -511,7 +511,8 @@
 	>
 		<div
 			class="relative z-10 w-full bg-surface-700 rounded-3xl flex flex-col overflow-hidden mb-[3rem] mx-2 md:mx-0"
-			class:max-w-6xl={currentModalType === 'menu' || currentModalType === 'custom-view'}
+			class:max-w-6xl={currentModalType === 'menu'}
+			class:max-w-[90vw]={currentModalType === 'custom-view'}
 			class:max-w-md={currentModalType === 'login' || currentModalType === 'signup'}
 			class:max-w-2xl={currentModalType === 'legal-and-privacy-policy' ||
 				currentModalType === 'notifications'}

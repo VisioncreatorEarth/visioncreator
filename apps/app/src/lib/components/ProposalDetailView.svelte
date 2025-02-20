@@ -7,11 +7,13 @@ HOW THIS COMPONENT WORKS:
    - Navigation between details, metadata, chat, and compose sections
    - Responsive layout that adapts to mobile and desktop views
    - Vote management and proposal state transitions
+   - Header auto-hides in compose tab for better editing experience
 
 2. Layout Structure:
    - Desktop: Three-column layout (nav, content, metadata)
    - Mobile: Single column with metadata integrated into navigation
    - Responsive breakpoints handle layout transitions
+   - Compose view hides header for full-height editing
 
 3. State Management:
    - Receives proposal data and user context as props
@@ -257,27 +259,33 @@ HOW THIS COMPONENT WORKS:
 
 {#if proposal}
 	<div class="flex flex-col h-full overflow-hidden">
-		<!-- Header -->
-		<div
-			class="sticky top-0 z-10 flex-none border-b bg-surface-800/95 backdrop-blur-sm border-surface-700/50"
-		>
-			<ProposalHeaderItem
-				{proposal}
-				{userData}
-				{canVote}
-				{canUnstakeVote}
-				{getVoteDisplay}
-				onVote={handleVote}
-				userTokens={$userTokensQuery.data?.balances?.VCE?.balance || 0}
-				{getNextVoteCost}
-				onDecision={handleDecision}
-				{isAdmin}
-				{getTimeAgo}
-			/>
-		</div>
+		<!-- Header - hidden in compose tab -->
+		{#if $activeTab !== 'compose'}
+			<div
+				class="sticky top-0 z-10 flex-none border-b bg-surface-800/95 backdrop-blur-sm border-surface-700/50"
+			>
+				<ProposalHeaderItem
+					{proposal}
+					{userData}
+					{canVote}
+					{canUnstakeVote}
+					{getVoteDisplay}
+					onVote={handleVote}
+					userTokens={$userTokensQuery.data?.balances?.VCE?.balance || 0}
+					{getNextVoteCost}
+					onDecision={handleDecision}
+					{isAdmin}
+					{getTimeAgo}
+				/>
+			</div>
+		{/if}
 
 		<!-- Main Content Area -->
-		<div class="flex flex-1 overflow-hidden md:grid md:grid-cols-[1fr_280px]">
+		<div
+			class="flex flex-1 overflow-hidden {$activeTab !== 'compose'
+				? 'md:grid md:grid-cols-[1fr_280px]'
+				: ''}"
+		>
 			<!-- Main Content Area -->
 			<div class="flex flex-col flex-1 overflow-hidden">
 				{#if $activeTab === 'details'}
@@ -508,7 +516,7 @@ HOW THIS COMPONENT WORKS:
 		<div
 			class="sticky bottom-0 left-0 right-0 z-20 hidden border-t md:flex bg-surface-600/95 backdrop-blur-sm border-surface-700/50"
 		>
-			<div class="flex items-center justify-between w-full max-w-6xl px-4 py-2 mx-auto">
+			<div class="flex items-center justify-between w-full px-4 py-2">
 				<!-- Left Side Nav Items -->
 				<div class="flex items-center gap-2">
 					<button class={getNavClasses('details')} on:click={() => setTab('details')}>
@@ -529,13 +537,7 @@ HOW THIS COMPONENT WORKS:
 
 				<!-- Right Side -->
 				<div class="flex items-center">
-					<button
-						class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 opacity-50 cursor-not-allowed rounded-6xl btn bg-gradient-to-br variant-gradient-secondary-primary"
-						disabled
-					>
-						<Icon icon="heroicons:pencil-square" class="w-5 h-5" />
-						Edit (Coming Soon)
-					</button>
+					<!-- Edit button removed -->
 				</div>
 			</div>
 		</div>
