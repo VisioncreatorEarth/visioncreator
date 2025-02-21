@@ -37,14 +37,6 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 30000 // Refetch every 30 seconds
 	});
 
-	// Query admin's EURe balance and VCE balance
-	const adminTokensQuery = createQuery({
-		operationName: 'getUserTokens',
-		input: { userId: '00000000-0000-0000-0000-000000000001' },
-		enabled: true,
-		refetchInterval: 30000
-	});
-
 	// Add CCP query
 	const ccpQuery = createQuery({
 		operationName: 'getCCP',
@@ -65,10 +57,6 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 5000
 	});
 
-	// Declare variables before using them in reactive statements
-	let eurePercentage = 0;
-	let vcePercentage = 0;
-
 	// Reactive values from API
 	$: stats = $orgaStatsQuery.data || {
 		totalActiveVCs: 0,
@@ -76,56 +64,45 @@ This is the dashboard area of the proposals view that:
 		currentTokenPrice: 1.0
 	};
 
-	// Get admin's EURe balance
-	$: adminEureBalance = $adminTokensQuery.data?.balances?.EURe?.balance || 0;
-
 	// Fixed values
 	const tokenPriceIncrease = 5.7;
 	const contributionIncrease = 16.32;
 	const monthlyRevenue = 0; // Hardcoded MRR
 
-	// Get current token price from orgaStats
-	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
+	// Compute token emission price from orgaStats
+	$: tokenEmissionPrice = (() => {
+		const price = $orgaStatsQuery.data?.currentTokenPrice;
+		if (typeof price === 'object' && price !== null) {
+			return Number(price.value) || 1.0;
+		}
+		return Number(price) || 1.0;
+	})();
 
-	// Calculate CCP using admin's total VCE (staked + unstaked) * token price + EURe
+	// Get CCP value from the API
 	$: ccpValue = new Intl.NumberFormat('en-US', {
 		style: 'currency',
 		currency: 'EUR',
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0
-	}).format(
-		($adminTokensQuery.data?.balances?.EURe?.balance || 0) +
-			(($adminTokensQuery.data?.balances?.VCE?.balance || 0) +
-				($adminTokensQuery.data?.balances?.VCE?.staked_balance || 0)) *
-				currentTokenPrice
-	);
+	}).format($ccpQuery.data?.total ?? 0);
 
-	// Format distribution percentages based on actual values
-	$: {
-		const eureAmount = $adminTokensQuery.data?.balances?.EURe?.balance || 0;
-		const totalVceAmount =
-			($adminTokensQuery.data?.balances?.VCE?.balance || 0) +
-			($adminTokensQuery.data?.balances?.VCE?.staked_balance || 0);
-		const vceInEure = totalVceAmount * currentTokenPrice;
-		const total = eureAmount + vceInEure;
-
-		eurePercentage = total > 0 ? Math.round((eureAmount / total) * 100) : 0;
-		vcePercentage = total > 0 ? Math.round((vceInEure / total) * 100) : 0;
-	}
+	// Get distribution percentages from the API
+	$: eurePercentage = Math.round($ccpQuery.data?.distribution?.eure ?? 0);
+	$: vcePercentage = Math.round($ccpQuery.data?.distribution?.vce ?? 0);
 
 	// Extract the current VC count from the 'activeVC' endpoint (0 if not loaded)
 	$: totalVCs = $activeVCQuery.data?.totalVCs ?? 0;
 
 	// Compute the next milestone threshold based on levels from investment metrics.
 	$: nextMilestone = (() => {
-	    const levels = $investmentMetricsQuery.data?.levels;
-	    if (!levels || levels.length === 0) return 0;
-	    // Find the first level whose totalVCs is greater than the current totalVCs.
-	    for (const level of levels) {
-	        if (level.totalVCs > totalVCs) return level.totalVCs;
-	    }
-	    // If none found, use the highest milestone available.
-	    return levels[levels.length - 1].totalVCs;
+		const levels = $investmentMetricsQuery.data?.levels;
+		if (!levels || levels.length === 0) return 0;
+		// Find the first level whose totalVCs is greater than the current totalVCs.
+		for (const level of levels) {
+			if (level.totalVCs > totalVCs) return level.totalVCs;
+		}
+		// If none found, use the highest milestone available.
+		return levels[levels.length - 1].totalVCs;
 	})();
 
 	// Calculate remaining Vision Creators needed for the next milestone; if the next milestone is not yet met, subtract current VCs
@@ -193,7 +170,7 @@ This is the dashboard area of the proposals view that:
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm">/t</span>
+								€{tokenEmissionPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm">/t</span>
 							</p>
 						</div>
 
@@ -268,13 +245,25 @@ This is the dashboard area of the proposals view that:
 					
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Current Token Emission Price</h3>
-						<p class="text-2xl font-bold text-tertiary-100">€{stats.currentTokenPrice.toFixed(2)}</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $orgaStatsQuery.data}
+								€{tokenEmissionPrice.toFixed(2)}
+							{:else}
+								Loading…
+							{/if}
+						</p>
 						<p class="text-sm text-tertiary-300 mt-2">1000 Tokens sold for €2000 in last round</p>
 					</div>
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Pool Distribution</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{eurePercentage}% / {vcePercentage}%</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $ccpQuery.data}
+								{eurePercentage}% / {vcePercentage}%
+							{:else}
+								Loading…
+							{/if}
+						</p>
 						<p class="text-sm text-tertiary-300 mt-2">EURe / VCE ratio</p>
 					</div>
 
