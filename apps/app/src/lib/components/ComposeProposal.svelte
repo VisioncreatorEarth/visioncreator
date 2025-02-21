@@ -6,6 +6,7 @@ This component handles:
 2. Display and management of related composites (variations, forks, etc.)
 3. Editing capabilities for the main content and variations
 4. Creation of new relationships between composites
+5. Management of edit requests through the right aside
 -->
 <script lang="ts">
 	import { marked } from 'marked';
@@ -13,6 +14,7 @@ This component handles:
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
 	import JsonEditor from './JsonEditor.svelte';
+	import EditRequests from './EditRequests.svelte';
 
 	// Props
 	export let proposalId: string;
@@ -71,6 +73,7 @@ This component handles:
 	let editMode = false;
 	let editContent = '';
 	let selectedCompositeId: string | null = null;
+	let selectedEditRequestId: string | undefined;
 
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
@@ -132,6 +135,7 @@ This component handles:
 	function handleCompositeSelect(compositeId: string | null) {
 		selectedCompositeId = compositeId;
 		editMode = false; // Reset edit mode when switching composites
+		selectedEditRequestId = undefined; // Reset edit request selection
 
 		// Debug log
 		if (compositeId) {
@@ -141,6 +145,25 @@ This component handles:
 				compose_id: composite?.compose_id,
 				title: composite?.title
 			});
+		}
+	}
+
+	// Handle edit request selection
+	function handleEditRequestSelect(event: CustomEvent<{ request: any }>) {
+		const request = event.detail.request;
+		selectedEditRequestId = request.id;
+
+		// If this is a request for a related composite, select it
+		if (request.composite_id !== compose_data?.compose_id) {
+			selectedCompositeId = request.composite_id;
+		} else {
+			selectedCompositeId = null;
+		}
+
+		// Update content based on the request
+		if (request.changes?.content) {
+			editContent = request.changes.content;
+			editMode = true;
 		}
 	}
 
@@ -377,6 +400,24 @@ This component handles:
 			{/if}
 		</div>
 	</div>
+
+	<!-- Right Aside: Edit Requests -->
+	<aside class="flex flex-col border-l w-80 border-surface-700">
+		<div class="p-4 border-b border-surface-700">
+			<h3 class="text-lg font-semibold text-surface-100">Edit Requests</h3>
+		</div>
+		<div class="flex-1 overflow-y-auto">
+			{#if compose_data}
+				<EditRequests
+					compositeId={selectedCompositeId ||
+						compose_data.related_composites[0]?.id ||
+						'33333333-3333-3333-3333-333333333333'}
+					selectedRequestId={selectedEditRequestId}
+					on:select={handleEditRequestSelect}
+				/>
+			{/if}
+		</div>
+	</aside>
 </div>
 
 <style>

@@ -117,7 +117,7 @@ export default createOperation.mutation({
             // Try active db first
             const activeResult = await context.supabase
                 .from("db")
-                .select("schema, json, version, variation, author")
+                .select("schema, json, version, author")
                 .eq("id", input.id)
                 .single();
 
@@ -126,7 +126,7 @@ export default createOperation.mutation({
                 // Try archive if not found in active
                 const archiveResult = await context.supabase
                     .from("db_archive")
-                    .select("schema, json, version, variation, author")
+                    .select("schema, json, version, author")
                     .eq("id", input.id)
                     .single();
 
@@ -153,7 +153,7 @@ export default createOperation.mutation({
                 isArchived
             });
 
-            const currentDBItem = currentItem as DBItem & { version: number; variation: string; author: string };
+            const currentDBItem = currentItem as DBItem & { version: number; author: string };
 
             // Special handling for schema updates (meta-schema)
             if (currentDBItem.schema === '00000000-0000-0000-0000-000000000001') {
@@ -305,21 +305,18 @@ export default createOperation.mutation({
             if (isArchived) {
                 console.log('[editDB] Creating new clone for archived item');
                 const newId = crypto.randomUUID();
-                const newVariationId = crypto.randomUUID();
 
                 // Keep only the actual data in the json field, not system fields
                 const newJson = { ...input.json };
                 // Remove any system fields from json if they were accidentally included
                 delete newJson.version;
                 delete newJson.prev;
-                delete newJson.variation;
                 delete newJson.created_at;
                 delete newJson.author;
                 delete newJson.schema;
 
                 console.log('[editDB] Inserting new clone:', {
                     id: newId,
-                    variationId: newVariationId,
                     prev: input.id
                 });
 
@@ -332,7 +329,6 @@ export default createOperation.mutation({
                         schema: currentDBItem.schema,
                         author: user.customClaims.id,
                         version: 1,
-                        variation: newVariationId,
                         prev: input.id
                     })
                     .select()
@@ -368,7 +364,6 @@ export default createOperation.mutation({
             const cleanJson = { ...input.json };
             delete cleanJson.version;
             delete cleanJson.prev;
-            delete cleanJson.variation;
             delete cleanJson.created_at;
             delete cleanJson.author;
             delete cleanJson.schema;

@@ -82,13 +82,13 @@ BEGIN
         RAISE EXCEPTION 'Old version % not found in either db or db_archive', p_old_version_id;
     END IF;
 
-    -- Find composites that were referencing the old version
+    -- Find all composites that reference this content version
     FOR v_composite_record IN 
-        SELECT id, title, compose_id 
-        FROM public.composites 
-        WHERE compose_id = p_old_version_id
+        SELECT c.id, c.title, c.compose_id 
+        FROM public.composites c
+        WHERE c.compose_id = p_old_version_id
     LOOP
-        -- Check if a patch request already exists
+        -- Check if a patch request already exists for this composite
         SELECT * INTO v_existing_request
         FROM public.patch_requests
         WHERE composite_id = v_composite_record.id
@@ -100,15 +100,10 @@ BEGIN
             -- Generate descriptive title and description
             v_title := 'Update request for ' || v_composite_record.title;
             v_description := format(
-                'Content update for %s.%s%s%s',
+                'Content update for %s.%s%s',
                 v_composite_record.title,
                 E'\n\nPrevious version: ' || p_old_version_id,
-                E'\nNew version: ' || p_new_version_id,
-                CASE 
-                    WHEN v_new_version.variation <> v_old_version.variation 
-                    THEN E'\n(Created as new variation)' 
-                    ELSE '' 
-                END
+                E'\nNew version: ' || p_new_version_id
             );
 
             -- Create patch request
@@ -132,32 +127,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Drop existing triggers
-DROP TRIGGER IF EXISTS generate_patch_request_trigger ON public.db;
-DROP TRIGGER IF EXISTS generate_patch_request_trigger_archive ON public.db_archive;
+-- Create trigger to watch for version updates
+CREATE OR REPLACE FUNCTION public.on_version_updated()
+RETURNS trigger AS $$
+BEGIN
+    -- Only proceed if prev field was updated and is not null
+    IF NEW.prev IS NOT NULL THEN
+        -- Call the patch request generation with the correct version IDs
+        PERFORM public.generate_patch_request(NEW.prev, NEW.id);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- Enable RLS on patch_requests
-ALTER TABLE "public"."patch_requests" ENABLE ROW LEVEL SECURITY;
-
--- Grant permissions
-GRANT ALL PRIVILEGES ON TABLE "public"."patch_requests" TO service_role;
-
--- RLS Policies for patch_requests
-DO $$ BEGIN
-    DROP POLICY IF EXISTS "service_role_all" ON "public"."patch_requests";
-    CREATE POLICY "service_role_all" ON "public"."patch_requests"
-    AS PERMISSIVE FOR ALL TO service_role
-    USING (true) WITH CHECK (true);
-EXCEPTION
-    WHEN undefined_object THEN null;
-END $$;
-
--- Add indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_patch_requests_composite_id ON public.patch_requests(composite_id);
-CREATE INDEX IF NOT EXISTS idx_patch_requests_status ON public.patch_requests(status);
-CREATE INDEX IF NOT EXISTS idx_patch_requests_author ON public.patch_requests(author);
-CREATE INDEX IF NOT EXISTS idx_patch_requests_old_version ON public.patch_requests(old_version_id);
-CREATE INDEX IF NOT EXISTS idx_patch_requests_new_version ON public.patch_requests(new_version_id);
+-- Create trigger to watch for prev field updates
+CREATE TRIGGER on_version_updated_trigger
+    AFTER UPDATE OF prev ON public.db
+    FOR EACH ROW
+    WHEN (NEW.prev IS NOT NULL)
+    EXECUTE FUNCTION public.on_version_updated();
 
 -- Add function to approve patch request
 CREATE OR REPLACE FUNCTION public.approve_patch_request(p_patch_request_id uuid)
@@ -177,7 +165,8 @@ BEGIN
 
     -- Update the composite to point to the new version
     UPDATE public.composites
-    SET compose_id = v_patch_request.new_version_id
+    SET compose_id = v_patch_request.new_version_id,
+        updated_at = now()
     WHERE id = v_patch_request.composite_id
     RETURNING * INTO v_composite;
 
@@ -214,49 +203,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create function to validate version references
-CREATE OR REPLACE FUNCTION public.validate_patch_request_versions()
-RETURNS trigger AS $$
-BEGIN
-    -- Check if new version exists in either db or archive
-    IF NOT EXISTS (
-        SELECT 1 FROM public.db WHERE id = NEW.new_version_id
-        UNION ALL
-        SELECT 1 FROM public.db_archive WHERE id = NEW.new_version_id
-    ) THEN
-        RAISE EXCEPTION 'New version % not found in db or db_archive', NEW.new_version_id;
-    END IF;
+-- Add indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_patch_requests_composite_id ON public.patch_requests(composite_id);
+CREATE INDEX IF NOT EXISTS idx_patch_requests_status ON public.patch_requests(status);
+CREATE INDEX IF NOT EXISTS idx_patch_requests_author ON public.patch_requests(author);
+CREATE INDEX IF NOT EXISTS idx_patch_requests_old_version ON public.patch_requests(old_version_id);
+CREATE INDEX IF NOT EXISTS idx_patch_requests_new_version ON public.patch_requests(new_version_id);
 
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Enable RLS on patch_requests
+ALTER TABLE "public"."patch_requests" ENABLE ROW LEVEL SECURITY;
 
--- Create trigger to validate version references
-CREATE TRIGGER validate_patch_request_versions
-    BEFORE INSERT OR UPDATE ON public.patch_requests
-    FOR EACH ROW
-    EXECUTE FUNCTION public.validate_patch_request_versions();
+-- Grant permissions
+GRANT ALL PRIVILEGES ON TABLE "public"."patch_requests" TO service_role;
 
--- Create function to watch for version updates
-CREATE OR REPLACE FUNCTION public.on_version_updated()
-RETURNS trigger AS $$
-BEGIN
-    -- Only proceed if prev field was updated and is not null
-    IF NEW.prev IS NOT NULL THEN
-        -- Call the patch request generation with the correct version IDs
-        PERFORM public.generate_patch_request(NEW.prev, NEW.id);
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger to watch for prev field updates
-CREATE TRIGGER on_version_updated_trigger
-    AFTER UPDATE OF prev ON public.db
-    FOR EACH ROW
-    WHEN (NEW.prev IS NOT NULL)
-    EXECUTE FUNCTION public.on_version_updated();
-
--- Drop existing archive trigger if it exists
-DROP TRIGGER IF EXISTS on_version_archived_trigger ON public.db_archive;
-DROP FUNCTION IF EXISTS public.on_version_archived() CASCADE; 
+-- RLS Policies for patch_requests
+CREATE POLICY "service_role_all" ON "public"."patch_requests"
+AS PERMISSIVE FOR ALL TO service_role
+USING (true) WITH CHECK (true); 

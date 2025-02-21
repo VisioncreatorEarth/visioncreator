@@ -7,8 +7,6 @@ CREATE TABLE composites (
     author UUID NOT NULL,      -- Reference to profiles.id
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- Keep variations array temporarily for backward compatibility
-    variations UUID[] DEFAULT ARRAY[]::UUID[],
     FOREIGN KEY (author) REFERENCES profiles(id)
 );
 
@@ -55,7 +53,7 @@ COMMENT ON TABLE composite_relationships IS 'Tracks relationships between compos
 
 -- Insert example data
 -- First, insert the markdown schema
-INSERT INTO db (id, json, author, schema, version, variation) VALUES 
+INSERT INTO db (id, json, author, schema, version) VALUES 
 ('11111111-1111-1111-1111-111111111111', 
 '{
   "type": "object",
@@ -73,44 +71,40 @@ INSERT INTO db (id, json, author, schema, version, variation) VALUES
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '00000000-0000-0000-0000-000000000001',  -- Meta schema
-1,  -- Initial version
-'11111111-1111-1111-1111-111111111111'   -- Unique variation ID
+1  -- Initial version
 );
 
 -- Insert main instance
-INSERT INTO db (id, json, author, schema, version, variation) VALUES 
+INSERT INTO db (id, json, author, schema, version) VALUES 
 ('22222222-2222-2222-2222-222222222222', 
 '{
   "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',
 '11111111-1111-1111-1111-111111111111',
-1,
-'22222222-2222-2222-2222-222222222222'
+1
 );
 
 -- Insert alternative design version
-INSERT INTO db (id, json, author, schema, version, variation) VALUES 
+INSERT INTO db (id, json, author, schema, version) VALUES 
 ('22222222-2222-2222-2222-222222222223', 
 '{
   "content": "# Alternative Content\n\nThis is a variation of the markdown content.\n\n## Additional Features\n- Different content structure\n- Alternative approach\n- Experimental features"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',
 '11111111-1111-1111-1111-111111111111',
-1,
-'22222222-2222-2222-2222-222222222223'
+1
 );
 
 -- Insert platform vision version
-INSERT INTO db (id, json, author, schema, version, variation) VALUES 
+INSERT INTO db (id, json, author, schema, version) VALUES 
 ('22222222-2222-2222-2222-222222222224', 
 '{
   "content": "# Vision Creator Platform\n\nA revolutionary platform for collaborative vision development.\n\n## Core Concepts\n- Vision as Code\n- Collaborative Decision Making\n- Transparent Evolution\n- Community-Driven Development"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',
 '11111111-1111-1111-1111-111111111111',
-1,
-'22222222-2222-2222-2222-222222222224'
+1
 );
 
 -- Create main composite

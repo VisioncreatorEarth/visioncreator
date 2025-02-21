@@ -50,6 +50,7 @@ export type OperationErrors = {
 	queryMyCapabilities: QueryMyCapabilitiesErrors;
 	queryMyShoppingList: QueryMyShoppingListErrors;
 	queryOrgaStats: QueryOrgaStatsErrors;
+	queryPatchRequests: QueryPatchRequestsErrors;
 	queryProposals: QueryProposalsErrors;
 	queryUserNotifications: QueryUserNotificationsErrors;
 	queryUserStats: QueryUserStatsErrors;
@@ -131,6 +132,7 @@ export type QueryMessagesErrors = ClientOperationErrors;
 export type QueryMyCapabilitiesErrors = ClientOperationErrors;
 export type QueryMyShoppingListErrors = ClientOperationErrors;
 export type QueryOrgaStatsErrors = ClientOperationErrors;
+export type QueryPatchRequestsErrors = ClientOperationErrors;
 export type QueryProposalsErrors = ClientOperationErrors;
 export type QueryUserNotificationsErrors = ClientOperationErrors;
 export type QueryUserStatsErrors = ClientOperationErrors;

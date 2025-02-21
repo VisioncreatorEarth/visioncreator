@@ -16,7 +16,6 @@ CREATE TABLE "public"."db_archive" (
     "author" uuid,
     "schema" uuid,
     "version" integer not null,
-    "variation" uuid not null,
     "created_at" timestamptz not null,
     "archived_at" timestamptz not null default now(),
     "prev" uuid,  -- Self-referential constraint added later
@@ -31,7 +30,6 @@ create table "public"."db" (
     "author" uuid,
     "schema" uuid,  -- Self-referential constraint added later
     "version" integer not null default 1,
-    "variation" uuid not null default gen_random_uuid(),
     "created_at" timestamptz not null default now(),
     "prev" uuid,  -- Reference to archive added later
     constraint "db_pkey" primary key ("id"),
@@ -83,10 +81,8 @@ CREATE TRIGGER validate_schema_ref_archive
 CREATE INDEX idx_db_author ON public.db(author);
 CREATE INDEX idx_db_schema ON public.db(schema);
 CREATE INDEX idx_db_version ON public.db(version);
-CREATE INDEX idx_db_variation ON public.db(variation);
 CREATE INDEX idx_db_archive_schema ON public.db_archive(schema);
 CREATE INDEX idx_db_archive_prev ON public.db_archive(prev);
-CREATE INDEX idx_db_archive_variation ON public.db_archive(variation);
 
 -- Create version update function
 CREATE OR REPLACE FUNCTION public.update_db_version(
@@ -117,7 +113,6 @@ BEGIN
         author,
         schema,
         version,
-        variation,
         created_at,
         prev
     ) VALUES (
@@ -126,7 +121,6 @@ BEGIN
         v_old_version.author,
         v_old_version.schema,
         v_old_version.version + 1,
-        v_old_version.variation,
         now(),
         null  -- Will update this after archiving
     )
@@ -139,7 +133,6 @@ BEGIN
         author,
         schema,
         version,
-        variation,
         created_at,
         prev
     ) VALUES (
@@ -148,7 +141,6 @@ BEGIN
         v_old_version.author,
         v_old_version.schema,
         v_old_version.version,
-        v_old_version.variation,
         v_old_version.created_at,
         v_old_version.prev
     );
@@ -183,7 +175,7 @@ AS PERMISSIVE FOR ALL TO service_role
 USING (true) WITH CHECK (true);
 
 -- Insert root schema
-INSERT INTO "public"."db" (id, json, author, version, schema, variation) VALUES 
+INSERT INTO "public"."db" (id, json, author, version, schema) VALUES 
 ('00000000-0000-0000-0000-000000000001', 
 '{ 
   "type": "object",
@@ -229,7 +221,6 @@ INSERT INTO "public"."db" (id, json, author, version, schema, variation) VALUES
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user ID for root schema
 1,  -- Initial version
-'00000000-0000-0000-0000-000000000001',  -- Self-reference for meta schema
-'00000000-0000-0000-0000-000000000001'   -- Variation ID (same as ID for root schema)
+'00000000-0000-0000-0000-000000000001'   -- Self-reference for meta schema
 );
 
