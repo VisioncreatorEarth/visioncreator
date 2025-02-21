@@ -52,7 +52,13 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 5000 // Update every 5 seconds
 	});
 
-	// Get total VCs from investment metrics
+	// Query for the current VC count
+	const activeVCQuery = createQuery({
+		operationName: 'activeVC',
+		enabled: true
+	});
+	
+	// Query for the investment metrics for details like next milestone threshold
 	const investmentMetricsQuery = createQuery({
 		operationName: 'getInvestmentMetrics',
 		enabled: true,
@@ -107,8 +113,23 @@ This is the dashboard area of the proposals view that:
 		vcePercentage = total > 0 ? Math.round((vceInEure / total) * 100) : 0;
 	}
 
-	// Reactive value for total VCs
-	$: totalVCs = $investmentMetricsQuery.data?.totalVCs || 0;
+	// Extract the current VC count from the 'activeVC' endpoint (0 if not loaded)
+	$: totalVCs = $activeVCQuery.data?.totalVCs ?? 0;
+
+	// Compute the next milestone threshold based on levels from investment metrics.
+	$: nextMilestone = (() => {
+	    const levels = $investmentMetricsQuery.data?.levels;
+	    if (!levels || levels.length === 0) return 0;
+	    // Find the first level whose totalVCs is greater than the current totalVCs.
+	    for (const level of levels) {
+	        if (level.totalVCs > totalVCs) return level.totalVCs;
+	    }
+	    // If none found, use the highest milestone available.
+	    return levels[levels.length - 1].totalVCs;
+	})();
+
+	// Calculate remaining Vision Creators needed for the next milestone; if the next milestone is not yet met, subtract current VCs
+	$: remainingVCs = nextMilestone > totalVCs ? nextMilestone - totalVCs : 0;
 
 	// Add state for modal
 	let isMetricsModalOpen = false;
@@ -229,8 +250,20 @@ This is the dashboard area of the proposals view that:
 				<div class="grid grid-cols-2 gap-4">
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Current VCs/Next VC Milestone</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{totalVCs}/21</p>
-						<p class="text-sm text-tertiary-300 mt-2">{21 - totalVCs} more Vision Creators needed for next milestone</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $investmentMetricsQuery.data}
+								{totalVCs}/{nextMilestone}
+							{:else}
+								Loading…
+							{/if}
+						</p>
+						<p class="text-sm text-tertiary-300 mt-2">
+							{#if $investmentMetricsQuery.data}
+								{remainingVCs} more Vision Creators needed for next milestone
+							{:else}
+								Please wait…
+							{/if}
+						</p>
 					</div>
 					
 					<div class="p-4 rounded-lg bg-surface-700/30">
