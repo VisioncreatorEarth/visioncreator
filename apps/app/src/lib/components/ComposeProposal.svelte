@@ -32,6 +32,9 @@ This component handles:
 		description: string;
 		compose_json: ComposeJson;
 		compose_id: string;
+		author: {
+			name: string;
+		};
 		related_composites: RelatedComposite[];
 	}
 
@@ -41,6 +44,9 @@ This component handles:
 		description: string;
 		compose_json: ComposeJson;
 		compose_id: string;
+		author: {
+			name: string;
+		};
 		relationship_type: string;
 		metadata: {
 			created_at: string;
@@ -219,50 +225,51 @@ This component handles:
 		</div>
 		<div class="flex-1 overflow-y-auto">
 			{#if compose_data}
-				<div class="p-4 space-y-2">
+				<div class="p-2 space-y-1">
 					<!-- Current Composite -->
 					<button
-						class="w-full p-4 rounded-lg transition-colors text-left
+						class="w-full p-3 rounded-lg transition-colors text-left
 							{!selectedCompositeId
 							? 'bg-surface-700 border-l-4 border-primary-500'
 							: 'bg-surface-900 hover:bg-surface-700'}"
 						on:click={() => handleCompositeSelect(null)}
 					>
-						<div class="space-y-2">
-							<div class="font-medium text-surface-100">{compose_data.title}</div>
-							<div class="text-sm text-surface-300">{compose_data.description}</div>
-							<div class="flex flex-wrap gap-2">
-								<span class="px-2 py-1 text-xs rounded-full bg-primary-500/20 text-primary-300">
+						<div class="flex flex-col gap-1">
+							<div class="flex items-center justify-between">
+								<div class="font-medium text-surface-100">{compose_data.title}</div>
+								<span class="px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300">
 									Current
 								</span>
 							</div>
+							<div class="text-xs text-surface-400">by {compose_data.author.name}</div>
 						</div>
 					</button>
 
 					<!-- Related Composites -->
 					{#each compose_data.related_composites || [] as composite}
 						<button
-							class="w-full p-4 rounded-lg transition-colors text-left
+							class="w-full p-3 rounded-lg transition-colors text-left
 								{selectedCompositeId === composite.id
 								? 'bg-surface-700 border-l-4 border-primary-500'
 								: 'bg-surface-900 hover:bg-surface-700'}"
 							on:click={() => handleCompositeSelect(composite.id)}
 						>
-							<div class="space-y-2">
-								<div class="font-medium text-surface-100">{composite.title}</div>
-								<div class="text-sm text-surface-300">{composite.description}</div>
-								<div class="flex flex-wrap gap-2">
-									<span class="px-2 py-1 text-xs rounded-full bg-surface-700 text-surface-200">
-										{formatRelationshipType(composite.relationship_type)}
-									</span>
-									{#if composite.metadata.variation_type}
-										<span class="px-2 py-1 text-xs rounded-full bg-primary-500/20 text-primary-300">
-											{composite.metadata.variation_type}
-										</span>
-									{/if}
+							<div class="flex flex-col gap-1">
+								<div class="flex items-center justify-between">
+									<div class="font-medium text-surface-100">{composite.title}</div>
+									<div class="flex items-center gap-1">
+										{#if composite.metadata.variation_type}
+											<span
+												class="px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300"
+											>
+												{composite.metadata.variation_type}
+											</span>
+										{/if}
+									</div>
 								</div>
-								<div class="text-xs text-surface-400">
-									Created {formatDate(composite.metadata.created_at)}
+								<div class="flex items-center justify-between">
+									<div class="text-xs text-surface-400">by {composite.author.name}</div>
+									<span class="text-xs text-surface-300"> variation </span>
 								</div>
 							</div>
 						</button>

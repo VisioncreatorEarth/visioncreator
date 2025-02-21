@@ -13,6 +13,9 @@ interface RelatedComposite {
     compose_json: ComposeJson;
     compose_id: string;
     relationship_type: string;
+    author: {
+        name: string;
+    };
     metadata: {
         created_at: string;
         variation_type?: string;
@@ -26,6 +29,9 @@ interface ComposeData {
     description: string;
     compose_json: ComposeJson;
     compose_id: string;
+    author: {
+        name: string;
+    };
     related_composites: RelatedComposite[];
 }
 
@@ -34,6 +40,7 @@ interface CompositeData {
     title: string;
     description: string;
     compose_id: string;
+    author: string;
 }
 
 interface ProposalWithComposite {
@@ -46,12 +53,14 @@ interface RelationshipData {
         title: string;
         description: string;
         compose_id: string;
+        author: string;
     };
     target_composite: {
         id: string;
         title: string;
         description: string;
         compose_id: string;
+        author: string;
     };
     relationship_type: string;
     metadata: {
@@ -68,7 +77,7 @@ export default createOperation.query({
     }),
     handler: async ({ context, input }): Promise<{ compose_data: ComposeData | null }> => {
         try {
-            // Get the proposal's composite
+            // Get the proposal's composite with author info
             const { data: proposal, error: proposalError } = await context.supabase
                 .from('proposals')
                 .select(`
@@ -76,7 +85,8 @@ export default createOperation.query({
                         id,
                         title,
                         description,
-                        compose_id
+                        compose_id,
+                        author:profiles(name)
                     )
                 `)
                 .eq('id', input.proposalId)
@@ -115,7 +125,7 @@ export default createOperation.query({
                 mainCompose = mainContent.json as ComposeJson;
             }
 
-            // Get related composites
+            // Get related composites with author info
             const { data: relationships, error: relError } = await context.supabase
                 .from('composite_relationships')
                 .select(`
@@ -123,13 +133,15 @@ export default createOperation.query({
                         id,
                         title,
                         description,
-                        compose_id
+                        compose_id,
+                        author:profiles(name)
                     ),
                     target_composite:composites!composite_relationships_target_composite_id_fkey(
                         id,
                         title,
                         description,
-                        compose_id
+                        compose_id,
+                        author:profiles(name)
                     ),
                     relationship_type,
                     metadata
@@ -144,7 +156,6 @@ export default createOperation.query({
             // Process relationships and fetch related composite content
             const relatedComposites: RelatedComposite[] = [];
             for (const rel of relationships || []) {
-                // Determine if this composite is the source or target
                 const isSource = rel.target_composite.id === proposal.compose.id;
                 const relatedComposite = isSource ? rel.source_composite : rel.target_composite;
 
@@ -182,6 +193,7 @@ export default createOperation.query({
                     description: relatedComposite.description,
                     compose_json: composeJson,
                     compose_id: relatedComposite.compose_id,
+                    author: relatedComposite.author || { name: 'Unknown' },
                     relationship_type: isSource ? `target_${rel.relationship_type}` : rel.relationship_type,
                     metadata: rel.metadata
                 });
@@ -193,6 +205,7 @@ export default createOperation.query({
                     description: proposal.compose.description,
                     compose_json: mainCompose,
                     compose_id: proposal.compose.compose_id,
+                    author: proposal.compose.author || { name: 'Unknown' },
                     related_composites: relatedComposites
                 }
             };

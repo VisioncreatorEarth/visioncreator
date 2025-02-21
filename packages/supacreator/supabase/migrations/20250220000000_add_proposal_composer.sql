@@ -4,10 +4,12 @@ CREATE TABLE composites (
     title TEXT NOT NULL,
     description TEXT,
     compose_id UUID NOT NULL,  -- Main content version
+    author UUID NOT NULL,      -- Reference to profiles.id
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     -- Keep variations array temporarily for backward compatibility
-    variations UUID[] DEFAULT ARRAY[]::UUID[]
+    variations UUID[] DEFAULT ARRAY[]::UUID[],
+    FOREIGN KEY (author) REFERENCES profiles(id)
 );
 
 -- Create composite relationships table
@@ -27,6 +29,7 @@ CREATE TABLE composite_relationships (
 
 -- Add indexes for better query performance
 CREATE INDEX idx_composites_compose ON composites(compose_id);
+CREATE INDEX idx_composites_author ON composites(author);
 CREATE INDEX idx_composite_relationships_source ON composite_relationships(source_composite_id);
 CREATE INDEX idx_composite_relationships_target ON composite_relationships(target_composite_id);
 CREATE INDEX idx_composite_relationships_type ON composite_relationships(relationship_type);
@@ -47,6 +50,7 @@ CREATE INDEX idx_proposals_compose ON proposals(compose);
 -- Add comments explaining the fields
 COMMENT ON COLUMN proposals.compose IS 'Reference to a composite that contains instance data for this proposal';
 COMMENT ON COLUMN composites.compose_id IS 'The main content version of the composite';
+COMMENT ON COLUMN composites.author IS 'Reference to the profile that created this composite';
 COMMENT ON TABLE composite_relationships IS 'Tracks relationships between composites (variations, forks, etc)';
 
 -- Insert example data
@@ -114,12 +118,14 @@ INSERT INTO composites (
     id,
     title,
     description,
-    compose_id
+    compose_id,
+    author
 ) VALUES (
     '33333333-3333-3333-3333-333333333333',
     'Markdown Content Composite',
     'A composite for storing and versioning markdown content',
-    '22222222-2222-2222-2222-222222222222'
+    '22222222-2222-2222-2222-222222222222',
+    '00000000-0000-0000-0000-000000000001'  -- System user as author
 );
 
 -- Create alternative design composite
@@ -127,12 +133,14 @@ INSERT INTO composites (
     id,
     title,
     description,
-    compose_id
+    compose_id,
+    author
 ) VALUES (
     '33333333-3333-3333-3333-333333333334',
     'Alternative Design',
     'Alternative design exploration',
-    '22222222-2222-2222-2222-222222222223'
+    '22222222-2222-2222-2222-222222222223',
+    '00000000-0000-0000-0000-000000000001'  -- System user as author
 );
 
 -- Create platform vision composite
@@ -140,12 +148,14 @@ INSERT INTO composites (
     id,
     title,
     description,
-    compose_id
+    compose_id,
+    author
 ) VALUES (
     '33333333-3333-3333-3333-333333333335',
     'Platform Vision',
     'Vision for the platform',
-    '22222222-2222-2222-2222-222222222224'
+    '22222222-2222-2222-2222-222222222224',
+    '00000000-0000-0000-0000-000000000001'  -- System user as author
 );
 
 -- Create relationships between composites
