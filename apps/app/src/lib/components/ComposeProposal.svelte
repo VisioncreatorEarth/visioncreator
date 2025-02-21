@@ -538,13 +538,7 @@ HOW THIS COMPONENT WORKS:
 	<!-- Right Aside: Edit Requests -->
 	<div class="border-l w-80 border-surface-700">
 		<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
-			<h3 class="text-sm font-medium text-tertiary-100">Edit Requests</h3>
-			<button
-				class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-colors rounded-lg bg-tertiary-500/10 hover:bg-tertiary-500/20 text-tertiary-300"
-			>
-				<Icon icon="heroicons:plus-small" class="w-4 h-4" />
-				New Edit
-			</button>
+			<h3 class="text-sm font-medium text-tertiary-100">Patch Requests</h3>
 		</div>
 
 		<!-- Edit Requests List -->

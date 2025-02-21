@@ -117,7 +117,7 @@ export default createOperation.mutation({
             // Try active db first
             const activeResult = await context.supabase
                 .from("db")
-                .select("schema, json")
+                .select("schema, json, version, variation, author")
                 .eq("id", input.id)
                 .single();
 
@@ -126,7 +126,7 @@ export default createOperation.mutation({
                 // Try archive if not found in active
                 const archiveResult = await context.supabase
                     .from("db_archive")
-                    .select("schema, json")
+                    .select("schema, json, version, variation, author")
                     .eq("id", input.id)
                     .single();
 
@@ -153,7 +153,7 @@ export default createOperation.mutation({
                 isArchived
             });
 
-            const currentDBItem = currentItem as DBItem;
+            const currentDBItem = currentItem as DBItem & { version: number; variation: string; author: string };
 
             // Special handling for schema updates (meta-schema)
             if (currentDBItem.schema === '00000000-0000-0000-0000-000000000001') {
@@ -301,9 +301,9 @@ export default createOperation.mutation({
                 console.log('[editDB] Validation passed');
             }
 
-            // If the item is archived, create a new active version with a new variation ID
+            // If the item is archived, create a new clone first
             if (isArchived) {
-                console.log('[editDB] Creating new active version for archived item');
+                console.log('[editDB] Creating new clone for archived item');
                 const newId = crypto.randomUUID();
                 const newVariationId = crypto.randomUUID();
 
@@ -317,36 +317,49 @@ export default createOperation.mutation({
                 delete newJson.author;
                 delete newJson.schema;
 
-                console.log('[editDB] Inserting new version:', {
+                console.log('[editDB] Inserting new clone:', {
                     id: newId,
                     variationId: newVariationId,
                     prev: input.id
                 });
 
-                const { data: insertResult, error: insertError } = await context.supabase
+                // Insert the clone into active db
+                const { data: cloneResult, error: cloneError } = await context.supabase
                     .from('db')
                     .insert({
                         id: newId,
-                        json: newJson,
+                        json: currentDBItem.json, // Use the original json for the clone
                         schema: currentDBItem.schema,
                         author: user.customClaims.id,
-                        version: 1,  // Let database default handle this
+                        version: 1,
                         variation: newVariationId,
                         prev: input.id
-                        // created_at will be handled by database default
                     })
                     .select()
                     .single();
 
-                if (insertError) {
-                    console.error('[editDB] Failed to insert new version:', insertError);
-                    throw new Error(`Failed to create new version: ${insertError.message}`);
+                if (cloneError) {
+                    console.error('[editDB] Failed to create clone:', cloneError);
+                    throw new Error(`Failed to create clone: ${cloneError.message}`);
                 }
 
-                console.log('[editDB] Successfully created new version');
+                console.log('[editDB] Successfully created clone, now updating it');
+
+                // Now update the clone with the new content
+                const { data: updateResult, error: updateError } = await context.supabase.rpc('update_db_version', {
+                    p_id: newId,
+                    p_json: newJson
+                });
+
+                if (updateError) {
+                    console.error('[editDB] Failed to update clone:', updateError);
+                    throw new Error(`Failed to update clone: ${updateError.message}`);
+                }
+
+                console.log('[editDB] Successfully updated clone');
                 return {
                     success: true,
-                    updatedData: insertResult
+                    updatedData: updateResult
                 };
             }
 
