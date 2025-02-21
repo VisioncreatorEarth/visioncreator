@@ -123,17 +123,26 @@ This is the dashboard area of the proposals view that:
 		}
 	}
 
-	// Generate 180 days of fake data (about 6 months)
+	// Generate 6 months of daily data
 	const generateDailyData = () => {
 		const data = [];
-		let value = 10000;
-		for (let i = 0; i < 180; i++) {
-			// Add some random variation
-			value = value + (Math.random() - 0.48) * 500;
-			// Ensure value stays within reasonable bounds
-			value = Math.max(5000, Math.min(25000, value));
+		// Calculate dates for exactly 6 months of data
+		const endDate = new Date();
+		const startDate = new Date(endDate);
+		startDate.setMonth(startDate.getMonth() - 5); // Go back 5 months for a total of 6 months
+		const days = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+		
+		let value = 15000; // Starting value
+		for (let i = 0; i <= days; i++) {
+			// Create a smooth upward trend with natural variations
+			const trend = Math.sin(i / 20) * 2000; // Add wave pattern
+			const daily = (Math.random() - 0.5) * 500; // Daily fluctuation
+			value = value + trend + daily;
+			// Keep values within reasonable bounds
+			value = Math.max(12000, Math.min(28000, value));
+			
 			data.push({
-				date: new Date(Date.now() - (179 - i) * 24 * 60 * 60 * 1000),
+				date: new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000),
 				value: value
 			});
 		}
@@ -309,14 +318,14 @@ This is the dashboard area of the proposals view that:
 					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
 					<div class="h-64 w-full">
 						<!-- Demo data for 6-month cashflow -->
-						<div class="relative h-full">
+						<div class="relative h-full pl-12 pr-4"> <!-- Add padding for y-axis -->
 							<!-- Line chart with glow effect -->
 							<svg class="w-full h-full">
 								<!-- Define gradient for glow effect -->
 								<defs>
 									<linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stop-color="rgb(239, 68, 68)" stop-opacity="0.5" />
-										<stop offset="100%" stop-color="rgb(239, 68, 68)" stop-opacity="0.1" />
+										<stop offset="0%" stop-color="rgb(var(--color-tertiary-200))" stop-opacity="0.5" />
+										<stop offset="100%" stop-color="rgb(var(--color-tertiary-200))" stop-opacity="0.1" />
 									</linearGradient>
 									<!-- Glow filter -->
 									<filter id="glow">
@@ -335,7 +344,7 @@ This is the dashboard area of the proposals view that:
 										const y = 100 - (point.value / maxValue * 100);
 										return path + (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
 									}, '')}
-									class="stroke-red-500"
+									class="stroke-tertiary-200"
 									stroke-width="1.5"
 									fill="none"
 									filter="url(#glow)"
@@ -355,25 +364,30 @@ This is the dashboard area of the proposals view that:
 									opacity="0.15"
 								/>
 
-								<!-- Month labels (show every 30 days) -->
-								{#each dailyData.filter((_, i) => i % 30 === 0) as point, i}
+								<!-- Month labels -->
+								{#each Array.from({ length: 6 }, (_, i) => {
+									const date = new Date(dailyData[0].date);
+									date.setMonth(date.getMonth() + i);
+									return date;
+								}) as date, i}
 									<text
-										x="{(i * 30 / (dailyData.length - 1)) * 100}%"
+										x="{(i * 20)}%"
 										y="100%"
 										class="text-xs fill-tertiary-200"
 										text-anchor="middle"
 										transform="translate(0, -10)"
 									>
-										{point.date.toLocaleString('default', { month: 'short' })}
+										{date.toLocaleString('default', { month: 'short' })}
 									</text>
 								{/each}
 							</svg>
 							<!-- Y-axis labels -->
-							<div class="absolute top-0 right-full h-full pr-2 flex flex-col justify-between text-xs text-tertiary-300">
-								<span>€22K</span>
-								<span>€16.5K</span>
-								<span>€11K</span>
-								<span>€5.5K</span>
+							<div class="absolute top-0 left-0 h-full pr-2 flex flex-col justify-between text-xs text-tertiary-300">
+								<span>€30K</span>
+								<span>€24K</span>
+								<span>€18K</span>
+								<span>€12K</span>
+								<span>€6K</span>
 								<span>€0</span>
 							</div>
 						</div>
