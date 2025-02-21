@@ -122,6 +122,26 @@ This is the dashboard area of the proposals view that:
 			toggleMetricsModal(false);
 		}
 	}
+
+	// Generate 180 days of fake data (about 6 months)
+	const generateDailyData = () => {
+		const data = [];
+		let value = 10000;
+		for (let i = 0; i < 180; i++) {
+			// Add some random variation
+			value = value + (Math.random() - 0.48) * 500;
+			// Ensure value stays within reasonable bounds
+			value = Math.max(5000, Math.min(25000, value));
+			data.push({
+				date: new Date(Date.now() - (179 - i) * 24 * 60 * 60 * 1000),
+				value: value
+			});
+		}
+		return data;
+	};
+
+	const dailyData = generateDailyData();
+	const maxValue = Math.max(...dailyData.map(d => d.value));
 </script>
 
 <!-- Add keydown event listener to window -->
@@ -170,7 +190,7 @@ This is the dashboard area of the proposals view that:
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-								€{tokenEmissionPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm">/t</span>
+								€{tokenEmissionPrice.toFixed(2)}
 							</p>
 						</div>
 
@@ -240,7 +260,7 @@ This is the dashboard area of the proposals view that:
 						</p>
 						<p class="text-sm text-tertiary-300 mt-2">
 							{#if $investmentMetricsQuery.data}
-								{remainingVCs} more Vision Creators needed for next milestone
+								Bring in {remainingVCs} new VC{remainingVCs !== 1 ? 's' : ''} to unlock next milestone
 							{:else}
 								Please wait…
 							{/if}
@@ -248,7 +268,7 @@ This is the dashboard area of the proposals view that:
 					</div>
 					
 					<div class="p-4 rounded-lg bg-surface-700/30">
-						<h3 class="text-sm font-medium text-tertiary-200">Current Token Emission Price</h3>
+						<h3 class="text-sm font-medium text-tertiary-200">Current VCR Emission Price</h3>
 						<p class="text-2xl font-bold text-tertiary-100">
 							{#if $orgaStatsQuery.data}
 								€{tokenEmissionPrice.toFixed(2)}
@@ -256,7 +276,7 @@ This is the dashboard area of the proposals view that:
 								Loading…
 							{/if}
 						</p>
-						<p class="text-sm text-tertiary-300 mt-2">1000 Tokens sold for €2000 in last round</p>
+						<p class="text-sm text-tertiary-300 mt-2">Price VCR sold for in last round</p>
 					</div>
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
@@ -284,49 +304,78 @@ This is the dashboard area of the proposals view that:
 					</div>
 				</div>
 
-				<!-- New Detailed Metrics Section -->
+				<!-- Cashflow Chart Section -->
 				<div class="p-4 rounded-lg bg-surface-700/30">
-					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Detailed Metrics</h3>
-					<div class="space-y-2">
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 1</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 2</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 3</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 4</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 5</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 6</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 7</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 8</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 9</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 10</span>
-							<span class="text-tertiary-100 font-medium">-</span>
+					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
+					<div class="h-64 w-full">
+						<!-- Demo data for 6-month cashflow -->
+						<div class="relative h-full">
+							<!-- Line chart with glow effect -->
+							<svg class="w-full h-full">
+								<!-- Define gradient for glow effect -->
+								<defs>
+									<linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
+										<stop offset="0%" stop-color="rgb(239, 68, 68)" stop-opacity="0.5" />
+										<stop offset="100%" stop-color="rgb(239, 68, 68)" stop-opacity="0.1" />
+									</linearGradient>
+									<!-- Glow filter -->
+									<filter id="glow">
+										<feGaussianBlur stdDeviation="2" result="blur" />
+										<feMerge>
+											<feMergeNode in="blur" />
+											<feMergeNode in="SourceGraphic" />
+										</feMerge>
+									</filter>
+								</defs>
+
+								<!-- Create the line path -->
+								<path
+									d={dailyData.reduce((path, point, i) => {
+										const x = (i / (dailyData.length - 1)) * 100;
+										const y = 100 - (point.value / maxValue * 100);
+										return path + (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+									}, '')}
+									class="stroke-red-500"
+									stroke-width="1.5"
+									fill="none"
+									filter="url(#glow)"
+								/>
+
+								<!-- Area under the line -->
+								<path
+									d={dailyData.reduce((path, point, i) => {
+										const x = (i / (dailyData.length - 1)) * 100;
+										const y = 100 - (point.value / maxValue * 100);
+										return path + (i === 0 
+											? `M ${x} ${y}` 
+											: ` L ${x} ${y}`
+										);
+									}, '') + ` L 100 100 L 0 100 Z`}
+									fill="url(#line-gradient)"
+									opacity="0.15"
+								/>
+
+								<!-- Month labels (show every 30 days) -->
+								{#each dailyData.filter((_, i) => i % 30 === 0) as point, i}
+									<text
+										x="{(i * 30 / (dailyData.length - 1)) * 100}%"
+										y="100%"
+										class="text-xs fill-tertiary-200"
+										text-anchor="middle"
+										transform="translate(0, -10)"
+									>
+										{point.date.toLocaleString('default', { month: 'short' })}
+									</text>
+								{/each}
+							</svg>
+							<!-- Y-axis labels -->
+							<div class="absolute top-0 right-full h-full pr-2 flex flex-col justify-between text-xs text-tertiary-300">
+								<span>€22K</span>
+								<span>€16.5K</span>
+								<span>€11K</span>
+								<span>€5.5K</span>
+								<span>€0</span>
+							</div>
 						</div>
 					</div>
 				</div>
