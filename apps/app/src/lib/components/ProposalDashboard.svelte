@@ -78,8 +78,8 @@ This is the dashboard area of the proposals view that:
 		return Number(price) || 1.0;
 	})();
 
-	// Get CCP value from the API
-	$: ccpValue = new Intl.NumberFormat('en-US', {
+	// Format the total pool value from CCP data
+	$: formattedPoolValue = new Intl.NumberFormat('en-US', {
 		style: 'currency',
 		currency: 'EUR',
 		minimumFractionDigits: 0,
@@ -180,7 +180,11 @@ This is the dashboard area of the proposals view that:
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
-								{ccpValue}
+								{#if $ccpQuery.data}
+									{formattedPoolValue}
+								{:else}
+									Loading…
+								{/if}
 							</p>
 						</div>
 					</div>
@@ -269,7 +273,13 @@ This is the dashboard area of the proposals view that:
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Total Pool Value</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{ccpValue}</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $ccpQuery.data}
+								{formattedPoolValue}
+							{:else}
+								Loading…
+							{/if}
+						</p>
 						<p class="text-sm text-tertiary-300 mt-2">Combined value of EURe and VCE</p>
 					</div>
 				</div>
