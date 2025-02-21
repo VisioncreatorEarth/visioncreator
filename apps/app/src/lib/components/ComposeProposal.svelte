@@ -1,38 +1,24 @@
 <!--
-HOW THIS COMPONENT WORKS:
-
-1. Overview:
-   This component handles the compose functionality for proposals:
-   - Displays and manages content, JSON, and variations tabs
-   - Shows markdown content with preview
-   - Shows instance data in JSON format with editing capabilities
-   - Shows list of variations with their content
-   - Provides split view comparison for edit requests with highlighted changes
-   - Handles edit request approvals and rejections
-
-2. Features:
-   - Left-aligned tab navigation between content, JSON, and variations views
-   - JSON view as default display with editing support
-   - Side-by-side split view for version comparison with diff highlighting
-   - Edit request tracking with version history
-   - Responsive design that works in both desktop and mobile layouts
+@component
+ComposeProposal.svelte - A component for displaying and managing proposal composites and their relationships.
+This component handles:
+1. Display of the main composite content
+2. Display and management of related composites (variations, forks, etc.)
+3. Editing capabilities for the main content and variations
+4. Creation of new relationships between composites
 -->
-
 <script lang="ts">
 	import { marked } from 'marked';
 	import { writable } from 'svelte/store';
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
-	import EditRequests from './EditRequests.svelte';
 	import JsonEditor from './JsonEditor.svelte';
-	import type { Change } from 'diff';
-	import { diffWords, diffJson } from 'diff';
 
 	// Props
 	export let proposalId: string;
 
-	// Create a store for the compose tab - default to JSON
-	const activeComposeTab = writable<'content' | 'json' | 'variations'>('json');
+	// Create a store for the compose tab - default to Content
+	const activeComposeTab = writable<'content' | 'json'>('content');
 
 	// Add TypeScript interfaces to match backend
 	interface ComposeJson {
@@ -45,509 +31,373 @@ HOW THIS COMPONENT WORKS:
 		title: string;
 		description: string;
 		compose_json: ComposeJson;
-		variations_json: ComposeJson[];
 		compose_id: string;
+		related_composites: RelatedComposite[];
 	}
 
-	interface CompositeData {
+	interface RelatedComposite {
 		id: string;
 		title: string;
 		description: string;
+		compose_json: ComposeJson;
 		compose_id: string;
-		variations: string[];
+		relationship_type: string;
+		metadata: {
+			created_at: string;
+			variation_type?: string;
+			description?: string;
+			[key: string]: unknown;
+		};
 	}
 
-	interface ProposalWithComposite {
-		compose: CompositeData;
-	}
-
-	// Create query for compose data with proper typing
-	const composeQuery = createQuery<{ compose_data: ComposeData | null }>({
+	// Create queries and mutations
+	const composeQuery = createQuery({
 		operationName: 'queryComposeProposal',
 		input: { proposalId },
 		enabled: true
 	});
 
-	// Create query for edit requests
-	const editRequestsQuery = createQuery({
-		operationName: 'queryEditRequests',
-		input: { proposalId },
-		enabled: true
-	});
-
-	// Create mutation for editing
 	const editDBMutation = createMutation({
 		operationName: 'editDB'
 	});
 
-	// State for editing with proper typing
-	let editedJson: ComposeJson | null = null;
-	let hasChanges = false;
+	// State management
+	let editMode = false;
+	let editContent = '';
+	let selectedCompositeId: string | null = null;
 
-	// Store for selected edit request
-	let selectedRequest: any = null;
-
-	// Store for selected variation
-	let selectedVariation: any = null;
-
-	// Helper function to format JSON for display
-	function formatJSON(json: any): string {
-		return JSON.stringify(json, null, 2);
-	}
-
-	// Helper function to safely get content as string
-	function getContent(content: unknown): string {
-		return typeof content === 'string' ? content : '';
-	}
-
-	// Helper function to safely get variations array with proper typing
-	function getVariations(data: { compose_data: ComposeData | null } | undefined): ComposeJson[] {
-		if (!data?.compose_data?.variations_json) {
-			return [];
-		}
-		return Array.isArray(data.compose_data.variations_json)
-			? data.compose_data.variations_json
-			: [];
-	}
-
-	// Helper function to compute and highlight diffs
-	function computeDiff(oldStr: string, newStr: string): { html: string; hasChanges: boolean } {
-		const changes = diffWords(oldStr, newStr);
-		let html = '';
-		let hasChanges = false;
-
-		changes.forEach((part: Change) => {
-			const color = part.added
-				? 'bg-green-400/20 text-green-300'
-				: part.removed
-				? 'bg-red-400/20 text-red-300'
-				: '';
-
-			if (part.added || part.removed) {
-				hasChanges = true;
-				html += `<span class="px-1 rounded ${color}">${part.value}</span>`;
-			} else {
-				html += part.value;
-			}
-		});
-
-		return { html, hasChanges };
-	}
-
-	// Helper function to compute JSON diff with better formatting
-	function computeJsonDiff(oldJson: any, newJson: any): { html: string; hasChanges: boolean } {
-		const changes = diffJson(oldJson, newJson);
-		let html = '';
-		let hasChanges = false;
-		let indentLevel = 0;
-		const indentSize = 2;
-
-		changes.forEach((part: Change) => {
-			const lines = part.value.split('\n');
-			const color = part.added
-				? 'bg-green-400/20 text-green-300'
-				: part.removed
-				? 'bg-red-400/20 text-red-300'
-				: '';
-
-			if (part.added || part.removed) {
-				hasChanges = true;
-			}
-
-			lines.forEach((line: string, i: number) => {
-				// Handle indentation
-				if (line.includes('}') || line.includes(']')) {
-					indentLevel--;
-				}
-
-				const indent = ' '.repeat(Math.max(0, indentLevel * indentSize));
-				const formattedLine = indent + line.trim();
-
-				if (formattedLine.length > 0) {
-					if (part.added || part.removed) {
-						html += `<span class="block px-1 rounded ${color}">${formattedLine}</span>`;
-					} else {
-						html += `<span class="block">${formattedLine}</span>`;
-					}
-					if (i < lines.length - 1) {
-						html += '\n';
-					}
-				}
-
-				// Adjust indent level for next line
-				if (line.includes('{') || line.includes('[')) {
-					indentLevel++;
-				}
+	// Subscribe to query updates
+	$: compose_data = $composeQuery.data?.compose_data;
+	$: {
+		if (compose_data) {
+			console.log('Compose data loaded:', {
+				mainComposite: {
+					id: compose_data.compose_id,
+					title: compose_data.title
+				},
+				relatedComposites: compose_data.related_composites.map((rc) => ({
+					id: rc.id,
+					compose_id: rc.compose_id,
+					title: rc.title
+				}))
 			});
+		}
+	}
+	$: content = compose_data?.compose_json?.content || '';
+	$: selectedComposite = compose_data?.related_composites?.find(
+		(c) => c.id === selectedCompositeId
+	);
+	$: {
+		if (selectedComposite) {
+			console.log('Selected composite details:', {
+				id: selectedComposite.id,
+				compose_id: selectedComposite.compose_id,
+				title: selectedComposite.title,
+				content: selectedComposite.compose_json?.content?.substring(0, 50) + '...'
+			});
+		}
+	}
+
+	// Format markdown content
+	$: formattedContent = content ? marked(content) : '';
+	$: formattedSelectedContent = selectedComposite?.compose_json?.content
+		? marked(selectedComposite.compose_json.content)
+		: '';
+
+	// Get the current composite's content ID for editing
+	$: currentComposeId = selectedCompositeId
+		? selectedComposite?.compose_id // Use compose_id for sister composites
+		: compose_data?.compose_id; // Use compose_id for main composite
+
+	$: {
+		console.log('Current compose ID:', {
+			currentComposeId,
+			selectedCompositeId,
+			isMainComposite: !selectedCompositeId
 		});
-
-		return { html, hasChanges };
 	}
 
-	// Handle edit request selection
-	function handleRequestSelect({ detail }: CustomEvent<{ request: any }>) {
-		selectedRequest = detail.request;
-		selectedVariation = null;
-		activeComposeTab.set('json'); // Switch to JSON view when selecting an edit request
+	// Handle tab changes
+	function handleTabChange(tab: 'content' | 'json') {
+		$activeComposeTab = tab;
 	}
 
-	// Handle variation selection
-	function handleVariationSelect(variation: any) {
-		selectedVariation = variation;
-		selectedRequest = null;
-	}
+	// Handle composite selection
+	function handleCompositeSelect(compositeId: string | null) {
+		selectedCompositeId = compositeId;
+		editMode = false; // Reset edit mode when switching composites
 
-	// Update the JsonEditor handlers with proper typing
-	function handleJsonEditorSave(event: CustomEvent<{ json: ComposeJson }>) {
-		console.log('[ComposeProposal] JsonEditor save event:', event.detail);
-		try {
-			if (!$composeQuery.data?.compose_data?.compose_json) {
-				console.error('[ComposeProposal] No compose JSON available');
-				return;
-			}
-
-			// Get the original JSON structure
-			const originalJson = $composeQuery.data.compose_data.compose_json;
-			console.log('[ComposeProposal] Original JSON structure:', originalJson);
-
-			// Create a new JSON object that preserves all fields
-			editedJson = {
-				...originalJson,
-				// Only update content and schema, preserve all other fields
-				content: event.detail.json.content || originalJson.content,
-				schema: event.detail.json.schema || originalJson.schema,
-				// Preserve these important fields if they exist
-				version: originalJson.version,
-				prev: originalJson.prev,
-				author: originalJson.author,
-				created_at: originalJson.created_at,
-				variation: originalJson.variation,
-				title: originalJson.title,
-				description: originalJson.description
-			};
-
-			console.log('[ComposeProposal] Prepared editedJson with all fields:', editedJson);
-			saveChanges();
-		} catch (error) {
-			console.error('[ComposeProposal] Error in handleJsonEditorSave:', error);
+		// Debug log
+		if (compositeId) {
+			const composite = compose_data?.related_composites?.find((c) => c.id === compositeId);
+			console.log('Selected composite:', {
+				id: composite?.id,
+				compose_id: composite?.compose_id,
+				title: composite?.title
+			});
 		}
 	}
 
-	function handleJsonEditorChange(event: CustomEvent<{ json: ComposeJson; isValid: boolean }>) {
-		console.log('[ComposeProposal] JsonEditor change event:', event.detail);
-		try {
-			if (event.detail.isValid && $composeQuery.data?.compose_data?.compose_json) {
-				// Get the original JSON structure
-				const originalJson = $composeQuery.data.compose_data.compose_json;
-				console.log('[ComposeProposal] Original JSON structure:', originalJson);
-
-				// Create a new JSON object that preserves all fields
-				editedJson = {
-					...originalJson,
-					// Only update content and schema, preserve all other fields
-					content: event.detail.json.content || originalJson.content,
-					schema: event.detail.json.schema || originalJson.schema,
-					// Preserve these important fields if they exist
-					version: originalJson.version,
-					prev: originalJson.prev,
-					author: originalJson.author,
-					created_at: originalJson.created_at,
-					variation: originalJson.variation,
-					title: originalJson.title,
-					description: originalJson.description
-				};
-
-				console.log('[ComposeProposal] Updated editedJson with all fields:', editedJson);
-				hasChanges = true;
-			}
-		} catch (error) {
-			console.error('[ComposeProposal] Error in handleJsonEditorChange:', error);
-		}
+	// Format relationship type for display
+	function formatRelationshipType(type: string): string {
+		return type.startsWith('target_')
+			? type.replace('target_', '').replace(/_/g, ' ') + ' of'
+			: type.replace(/_/g, ' ');
 	}
 
-	// Save changes function aligned with backend types
+	// Custom date formatting function
+	function formatDate(dateString: string): string {
+		const date = new Date(dateString);
+		const now = new Date();
+		const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+		if (diffInSeconds < 60) return 'just now';
+		const diffInMinutes = Math.floor(diffInSeconds / 60);
+		if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+		const diffInHours = Math.floor(diffInMinutes / 60);
+		if (diffInHours < 24) return `${diffInHours}h ago`;
+		const diffInDays = Math.floor(diffInHours / 24);
+		if (diffInDays < 30) return `${diffInDays}d ago`;
+		const diffInMonths = Math.floor(diffInDays / 30);
+		if (diffInMonths < 12) return `${diffInMonths}mo ago`;
+		const diffInYears = Math.floor(diffInMonths / 12);
+		return `${diffInYears}y ago`;
+	}
+
+	// Handle edit mode toggle
+	function toggleEditMode() {
+		if (!editMode) {
+			// Set initial content based on whether we're editing the main composite or a variation
+			editContent = selectedCompositeId ? selectedComposite?.compose_json?.content || '' : content;
+		}
+		editMode = !editMode;
+	}
+
+	// Handle content save
 	async function saveChanges() {
-		console.log('[ComposeProposal] Starting saveChanges...');
-		console.log('[ComposeProposal] Current compose data:', $composeQuery.data?.compose_data);
-		console.log('[ComposeProposal] Edited JSON:', editedJson);
+		if (!editContent) {
+			console.error('Missing content for save');
+			return;
+		}
 
-		if (!editedJson || !$composeQuery.data?.compose_data) {
-			console.error('[ComposeProposal] Missing required data:', {
-				editedJson: !!editedJson,
-				composeData: !!$composeQuery.data?.compose_data
+		if (!currentComposeId) {
+			console.error('Missing compose ID for save:', {
+				selectedCompositeId,
+				selectedCompose: selectedComposite?.compose_id,
+				mainCompose: compose_data?.compose_id
 			});
 			return;
 		}
 
 		try {
-			const compose_id = $composeQuery.data.compose_data.compose_id;
-
-			if (!compose_id) {
-				console.error('[ComposeProposal] No compose_id found');
-				return;
-			}
-
-			// Get the original JSON structure to ensure we preserve all fields
-			const originalJson = $composeQuery.data.compose_data.compose_json;
-
-			// Create the final JSON structure for saving
-			const saveJson = {
-				content: editedJson.content,
-				schema: editedJson.schema || originalJson.schema
-			};
-
-			console.log('[ComposeProposal] Attempting to save changes:', {
-				id: compose_id,
-				json: saveJson
+			console.log('Saving changes for composite:', {
+				id: currentComposeId,
+				isVariation: !!selectedCompositeId,
+				content: editContent.substring(0, 50) + '...' // Log first 50 chars for debugging
 			});
 
-			// Use editDB to update the content
 			const result = await $editDBMutation.mutateAsync({
-				id: compose_id,
-				json: saveJson
+				id: currentComposeId,
+				json: { content: editContent }
 			});
-
-			console.log('[ComposeProposal] Save result:', result);
 
 			if (result?.success) {
-				console.log('[ComposeProposal] Save successful, refetching data...');
-				await Promise.all([$composeQuery.refetch(), $editRequestsQuery.refetch()]);
-				editedJson = null;
-				hasChanges = false;
-			} else {
-				console.error('[ComposeProposal] Failed to save changes:', result?.details);
-				const errorMessage = Array.isArray(result?.details)
-					? result.details.map((d) => `${d.field}: ${d.message}`).join(', ')
-					: result?.details || 'Unknown error occurred';
-				throw new Error(errorMessage);
+				await $composeQuery.refetch();
+				editMode = false;
 			}
 		} catch (error) {
-			console.error('[ComposeProposal] Error in saveChanges:', error);
-			throw error;
+			console.error('Failed to save changes:', error);
 		}
 	}
-
-	// Compute diffs based on request type
-	$: diffResult = selectedRequest
-		? selectedRequest.changes.content
-			? computeDiff(
-					getContent(selectedRequest.previousVersion.content),
-					getContent(selectedRequest.changes.content)
-			  )
-			: computeJsonDiff(selectedRequest.previousVersion.instance, selectedRequest.changes.instance)
-		: { html: '', hasChanges: false };
 </script>
 
-<div class="flex flex-1 overflow-hidden bg-surface-700">
-	<!-- Left Tabs -->
-	<div class="flex flex-col w-40 border-r border-surface-700/50">
-		<button
-			class="px-6 py-3 text-sm font-medium text-left transition-colors {$activeComposeTab === 'json'
-				? 'bg-surface-800 text-tertiary-100 border-l-2 border-tertiary-500'
-				: 'text-tertiary-300 hover:text-tertiary-200 hover:bg-surface-700/50'}"
-			on:click={() => activeComposeTab.set('json')}
-		>
-			JSON
-		</button>
-		<button
-			class="px-6 py-3 text-sm font-medium text-left transition-colors {$activeComposeTab ===
-			'content'
-				? 'bg-surface-800 text-tertiary-100 border-l-2 border-tertiary-500'
-				: 'text-tertiary-300 hover:text-tertiary-200 hover:bg-surface-700/50'}"
-			on:click={() => activeComposeTab.set('content')}
-		>
-			Content
-		</button>
-		<button
-			class="px-6 py-3 text-sm font-medium text-left transition-colors {$activeComposeTab ===
-			'variations'
-				? 'bg-surface-800 text-tertiary-100 border-l-2 border-tertiary-500'
-				: 'text-tertiary-300 hover:text-tertiary-200 hover:bg-surface-700/50'}"
-			on:click={() => activeComposeTab.set('variations')}
-		>
-			Variations ({getVariations($composeQuery.data).length})
-		</button>
-	</div>
-
-	<!-- Main Content Area -->
-	<div class="flex flex-col flex-1 overflow-hidden bg-surface-800">
-		{#if $composeQuery.isLoading}
-			<div class="flex items-center justify-center flex-1 py-8">
-				<p class="text-tertiary-300">Loading compose data...</p>
-			</div>
-		{:else if $composeQuery.error}
-			<div class="flex items-center justify-center flex-1 py-8">
-				<p class="text-red-400">Error loading compose data</p>
-			</div>
-		{:else if $composeQuery.data?.compose_data}
-			{#if selectedRequest}
-				<!-- Split View for Edit Requests -->
-				<div class="grid flex-1 grid-cols-2 divide-x divide-surface-700/50">
-					<!-- Previous Version -->
-					<div class="overflow-hidden">
-						<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
-							<h4 class="text-sm font-medium text-tertiary-100">Previous Version</h4>
-							<button
-								class="p-1 transition-colors rounded-lg hover:bg-surface-700/50"
-								on:click={() => (selectedRequest = null)}
-							>
-								<Icon icon="heroicons:x-mark" class="w-4 h-4 text-tertiary-300" />
-							</button>
-						</div>
-						<div class="p-4 overflow-y-auto">
-							<pre class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-									selectedRequest.previousVersion.content ||
-										selectedRequest.previousVersion.instance
-								)}</pre>
-						</div>
-					</div>
-
-					<!-- New Version with Diff Highlighting -->
-					<div class="overflow-hidden">
-						<div class="p-4 border-b border-surface-700/50">
-							<div class="flex items-center justify-between">
-								<h4 class="text-sm font-medium text-tertiary-100">New Version</h4>
-								<div class="flex items-center gap-4">
-									<div class="flex items-center gap-2">
-										<span class="inline-block w-3 h-3 rounded bg-green-400/20" />
-										<span class="text-xs text-tertiary-300">Added</span>
-									</div>
-									<div class="flex items-center gap-2">
-										<span class="inline-block w-3 h-3 rounded bg-red-400/20" />
-										<span class="text-xs text-tertiary-300">Removed</span>
-									</div>
-								</div>
+<div class="flex h-full bg-surface-800">
+	<!-- Left Aside: Variations List -->
+	<aside class="flex flex-col border-r w-80 border-surface-700">
+		<div class="p-4 border-b border-surface-700">
+			<h3 class="text-lg font-semibold text-surface-100">Composites</h3>
+		</div>
+		<div class="flex-1 overflow-y-auto">
+			{#if compose_data}
+				<div class="p-4 space-y-2">
+					<!-- Current Composite -->
+					<button
+						class="w-full p-4 rounded-lg transition-colors text-left
+							{!selectedCompositeId
+							? 'bg-surface-700 border-l-4 border-primary-500'
+							: 'bg-surface-900 hover:bg-surface-700'}"
+						on:click={() => handleCompositeSelect(null)}
+					>
+						<div class="space-y-2">
+							<div class="font-medium text-surface-100">{compose_data.title}</div>
+							<div class="text-sm text-surface-300">{compose_data.description}</div>
+							<div class="flex flex-wrap gap-2">
+								<span class="px-2 py-1 text-xs rounded-full bg-primary-500/20 text-primary-300">
+									Current
+								</span>
 							</div>
 						</div>
-						<div class="p-4 overflow-y-auto">
-							<pre
-								class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{@html diffResult.html}</pre>
-						</div>
-					</div>
-				</div>
-			{:else if selectedVariation}
-				<!-- Split View for Variations -->
-				<div class="grid flex-1 grid-cols-2 divide-x divide-surface-700/50">
-					<!-- Main Version -->
-					<div class="overflow-hidden">
-						<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
-							<h4 class="text-sm font-medium text-tertiary-100">Main Version</h4>
-							<button
-								class="p-1 transition-colors rounded-lg hover:bg-surface-700/50"
-								on:click={() => (selectedVariation = null)}
-							>
-								<Icon icon="heroicons:x-mark" class="w-4 h-4 text-tertiary-300" />
-							</button>
-						</div>
-						<div class="p-4 overflow-y-auto">
-							{#if $composeQuery.data.compose_data.compose_json?.content}
-								<div class="prose prose-invert max-w-none">
-									{@html marked(getContent($composeQuery.data.compose_data.compose_json.content))}
-								</div>
-							{:else}
-								<pre class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-										$composeQuery.data.compose_data.compose_json
-									)}</pre>
-							{/if}
-						</div>
-					</div>
+					</button>
 
-					<!-- Variation with Diff Highlighting -->
-					<div class="overflow-hidden">
-						<div class="p-4 border-b border-surface-700/50">
-							<h4 class="text-sm font-medium text-tertiary-100">Variation</h4>
-						</div>
-						<div class="p-4 overflow-y-auto">
-							{#if selectedVariation.content}
-								<div class="prose prose-invert max-w-none">
-									{@html marked(getContent(selectedVariation.content))}
-								</div>
-							{:else}
-								<pre class="font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-										selectedVariation
-									)}</pre>
-							{/if}
-						</div>
-					</div>
-				</div>
-			{:else}
-				<!-- Regular Content -->
-				<div class="flex-1 overflow-y-auto">
-					{#if $activeComposeTab === 'content'}
-						{#if $composeQuery.data.compose_data.compose_json?.content}
-							<div class="p-6 prose prose-invert max-w-none">
-								{@html marked(getContent($composeQuery.data.compose_data.compose_json.content))}
-							</div>
-						{:else}
-							<pre class="p-4 font-mono text-sm whitespace-pre-wrap text-tertiary-200">{formatJSON(
-									$composeQuery.data.compose_data.compose_json
-								)}</pre>
-						{/if}
-					{:else if $activeComposeTab === 'json'}
-						<div class="flex flex-col h-full">
-							<div class="flex-1 overflow-y-auto">
-								<JsonEditor
-									json={$composeQuery.data.compose_data.compose_json}
-									on:save={handleJsonEditorSave}
-									on:change={handleJsonEditorChange}
-								/>
-							</div>
-						</div>
-					{:else if $activeComposeTab === 'variations'}
-						<div class="p-4 space-y-4">
-							<h3 class="text-lg font-medium text-tertiary-100">Available Variations</h3>
+					<!-- Related Composites -->
+					{#each compose_data.related_composites || [] as composite}
+						<button
+							class="w-full p-4 rounded-lg transition-colors text-left
+								{selectedCompositeId === composite.id
+								? 'bg-surface-700 border-l-4 border-primary-500'
+								: 'bg-surface-900 hover:bg-surface-700'}"
+							on:click={() => handleCompositeSelect(composite.id)}
+						>
 							<div class="space-y-2">
-								{#each getVariations($composeQuery.data) as variation}
-									<button
-										class="w-full p-4 text-left transition-colors rounded-lg bg-surface-700/50 hover:bg-surface-700"
-										on:click={() => handleVariationSelect(variation)}
-									>
-										<div class="flex items-center justify-between">
-											<div>
-												<h4 class="text-sm font-medium text-tertiary-100">
-													{@html variation.content
-														? marked(variation.content.split('\n')[0].replace('#', '').trim())
-														: 'Untitled Variation'}
-												</h4>
-												{#if variation.content}
-													<p class="mt-1 text-sm text-tertiary-300">
-														{variation.content.split('\n').slice(1, 2).join(' ').slice(0, 100)}...
-													</p>
-												{/if}
-											</div>
-											<Icon icon="heroicons:chevron-right" class="w-5 h-5 text-tertiary-300" />
-										</div>
-									</button>
-								{:else}
-									<div class="p-4 text-center rounded-lg text-tertiary-300 bg-surface-700/50">
-										No variations available
-									</div>
-								{/each}
+								<div class="font-medium text-surface-100">{composite.title}</div>
+								<div class="text-sm text-surface-300">{composite.description}</div>
+								<div class="flex flex-wrap gap-2">
+									<span class="px-2 py-1 text-xs rounded-full bg-surface-700 text-surface-200">
+										{formatRelationshipType(composite.relationship_type)}
+									</span>
+									{#if composite.metadata.variation_type}
+										<span class="px-2 py-1 text-xs rounded-full bg-primary-500/20 text-primary-300">
+											{composite.metadata.variation_type}
+										</span>
+									{/if}
+								</div>
+								<div class="text-xs text-surface-400">
+									Created {formatDate(composite.metadata.created_at)}
+								</div>
 							</div>
-						</div>
-					{/if}
+						</button>
+					{/each}
 				</div>
 			{/if}
-		{:else}
-			<div class="flex items-center justify-center flex-1 py-8">
-				<p class="text-tertiary-300">No compose data available</p>
-			</div>
-		{/if}
-	</div>
-
-	<!-- Right Aside: Edit Requests -->
-	<div class="border-l w-80 border-surface-700">
-		<div class="flex items-center justify-between p-4 border-b border-surface-700/50">
-			<h3 class="text-sm font-medium text-tertiary-100">Patch Requests</h3>
 		</div>
+	</aside>
 
-		<!-- Edit Requests List -->
-		<div class="overflow-y-auto">
-			<EditRequests
-				{proposalId}
-				selectedRequestId={selectedRequest?.id}
-				on:select={handleRequestSelect}
-			/>
+	<!-- Main Content Area -->
+	<div class="flex-1">
+		<!-- Tab Navigation -->
+		<nav class="flex border-b border-surface-700">
+			<button
+				class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'content'
+					? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+					: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+				on:click={() => handleTabChange('content')}
+			>
+				Content
+			</button>
+			<button
+				class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'json'
+					? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+					: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+				on:click={() => handleTabChange('json')}
+			>
+				JSON
+			</button>
+		</nav>
+
+		<!-- Content Area -->
+		<div class="p-6 overflow-y-auto">
+			{#if $composeQuery.isLoading}
+				<div class="flex items-center justify-center h-full">
+					<div class="text-surface-300">Loading...</div>
+				</div>
+			{:else if $composeQuery.error}
+				<div class="flex items-center justify-center h-full">
+					<div class="text-red-400">Error loading data</div>
+				</div>
+			{:else if compose_data}
+				{#if $activeComposeTab === 'json'}
+					<div class="flex flex-col h-full">
+						<div class="flex items-center justify-between mb-4">
+							<h2 class="text-xl font-semibold text-surface-100">
+								{selectedComposite?.title || compose_data.title}
+							</h2>
+						</div>
+						<JsonEditor
+							json={selectedComposite?.compose_json || compose_data.compose_json}
+							on:save={saveChanges}
+						/>
+					</div>
+				{:else}
+					<div class="flex flex-col h-full">
+						<div class="flex items-center justify-between mb-4">
+							<h2 class="text-xl font-semibold text-surface-100">
+								{selectedComposite?.title || compose_data.title}
+							</h2>
+							<div class="flex items-center gap-2">
+								{#if editMode}
+									<button
+										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
+										on:click={saveChanges}
+									>
+										Save
+									</button>
+									<button
+										class="px-4 py-2 text-sm font-medium text-red-400 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+										on:click={toggleEditMode}
+									>
+										Cancel
+									</button>
+								{:else}
+									<button
+										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20"
+										on:click={toggleEditMode}
+									>
+										Edit
+									</button>
+								{/if}
+							</div>
+						</div>
+
+						{#if editMode}
+							<div class="flex flex-col gap-4">
+								<textarea
+									bind:value={editContent}
+									class="w-full h-[calc(100vh-12rem)] p-4 border rounded-lg bg-surface-900 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100"
+									placeholder="Enter markdown content..."
+								/>
+							</div>
+						{:else}
+							<div class="prose prose-invert max-w-none">
+								{@html selectedComposite ? formattedSelectedContent : formattedContent}
+							</div>
+						{/if}
+					</div>
+				{/if}
+			{:else}
+				<div class="flex items-center justify-center h-full">
+					<div class="text-surface-300">No data available</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 </div>
+
+<style>
+	:global(.prose) {
+		@apply text-surface-200;
+	}
+	:global(.prose h1, .prose h2, .prose h3, .prose h4) {
+		@apply text-surface-100;
+	}
+	:global(.prose a) {
+		@apply text-primary-500;
+	}
+	:global(.prose strong) {
+		@apply text-surface-100;
+	}
+	:global(.prose ul, .prose ol) {
+		@apply text-surface-200;
+	}
+	:global(.prose blockquote) {
+		@apply border-l-4 border-surface-700 text-surface-300;
+	}
+	:global(.prose code) {
+		@apply bg-surface-900 text-surface-200 px-1 rounded;
+	}
+	:global(.prose pre) {
+		@apply bg-surface-900;
+	}
+	:global(.prose pre code) {
+		@apply bg-transparent;
+	}
+</style>

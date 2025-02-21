@@ -6,12 +6,27 @@ interface ComposeJson {
     schema?: string;
 }
 
+interface RelatedComposite {
+    id: string;
+    title: string;
+    description: string;
+    compose_json: ComposeJson;
+    compose_id: string;
+    relationship_type: string;
+    metadata: {
+        created_at: string;
+        variation_type?: string;
+        description?: string;
+        [key: string]: unknown;
+    };
+}
+
 interface ComposeData {
     title: string;
     description: string;
     compose_json: ComposeJson;
-    variations_json: ComposeJson[];
     compose_id: string;
+    related_composites: RelatedComposite[];
 }
 
 interface CompositeData {
@@ -19,11 +34,32 @@ interface CompositeData {
     title: string;
     description: string;
     compose_id: string;
-    variations: string[];
 }
 
 interface ProposalWithComposite {
     compose: CompositeData;
+}
+
+interface RelationshipData {
+    source_composite: {
+        id: string;
+        title: string;
+        description: string;
+        compose_id: string;
+    };
+    target_composite: {
+        id: string;
+        title: string;
+        description: string;
+        compose_id: string;
+    };
+    relationship_type: string;
+    metadata: {
+        created_at: string;
+        variation_type?: string;
+        description?: string;
+        [key: string]: unknown;
+    };
 }
 
 export default createOperation.query({
@@ -31,91 +67,138 @@ export default createOperation.query({
         proposalId: z.string()
     }),
     handler: async ({ context, input }): Promise<{ compose_data: ComposeData | null }> => {
-        // Get the proposal's composite
-        const { data: proposal, error: proposalError } = await context.supabase
-            .from('proposals')
-            .select(`
-                compose:composites!proposals_compose_fkey(
-                    id,
-                    title,
-                    description,
-                    compose_id,
-                    variations
-                )
-            `)
-            .eq('id', input.proposalId)
-            .single() as { data: ProposalWithComposite | null; error: any };
+        try {
+            // Get the proposal's composite
+            const { data: proposal, error: proposalError } = await context.supabase
+                .from('proposals')
+                .select(`
+                    compose:composites!proposals_compose_fkey(
+                        id,
+                        title,
+                        description,
+                        compose_id
+                    )
+                `)
+                .eq('id', input.proposalId)
+                .single() as { data: ProposalWithComposite | null; error: any };
 
-        if (proposalError || !proposal?.compose) {
-            return { compose_data: null };
-        }
+            if (proposalError || !proposal?.compose) {
+                console.error('[queryComposeProposal] Failed to fetch proposal:', proposalError);
+                return { compose_data: null };
+            }
 
-        // Get compose data
-        const { data: dbEntry, error: dbError } = await context.supabase
-            .from('db')
-            .select('json')
-            .eq('id', proposal.compose.compose_id)
-            .single();
-
-        let mainCompose: ComposeJson;
-        if (dbError) {
-            // If not found in active db, try archive
-            const { data: archivedEntry, error: archiveError } = await context.supabase
-                .from('db_archive')
+            // Get main composite's content
+            const { data: mainContent, error: mainError } = await context.supabase
+                .from('db')
                 .select('json')
                 .eq('id', proposal.compose.compose_id)
                 .single();
 
-            if (archiveError || !archivedEntry) {
-                throw new Error(`Failed to fetch compose entry: ${dbError.message}`);
+            let mainCompose: ComposeJson;
+            if (mainError) {
+                // Try archive if not in active db
+                const { data: archivedContent, error: archiveError } = await context.supabase
+                    .from('db_archive')
+                    .select('json')
+                    .eq('id', proposal.compose.compose_id)
+                    .single();
+
+                if (archiveError || !archivedContent) {
+                    console.error('[queryComposeProposal] Failed to fetch main content:', {
+                        mainError,
+                        archiveError
+                    });
+                    throw new Error('Failed to fetch main content');
+                }
+                mainCompose = archivedContent.json as ComposeJson;
+            } else {
+                mainCompose = mainContent.json as ComposeJson;
             }
 
-            mainCompose = archivedEntry.json as ComposeJson;
-        } else {
-            mainCompose = dbEntry.json as ComposeJson;
-        }
+            // Get related composites
+            const { data: relationships, error: relError } = await context.supabase
+                .from('composite_relationships')
+                .select(`
+                    source_composite:composites!composite_relationships_source_composite_id_fkey(
+                        id,
+                        title,
+                        description,
+                        compose_id
+                    ),
+                    target_composite:composites!composite_relationships_target_composite_id_fkey(
+                        id,
+                        title,
+                        description,
+                        compose_id
+                    ),
+                    relationship_type,
+                    metadata
+                `)
+                .or(`source_composite_id.eq.${proposal.compose.id},target_composite_id.eq.${proposal.compose.id}`) as { data: RelationshipData[] | null; error: any };
 
-        // Initialize variations as empty array
-        let variations: ComposeJson[] = [];
+            if (relError) {
+                console.error('[queryComposeProposal] Failed to fetch relationships:', relError);
+                throw new Error('Failed to fetch relationships');
+            }
 
-        if (proposal.compose.variations && proposal.compose.variations.length > 0) {
-            // First try active db
-            const { data: variationEntries, error: variationsError } = await context.supabase
-                .from('db')
-                .select('id, json')
-                .in('id', proposal.compose.variations);
+            // Process relationships and fetch related composite content
+            const relatedComposites: RelatedComposite[] = [];
+            for (const rel of relationships || []) {
+                // Determine if this composite is the source or target
+                const isSource = rel.target_composite.id === proposal.compose.id;
+                const relatedComposite = isSource ? rel.source_composite : rel.target_composite;
 
-            if (!variationsError && variationEntries) {
-                const variationMap = new Map(variationEntries.map(entry => [entry.id, entry.json]));
+                // Get the content for the related composite
+                const { data: relContent, error: relContentError } = await context.supabase
+                    .from('db')
+                    .select('json')
+                    .eq('id', relatedComposite.compose_id)
+                    .single();
 
-                // Check archive for any missing variations
-                const missingIds = proposal.compose.variations.filter(id => !variationMap.has(id));
-                if (missingIds.length > 0) {
-                    const { data: archivedVariations } = await context.supabase
+                let composeJson: ComposeJson;
+                if (relContentError || !relContent) {
+                    // Try archive if not in active db
+                    const { data: archiveContent, error: archiveError } = await context.supabase
                         .from('db_archive')
-                        .select('id, json')
-                        .in('id', missingIds);
+                        .select('json')
+                        .eq('id', relatedComposite.compose_id)
+                        .single();
 
-                    if (archivedVariations) {
-                        archivedVariations.forEach(entry => variationMap.set(entry.id, entry.json));
+                    if (archiveError || !archiveContent) {
+                        console.error('[queryComposeProposal] Failed to fetch related content:', {
+                            relContentError,
+                            archiveError
+                        });
+                        continue;
                     }
+                    composeJson = archiveContent.json as ComposeJson;
+                } else {
+                    composeJson = relContent.json as ComposeJson;
                 }
 
-                // Maintain order of variations as stored in the array
-                variations = proposal.compose.variations
-                    .map(id => variationMap.get(id))
-                    .filter((json): json is ComposeJson => json !== undefined);
+                relatedComposites.push({
+                    id: relatedComposite.id,
+                    title: relatedComposite.title,
+                    description: relatedComposite.description,
+                    compose_json: composeJson,
+                    compose_id: relatedComposite.compose_id,
+                    relationship_type: isSource ? `target_${rel.relationship_type}` : rel.relationship_type,
+                    metadata: rel.metadata
+                });
             }
-        }
 
-        return {
-            compose_data: {
-                title: proposal.compose.title,
-                description: proposal.compose.description,
-                compose_json: mainCompose,
-                variations_json: variations,
-                compose_id: proposal.compose.compose_id
-            }
-        };
+            return {
+                compose_data: {
+                    title: proposal.compose.title,
+                    description: proposal.compose.description,
+                    compose_json: mainCompose,
+                    compose_id: proposal.compose.compose_id,
+                    related_composites: relatedComposites
+                }
+            };
+        } catch (error) {
+            console.error('[queryComposeProposal] Unexpected error:', error);
+            throw error;
+        }
     }
 }); 
