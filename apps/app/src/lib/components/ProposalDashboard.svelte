@@ -126,20 +126,23 @@ This is the dashboard area of the proposals view that:
 	// Generate 6 months of daily data
 	const generateDailyData = () => {
 		const data = [];
-		// Calculate dates for exactly 6 months of data
-		const endDate = new Date();
-		const startDate = new Date(endDate);
-		startDate.setMonth(startDate.getMonth() - 5); // Go back 5 months for a total of 6 months
+		// Start from September 1st, 2023
+		const startDate = new Date('2023-09-01');
+		// End at February 29th, 2024 (fixed end date)
+		const endDate = new Date('2024-02-29');
 		const days = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
 		
-		let value = 15000; // Starting value
+		// Generate data points
 		for (let i = 0; i <= days; i++) {
-			// Create a smooth upward trend with natural variations
-			const trend = Math.sin(i / 20) * 2000; // Add wave pattern
-			const daily = (Math.random() - 0.5) * 500; // Daily fluctuation
-			value = value + trend + daily;
-			// Keep values within reasonable bounds
-			value = Math.max(12000, Math.min(28000, value));
+			const progress = i / days;
+			// Start at 6K and end around 28K with some variation
+			const baseValue = 6000 + (22000 * progress);
+			// Add some natural variation with multiple frequencies
+			const variation = 
+				Math.sin(progress * Math.PI * 4) * 1000 + // Longer waves
+				Math.sin(progress * Math.PI * 12) * 500;  // Shorter waves
+			
+			const value = baseValue + variation;
 			
 			data.push({
 				date: new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000),
@@ -318,9 +321,9 @@ This is the dashboard area of the proposals view that:
 					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
 					<div class="h-64 w-full">
 						<!-- Demo data for 6-month cashflow -->
-						<div class="relative h-full pl-12 pr-4"> <!-- Add padding for y-axis -->
+						<div class="relative h-full pl-16 pr-8 pb-16">
 							<!-- Line chart with glow effect -->
-							<svg class="w-full h-full">
+							<svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
 								<!-- Define gradient for glow effect -->
 								<defs>
 									<linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
@@ -340,12 +343,12 @@ This is the dashboard area of the proposals view that:
 								<!-- Create the line path -->
 								<path
 									d={dailyData.reduce((path, point, i) => {
-										const x = (i / (dailyData.length - 1)) * 100;
+										const x = (i / (dailyData.length - 1)) * 92 + 4;
 										const y = 100 - (point.value / maxValue * 100);
 										return path + (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
 									}, '')}
 									class="stroke-tertiary-200"
-									stroke-width="1.5"
+									stroke-width="1"
 									fill="none"
 									filter="url(#glow)"
 								/>
@@ -353,31 +356,28 @@ This is the dashboard area of the proposals view that:
 								<!-- Area under the line -->
 								<path
 									d={dailyData.reduce((path, point, i) => {
-										const x = (i / (dailyData.length - 1)) * 100;
+										const x = (i / (dailyData.length - 1)) * 92 + 4;
 										const y = 100 - (point.value / maxValue * 100);
 										return path + (i === 0 
 											? `M ${x} ${y}` 
 											: ` L ${x} ${y}`
 										);
-									}, '') + ` L 100 100 L 0 100 Z`}
+									}, '') + ` L 96 100 L 4 100 Z`}
 									fill="url(#line-gradient)"
 									opacity="0.15"
 								/>
 
-								<!-- Month labels -->
-								{#each Array.from({ length: 6 }, (_, i) => {
-									const date = new Date(dailyData[0].date);
-									date.setMonth(date.getMonth() + i);
-									return date;
-								}) as date, i}
+								<!-- Fixed month labels -->
+								{#each ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'] as month, i}
 									<text
-										x="{(i * 20)}%"
+										x="{i * 18.4 + 4}%"
 										y="100%"
 										class="text-xs fill-tertiary-200"
 										text-anchor="middle"
-										transform="translate(0, -10)"
+										transform="translate(0, 30)"
+										style="font-size: 0.7rem"
 									>
-										{date.toLocaleString('default', { month: 'short' })}
+										{month}
 									</text>
 								{/each}
 							</svg>
