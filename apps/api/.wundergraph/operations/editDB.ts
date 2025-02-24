@@ -353,6 +353,20 @@ export default createOperation.mutation({
                 }
 
                 console.log('[editDB] Successfully updated clone');
+
+                // Find composites that might be using this content
+                const { data: composites } = await context.supabase
+                    .from('composites')
+                    .select('id')
+                    .eq('compose_id', input.id);
+
+                if (composites && composites.length > 0) {
+                    console.log('[editDB] Found composites using this content:', {
+                        count: composites.length,
+                        compositeIds: composites.map(c => c.id)
+                    });
+                }
+
                 return {
                     success: true,
                     updatedData: updateResult

@@ -6,6 +6,7 @@ This component handles:
 2. Approving or rejecting patch requests
 3. Showing the changes between versions
 4. Managing the patch request lifecycle
+5. Displaying granular operations for each patch request
 
 Props:
 - compositeId: string - The ID of the composite to show patch requests for
@@ -39,6 +40,9 @@ Props:
 		operationName: 'updateEditRequest' as const
 	});
 
+	// State for expanded operations
+	let expandedRequestId: string | null = null;
+
 	// Debug logging for props and query changes
 	$: {
 		console.log('[EditRequests] Props and State:', {
@@ -59,6 +63,7 @@ Props:
 					title: r.title,
 					status: r.status,
 					composite_id: r.composite_id,
+					operationsCount: r.operations?.length || 0,
 					previousVersion: {
 						id: r.previousVersion?.instance?.id,
 						version: r.previousVersion?.version
@@ -76,7 +81,7 @@ Props:
 
 	// Refetch when composite ID changes
 	$: {
-		if (compositeId && $patchRequestsQuery.enabled) {
+		if (compositeId && !$patchRequestsQuery.isLoading && $patchRequestsQuery.isFetched) {
 			console.log('[EditRequests] Composite ID changed, refetching:', compositeId);
 			$patchRequestsQuery.refetch();
 		}
@@ -90,6 +95,12 @@ Props:
 			status: request.status
 		});
 		dispatch('select', { request });
+	}
+
+	// Toggle operations visibility
+	function toggleOperations(requestId: string, event: MouseEvent) {
+		event.stopPropagation();
+		expandedRequestId = expandedRequestId === requestId ? null : requestId;
 	}
 
 	// Handle request approval with logging
@@ -157,6 +168,42 @@ Props:
 		}
 	}
 
+	// Helper function to get operation type icon
+	function getOperationIcon(type: string): string {
+		switch (type.toLowerCase()) {
+			case 'add':
+				return 'heroicons:plus-circle';
+			case 'remove':
+				return 'heroicons:minus-circle';
+			case 'replace':
+				return 'heroicons:arrow-path';
+			case 'move':
+				return 'heroicons:arrows-right-left';
+			case 'copy':
+				return 'heroicons:document-duplicate';
+			default:
+				return 'heroicons:question-mark-circle';
+		}
+	}
+
+	// Helper function to get operation type color
+	function getOperationColor(type: string): string {
+		switch (type.toLowerCase()) {
+			case 'add':
+				return 'text-green-400 bg-green-400/10';
+			case 'remove':
+				return 'text-red-400 bg-red-400/10';
+			case 'replace':
+				return 'text-blue-400 bg-blue-400/10';
+			case 'move':
+				return 'text-purple-400 bg-purple-400/10';
+			case 'copy':
+				return 'text-yellow-400 bg-yellow-400/10';
+			default:
+				return 'text-gray-400 bg-gray-400/10';
+		}
+	}
+
 	// Format date for display
 	function formatDate(dateString: string): string {
 		const date = new Date(dateString);
@@ -174,6 +221,17 @@ Props:
 		if (diffInMonths < 12) return `${diffInMonths}mo ago`;
 		const diffInYears = Math.floor(diffInMonths / 12);
 		return `${diffInYears}y ago`;
+	}
+
+	// Format value for display
+	function formatValue(value: any): string {
+		if (value === null || value === undefined) return 'null';
+		if (typeof value === 'object') return JSON.stringify(value).substring(0, 30) + '...';
+		if (typeof value === 'string') {
+			// For long strings, truncate
+			return value.length > 30 ? value.substring(0, 30) + '...' : value;
+		}
+		return String(value);
 	}
 </script>
 
@@ -236,6 +294,69 @@ Props:
 							</span>
 						</div>
 					</div>
+
+					<!-- Operations count and toggle button -->
+					{#if request.operations && request.operations.length > 0}
+						<div class="mt-2">
+							<button
+								class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg bg-surface-700/50 hover:bg-surface-700 text-tertiary-300"
+								on:click={(e) => toggleOperations(request.id, e)}
+							>
+								<Icon
+									icon={expandedRequestId === request.id
+										? 'heroicons:chevron-down'
+										: 'heroicons:chevron-right'}
+									class="w-3.5 h-3.5"
+								/>
+								{request.operations.length} operations
+							</button>
+
+							<!-- Operations list (expanded) -->
+							{#if expandedRequestId === request.id}
+								<div class="mt-2 overflow-hidden rounded-lg bg-surface-900/50">
+									{#each request.operations as operation}
+										<div class="p-2 text-xs border-b border-surface-800 last:border-0">
+											<div class="flex items-center justify-between">
+												<div class="flex items-center gap-1">
+													<span
+														class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-full {getOperationColor(
+															operation.operation_type
+														)}"
+													>
+														<Icon
+															icon={getOperationIcon(operation.operation_type)}
+															class="w-3 h-3"
+														/>
+														{operation.operation_type}
+													</span>
+													<span class="text-tertiary-300">
+														{operation.path.join('.')}
+													</span>
+												</div>
+												<span class="text-tertiary-400 text-[10px]">
+													{formatDate(operation.created_at)}
+												</span>
+											</div>
+											{#if operation.operation_type !== 'remove'}
+												<div class="mt-1 pl-5">
+													{#if operation.old_value !== null && operation.old_value !== undefined}
+														<div class="text-red-400">- {formatValue(operation.old_value)}</div>
+													{/if}
+													{#if operation.new_value !== null && operation.new_value !== undefined}
+														<div class="text-green-400">+ {formatValue(operation.new_value)}</div>
+													{/if}
+												</div>
+											{:else}
+												<div class="mt-1 pl-5">
+													<div class="text-red-400">- {formatValue(operation.old_value)}</div>
+												</div>
+											{/if}
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
 
 					{#if request.status === 'pending'}
 						<div class="flex items-center gap-2 mt-3">

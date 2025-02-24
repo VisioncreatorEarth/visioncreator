@@ -34,6 +34,7 @@ This component handles:
 		description: string;
 		compose_json: ComposeJson;
 		compose_id: string;
+		created_at: string;
 		author: {
 			name: string;
 		};
@@ -157,7 +158,8 @@ This component handles:
 			: {
 					id: compose_data?.compose_id,
 					compose_id: compose_data?.compose_id,
-					relationship_type: 'main'
+					relationship_type: 'main',
+					metadata: { variation_type: 'main' }
 			  };
 
 		console.log('[ComposeProposal] Composite Selected:', {
@@ -265,8 +267,16 @@ This component handles:
 	}
 
 	// Handle content save
-	async function saveChanges() {
-		if (!editContent) {
+	async function saveChanges(event?: { detail?: { json: any } } | MouseEvent) {
+		// Check if this is a JSON editor save event
+		const isJsonEditorSave = event && 'detail' in event && event.detail && 'json' in event.detail;
+
+		// Get the JSON to save - either from the JSON editor or create it from the content
+		const jsonToSave = isJsonEditorSave
+			? (event as { detail: { json: any } }).detail.json
+			: { content: editContent };
+
+		if (!isJsonEditorSave && !editContent) {
 			console.error('Missing content for save');
 			return;
 		}
@@ -284,12 +294,16 @@ This component handles:
 			console.log('Saving changes for composite:', {
 				id: currentComposeId,
 				isVariation: !!selectedCompositeId,
-				content: editContent.substring(0, 50) + '...' // Log first 50 chars for debugging
+				isJsonEditorSave,
+				jsonKeys: Object.keys(jsonToSave),
+				contentPreview: jsonToSave.content
+					? jsonToSave.content.substring(0, 50) + '...'
+					: 'No content'
 			});
 
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
-				json: { content: editContent }
+				json: jsonToSave
 			});
 
 			if (result?.success) {

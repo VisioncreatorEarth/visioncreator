@@ -14,6 +14,15 @@ interface PatchRequest {
         id: string;
         name: string;
     };
+    operations: Array<{
+        id: string;
+        operation_type: string;
+        path: string[];
+        old_value: any;
+        new_value: any;
+        created_at: string;
+        metadata: Record<string, any>;
+    }>;
 }
 
 interface DBVersion {
@@ -41,6 +50,17 @@ interface RawDBVersion {
     json: Record<string, any>;
     version: number;
     created_at: string;
+}
+
+interface RawOperation {
+    id: string;
+    operation_type: string;
+    path: string[];
+    old_value: any;
+    new_value: any;
+    created_at: string;
+    metadata: Record<string, any>;
+    patch_request_id: string;
 }
 
 interface Profile {
@@ -140,11 +160,53 @@ export default createOperation.query({
                 });
             }
 
+            // Get operations for each patch request
+            const operationsMap = new Map<string, RawOperation[]>();
+
+            // Fetch operations for all patch requests at once
+            const { data: rawOperations, error: operationsError } = await context.supabase
+                .from('db_operations')
+                .select(`
+                    id,
+                    patch_request_id,
+                    operation_type,
+                    path,
+                    old_value,
+                    new_value,
+                    created_at,
+                    metadata
+                `)
+                .in('patch_request_id', patchRequests.map(req => req.id))
+                .order('created_at', { ascending: true });
+
+            if (operationsError) {
+                console.error('[queryPatchRequests] Error fetching operations:', operationsError);
+            } else {
+                // Group operations by patch request ID
+                const operations = (rawOperations || []) as RawOperation[];
+                operations.forEach((op) => {
+                    if (!operationsMap.has(op.patch_request_id)) {
+                        operationsMap.set(op.patch_request_id, []);
+                    }
+                    operationsMap.get(op.patch_request_id)?.push({
+                        id: op.id,
+                        operation_type: op.operation_type,
+                        path: op.path,
+                        old_value: op.old_value,
+                        new_value: op.new_value,
+                        created_at: op.created_at,
+                        metadata: op.metadata,
+                        patch_request_id: op.patch_request_id
+                    });
+                });
+            }
+
             // Transform the data into the expected format
             const transformedRequests = patchRequests.map((request) => {
                 const oldVersion = request.old_version_id ? versionsMap.get(request.old_version_id) : null;
                 const newVersion = request.new_version_id ? versionsMap.get(request.new_version_id) : null;
                 const author = profileMap.get(request.author);
+                const operations = operationsMap.get(request.id) || [];
 
                 return {
                     id: request.id,
@@ -171,7 +233,8 @@ export default createOperation.query({
                         created_at: oldVersion?.created_at
                     },
                     status: request.status || 'pending',
-                    composite_id: request.composite_id
+                    composite_id: request.composite_id,
+                    operations: operations
                 };
             });
 
