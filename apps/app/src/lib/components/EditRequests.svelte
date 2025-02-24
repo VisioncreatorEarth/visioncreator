@@ -14,7 +14,7 @@ Props:
 -->
 
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
 
@@ -143,6 +143,22 @@ Props:
 			console.error('[EditRequests] Reject Error:', error);
 		}
 	}
+
+	// Listen for approve events from the diff view
+	function handleExternalApprove(event: CustomEvent<{ requestId: string }>) {
+		const { requestId } = event.detail;
+		console.log('[EditRequests] External Approve Event:', { requestId });
+		handleApprove(requestId);
+	}
+
+	// Add and remove event listeners
+	onMount(() => {
+		document.addEventListener('approve', handleExternalApprove as EventListener);
+	});
+
+	onDestroy(() => {
+		document.removeEventListener('approve', handleExternalApprove as EventListener);
+	});
 
 	// Helper function to get status color
 	function getStatusColor(status: string): string {

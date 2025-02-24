@@ -7,6 +7,7 @@ This component handles:
 3. Editing capabilities for the main content and variations
 4. Creation of new relationships between composites
 5. Management of edit requests through the right aside
+6. Displaying JSON diffs for edit requests
 -->
 <script lang="ts">
 	import { marked } from 'marked';
@@ -15,12 +16,13 @@ This component handles:
 	import Icon from '@iconify/svelte';
 	import JsonEditor from './JsonEditor.svelte';
 	import EditRequests from './EditRequests.svelte';
+	import JsonDiffViewer from './JsonDiffViewer.svelte';
 
 	// Props
 	export let proposalId: string;
 
 	// Create a store for the compose tab - default to Content
-	const activeComposeTab = writable<'content' | 'json'>('content');
+	const activeComposeTab = writable<'content' | 'json' | 'diff'>('content');
 
 	// Add TypeScript interfaces to match backend
 	interface ComposeJson {
@@ -34,7 +36,6 @@ This component handles:
 		description: string;
 		compose_json: ComposeJson;
 		compose_id: string;
-		created_at: string;
 		author: {
 			name: string;
 		};
@@ -52,7 +53,7 @@ This component handles:
 		};
 		relationship_type: string;
 		metadata: {
-			created_at: string;
+			created_at?: string;
 			variation_type?: string;
 			description?: string;
 			[key: string]: unknown;
@@ -75,6 +76,7 @@ This component handles:
 	let editContent = '';
 	let selectedCompositeId: string | null = null;
 	let selectedEditRequestId: string | undefined;
+	let selectedEditRequest: any = null;
 
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
@@ -89,7 +91,6 @@ This component handles:
 				relationship_type: 'main',
 				author: compose_data.author,
 				metadata: {
-					created_at: compose_data.created_at,
 					variation_type: 'main'
 				}
 			};
@@ -147,7 +148,7 @@ This component handles:
 	}
 
 	// Handle tab changes
-	function handleTabChange(tab: 'content' | 'json') {
+	function handleTabChange(tab: 'content' | 'json' | 'diff') {
 		$activeComposeTab = tab;
 	}
 
@@ -178,6 +179,8 @@ This component handles:
 		selectedCompositeId = compositeId;
 		editMode = false; // Reset edit mode when switching composites
 		selectedEditRequestId = undefined; // Reset edit request selection
+		selectedEditRequest = null; // Reset selected edit request
+		$activeComposeTab = 'content'; // Reset to content tab
 	}
 
 	// Handle edit request selection
@@ -204,6 +207,7 @@ This component handles:
 		});
 
 		selectedEditRequestId = request.id;
+		selectedEditRequest = request;
 
 		// If this is a request for a related composite, select it
 		if (request.composite_id !== compose_data?.compose_id) {
@@ -218,6 +222,11 @@ This component handles:
 				relationship_type: 'main'
 			});
 			selectedCompositeId = null;
+		}
+
+		// Switch to diff view if there are operations
+		if (request.operations && request.operations.length > 0) {
+			$activeComposeTab = 'diff';
 		}
 
 		// Update content based on the request
@@ -267,7 +276,7 @@ This component handles:
 	}
 
 	// Handle content save
-	async function saveChanges(event?: { detail?: { json: any } } | MouseEvent) {
+	async function saveChanges(event?: { detail: { json: any } } | MouseEvent) {
 		// Check if this is a JSON editor save event
 		const isJsonEditorSave = event && 'detail' in event && event.detail && 'json' in event.detail;
 
@@ -398,6 +407,19 @@ This component handles:
 			>
 				JSON
 			</button>
+			{#if selectedEditRequest && selectedEditRequest.operations && selectedEditRequest.operations.length > 0}
+				<button
+					class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'diff'
+						? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+						: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+					on:click={() => handleTabChange('diff')}
+				>
+					Changes
+					<span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300">
+						{selectedEditRequest.operations.length}
+					</span>
+				</button>
+			{/if}
 		</nav>
 
 		<!-- Content Area -->
@@ -421,6 +443,42 @@ This component handles:
 						<JsonEditor
 							json={selectedComposite?.compose_json || compose_data.compose_json}
 							on:save={saveChanges}
+						/>
+					</div>
+				{:else if $activeComposeTab === 'diff' && selectedEditRequest}
+					<div class="flex flex-col h-full">
+						<div class="flex items-center justify-between mb-4">
+							<div>
+								<h2 class="text-xl font-semibold text-surface-100">
+									{selectedEditRequest.title}
+								</h2>
+								<p class="text-sm text-surface-300 mt-1">
+									Showing changes from v{selectedEditRequest.previousVersion.version || '?'} to v{selectedEditRequest
+										.changes.version || '?'}
+								</p>
+							</div>
+							<div class="flex items-center gap-2">
+								{#if selectedEditRequest.status === 'pending'}
+									<button
+										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
+										on:click={() => {
+											// Dispatch the same event as the approve button in EditRequests
+											const event = new CustomEvent('approve', {
+												detail: { requestId: selectedEditRequest.id }
+											});
+											document.dispatchEvent(event);
+										}}
+									>
+										Approve
+									</button>
+								{/if}
+							</div>
+						</div>
+
+						<JsonDiffViewer
+							baseJson={selectedEditRequest.previousVersion.instance || {}}
+							operations={selectedEditRequest.operations || []}
+							expanded={true}
 						/>
 					</div>
 				{:else}
