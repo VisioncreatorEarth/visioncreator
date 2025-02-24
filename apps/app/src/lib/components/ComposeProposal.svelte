@@ -79,16 +79,35 @@ This component handles:
 	$: compose_data = $composeQuery.data?.compose_data;
 	$: {
 		if (compose_data) {
-			console.log('Compose data loaded:', {
-				mainComposite: {
-					id: compose_data.compose_id,
-					title: compose_data.title
-				},
-				relatedComposites: compose_data.related_composites.map((rc) => ({
-					id: rc.id,
-					compose_id: rc.compose_id,
-					title: rc.title
-				}))
+			// Transform main composite to match related composite interface
+			const mainComposite = {
+				id: compose_data.compose_id,
+				title: compose_data.title,
+				description: compose_data.description,
+				compose_id: compose_data.compose_id,
+				relationship_type: 'main',
+				author: compose_data.author,
+				metadata: {
+					created_at: compose_data.created_at,
+					variation_type: 'main'
+				}
+			};
+
+			console.log('[ComposeProposal] Compose Data Loaded:', {
+				composites: [
+					mainComposite,
+					...compose_data.related_composites.map((rc) => ({
+						id: rc.id,
+						title: rc.title,
+						description: rc.description,
+						compose_id: rc.compose_id,
+						relationship_type: rc.relationship_type,
+						author: rc.author,
+						metadata: rc.metadata
+					}))
+				],
+				selectedCompositeId,
+				currentComposeId
 			});
 		}
 	}
@@ -133,35 +152,78 @@ This component handles:
 
 	// Handle composite selection
 	function handleCompositeSelect(compositeId: string | null) {
+		const targetComposite = compositeId
+			? compose_data?.related_composites.find((c) => c.id === compositeId)
+			: {
+					id: compose_data?.compose_id,
+					compose_id: compose_data?.compose_id,
+					relationship_type: 'main'
+			  };
+
+		console.log('[ComposeProposal] Composite Selected:', {
+			previousId: selectedCompositeId,
+			newId: compositeId,
+			composite: targetComposite
+				? {
+						id: targetComposite.id,
+						compose_id: targetComposite.compose_id,
+						relationship_type: targetComposite.relationship_type,
+						metadata: targetComposite.metadata || { variation_type: 'main' }
+				  }
+				: null
+		});
+
 		selectedCompositeId = compositeId;
 		editMode = false; // Reset edit mode when switching composites
 		selectedEditRequestId = undefined; // Reset edit request selection
-
-		// Debug log
-		if (compositeId) {
-			const composite = compose_data?.related_composites?.find((c) => c.id === compositeId);
-			console.log('Selected composite:', {
-				id: composite?.id,
-				compose_id: composite?.compose_id,
-				title: composite?.title
-			});
-		}
 	}
 
 	// Handle edit request selection
 	function handleEditRequestSelect(event: CustomEvent<{ request: any }>) {
 		const request = event.detail.request;
+		const targetComposite = compose_data?.related_composites.find(
+			(c) => c.id === request.composite_id
+		) || {
+			id: compose_data?.compose_id,
+			compose_id: compose_data?.compose_id,
+			relationship_type: 'main'
+		};
+
+		console.log('[ComposeProposal] Edit Request Selected:', {
+			requestId: request.id,
+			compositeId: request.composite_id,
+			currentCompositeId: selectedCompositeId || compose_data?.compose_id,
+			targetComposite: {
+				id: targetComposite.id,
+				compose_id: targetComposite.compose_id,
+				relationship_type: targetComposite.relationship_type
+			},
+			willSwitchComposite: request.composite_id !== compose_data?.compose_id
+		});
+
 		selectedEditRequestId = request.id;
 
 		// If this is a request for a related composite, select it
 		if (request.composite_id !== compose_data?.compose_id) {
+			console.log('[ComposeProposal] Switching to Related Composite:', {
+				from: selectedCompositeId,
+				to: request.composite_id,
+				relationship_type: targetComposite.relationship_type
+			});
 			selectedCompositeId = request.composite_id;
 		} else {
+			console.log('[ComposeProposal] Switching to Main Composite:', {
+				relationship_type: 'main'
+			});
 			selectedCompositeId = null;
 		}
 
 		// Update content based on the request
 		if (request.changes?.content) {
+			console.log('[ComposeProposal] Updating Edit Content:', {
+				contentLength: request.changes.content.length,
+				compositeType: targetComposite.relationship_type
+			});
 			editContent = request.changes.content;
 			editMode = true;
 		}
@@ -408,13 +470,28 @@ This component handles:
 		</div>
 		<div class="flex-1 overflow-y-auto">
 			{#if compose_data}
-				<EditRequests
-					compositeId={selectedCompositeId ||
-						compose_data.related_composites[0]?.id ||
-						'33333333-3333-3333-3333-333333333333'}
-					selectedRequestId={selectedEditRequestId}
-					on:select={handleEditRequestSelect}
-				/>
+				{#if selectedCompositeId}
+					<EditRequests
+						compositeId={selectedCompositeId}
+						selectedRequestId={selectedEditRequestId}
+						on:select={handleEditRequestSelect}
+						on:refetch={() => {
+							console.log('[ComposeProposal] Refetching compose data after patch request update');
+							$composeQuery.refetch();
+						}}
+					/>
+				{:else}
+					<!-- For main composite, we need to find its ID from the composites table -->
+					<EditRequests
+						compositeId={'33333333-3333-3333-3333-333333333333'}
+						selectedRequestId={selectedEditRequestId}
+						on:select={handleEditRequestSelect}
+						on:refetch={() => {
+							console.log('[ComposeProposal] Refetching compose data after patch request update');
+							$composeQuery.refetch();
+						}}
+					/>
+				{/if}
 			{/if}
 		</div>
 	</aside>

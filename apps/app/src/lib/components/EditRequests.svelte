@@ -24,68 +24,136 @@ Props:
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
 		select: { request: any };
+		refetch: void;
 	}>();
 
 	// Create queries and mutations
 	$: patchRequestsQuery = createQuery({
 		operationName: 'queryPatchRequests' as const,
 		input: { compositeIds: [compositeId] },
-		enabled: !!compositeId
+		enabled: !!compositeId,
+		refetchInterval: 5000 // Refresh every 5 seconds
 	});
 
 	const updatePatchRequestMutation = createMutation({
 		operationName: 'updateEditRequest' as const
 	});
 
-	// Debug logging
+	// Debug logging for props and query changes
+	$: {
+		console.log('[EditRequests] Props and State:', {
+			compositeId,
+			selectedRequestId,
+			queryEnabled: !!compositeId
+		});
+	}
+
+	// Debug logging for query results
 	$: {
 		if ($patchRequestsQuery.data) {
-			console.log('Patch requests loaded for composite:', {
+			console.log('[EditRequests] Patch Requests Query Result:', {
 				compositeId,
+				requestCount: $patchRequestsQuery.data.patch_requests.length,
 				requests: $patchRequestsQuery.data.patch_requests.map((r) => ({
 					id: r.id,
 					title: r.title,
 					status: r.status,
-					composite_id: r.composite_id
+					composite_id: r.composite_id,
+					previousVersion: {
+						id: r.previousVersion?.instance?.id,
+						version: r.previousVersion?.version
+					},
+					changes: {
+						id: r.changes?.instance?.id,
+						version: r.changes?.version
+					}
 				}))
 			});
+		} else if ($patchRequestsQuery.error) {
+			console.error('[EditRequests] Query Error:', $patchRequestsQuery.error);
 		}
 	}
 
-	// Handle request selection
+	// Refetch when composite ID changes
+	$: {
+		if (compositeId && $patchRequestsQuery.enabled) {
+			console.log('[EditRequests] Composite ID changed, refetching:', compositeId);
+			$patchRequestsQuery.refetch();
+		}
+	}
+
+	// Handle request selection with logging
 	function handleRequestSelect(request: any) {
+		console.log('[EditRequests] Request Selected:', {
+			requestId: request.id,
+			compositeId: request.composite_id,
+			status: request.status
+		});
 		dispatch('select', { request });
 	}
 
-	// Handle request approval
+	// Handle request approval with logging
 	async function handleApprove(requestId: string) {
+		console.log('[EditRequests] Approving Request:', { requestId });
 		try {
 			const result = await $updatePatchRequestMutation.mutateAsync({
 				id: requestId,
 				action: 'approve'
 			});
 
+			console.log('[EditRequests] Approve Result:', { result });
 			if (result?.success) {
-				await $patchRequestsQuery.refetch();
+				// Immediately refetch both queries to update UI
+				await Promise.all([
+					$patchRequestsQuery.refetch(),
+					// Emit an event to notify parent to refetch compose data
+					dispatch('refetch')
+				]);
 			}
 		} catch (error) {
-			console.error('Failed to approve request:', error);
+			console.error('[EditRequests] Approve Error:', error);
 		}
 	}
 
-	// Handle request rejection
+	// Handle request rejection with logging
 	async function handleReject(requestId: string) {
+		console.log('[EditRequests] Rejecting Request:', { requestId });
 		try {
 			const result = await $updatePatchRequestMutation.mutateAsync({
 				id: requestId,
 				action: 'reject'
 			});
 
+			console.log('[EditRequests] Reject Result:', { result });
 			if (result?.success) {
 				await $patchRequestsQuery.refetch();
 			}
 		} catch (error) {
-			console.error('Failed to reject request:', error);
+			console.error('[EditRequests] Reject Error:', error);
+		}
+	}
+
+	// Helper function to get status color
+	function getStatusColor(status: string): string {
+		switch (status.toLowerCase()) {
+			case 'approved':
+				return 'text-green-400 bg-green-400/10';
+			case 'rejected':
+				return 'text-red-400 bg-red-400/10';
+			default:
+				return 'text-yellow-400 bg-yellow-400/10';
+		}
+	}
+
+	// Helper function to get status icon
+	function getStatusIcon(status: string): string {
+		switch (status.toLowerCase()) {
+			case 'approved':
+				return 'heroicons:check-circle';
+			case 'rejected':
+				return 'heroicons:x-circle';
+			default:
+				return 'heroicons:clock';
 		}
 	}
 
@@ -107,18 +175,6 @@ Props:
 		const diffInYears = Math.floor(diffInMonths / 12);
 		return `${diffInYears}y ago`;
 	}
-
-	// Get status styles
-	function getStatusStyles(status: string): string {
-		switch (status.toLowerCase()) {
-			case 'approved':
-				return 'bg-green-900/20 text-green-400';
-			case 'rejected':
-				return 'bg-red-900/20 text-red-400';
-			default:
-				return 'bg-yellow-900/20 text-yellow-400';
-		}
-	}
 </script>
 
 <div class="flex flex-col h-full">
@@ -127,104 +183,85 @@ Props:
 			<div class="text-surface-300">Select a composite to view patch requests</div>
 		</div>
 	{:else if $patchRequestsQuery.isLoading}
-		<div class="flex items-center justify-center flex-1">
-			<div class="text-surface-300">Loading...</div>
+		<div class="flex items-center justify-center p-4">
+			<Icon icon="heroicons:arrow-path" class="w-5 h-5 text-tertiary-300 animate-spin" />
 		</div>
 	{:else if $patchRequestsQuery.error}
-		<div class="flex items-center justify-center flex-1">
-			<div class="text-red-400">Error loading patch requests</div>
+		<div class="flex items-center justify-center p-4">
+			<p class="text-sm text-red-400">Failed to load edit requests</p>
 		</div>
 	{:else if $patchRequestsQuery.data?.patch_requests?.length}
-		<div class="flex flex-col gap-4 p-4">
+		<div class="divide-y divide-surface-700/50">
 			{#each $patchRequestsQuery.data.patch_requests as request}
 				<div
-					class="relative flex flex-col gap-3 p-4 transition-all duration-200 rounded-xl bg-surface-900/50 hover:bg-surface-800/50 {selectedRequestId ===
+					class="p-4 transition-colors cursor-pointer hover:bg-surface-800 {selectedRequestId ===
 					request.id
-						? 'ring-2 ring-primary-500/50'
+						? 'bg-surface-800'
 						: ''}"
-					role="button"
 					on:click={() => handleRequestSelect(request)}
 				>
-					<!-- Label -->
-					<div class="absolute left-4 -top-3">
-						<span class="px-2 py-1 text-xs font-medium rounded-md bg-surface-800 text-surface-300">
-							Edit
-						</span>
-					</div>
-
-					<!-- Header -->
 					<div class="flex items-start justify-between gap-4">
-						<div class="flex-1">
-							<h4 class="text-lg font-medium text-surface-50">{request.title}</h4>
-							<p class="text-sm text-surface-400">
-								by {request.author.name} • {formatDate(request.created_at)}
+						<div class="flex-1 min-w-0">
+							<h4 class="text-sm font-medium truncate text-tertiary-100">{request.title}</h4>
+							<p class="mt-1 text-xs text-tertiary-300">
+								{request.author.name} • {formatDate(request.created_at)}
 							</p>
+							<div class="mt-2 space-y-1">
+								<p class="text-xs text-tertiary-400">
+									From: v{request.previousVersion.version || '?'}
+									{#if request.previousVersion.instance?.id}
+										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
+											{request.previousVersion.instance.id.slice(0, 8)}
+										</span>
+									{/if}
+								</p>
+								<p class="text-xs text-tertiary-400">
+									To: v{request.changes.version || '?'}
+									{#if request.changes.instance?.id}
+										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
+											{request.changes.instance.id.slice(0, 8)}
+										</span>
+									{/if}
+								</p>
+							</div>
 						</div>
-						<div>
-							{#if request.status === 'pending'}
-								<div class="flex gap-2">
-									<button
-										class="p-2 text-green-400 transition-colors rounded-lg bg-green-900/20 hover:bg-green-900/40"
-										on:click|stopPropagation={() => handleApprove(request.id)}
-									>
-										<Icon icon="mdi:check" class="w-4 h-4" />
-									</button>
-									<button
-										class="p-2 text-red-400 transition-colors rounded-lg bg-red-900/20 hover:bg-red-900/40"
-										on:click|stopPropagation={() => handleReject(request.id)}
-									>
-										<Icon icon="mdi:close" class="w-4 h-4" />
-									</button>
-								</div>
-							{:else}
-								<span
-									class="px-3 py-1 text-sm font-medium rounded-full {getStatusStyles(
-										request.status
-									)}"
-								>
-									{request.status}
-								</span>
-							{/if}
+						<div class="flex items-center gap-2">
+							<span
+								class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full {getStatusColor(
+									request.status
+								)}"
+							>
+								<Icon icon={getStatusIcon(request.status)} class="w-3.5 h-3.5" />
+								{request.status}
+							</span>
 						</div>
 					</div>
 
-					<!-- Description -->
-					{#if request.description}
-						<p class="text-sm text-surface-300">{request.description}</p>
+					{#if request.status === 'pending'}
+						<div class="flex items-center gap-2 mt-3">
+							<button
+								class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-green-400/10 hover:bg-green-400/20 text-green-400"
+								on:click|stopPropagation={() => handleApprove(request.id)}
+							>
+								<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
+								Approve
+							</button>
+							<button
+								class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-red-400/10 hover:bg-red-400/20 text-red-400"
+								on:click|stopPropagation={() => handleReject(request.id)}
+							>
+								<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
+								Reject
+							</button>
+						</div>
 					{/if}
-
-					<!-- Version Info -->
-					<div class="flex flex-col gap-2 p-3 rounded-lg bg-surface-800/50">
-						<div class="flex items-center gap-2 text-sm text-surface-300">
-							<span class="text-surface-400">From:</span>
-							<span class="px-2 py-0.5 rounded-md bg-surface-700">
-								v{request.previousVersion.version || '?'}
-							</span>
-							{#if request.previousVersion.instance?.id}
-								<span class="px-2 py-0.5 font-mono text-xs rounded-md bg-surface-700/50">
-									{request.previousVersion.instance.id.substring(0, 8)}
-								</span>
-							{/if}
-						</div>
-						<div class="flex items-center gap-2 text-sm text-surface-300">
-							<span class="text-surface-400">To:</span>
-							<span class="px-2 py-0.5 rounded-md bg-surface-700">
-								v{request.changes.version || '?'}
-							</span>
-							{#if request.changes.instance?.id}
-								<span class="px-2 py-0.5 font-mono text-xs rounded-md bg-surface-700/50">
-									{request.changes.instance.id.substring(0, 8)}
-								</span>
-							{/if}
-						</div>
-					</div>
 				</div>
 			{/each}
 		</div>
 	{:else}
-		<div class="flex flex-col items-center justify-center flex-1 gap-3 p-8">
-			<Icon icon="mdi:file-document-edit-outline" class="w-12 h-12 text-surface-600" />
-			<p class="text-surface-400">No patch requests for this composite</p>
+		<div class="flex flex-col items-center justify-center p-8 text-center">
+			<Icon icon="heroicons:document-text" class="w-8 h-8 text-tertiary-300" />
+			<p class="mt-2 text-sm text-tertiary-300">No edit requests yet</p>
 		</div>
 	{/if}
 </div>
