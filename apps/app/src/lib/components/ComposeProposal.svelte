@@ -17,6 +17,7 @@ This component handles:
 	import JsonEditor from './JsonEditor.svelte';
 	import EditRequests from './EditRequests.svelte';
 	import JsonDiffViewer from './JsonDiffViewer.svelte';
+	import VariationTreeItem from './VariationTreeItem.svelte';
 
 	// Props
 	export let proposalId: string;
@@ -399,6 +400,138 @@ This component handles:
 			console.error('Error creating variation:', error);
 		}
 	}
+
+	// Add a function to organize composites into a tree structure
+	function organizeCompositesIntoTree(composites: RelatedComposite[]) {
+		console.log('[organizeCompositesIntoTree] Organizing composites into tree:', composites.length);
+
+		// Define a recursive type for nested composites
+		type CompositeNode = RelatedComposite & { children: CompositeNode[] };
+
+		// Create a map of all composites by ID for quick lookup
+		const compositesMap = new Map<string, CompositeNode>();
+
+		// Initialize each composite with an empty children array
+		composites.forEach((composite) => {
+			compositesMap.set(composite.id, { ...composite, children: [] });
+			console.log(
+				`[organizeCompositesIntoTree] Added composite to map: ${composite.id} (${composite.title})`
+			);
+		});
+
+		// Create a root array for top-level variations (direct variations of the main composite)
+		const rootVariations: CompositeNode[] = [];
+
+		// First pass: identify parent-child relationships
+		composites.forEach((composite) => {
+			const compositeWithChildren = compositesMap.get(composite.id)!;
+
+			// Check if this is a variation of another variation by looking at the relationship metadata
+			const targetId =
+				composite.metadata && typeof composite.metadata === 'object'
+					? (composite.metadata.target_composite_id as string)
+					: undefined;
+
+			console.log(
+				`[organizeCompositesIntoTree] Processing composite: ${composite.id} (${
+					composite.title
+				}), target: ${targetId || 'none'}`
+			);
+
+			// Skip self-referencing relationships (where target is the same as the composite id)
+			if (targetId && targetId === composite.id) {
+				console.log(`[organizeCompositesIntoTree] Skipping self-reference for: ${composite.id}`);
+				rootVariations.push(compositeWithChildren);
+				return;
+			}
+
+			if (targetId) {
+				// This is a variation of another composite
+				if (compositesMap.has(targetId)) {
+					// This is a variation of another composite in our map
+					const parent = compositesMap.get(targetId)!;
+					parent.children.push(compositeWithChildren);
+					console.log(`[organizeCompositesIntoTree] Added as child to: ${targetId}`);
+				} else if (targetId === compose_data?.compose_id) {
+					// This is a direct variation of the main composite (by compose_id)
+					rootVariations.push(compositeWithChildren);
+					console.log(`[organizeCompositesIntoTree] Added as root variation (by compose_id match)`);
+				} else {
+					// This is a direct variation of the main composite or an unknown composite
+					rootVariations.push(compositeWithChildren);
+					console.log(`[organizeCompositesIntoTree] Added as root variation (fallback)`);
+				}
+			} else {
+				// No target ID found, assume it's a direct variation of the main composite
+				rootVariations.push(compositeWithChildren);
+				console.log(`[organizeCompositesIntoTree] Added as root variation (no target)`);
+			}
+		});
+
+		// Sort variations by creation date (newest first)
+		const sortByDate = (a: RelatedComposite, b: RelatedComposite) => {
+			const dateA = a.metadata?.created_at ? new Date(a.metadata.created_at).getTime() : 0;
+			const dateB = b.metadata?.created_at ? new Date(b.metadata.created_at).getTime() : 0;
+			return dateB - dateA;
+		};
+
+		// Recursive function to sort children at all levels
+		const sortChildrenRecursively = (node: CompositeNode) => {
+			if (node.children && node.children.length > 0) {
+				node.children.sort(sortByDate);
+				node.children.forEach(sortChildrenRecursively);
+			}
+		};
+
+		// Sort root variations and recursively sort all children
+		rootVariations.sort(sortByDate);
+		rootVariations.forEach(sortChildrenRecursively);
+
+		// Log the tree structure for debugging
+		console.log(
+			`[organizeCompositesIntoTree] Final tree: ${rootVariations.length} root variations`
+		);
+
+		// Recursive function to log the tree structure
+		const logTreeNode = (node: CompositeNode, depth = 0, prefix = '') => {
+			const indent = '  '.repeat(depth);
+			console.log(`${indent}${prefix}${node.id} (${node.title}): ${node.children.length} children`);
+			node.children.forEach((child, index) => {
+				logTreeNode(child, depth + 1, `${index + 1}. `);
+			});
+		};
+
+		rootVariations.forEach((root, index) => {
+			logTreeNode(root, 0, `${index + 1}. `);
+		});
+
+		return rootVariations;
+	}
+
+	// Organize composites into a tree structure when data changes
+	$: variationTree = compose_data?.related_composites
+		? organizeCompositesIntoTree(compose_data.related_composites)
+		: [];
+
+	// Debug function to log the current state
+	function debugTreeStructure() {
+		console.log('DEBUG: Current compose_data:', compose_data);
+		console.log('DEBUG: Related composites:', compose_data?.related_composites);
+		console.log('DEBUG: Variation tree:', variationTree);
+
+		// Check for any composites with self-references
+		const selfRefs = compose_data?.related_composites.filter(
+			(c) => c.metadata?.target_composite_id === c.id
+		);
+		console.log('DEBUG: Self-referencing composites:', selfRefs);
+
+		// Check for any composites with missing targets
+		const missingTargets = compose_data?.related_composites.filter((c) => {
+			const targetId = c.metadata?.target_composite_id;
+			return targetId && !compose_data.related_composites.some((rc) => rc.id === targetId);
+		});
+		console.log('DEBUG: Composites with missing targets:', missingTargets);
+	}
 </script>
 
 <div class="flex h-full bg-surface-800">
@@ -429,34 +562,9 @@ This component handles:
 						</div>
 					</button>
 
-					<!-- Related Composites -->
-					{#each compose_data.related_composites || [] as composite}
-						<button
-							class="w-full p-3 rounded-lg transition-colors text-left
-								{selectedCompositeId === composite.id
-								? 'bg-surface-700 border-l-4 border-primary-500'
-								: 'bg-surface-900 hover:bg-surface-700'}"
-							on:click={() => handleCompositeSelect(composite.id)}
-						>
-							<div class="flex flex-col gap-1">
-								<div class="flex items-center justify-between">
-									<div class="font-medium text-surface-100">{composite.title}</div>
-									<div class="flex items-center gap-1">
-										{#if composite.metadata.variation_type}
-											<span
-												class="px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300"
-											>
-												{composite.metadata.variation_type}
-											</span>
-										{/if}
-									</div>
-								</div>
-								<div class="flex items-center justify-between">
-									<div class="text-xs text-surface-400">by {composite.author.name}</div>
-									<span class="text-xs text-surface-300"> variation </span>
-								</div>
-							</div>
-						</button>
+					<!-- Tree-structured Variations -->
+					{#each variationTree as composite}
+						<VariationTreeItem {composite} {selectedCompositeId} onSelect={handleCompositeSelect} />
 					{/each}
 				</div>
 			{/if}
@@ -597,6 +705,12 @@ This component handles:
 										on:click={toggleEditMode}
 									>
 										Edit
+									</button>
+									<button
+										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+										on:click={debugTreeStructure}
+									>
+										Debug
 									</button>
 								{/if}
 							</div>

@@ -20,6 +20,7 @@ interface RelatedComposite {
         created_at: string;
         variation_type?: string;
         description?: string;
+        target_composite_id?: string;
         [key: string]: unknown;
     };
 }
@@ -125,45 +126,153 @@ export default createOperation.query({
                 mainCompose = mainContent.json as ComposeJson;
             }
 
-            // Get related composites with author info
-            const { data: relationships, error: relError } = await context.supabase
+            // Get ALL relationships from the database
+            const { data: allRelationships, error: relError } = await context.supabase
                 .from('composite_relationships')
                 .select(`
-                    source_composite:composites!composite_relationships_source_composite_id_fkey(
-                        id,
-                        title,
-                        description,
-                        compose_id,
-                        author:profiles(name)
-                    ),
-                    target_composite:composites!composite_relationships_target_composite_id_fkey(
-                        id,
-                        title,
-                        description,
-                        compose_id,
-                        author:profiles(name)
-                    ),
+                    source_composite_id,
+                    target_composite_id,
                     relationship_type,
                     metadata
-                `)
-                .or(`source_composite_id.eq.${proposal.compose.id},target_composite_id.eq.${proposal.compose.id}`) as { data: RelationshipData[] | null; error: any };
+                `) as { data: { source_composite_id: string, target_composite_id: string, relationship_type: string, metadata: any }[] | null; error: any };
 
             if (relError) {
                 console.error('[queryComposeProposal] Failed to fetch relationships:', relError);
                 throw new Error('Failed to fetch relationships');
             }
 
-            // Process relationships and fetch related composite content
-            const relatedComposites: RelatedComposite[] = [];
-            for (const rel of relationships || []) {
-                const isSource = rel.target_composite.id === proposal.compose.id;
-                const relatedComposite = isSource ? rel.source_composite : rel.target_composite;
+            console.log('[queryComposeProposal] Found relationships:', allRelationships?.length || 0);
 
+            // Create a map to store the correct target for each composite
+            const correctTargetMap = new Map<string, string>();
+
+            // First pass: identify and fix self-references
+            for (const rel of allRelationships || []) {
+                // Skip if not a variation relationship
+                if (rel.relationship_type !== 'variation_of') continue;
+
+                // Check for self-reference
+                if (rel.source_composite_id === rel.target_composite_id) {
+                    console.log(`[queryComposeProposal] Found self-reference: ${rel.source_composite_id}`);
+
+                    // Look for other relationships where this composite is the source
+                    const otherRels = allRelationships?.filter(
+                        r => r.source_composite_id === rel.source_composite_id &&
+                            r.target_composite_id !== rel.source_composite_id
+                    );
+
+                    if (otherRels && otherRels.length > 0) {
+                        // Use the first non-self target as the correct target
+                        correctTargetMap.set(rel.source_composite_id, otherRels[0].target_composite_id);
+                        console.log(`[queryComposeProposal] Fixed self-reference for ${rel.source_composite_id} to point to ${otherRels[0].target_composite_id}`);
+                    } else {
+                        // If no other relationships, point to the main composite
+                        correctTargetMap.set(rel.source_composite_id, proposal.compose.id);
+                        console.log(`[queryComposeProposal] Fixed self-reference for ${rel.source_composite_id} to point to main composite ${proposal.compose.id}`);
+                    }
+                } else {
+                    // Store the correct target
+                    correctTargetMap.set(rel.source_composite_id, rel.target_composite_id);
+                }
+            }
+
+            // Build a map of all relationships to efficiently find all related composites
+            const relationshipMap = new Map<string, { targetIds: string[], sourceIds: string[], relationships: any[] }>();
+
+            // Initialize with the main composite
+            relationshipMap.set(proposal.compose.id, { targetIds: [], sourceIds: [], relationships: [] });
+
+            // Process all relationships to build the complete map
+            for (const rel of allRelationships || []) {
+                // Add source composite to the map if not exists
+                if (!relationshipMap.has(rel.source_composite_id)) {
+                    relationshipMap.set(rel.source_composite_id, { targetIds: [], sourceIds: [], relationships: [] });
+                }
+
+                // Add target composite to the map if not exists
+                if (!relationshipMap.has(rel.target_composite_id)) {
+                    relationshipMap.set(rel.target_composite_id, { targetIds: [], sourceIds: [], relationships: [] });
+                }
+
+                // Record the relationship
+                relationshipMap.get(rel.source_composite_id)!.targetIds.push(rel.target_composite_id);
+                relationshipMap.get(rel.target_composite_id)!.sourceIds.push(rel.source_composite_id);
+
+                // Store the full relationship data
+                relationshipMap.get(rel.source_composite_id)!.relationships.push({
+                    targetId: rel.target_composite_id,
+                    type: rel.relationship_type,
+                    metadata: rel.metadata
+                });
+                relationshipMap.get(rel.target_composite_id)!.relationships.push({
+                    sourceId: rel.source_composite_id,
+                    type: `target_${rel.relationship_type}`,
+                    metadata: rel.metadata
+                });
+            }
+
+            // Find all composites that are directly or indirectly related to the main composite
+            const relatedCompositeIds = new Set<string>();
+
+            // Start with all composites that have any relationship
+            for (const [id, _] of relationshipMap) {
+                if (id !== proposal.compose.id) {
+                    relatedCompositeIds.add(id);
+                }
+            }
+
+            console.log('[queryComposeProposal] Found related composites:', relatedCompositeIds.size);
+
+            // Fetch details for all related composites
+            const relatedCompositeIdsArray = Array.from(relatedCompositeIds);
+            if (relatedCompositeIdsArray.length === 0) {
+                // No related composites found
+                return {
+                    compose_data: {
+                        title: proposal.compose.title,
+                        description: proposal.compose.description,
+                        compose_json: mainCompose,
+                        compose_id: proposal.compose.compose_id,
+                        author: typeof proposal.compose.author === 'string'
+                            ? { name: proposal.compose.author }
+                            : proposal.compose.author || { name: 'Unknown' },
+                        related_composites: []
+                    }
+                };
+            }
+
+            const { data: relatedCompositesData, error: compositeError } = await context.supabase
+                .from('composites')
+                .select(`
+                    id,
+                    title,
+                    description,
+                    compose_id,
+                    author:profiles(name)
+                `)
+                .in('id', relatedCompositeIdsArray);
+
+            if (compositeError) {
+                console.error('[queryComposeProposal] Failed to fetch related composites:', compositeError);
+                throw new Error('Failed to fetch related composites');
+            }
+
+            console.log('[queryComposeProposal] Fetched composite details:', relatedCompositesData?.length || 0);
+
+            // Create a map of composite data for quick lookup
+            const compositesDataMap = new Map();
+            for (const composite of relatedCompositesData || []) {
+                compositesDataMap.set(composite.id, composite);
+            }
+
+            // Process each related composite to get its content and relationship info
+            const relatedComposites: RelatedComposite[] = [];
+            for (const composite of relatedCompositesData || []) {
                 // Get the content for the related composite
                 const { data: relContent, error: relContentError } = await context.supabase
                     .from('db')
                     .select('json')
-                    .eq('id', relatedComposite.compose_id)
+                    .eq('id', composite.compose_id as string)
                     .single();
 
                 let composeJson: ComposeJson;
@@ -172,7 +281,7 @@ export default createOperation.query({
                     const { data: archiveContent, error: archiveError } = await context.supabase
                         .from('db_archive')
                         .select('json')
-                        .eq('id', relatedComposite.compose_id)
+                        .eq('id', composite.compose_id as string)
                         .single();
 
                     if (archiveError || !archiveContent) {
@@ -187,16 +296,55 @@ export default createOperation.query({
                     composeJson = relContent.json as ComposeJson;
                 }
 
+                // Find the relationship info for this composite
+                const relationships = relationshipMap.get(composite.id as string)?.relationships || [];
+
+                // Find the relationship with the main composite or any other composite
+                // Prioritize relationships where this is a variation of another composite
+                const relationshipInfo = relationships.find(r => r.sourceId) || relationships[0];
+
+                const relationshipType = relationshipInfo ?
+                    (relationshipInfo.type || 'variation_of') :
+                    'variation_of';
+
+                const metadata = relationshipInfo ?
+                    (relationshipInfo.metadata || {}) :
+                    { variation_type: 'design' };
+
+                // Use the corrected target ID if available, otherwise use the original
+                const correctTargetId = correctTargetMap.get(composite.id as string);
+                if (correctTargetId) {
+                    metadata.target_composite_id = correctTargetId;
+                    console.log(`[queryComposeProposal] Using corrected target for ${composite.id} (${composite.title}): ${correctTargetId}`);
+                } else if (relationshipInfo && relationshipInfo.sourceId) {
+                    metadata.target_composite_id = relationshipInfo.sourceId;
+                }
+
+                // Check if this is a self-reference
+                if (metadata.target_composite_id === composite.id) {
+                    console.log(`[queryComposeProposal] Detected remaining self-reference for ${composite.id} (${composite.title}), pointing to main composite`);
+                    metadata.target_composite_id = proposal.compose.id;
+                }
+
                 relatedComposites.push({
-                    id: relatedComposite.id,
-                    title: relatedComposite.title,
-                    description: relatedComposite.description,
+                    id: composite.id as string,
+                    title: composite.title as string,
+                    description: composite.description as string,
                     compose_json: composeJson,
-                    compose_id: relatedComposite.compose_id,
-                    author: relatedComposite.author || { name: 'Unknown' },
-                    relationship_type: isSource ? `target_${rel.relationship_type}` : rel.relationship_type,
-                    metadata: rel.metadata
+                    compose_id: composite.compose_id as string,
+                    author: typeof composite.author === 'string'
+                        ? { name: composite.author }
+                        : composite.author || { name: 'Unknown' },
+                    relationship_type: relationshipType,
+                    metadata: metadata
                 });
+            }
+
+            console.log('[queryComposeProposal] Processed related composites:', relatedComposites.length);
+
+            // Log some debug info about the relationships
+            for (const composite of relatedComposites) {
+                console.log(`[queryComposeProposal] Composite ${composite.id} (${composite.title}) has target: ${composite.metadata?.target_composite_id || 'none'}`);
             }
 
             return {
@@ -205,7 +353,9 @@ export default createOperation.query({
                     description: proposal.compose.description,
                     compose_json: mainCompose,
                     compose_id: proposal.compose.compose_id,
-                    author: proposal.compose.author || { name: 'Unknown' },
+                    author: typeof proposal.compose.author === 'string'
+                        ? { name: proposal.compose.author }
+                        : proposal.compose.author || { name: 'Unknown' },
                     related_composites: relatedComposites
                 }
             };

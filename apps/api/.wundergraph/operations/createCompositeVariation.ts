@@ -192,7 +192,8 @@ export default createOperation.mutation({
                     metadata: {
                         created_at: new Date().toISOString(),
                         variation_type: variationType,
-                        description: description || `Variation of ${sourceComposite.title}`
+                        description: description || `Variation of ${sourceComposite.title}`,
+                        target_composite_id: sourceComposite.id
                     }
                 });
 
