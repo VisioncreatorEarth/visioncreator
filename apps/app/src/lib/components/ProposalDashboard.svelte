@@ -26,29 +26,43 @@ This is the dashboard area of the proposals view that:
 	import type { ProposalState } from '$lib/stores/proposalStore';
 	import { createQuery } from '$lib/wundergraph';
 	import { onMount, tick } from 'svelte';
-	// Remove LayerChart imports and use d3 directly
-	import { scaleTime, scaleLinear } from 'd3-scale';
-	import { line, area } from 'd3-shape';
-	import { timeFormat } from 'd3-time-format';
-	import { format } from 'd3-format';
+	
+	// Remove dynamic D3 imports and replace with static rendering
+	// We'll use a completely static approach that doesn't depend on D3
 
 	// Props
 	export let activeTab: string;
 	export let states: string[];
 	export let onStateSelect: (state: string) => void;
 
-	// Add a mounted flag
+	// Add flags for SSR and client-side rendering
+	let isBrowser = typeof window !== 'undefined';
 	let isMounted = false;
-	let chartError: Error | null = null;
+	
+	// Add fallback data and error states
+	let apiError = false;
+	
+	// Fallback for API failure
+	$: {
+		// Check if any of the queries have failed
+		if (isBrowser && 
+			($orgaStatsQuery.error || $ccpQuery.error || $activeVCQuery.error || $investmentMetricsQuery.error)) {
+			console.error('API Error:', {
+				orgaStats: $orgaStatsQuery.error,
+				ccp: $ccpQuery.error,
+				activeVC: $activeVCQuery.error,
+				investmentMetrics: $investmentMetricsQuery.error
+			});
+			apiError = true;
+		}
+	}
 	
 	onMount(() => {
 		try {
 			isMounted = true;
 			console.log('ProposalDashboard component mounted');
-			console.log('Daily data points:', dailyData.length);
 		} catch (error) {
 			console.error('Error during component mount:', error);
-			chartError = error instanceof Error ? error : new Error(String(error));
 		}
 	});
 
@@ -145,93 +159,67 @@ This is the dashboard area of the proposals view that:
 		}
 	}
 
-	// Wrap data generation in a try/catch
-	const generateDailyData = () => {
-		try {
-			const data = [];
-			// Start from September 1st, 2023
-			const startDate = new Date('2023-09-01');
-			// End at February 29th, 2024 (fixed end date)
-			const endDate = new Date('2024-02-29');
-			const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-			
-			// Generate data points with rising trend (instead of declining)
-			for (let i = 0; i <= days; i++) {
-				const progress = i / days;
-				// Start at 6K and end around 28K with rising trend
-				const baseValue = 6000 + (progress * progress * 22000); // Use quadratic for steeper rise
-				// Add some natural variation with multiple frequencies
-				const variation = 
-					Math.sin(progress * Math.PI * 6) * 1500 + // Longer waves
-					Math.sin(progress * Math.PI * 20) * 800;  // Shorter waves for daily-like variations
-				
-				const value = Math.max(baseValue + variation, 3000); // Ensure minimum value
-				
-				data.push({
-					date: new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000),
-					value: value
-				});
-			}
-			console.log('Generated daily data successfully');
-			return data;
-		} catch (error) {
-			console.error('Error generating daily data:', error);
-			chartError = error instanceof Error ? error : new Error(String(error));
-			return [];
-		}
-	};
-
-	// Define the data type for chart
-	interface CashflowDataPoint {
-		date: Date;
-		value: number;
-	}
-
-	const dailyData: CashflowDataPoint[] = generateDailyData();
-	
-	// SVG chart dimensions
-	const chartWidth = 600;
-	const chartHeight = 240;
-	const margin = { top: 20, right: 30, bottom: 40, left: 50 };
-	const width = chartWidth - margin.left - margin.right;
-	const height = chartHeight - margin.top - margin.bottom;
-	
-	// Create scales for the chart
-	const xScale = scaleTime()
-		.domain([new Date('2023-09-01'), new Date('2024-02-29')])
-		.range([0, width]);
-		
-	const yScale = scaleLinear()
-		.domain([-5000, 30000])
-		.range([height, 0]);
-	
-	// Create formatters
-	const formatMonth = timeFormat('%b');
-	const formatEuro = format('€%dK');
-	
-	// Create line and area generators
-	const lineGenerator = line<CashflowDataPoint>()
-		.x(d => xScale(d.date))
-		.y(d => yScale(d.value));
-		
-	const areaGenerator = area<CashflowDataPoint>()
-		.x(d => xScale(d.date))
-		.y0(height)
-		.y1(d => yScale(d.value));
-	
-	// Generate x-axis ticks (6 months)
-	const xTicks = [
-		new Date('2023-09-01'),
-		new Date('2023-10-01'),
-		new Date('2023-11-01'),
-		new Date('2023-12-01'),
-		new Date('2024-01-01'),
-		new Date('2024-02-01')
+	// Static chart data - completely independent of D3
+	const staticChartData = [
+		{ month: 'Sep', value: 6000 },
+		{ month: 'Oct', value: 9000 },
+		{ month: 'Nov', value: 13000 },
+		{ month: 'Dec', value: 17000 },
+		{ month: 'Jan', value: 22000 },
+		{ month: 'Feb', value: 28000 }
 	];
 	
-	// Generate y-axis ticks with more values for visibility
-	const yTicks = [-5000, 0, 5000, 10000, 15000, 20000, 25000, 30000];
-
+	// Pre-calculate all the static chart elements
+	const chartHeight = 180;
+	const chartWidth = 500;
+	
+	// Pre-calculate the line points
+	const linePoints = staticChartData.map((point, i) => {
+		return {
+			x: i * 100,
+			y: chartHeight - (point.value / 200)
+		};
+	});
+	
+	// Define interface for line segments
+	interface LineSegment {
+		x1: number;
+		y1: number;
+		x2: number;
+		y2: number;
+	}
+	
+	// Pre-calculate the line segments
+	const lineSegments: LineSegment[] = [];
+	for (let i = 0; i < linePoints.length - 1; i++) {
+		lineSegments.push({
+			x1: linePoints[i].x,
+			y1: linePoints[i].y,
+			x2: linePoints[i + 1].x,
+			y2: linePoints[i + 1].y
+		});
+	}
+	
+	// Pre-calculate the area path
+	function createAreaPath() {
+		let path = `M 0 ${chartHeight} L 0 ${linePoints[0].y}`;
+		
+		// Add points for each month
+		linePoints.forEach(point => {
+			path += ` L ${point.x} ${point.y}`;
+		});
+		
+		// Close the path
+		path += ` L ${linePoints[linePoints.length - 1].x} ${chartHeight} Z`;
+		
+		return path;
+	}
+	
+	const areaPathString = createAreaPath();
+	
+	// Y-axis ticks
+	const yTicks = [0, 10000, 20000, 30000];
+	
 	// Handle event with proper typing
 	function handleMetricsClick(event: MouseEvent) {
 		toggleMetricsModal();
@@ -341,6 +329,15 @@ This is the dashboard area of the proposals view that:
 
 			<!-- Modal body -->
 			<div class="p-4 space-y-4">
+				{#if apiError}
+					<div class="p-4 bg-red-900/30 rounded-lg border border-red-500/30">
+						<h3 class="text-red-300 font-medium">Connection Error</h3>
+						<p class="text-red-200 text-sm mt-2">
+							Unable to connect to the API. Please check your connection and try again.
+						</p>
+					</div>
+				{/if}
+				
 				<!-- Detailed metrics grid -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="p-4 rounded-lg bg-surface-700/30">
@@ -401,83 +398,78 @@ This is the dashboard area of the proposals view that:
 				<!-- Cashflow Chart Section -->
 				<div class="p-4 rounded-lg bg-surface-700/30">
 					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
+					
+					<!-- Static chart that doesn't depend on D3 -->
 					<div class="h-64 w-full flex justify-center">
-						<svg width="100%" height="100%" viewBox="0 0 {chartWidth} {chartHeight}" preserveAspectRatio="xMidYMid meet">
-							<g transform="translate({margin.left}, {margin.top})">
-								<!-- Y-axis line -->
-								<line x1="0" y1="0" x2="0" y2="{height}" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+						<svg width="100%" height="100%" viewBox="0 0 600 240" preserveAspectRatio="xMidYMid meet">
+							<g transform="translate(50, 20)">
+								<!-- Static chart with hardcoded values -->
+								<line x1="0" y1="0" x2="0" y2="180" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+								<line x1="0" y1="180" x2="520" y2="180" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
 								
 								<!-- Y-axis ticks and labels -->
-								{#each yTicks as tick}
+								{#each yTicks as value}
 									<line 
 										x1="0" 
-										y1="{yScale(tick)}" 
-										x2="{width}" 
-										y2="{yScale(tick)}" 
+										y1="{chartHeight - (value / 200)}" 
+										x2="520" 
+										y2="{chartHeight - (value / 200)}" 
 										stroke="#ffffff" 
 										stroke-opacity="0.15" 
-										stroke-dasharray="2,2" 
+										stroke-dasharray="2,2"
 									/>
 									<text 
-										x="-8" 
-										y="{yScale(tick)}" 
+										x="-10" 
+										y="{chartHeight - (value / 200)}" 
 										text-anchor="end" 
-										dominant-baseline="middle" 
-										fill="#ffffff" 
+										dominant-baseline="middle"
+										fill="#ffffff"
 										font-size="12px"
 										font-weight="600"
 									>
-										{formatEuro(tick/1000)}
+										€{value/1000}K
 									</text>
 								{/each}
 								
-								<!-- X-axis line -->
-								<line x1="0" y1="{height}" x2="{width}" y2="{height}" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
-								
-								<!-- X-axis ticks and labels -->
-								{#each xTicks as tick}
-									<line 
-										x1="{xScale(tick)}" 
-										y1="{height}" 
-										x2="{xScale(tick)}" 
-										y2="{height + 5}" 
-										stroke="#ffffff" 
-										stroke-opacity="0.8" 
-									/>
+								<!-- Simplified X-axis -->
+								{#each staticChartData as point, i}
 									<text 
-										x="{xScale(tick)}" 
-										y="{height + 20}" 
+										x="{i * 100}" 
+										y="200" 
 										text-anchor="middle" 
 										fill="#ffffff" 
 										font-size="14px"
 										font-weight="600"
 									>
-										{formatMonth(tick)}
+										{point.month}
 									</text>
 								{/each}
 								
-								<!-- Area under the line -->
+								<!-- Fill area under the line -->
 								<path 
-									d="{areaGenerator(dailyData)}" 
-									fill="#6366f1" 
+									d={areaPathString}
+									fill="#6366f1"
 									fill-opacity="0.15"
 									class="filter-glow"
 								/>
 								
-								<!-- Line chart -->
-								<path 
-									d="{lineGenerator(dailyData)}" 
-									fill="none" 
-									stroke="#6366f1" 
-									stroke-width="2.5"
-									class="filter-glow"
-								/>
+								<!-- Simplified data points and lines -->
+								{#each lineSegments as segment}
+									<line 
+										x1="{segment.x1}" 
+										y1="{segment.y1}" 
+										x2="{segment.x2}" 
+										y2="{segment.y2}" 
+										stroke="#6366f1" 
+										stroke-width="2.5"
+										class="filter-glow"
+									/>
+								{/each}
 								
-								<!-- Data points (every 14 days for more data points) -->
-								{#each dailyData.filter((_, i) => i % 14 === 0) as point}
+								{#each linePoints as point}
 									<circle 
-										cx="{xScale(point.date)}" 
-										cy="{yScale(point.value)}" 
+										cx="{point.x}" 
+										cy="{point.y}" 
 										r="4" 
 										fill="#ffffff"
 										stroke="#6366f1"
