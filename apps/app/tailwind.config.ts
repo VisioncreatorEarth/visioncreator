@@ -7,7 +7,11 @@ import { vcTheme } from './src/lib/themes/vcTheme'
 
 export default {
 	darkMode: 'selector',
-	content: ['./src/**/*.{html,js,svelte,ts}', join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}')],
+	content: [
+		'./src/**/*.{html,js,svelte,ts}', 
+		join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}'),
+		'./node_modules/layerchart/**/*.{svelte,js}'
+	],
 	theme: {
 		extend: {
 			fontSize: {

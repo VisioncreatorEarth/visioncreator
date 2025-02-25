@@ -25,11 +25,32 @@ This is the dashboard area of the proposals view that:
 <script lang="ts">
 	import type { ProposalState } from '$lib/stores/proposalStore';
 	import { createQuery } from '$lib/wundergraph';
+	import { onMount, tick } from 'svelte';
+	// Remove LayerChart imports and use d3 directly
+	import { scaleTime, scaleLinear } from 'd3-scale';
+	import { line, area } from 'd3-shape';
+	import { timeFormat } from 'd3-time-format';
+	import { format } from 'd3-format';
 
 	// Props
 	export let activeTab: string;
 	export let states: string[];
 	export let onStateSelect: (state: string) => void;
+
+	// Add a mounted flag
+	let isMounted = false;
+	let chartError: Error | null = null;
+	
+	onMount(() => {
+		try {
+			isMounted = true;
+			console.log('ProposalDashboard component mounted');
+			console.log('Daily data points:', dailyData.length);
+		} catch (error) {
+			console.error('Error during component mount:', error);
+			chartError = error instanceof Error ? error : new Error(String(error));
+		}
+	});
 
 	// Query organization stats
 	const orgaStatsQuery = createQuery({
@@ -73,7 +94,8 @@ This is the dashboard area of the proposals view that:
 	$: tokenEmissionPrice = (() => {
 		const price = $orgaStatsQuery.data?.currentTokenPrice;
 		if (typeof price === 'object' && price !== null) {
-			return Number(price.value) || 1.0;
+			// Use optional chaining with a default value to handle potential missing 'value' property
+			return Number((price as any)?.value ?? 1.0) || 1.0;
 		}
 		return Number(price) || 1.0;
 	})();
@@ -123,37 +145,97 @@ This is the dashboard area of the proposals view that:
 		}
 	}
 
-	// Generate 6 months of daily data
+	// Wrap data generation in a try/catch
 	const generateDailyData = () => {
-		const data = [];
-		// Start from September 1st, 2023
-		const startDate = new Date('2023-09-01');
-		// End at February 29th, 2024 (fixed end date)
-		const endDate = new Date('2024-02-29');
-		const days = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
-		
-		// Generate data points
-		for (let i = 0; i <= days; i++) {
-			const progress = i / days;
-			// Start at 6K and end around 28K with some variation
-			const baseValue = 6000 + (22000 * progress);
-			// Add some natural variation with multiple frequencies
-			const variation = 
-				Math.sin(progress * Math.PI * 4) * 1000 + // Longer waves
-				Math.sin(progress * Math.PI * 12) * 500;  // Shorter waves
+		try {
+			const data = [];
+			// Start from September 1st, 2023
+			const startDate = new Date('2023-09-01');
+			// End at February 29th, 2024 (fixed end date)
+			const endDate = new Date('2024-02-29');
+			const days = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 			
-			const value = baseValue + variation;
-			
-			data.push({
-				date: new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000),
-				value: value
-			});
+			// Generate data points with rising trend (instead of declining)
+			for (let i = 0; i <= days; i++) {
+				const progress = i / days;
+				// Start at 6K and end around 28K with rising trend
+				const baseValue = 6000 + (progress * progress * 22000); // Use quadratic for steeper rise
+				// Add some natural variation with multiple frequencies
+				const variation = 
+					Math.sin(progress * Math.PI * 6) * 1500 + // Longer waves
+					Math.sin(progress * Math.PI * 20) * 800;  // Shorter waves for daily-like variations
+				
+				const value = Math.max(baseValue + variation, 3000); // Ensure minimum value
+				
+				data.push({
+					date: new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000),
+					value: value
+				});
+			}
+			console.log('Generated daily data successfully');
+			return data;
+		} catch (error) {
+			console.error('Error generating daily data:', error);
+			chartError = error instanceof Error ? error : new Error(String(error));
+			return [];
 		}
-		return data;
 	};
 
-	const dailyData = generateDailyData();
-	const maxValue = Math.max(...dailyData.map(d => d.value));
+	// Define the data type for chart
+	interface CashflowDataPoint {
+		date: Date;
+		value: number;
+	}
+
+	const dailyData: CashflowDataPoint[] = generateDailyData();
+	
+	// SVG chart dimensions
+	const chartWidth = 600;
+	const chartHeight = 240;
+	const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+	const width = chartWidth - margin.left - margin.right;
+	const height = chartHeight - margin.top - margin.bottom;
+	
+	// Create scales for the chart
+	const xScale = scaleTime()
+		.domain([new Date('2023-09-01'), new Date('2024-02-29')])
+		.range([0, width]);
+		
+	const yScale = scaleLinear()
+		.domain([-5000, 30000])
+		.range([height, 0]);
+	
+	// Create formatters
+	const formatMonth = timeFormat('%b');
+	const formatEuro = format('€%dK');
+	
+	// Create line and area generators
+	const lineGenerator = line<CashflowDataPoint>()
+		.x(d => xScale(d.date))
+		.y(d => yScale(d.value));
+		
+	const areaGenerator = area<CashflowDataPoint>()
+		.x(d => xScale(d.date))
+		.y0(height)
+		.y1(d => yScale(d.value));
+	
+	// Generate x-axis ticks (6 months)
+	const xTicks = [
+		new Date('2023-09-01'),
+		new Date('2023-10-01'),
+		new Date('2023-11-01'),
+		new Date('2023-12-01'),
+		new Date('2024-01-01'),
+		new Date('2024-02-01')
+	];
+	
+	// Generate y-axis ticks with more values for visibility
+	const yTicks = [-5000, 0, 5000, 10000, 15000, 20000, 25000, 30000];
+
+	// Handle event with proper typing
+	function handleMetricsClick(event: MouseEvent) {
+		toggleMetricsModal();
+	}
 </script>
 
 <!-- Add keydown event listener to window -->
@@ -176,7 +258,7 @@ This is the dashboard area of the proposals view that:
 				<!-- Add group class and click handler -->
 				<div 
 					class="group relative cursor-pointer"
-					on:click={toggleMetricsModal}
+					on:click={handleMetricsClick}
 				>
 					<!-- Glow effect rectangle -->
 					<div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 
@@ -319,83 +401,117 @@ This is the dashboard area of the proposals view that:
 				<!-- Cashflow Chart Section -->
 				<div class="p-4 rounded-lg bg-surface-700/30">
 					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
-					<div class="h-64 w-full">
-						<!-- Demo data for 6-month cashflow -->
-						<div class="relative h-full pl-16 pr-8 pb-16">
-							<!-- Line chart with glow effect -->
-							<svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-								<!-- Define gradient for glow effect -->
-								<defs>
-									<linearGradient id="line-gradient" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stop-color="rgb(var(--color-tertiary-200))" stop-opacity="0.5" />
-										<stop offset="100%" stop-color="rgb(var(--color-tertiary-200))" stop-opacity="0.1" />
-									</linearGradient>
-									<!-- Glow filter -->
-									<filter id="glow">
-										<feGaussianBlur stdDeviation="2" result="blur" />
-										<feMerge>
-											<feMergeNode in="blur" />
-											<feMergeNode in="SourceGraphic" />
-										</feMerge>
-									</filter>
-								</defs>
-
-								<!-- Create the line path -->
-								<path
-									d={dailyData.reduce((path, point, i) => {
-										const x = (i / (dailyData.length - 1)) * 92 + 4;
-										const y = 100 - (point.value / maxValue * 100);
-										return path + (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
-									}, '')}
-									class="stroke-tertiary-200"
-									stroke-width="1"
-									fill="none"
-									filter="url(#glow)"
-								/>
-
-								<!-- Area under the line -->
-								<path
-									d={dailyData.reduce((path, point, i) => {
-										const x = (i / (dailyData.length - 1)) * 92 + 4;
-										const y = 100 - (point.value / maxValue * 100);
-										return path + (i === 0 
-											? `M ${x} ${y}` 
-											: ` L ${x} ${y}`
-										);
-									}, '') + ` L 96 100 L 4 100 Z`}
-									fill="url(#line-gradient)"
-									opacity="0.15"
-								/>
-
-								<!-- Fixed month labels -->
-								{#each ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'] as month, i}
-									<text
-										x="{i * 18.4 + 4}%"
-										y="100%"
-										class="text-xs fill-tertiary-200"
-										text-anchor="middle"
-										transform="translate(0, 30)"
-										style="font-size: 0.7rem"
+					<div class="h-64 w-full flex justify-center">
+						<svg width="100%" height="100%" viewBox="0 0 {chartWidth} {chartHeight}" preserveAspectRatio="xMidYMid meet">
+							<g transform="translate({margin.left}, {margin.top})">
+								<!-- Y-axis line -->
+								<line x1="0" y1="0" x2="0" y2="{height}" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+								
+								<!-- Y-axis ticks and labels -->
+								{#each yTicks as tick}
+									<line 
+										x1="0" 
+										y1="{yScale(tick)}" 
+										x2="{width}" 
+										y2="{yScale(tick)}" 
+										stroke="#ffffff" 
+										stroke-opacity="0.15" 
+										stroke-dasharray="2,2" 
+									/>
+									<text 
+										x="-8" 
+										y="{yScale(tick)}" 
+										text-anchor="end" 
+										dominant-baseline="middle" 
+										fill="#ffffff" 
+										font-size="12px"
+										font-weight="600"
 									>
-										{month}
+										{formatEuro(tick/1000)}
 									</text>
 								{/each}
-							</svg>
-							<!-- Y-axis labels -->
-							<div class="absolute top-0 left-0 h-full pr-2 flex flex-col justify-between text-xs text-tertiary-300">
-								<span>€30K</span>
-								<span>€24K</span>
-								<span>€18K</span>
-								<span>€12K</span>
-								<span>€6K</span>
-								<span>€0</span>
-							</div>
-						</div>
+								
+								<!-- X-axis line -->
+								<line x1="0" y1="{height}" x2="{width}" y2="{height}" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+								
+								<!-- X-axis ticks and labels -->
+								{#each xTicks as tick}
+									<line 
+										x1="{xScale(tick)}" 
+										y1="{height}" 
+										x2="{xScale(tick)}" 
+										y2="{height + 5}" 
+										stroke="#ffffff" 
+										stroke-opacity="0.8" 
+									/>
+									<text 
+										x="{xScale(tick)}" 
+										y="{height + 20}" 
+										text-anchor="middle" 
+										fill="#ffffff" 
+										font-size="14px"
+										font-weight="600"
+									>
+										{formatMonth(tick)}
+									</text>
+								{/each}
+								
+								<!-- Area under the line -->
+								<path 
+									d="{areaGenerator(dailyData)}" 
+									fill="#6366f1" 
+									fill-opacity="0.15"
+									class="filter-glow"
+								/>
+								
+								<!-- Line chart -->
+								<path 
+									d="{lineGenerator(dailyData)}" 
+									fill="none" 
+									stroke="#6366f1" 
+									stroke-width="2.5"
+									class="filter-glow"
+								/>
+								
+								<!-- Data points (every 14 days for more data points) -->
+								{#each dailyData.filter((_, i) => i % 14 === 0) as point}
+									<circle 
+										cx="{xScale(point.date)}" 
+										cy="{yScale(point.value)}" 
+										r="4" 
+										fill="#ffffff"
+										stroke="#6366f1"
+										stroke-width="2"
+										class="filter-glow"
+									/>
+								{/each}
+							</g>
+						</svg>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Add glow effect for the chart line */
+	.filter-glow {
+		filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.8)); /* Stronger glow */
+	}
+
+	/* Set a general stroke width for the chart */
+	:global(svg line) {
+		stroke-width: 1.2px;
+	}
+	
+	/* Ensure text is visible with proper sizing */
+	:global(svg text) {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+		font-size: 12px;
+		font-weight: 600;
+		fill: #ffffff;
+	}
+</style>
 
 
