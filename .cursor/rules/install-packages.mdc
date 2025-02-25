@@ -1,0 +1,6 @@
+---
+description: installing new packages via npm
+globs: 
+alwaysApply: false
+---
+install new npm packages for our frontend to: /Users/cevahir/Documents/Coding/visioncreator/apps/app
