@@ -85,28 +85,6 @@ INSERT INTO db (id, json, author, schema, version) VALUES
 1
 );
 
--- Insert alternative design version
-INSERT INTO db (id, json, author, schema, version) VALUES 
-('22222222-2222-2222-2222-222222222223', 
-'{
-  "content": "# Alternative Content\n\nThis is a variation of the markdown content.\n\n## Additional Features\n- Different content structure\n- Alternative approach\n- Experimental features"
-}'::jsonb,
-'00000000-0000-0000-0000-000000000001',
-'11111111-1111-1111-1111-111111111111',
-1
-);
-
--- Insert platform vision version
-INSERT INTO db (id, json, author, schema, version) VALUES 
-('22222222-2222-2222-2222-222222222224', 
-'{
-  "content": "# Vision Creator Platform\n\nA revolutionary platform for collaborative vision development.\n\n## Core Concepts\n- Vision as Code\n- Collaborative Decision Making\n- Transparent Evolution\n- Community-Driven Development"
-}'::jsonb,
-'00000000-0000-0000-0000-000000000001',
-'11111111-1111-1111-1111-111111111111',
-1
-);
-
 -- Create main composite
 INSERT INTO composites (
     id,
@@ -120,66 +98,6 @@ INSERT INTO composites (
     'A composite for storing and versioning markdown content',
     '22222222-2222-2222-2222-222222222222',
     '00000000-0000-0000-0000-000000000001'  -- System user as author
-);
-
--- Create alternative design composite
-INSERT INTO composites (
-    id,
-    title,
-    description,
-    compose_id,
-    author
-) VALUES (
-    '33333333-3333-3333-3333-333333333334',
-    'Alternative Design',
-    'Alternative design exploration',
-    '22222222-2222-2222-2222-222222222223',
-    '00000000-0000-0000-0000-000000000001'  -- System user as author
-);
-
--- Create platform vision composite
-INSERT INTO composites (
-    id,
-    title,
-    description,
-    compose_id,
-    author
-) VALUES (
-    '33333333-3333-3333-3333-333333333335',
-    'Platform Vision',
-    'Vision for the platform',
-    '22222222-2222-2222-2222-222222222224',
-    '00000000-0000-0000-0000-000000000001'  -- System user as author
-);
-
--- Create relationships between composites
-INSERT INTO composite_relationships (
-    source_composite_id,
-    target_composite_id,
-    relationship_type,
-    metadata
-) VALUES 
--- Alternative design is a variation of main composite
-(
-    '33333333-3333-3333-3333-333333333334',
-    '33333333-3333-3333-3333-333333333333',
-    'variation_of',
-    jsonb_build_object(
-        'created_at', now(),
-        'variation_type', 'design',
-        'description', 'Alternative design exploration'
-    )
-),
--- Platform vision is a variation of main composite
-(
-    '33333333-3333-3333-3333-333333333335',
-    '33333333-3333-3333-3333-333333333333',
-    'variation_of',
-    jsonb_build_object(
-        'created_at', now(),
-        'variation_type', 'vision',
-        'description', 'Platform vision exploration'
-    )
 );
 
 -- Create default Visioncreator Platform proposal

@@ -71,12 +71,20 @@ This component handles:
 		operationName: 'editDB'
 	});
 
+	const createVariationMutation = createMutation({
+		operationName: 'createCompositeVariation'
+	});
+
 	// State management
 	let editMode = false;
 	let editContent = '';
 	let selectedCompositeId: string | null = null;
 	let selectedEditRequestId: string | undefined;
 	let selectedEditRequest: any = null;
+	let isCreatingVariation = false;
+	let newVariationTitle = '';
+	let newVariationDescription = '';
+	let newVariationType = 'design';
 
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
@@ -276,18 +284,28 @@ This component handles:
 	}
 
 	// Handle content save
-	async function saveChanges(event?: { detail: { json: any } } | MouseEvent) {
-		// Check if this is a JSON editor save event
-		const isJsonEditorSave = event && 'detail' in event && event.detail && 'json' in event.detail;
-
+	async function saveChanges(event?: CustomEvent<{ json: any }> | MouseEvent) {
 		// Get the JSON to save - either from the JSON editor or create it from the content
-		const jsonToSave = isJsonEditorSave
-			? (event as { detail: { json: any } }).detail.json
-			: { content: editContent };
+		let jsonToSave: Record<string, any>;
 
-		if (!isJsonEditorSave && !editContent) {
-			console.error('Missing content for save');
-			return;
+		// Check if this is a JSON editor save event by checking for CustomEvent with detail property
+		if (
+			event &&
+			event instanceof CustomEvent &&
+			'detail' in event &&
+			event.detail &&
+			'json' in event.detail
+		) {
+			// This is a save event from the JSON editor
+			jsonToSave = event.detail.json;
+		} else {
+			// This is a direct save from the edit mode
+			jsonToSave = { content: editContent };
+
+			if (!editContent) {
+				console.error('Missing content for save');
+				return;
+			}
 		}
 
 		if (!currentComposeId) {
@@ -303,7 +321,6 @@ This component handles:
 			console.log('Saving changes for composite:', {
 				id: currentComposeId,
 				isVariation: !!selectedCompositeId,
-				isJsonEditorSave,
 				jsonKeys: Object.keys(jsonToSave),
 				contentPreview: jsonToSave.content
 					? jsonToSave.content.substring(0, 50) + '...'
@@ -321,6 +338,65 @@ This component handles:
 			}
 		} catch (error) {
 			console.error('Failed to save changes:', error);
+		}
+	}
+
+	// Toggle variation creation modal
+	function toggleVariationModal() {
+		isCreatingVariation = !isCreatingVariation;
+		if (isCreatingVariation) {
+			// Initialize with default values
+			newVariationTitle = `${
+				selectedCompositeId ? selectedComposite?.title : compose_data?.title
+			} Variation`;
+			newVariationDescription = `Variation of ${
+				selectedCompositeId ? selectedComposite?.title : compose_data?.title
+			}`;
+			newVariationType = 'design';
+		}
+	}
+
+	// Create a new variation
+	async function createVariation() {
+		try {
+			const sourceId = selectedCompositeId || compose_data?.compose_id;
+			if (!sourceId) {
+				console.error('No source composite ID available');
+				return;
+			}
+
+			console.log('Creating variation:', {
+				sourceCompositeId: sourceId,
+				title: newVariationTitle,
+				description: newVariationDescription,
+				variationType: newVariationType,
+				applyPendingChanges: !!selectedEditRequestId,
+				pendingEditRequestId: selectedEditRequestId
+			});
+
+			const result = await $createVariationMutation.mutateAsync({
+				sourceCompositeId: sourceId,
+				title: newVariationTitle,
+				description: newVariationDescription,
+				variationType: newVariationType,
+				applyPendingChanges: !!selectedEditRequestId,
+				pendingEditRequestId: selectedEditRequestId
+			});
+
+			if (result?.success) {
+				console.log('Variation created successfully:', result);
+				await $composeQuery.refetch();
+				isCreatingVariation = false;
+
+				// Select the newly created variation
+				if (result.composite && typeof result.composite.id === 'string') {
+					handleCompositeSelect(result.composite.id);
+				}
+			} else {
+				console.error('Failed to create variation:', result?.message);
+			}
+		} catch (error) {
+			console.error('Error creating variation:', error);
 		}
 	}
 </script>
@@ -458,6 +534,13 @@ This component handles:
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
+								<button
+									class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+									on:click={toggleVariationModal}
+								>
+									<Icon icon="heroicons:code-bracket-square" class="w-4 h-4 mr-1 inline-block" />
+									New Variation
+								</button>
 								{#if selectedEditRequest.status === 'pending'}
 									<button
 										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
@@ -476,7 +559,7 @@ This component handles:
 						</div>
 
 						<JsonDiffViewer
-							baseJson={selectedEditRequest.previousVersion.instance || {}}
+							baseJson={selectedEditRequest.previousVersion.instance || { content: '' }}
 							operations={selectedEditRequest.operations || []}
 							expanded={true}
 						/>
@@ -502,6 +585,13 @@ This component handles:
 										Cancel
 									</button>
 								{:else}
+									<button
+										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+										on:click={toggleVariationModal}
+									>
+										<Icon icon="heroicons:code-bracket-square" class="w-4 h-4 mr-1 inline-block" />
+										New Variation
+									</button>
 									<button
 										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20"
 										on:click={toggleEditMode}
@@ -568,6 +658,83 @@ This component handles:
 		</div>
 	</aside>
 </div>
+
+<!-- Variation Creation Modal -->
+{#if isCreatingVariation}
+	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+		<div class="bg-surface-800 rounded-lg p-6 w-full max-w-md">
+			<h3 class="text-lg font-semibold text-surface-100 mb-4">Create New Variation</h3>
+
+			<div class="space-y-4">
+				<div>
+					<label for="variation-title" class="block text-sm font-medium text-surface-300 mb-1"
+						>Title</label
+					>
+					<input
+						id="variation-title"
+						type="text"
+						bind:value={newVariationTitle}
+						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500"
+						placeholder="Variation Title"
+					/>
+				</div>
+
+				<div>
+					<label for="variation-description" class="block text-sm font-medium text-surface-300 mb-1"
+						>Description</label
+					>
+					<textarea
+						id="variation-description"
+						bind:value={newVariationDescription}
+						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500 h-24"
+						placeholder="Variation Description"
+					/>
+				</div>
+
+				<div>
+					<label for="variation-type" class="block text-sm font-medium text-surface-300 mb-1"
+						>Variation Type</label
+					>
+					<select
+						id="variation-type"
+						bind:value={newVariationType}
+						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500"
+					>
+						<option value="design">Design</option>
+						<option value="vision">Vision</option>
+						<option value="alternative">Alternative</option>
+						<option value="experimental">Experimental</option>
+					</select>
+				</div>
+
+				{#if selectedEditRequestId}
+					<div class="p-3 bg-surface-700/50 rounded-lg">
+						<p class="text-sm text-surface-200">
+							<Icon icon="heroicons:information-circle" class="w-4 h-4 inline-block mr-1" />
+							This variation will include the pending changes from the selected edit request.
+						</p>
+					</div>
+				{/if}
+			</div>
+
+			<div class="flex justify-end gap-2 mt-6">
+				<button
+					class="px-4 py-2 text-sm font-medium text-surface-300 transition-colors rounded-lg bg-surface-700 hover:bg-surface-600"
+					on:click={toggleVariationModal}
+				>
+					Cancel
+				</button>
+				<button
+					class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
+					on:click={createVariation}
+					disabled={$createVariationMutation.isLoading}
+				>
+					{$createVariationMutation.isLoading ? 'Creating...' : 'Create Variation'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	:global(.prose) {

@@ -12,6 +12,7 @@ export type OperationErrors = {
 	checkCapabilities: CheckCapabilitiesErrors;
 	checkInvestmentEligibility: CheckInvestmentEligibilityErrors;
 	checkNotificationSubscription: CheckNotificationSubscriptionErrors;
+	createCompositeVariation: CreateCompositeVariationErrors;
 	createInvite: CreateInviteErrors;
 	createMessage: CreateMessageErrors;
 	createProposal: CreateProposalErrors;
@@ -94,6 +95,7 @@ export type AskHominioErrors =
 export type CheckCapabilitiesErrors = ClientOperationErrors;
 export type CheckInvestmentEligibilityErrors = ClientOperationErrors;
 export type CheckNotificationSubscriptionErrors = ClientOperationErrors;
+export type CreateCompositeVariationErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateMessageErrors = ClientOperationErrors;
 export type CreateProposalErrors = ClientOperationErrors;
