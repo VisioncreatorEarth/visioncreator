@@ -1,15 +1,29 @@
 -- Migration: Add patch-requests table and related functionality
 -- Description: Adds support for git-like patch requests for content updates
 
--- Drop existing objects if they exist
-DROP TRIGGER IF EXISTS generate_patch_request_trigger ON public.db;
-DROP FUNCTION IF EXISTS public.generate_patch_request() CASCADE;
-DROP FUNCTION IF EXISTS public.approve_patch_request(uuid) CASCADE;
-DROP FUNCTION IF EXISTS public.reject_patch_request(uuid) CASCADE;
-DROP TRIGGER IF EXISTS update_patch_requests_updated_at ON public.patch_requests;
-DROP FUNCTION IF EXISTS public.update_patch_request_updated_at() CASCADE;
-DROP TRIGGER IF EXISTS auto_approve_own_patch_requests ON public.patch_requests;
-DROP FUNCTION IF EXISTS public.auto_approve_own_patch_requests() CASCADE;
+-- Drop existing objects if they exist, but check if tables exist first
+DO $$
+BEGIN
+    -- Check if the tables exist before trying to drop triggers
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'db') THEN
+        DROP TRIGGER IF EXISTS generate_patch_request_trigger ON public.db;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'patch_requests') THEN
+        DROP TRIGGER IF EXISTS update_patch_requests_updated_at ON public.patch_requests;
+        DROP TRIGGER IF EXISTS auto_approve_own_patch_requests ON public.patch_requests;
+    END IF;
+    
+    -- Drop functions regardless of table existence
+    DROP FUNCTION IF EXISTS public.generate_patch_request() CASCADE;
+    DROP FUNCTION IF EXISTS public.approve_patch_request(uuid) CASCADE;
+    DROP FUNCTION IF EXISTS public.reject_patch_request(uuid) CASCADE;
+    DROP FUNCTION IF EXISTS public.update_patch_request_updated_at() CASCADE;
+    DROP FUNCTION IF EXISTS public.auto_approve_own_patch_requests() CASCADE;
+END
+$$;
+
+-- Drop the table if it exists
 DROP TABLE IF EXISTS public.patch_requests CASCADE;
 
 -- Create patch-requests table

@@ -1,9 +1,20 @@
 -- Migration: Add db_operations table for granular operation tracking
 -- Description: Adds support for Yjs-like operation tracking for better concurrency and conflict resolution
 
--- Drop existing objects if they exist
-DROP TRIGGER IF EXISTS on_db_operation_created ON public.db_operations;
-DROP FUNCTION IF EXISTS public.process_db_operations() CASCADE;
+-- Drop existing objects if they exist, but check if tables exist first
+DO $$
+BEGIN
+    -- Check if the tables exist before trying to drop triggers
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'db_operations') THEN
+        DROP TRIGGER IF EXISTS on_db_operation_created ON public.db_operations;
+    END IF;
+    
+    -- Drop functions regardless of table existence
+    DROP FUNCTION IF EXISTS public.process_db_operations() CASCADE;
+END
+$$;
+
+-- Drop the table if it exists
 DROP TABLE IF EXISTS public.db_operations CASCADE;
 
 -- Create db_operations table

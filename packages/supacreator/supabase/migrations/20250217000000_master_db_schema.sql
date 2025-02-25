@@ -1,9 +1,17 @@
 create extension if not exists "wrappers" with schema "extensions";
 
--- First, drop any existing objects that might conflict
-DROP FUNCTION IF EXISTS public.update_db_version CASCADE;
-DROP TRIGGER IF EXISTS on_db_update_archive ON public.db CASCADE;
-DROP FUNCTION IF EXISTS public.archive_db_version CASCADE;
+-- First, check if the db table exists before trying to drop triggers on it
+DO $$
+BEGIN
+    -- Check if the table exists before trying to drop triggers
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'db') THEN
+        -- Drop triggers and functions only if the table exists
+        DROP TRIGGER IF EXISTS on_db_update_archive ON public.db CASCADE;
+        DROP FUNCTION IF EXISTS public.update_db_version CASCADE;
+        DROP FUNCTION IF EXISTS public.archive_db_version CASCADE;
+    END IF;
+END
+$$;
 
 -- Drop tables if they exist (this will also drop their constraints)
 DROP TABLE IF EXISTS "public"."db_archive" CASCADE;
