@@ -616,17 +616,17 @@ This component handles:
 								<h2 class="text-xl font-semibold text-surface-100">
 									{selectedEditRequest.title}
 								</h2>
-								<p class="text-sm text-surface-300 mt-1">
+								<p class="mt-1 text-sm text-surface-300">
 									Showing changes from v{selectedEditRequest.previousVersion.version || '?'} to v{selectedEditRequest
 										.changes.version || '?'}
 								</p>
 							</div>
 							<div class="flex items-center gap-2">
 								<button
-									class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+									class="px-4 py-2 text-sm font-medium text-purple-400 transition-colors rounded-lg bg-purple-500/10 hover:bg-purple-500/20"
 									on:click={toggleVariationModal}
 								>
-									<Icon icon="heroicons:code-bracket-square" class="w-4 h-4 mr-1 inline-block" />
+									<Icon icon="heroicons:code-bracket-square" class="inline-block w-4 h-4 mr-1" />
 									New Variation
 								</button>
 								{#if selectedEditRequest.status === 'pending'}
@@ -674,10 +674,10 @@ This component handles:
 									</button>
 								{:else}
 									<button
-										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+										class="px-4 py-2 text-sm font-medium text-purple-400 transition-colors rounded-lg bg-purple-500/10 hover:bg-purple-500/20"
 										on:click={toggleVariationModal}
 									>
-										<Icon icon="heroicons:code-bracket-square" class="w-4 h-4 mr-1 inline-block" />
+										<Icon icon="heroicons:code-bracket-square" class="inline-block w-4 h-4 mr-1" />
 										New Variation
 									</button>
 									<button
@@ -749,40 +749,40 @@ This component handles:
 
 <!-- Variation Creation Modal -->
 {#if isCreatingVariation}
-	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-		<div class="bg-surface-800 rounded-lg p-6 w-full max-w-md">
-			<h3 class="text-lg font-semibold text-surface-100 mb-4">Create New Variation</h3>
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+		<div class="w-full max-w-md p-6 rounded-lg bg-surface-800">
+			<h3 class="mb-4 text-lg font-semibold text-surface-100">Create New Variation</h3>
 
 			<div class="space-y-4">
 				<div>
-					<label for="variation-title" class="block text-sm font-medium text-surface-300 mb-1"
+					<label for="variation-title" class="block mb-1 text-sm font-medium text-surface-300"
 						>Title</label
 					>
 					<input
 						id="variation-title"
 						type="text"
 						bind:value={newVariationTitle}
-						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500"
+						class="w-full p-2 border rounded-lg bg-surface-900 border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500"
 						placeholder="Variation Title"
 					/>
 				</div>
 
 				<div>
-					<label for="variation-description" class="block text-sm font-medium text-surface-300 mb-1"
+					<label for="variation-description" class="block mb-1 text-sm font-medium text-surface-300"
 						>Description</label
 					>
 					<textarea
 						id="variation-description"
 						bind:value={newVariationDescription}
-						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500 h-24"
+						class="w-full h-24 p-2 border rounded-lg bg-surface-900 border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500"
 						placeholder="Variation Description"
 					/>
 				</div>
 
 				{#if selectedEditRequestId}
-					<div class="p-3 bg-surface-700/50 rounded-lg">
+					<div class="p-3 rounded-lg bg-surface-700/50">
 						<p class="text-sm text-surface-200">
-							<Icon icon="heroicons:information-circle" class="w-4 h-4 inline-block mr-1" />
+							<Icon icon="heroicons:information-circle" class="inline-block w-4 h-4 mr-1" />
 							This variation will include the pending changes from the selected edit request.
 						</p>
 					</div>
@@ -791,7 +791,7 @@ This component handles:
 
 			<div class="flex justify-end gap-2 mt-6">
 				<button
-					class="px-4 py-2 text-sm font-medium text-surface-300 transition-colors rounded-lg bg-surface-700 hover:bg-surface-600"
+					class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-surface-300 bg-surface-700 hover:bg-surface-600"
 					on:click={toggleVariationModal}
 				>
 					Cancel

@@ -328,11 +328,12 @@ AS PERMISSIVE FOR ALL TO service_role
 USING (true) WITH CHECK (true);
 
 -- Update the approve_patch_request function to handle operations
-CREATE OR REPLACE FUNCTION public.approve_patch_request(p_patch_request_id uuid)
+CREATE OR REPLACE FUNCTION public.approve_patch_request(p_patch_request_id uuid, p_user_id uuid DEFAULT NULL)
 RETURNS "public"."patch_requests" AS $$
 DECLARE
     v_patch_request "public"."patch_requests";
     v_composite "public"."composites";
+    v_composite_author uuid;
 BEGIN
     -- Get the patch request
     SELECT * INTO v_patch_request 
@@ -341,6 +342,21 @@ BEGIN
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Patch request not found or not in pending status';
+    END IF;
+    
+    -- Get the composite and its author
+    SELECT c.*, c.author INTO v_composite
+    FROM public.composites c
+    WHERE c.id = v_patch_request.composite_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Composite not found for patch request';
+    END IF;
+    
+    -- Check if the user is the author of the composite
+    -- Skip this check if p_user_id is NULL (for internal calls like auto-approve)
+    IF p_user_id IS NOT NULL AND p_user_id != v_composite.author THEN
+        RAISE EXCEPTION 'Only the composite author can approve patch requests';
     END IF;
 
     -- Update the composite to point to the new version

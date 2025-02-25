@@ -27,13 +27,37 @@ export default createOperation.mutation({
     rbac: {
         requireMatchAll: ["authenticated"],
     },
-    handler: async ({ input, context }): Promise<{ success: boolean; patchRequest: any }> => {
+    handler: async ({ input, context, user }): Promise<{ success: boolean; patchRequest: any; message?: string }> => {
         try {
+            if (!user?.customClaims?.id) {
+                throw new Error("User not authenticated or missing ID");
+            }
+
+            const userId = user.customClaims.id;
+
             // Call the appropriate database function based on the action
-            const { data: result, error } = await context.supabase
-                .rpc(input.action === 'approve' ? 'approve_patch_request' : 'reject_patch_request', {
-                    p_patch_request_id: input.id
-                });
+            let result;
+            let error;
+
+            if (input.action === 'approve') {
+                // For approve, pass the user ID to check permissions
+                const response = await context.supabase
+                    .rpc('approve_patch_request', {
+                        p_patch_request_id: input.id,
+                        p_user_id: userId
+                    });
+                result = response.data;
+                error = response.error;
+            } else {
+                // For reject, we also need to pass the user ID for permission check
+                const response = await context.supabase
+                    .rpc('reject_patch_request', {
+                        p_patch_request_id: input.id,
+                        p_user_id: userId
+                    });
+                result = response.data;
+                error = response.error;
+            }
 
             if (error) {
                 console.error(`Error ${input.action}ing patch request:`, error);
@@ -48,7 +72,8 @@ export default createOperation.mutation({
             console.error(`Unexpected error ${input.action}ing patch request:`, error);
             return {
                 success: false,
-                patchRequest: null
+                patchRequest: null,
+                message: error instanceof Error ? error.message : String(error)
             };
         }
     }

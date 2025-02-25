@@ -5,6 +5,6 @@
     "dev": "npx supabase start && npx supabase status && npx supabase functions serve"
   },
   "devDependencies": {
-    "supabase": "^1.191.3"
+    "supabase": "^2.15.8"
   }
 }

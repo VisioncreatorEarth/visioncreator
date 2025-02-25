@@ -184,11 +184,37 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add function to reject patch request
-CREATE OR REPLACE FUNCTION public.reject_patch_request(p_patch_request_id uuid)
+CREATE OR REPLACE FUNCTION public.reject_patch_request(p_patch_request_id uuid, p_user_id uuid DEFAULT NULL)
 RETURNS "public"."patch_requests" AS $$
 DECLARE
     v_patch_request "public"."patch_requests";
+    v_composite record;
 BEGIN
+    -- Get the patch request
+    SELECT * INTO v_patch_request 
+    FROM public.patch_requests 
+    WHERE id = p_patch_request_id 
+      AND status = 'pending';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Patch request not found or not in pending status';
+    END IF;
+    
+    -- Get the composite author
+    SELECT c.id, c.author INTO v_composite 
+    FROM public.composites c
+    WHERE c.id = v_patch_request.composite_id;
+    
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Composite not found for patch request';
+    END IF;
+    
+    -- Check if the user is the author of the composite
+    -- Skip this check if p_user_id is NULL (for internal calls)
+    IF p_user_id IS NOT NULL AND p_user_id != v_composite.author THEN
+        RAISE EXCEPTION 'Only the composite author can reject patch requests';
+    END IF;
+
     -- Update the patch request status
     UPDATE public.patch_requests
     SET status = 'rejected',
@@ -274,7 +300,7 @@ BEGIN
         RAISE NOTICE 'Auto-approving patch request % - user is editing their own content', NEW.id;
         
         -- Call the approve function
-        PERFORM public.approve_patch_request(NEW.id);
+        PERFORM public.approve_patch_request(NEW.id, NULL);
     ELSE
         -- Log why we're not auto-approving
         RAISE NOTICE 'Not auto-approving patch request % - conditions not met: author_match_composite=%, author_match_old_content=%, author_match_new_content=%',

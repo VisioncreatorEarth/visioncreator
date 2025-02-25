@@ -3,7 +3,7 @@
 EditRequests.svelte - A component for displaying and managing patch requests for composites.
 This component handles:
 1. Displaying pending patch requests for the currently selected composite
-2. Approving or rejecting patch requests
+2. Approving or rejecting patch requests (only for authors of the composite)
 3. Showing the changes between versions
 4. Managing the patch request lifecycle
 5. Displaying granular operations for each patch request
@@ -28,6 +28,12 @@ Props:
 		refetch: void;
 	}>();
 
+	// Get current user data
+	const userQuery = createQuery({
+		operationName: 'queryMe',
+		enabled: true
+	});
+
 	// Create queries and mutations
 	$: patchRequestsQuery = createQuery({
 		operationName: 'queryPatchRequests' as const,
@@ -43,12 +49,16 @@ Props:
 	// State for expanded operations
 	let expandedRequestId: string | null = null;
 
+	// Get current user ID
+	$: userId = $userQuery.data?.id;
+
 	// Debug logging for props and query changes
 	$: {
 		console.log('[EditRequests] Props and State:', {
 			compositeId,
 			selectedRequestId,
-			queryEnabled: !!compositeId
+			queryEnabled: !!compositeId,
+			currentUserId: userId
 		});
 	}
 
@@ -249,6 +259,18 @@ Props:
 		}
 		return String(value);
 	}
+
+	// Check if the current user is the author of the composite
+	function isAuthor(request: any): boolean {
+		// Get the composite author from the request
+		const compositeAuthor = request.composite_author;
+		console.log('[EditRequests] Checking authorship:', {
+			userId,
+			compositeAuthor,
+			isAuthor: userId === compositeAuthor
+		});
+		return userId === compositeAuthor;
+	}
 </script>
 
 <div class="flex flex-col h-full">
@@ -376,20 +398,31 @@ Props:
 
 					{#if request.status === 'pending'}
 						<div class="flex items-center gap-2 mt-3">
-							<button
-								class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-green-400/10 hover:bg-green-400/20 text-green-400"
-								on:click|stopPropagation={() => handleApprove(request.id)}
-							>
-								<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
-								Approve
-							</button>
-							<button
-								class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-red-400/10 hover:bg-red-400/20 text-red-400"
-								on:click|stopPropagation={() => handleReject(request.id)}
-							>
-								<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
-								Reject
-							</button>
+							{#if isAuthor(request)}
+								<!-- Show approve/reject buttons only for the author -->
+								<button
+									class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-green-400/10 hover:bg-green-400/20 text-green-400"
+									on:click|stopPropagation={() => handleApprove(request.id)}
+								>
+									<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
+									Approve
+								</button>
+								<button
+									class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-red-400/10 hover:bg-red-400/20 text-red-400"
+									on:click|stopPropagation={() => handleReject(request.id)}
+								>
+									<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
+									Reject
+								</button>
+							{:else}
+								<!-- Show waiting message for non-authors -->
+								<div
+									class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-yellow-400/10 text-yellow-400"
+								>
+									<Icon icon="heroicons:clock" class="w-3.5 h-3.5" />
+									Waiting for author approval
+								</div>
+							{/if}
 						</div>
 					{/if}
 				</div>

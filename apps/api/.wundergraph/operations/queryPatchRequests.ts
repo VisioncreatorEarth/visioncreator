@@ -10,6 +10,7 @@ interface PatchRequest {
     old_version_id: string;
     new_version_id: string;
     composite_id: string;
+    composite_author: string;
     author: {
         id: string;
         name: string;
@@ -111,6 +112,22 @@ export default createOperation.query({
             const profiles = (rawProfiles || []) as Profile[];
             const profileMap = new Map(profiles.map(p => [p.id, p]));
 
+            // Get composite information including authors
+            const { data: composites, error: compositesError } = await context.supabase
+                .from('composites')
+                .select('id, author')
+                .in('id', input.compositeIds);
+
+            if (compositesError) {
+                console.error('[queryPatchRequests] Error fetching composites:', compositesError);
+                throw new Error('Failed to fetch composites');
+            }
+
+            // Create a map of composite IDs to their authors
+            const compositeAuthorMap = new Map(
+                (composites || []).map(c => [c.id, c.author])
+            );
+
             // Get all version IDs
             const versionIds = patchRequests.reduce((acc: string[], req) => {
                 if (req.old_version_id) acc.push(req.old_version_id);
@@ -207,6 +224,7 @@ export default createOperation.query({
                 const newVersion = request.new_version_id ? versionsMap.get(request.new_version_id) : null;
                 const author = profileMap.get(request.author);
                 const operations = operationsMap.get(request.id) || [];
+                const compositeAuthor = compositeAuthorMap.get(request.composite_id) || '';
 
                 return {
                     id: request.id,
@@ -218,6 +236,7 @@ export default createOperation.query({
                         id: author?.id || '',
                         name: author?.name || 'Unknown'
                     },
+                    composite_author: compositeAuthor,
                     changes: {
                         content: newVersion?.json?.content,
                         schema: newVersion?.json?.schema,
