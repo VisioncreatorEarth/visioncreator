@@ -169,19 +169,69 @@ This is the dashboard area of the proposals view that:
 		{ month: 'Feb', value: 28000 }
 	];
 	
+	// Generate more detailed data points for a smoother line
+	function generateDetailedData() {
+		const result = [];
+		// Create 30 points between each month for a smoother curve
+		for (let i = 0; i < staticChartData.length - 1; i++) {
+			const startPoint = staticChartData[i];
+			const endPoint = staticChartData[i + 1];
+			const startValue = startPoint.value;
+			const endValue = endPoint.value;
+			
+			// Add the start point
+			result.push({
+				x: i * 100,
+				y: startValue,
+				isMainPoint: true,
+				month: startPoint.month
+			});
+			
+			// Add intermediate points
+			for (let j = 1; j < 10; j++) {
+				const progress = j / 10;
+				// Base interpolation between months
+				const baseValue = startValue + (endValue - startValue) * progress;
+				
+				// Add some natural variation
+				const variation = Math.sin(progress * Math.PI) * (Math.random() * 800 - 400);
+				const value = baseValue + variation;
+				
+				result.push({
+					x: i * 100 + progress * 100,
+					y: value,
+					isMainPoint: false
+				});
+			}
+		}
+		
+		// Add the final point
+		result.push({
+			x: (staticChartData.length - 1) * 100,
+			y: staticChartData[staticChartData.length - 1].value,
+			isMainPoint: true,
+			month: staticChartData[staticChartData.length - 1].month
+		});
+		
+		return result;
+	}
+	
 	// Pre-calculate all the static chart elements
-	const chartHeight = 180;
+	const chartHeight = 260; // Further increased height
 	const chartWidth = 500;
 	
-	// Pre-calculate the line points
-	const linePoints = staticChartData.map((point, i) => {
+	// Generate detailed data points
+	const detailedData = generateDetailedData();
+	
+	// Pre-calculate the line points for main month markers
+	const linePoints = detailedData.filter(point => point.isMainPoint).map(point => {
 		return {
-			x: i * 100,
-			y: chartHeight - (point.value / 200)
+			x: point.x,
+			y: chartHeight - ((point.y + 10000) / 150) // Adjusted scale for taller chart with -10000 offset
 		};
 	});
 	
-	// Define interface for line segments
+	// Pre-calculate detailed line segments for the smooth curve
 	interface LineSegment {
 		x1: number;
 		y1: number;
@@ -191,34 +241,34 @@ This is the dashboard area of the proposals view that:
 	
 	// Pre-calculate the line segments
 	const lineSegments: LineSegment[] = [];
-	for (let i = 0; i < linePoints.length - 1; i++) {
+	for (let i = 0; i < detailedData.length - 1; i++) {
 		lineSegments.push({
-			x1: linePoints[i].x,
-			y1: linePoints[i].y,
-			x2: linePoints[i + 1].x,
-			y2: linePoints[i + 1].y
+			x1: detailedData[i].x,
+			y1: chartHeight - ((detailedData[i].y + 10000) / 150), // Adjusted scale with offset
+			x2: detailedData[i + 1].x,
+			y2: chartHeight - ((detailedData[i + 1].y + 10000) / 150) // Adjusted scale with offset
 		});
 	}
 	
 	// Pre-calculate the area path
 	function createAreaPath() {
-		let path = `M 0 ${chartHeight} L 0 ${linePoints[0].y}`;
+		let path = `M 0 ${chartHeight} L ${detailedData[0].x} ${chartHeight - ((detailedData[0].y + 10000) / 150)}`;
 		
-		// Add points for each month
-		linePoints.forEach(point => {
-			path += ` L ${point.x} ${point.y}`;
-		});
+		// Add points for each data point
+		for (let i = 1; i < detailedData.length; i++) {
+			path += ` L ${detailedData[i].x} ${chartHeight - ((detailedData[i].y + 10000) / 150)}`;
+		}
 		
 		// Close the path
-		path += ` L ${linePoints[linePoints.length - 1].x} ${chartHeight} Z`;
+		path += ` L ${detailedData[detailedData.length - 1].x} ${chartHeight} Z`;
 		
 		return path;
 	}
 	
 	const areaPathString = createAreaPath();
 	
-	// Y-axis ticks
-	const yTicks = [0, 10000, 20000, 30000];
+	// Y-axis ticks with more values for the taller chart, including negative values
+	const yTicks = [-10000, -5000, 0, 5000, 10000, 15000, 20000, 25000, 30000];
 	
 	// Handle event with proper typing
 	function handleMetricsClick(event: MouseEvent) {
@@ -400,27 +450,27 @@ This is the dashboard area of the proposals view that:
 					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
 					
 					<!-- Static chart that doesn't depend on D3 -->
-					<div class="h-64 w-full flex justify-center">
-						<svg width="100%" height="100%" viewBox="0 0 600 240" preserveAspectRatio="xMidYMid meet">
+					<div class="h-80 w-full flex justify-center"> <!-- Further increased height -->
+						<svg width="100%" height="100%" viewBox="0 0 600 320" preserveAspectRatio="xMidYMid meet"> <!-- Increased viewBox height -->
 							<g transform="translate(50, 20)">
 								<!-- Static chart with hardcoded values -->
-								<line x1="0" y1="0" x2="0" y2="180" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
-								<line x1="0" y1="180" x2="520" y2="180" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+								<line x1="0" y1="0" x2="0" y2="{chartHeight}" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+								<line x1="0" y1="{chartHeight}" x2="520" y2="{chartHeight}" stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
 								
 								<!-- Y-axis ticks and labels -->
 								{#each yTicks as value}
 									<line 
 										x1="0" 
-										y1="{chartHeight - (value / 200)}" 
+										y1="{chartHeight - ((value + 10000) / 150)}" 
 										x2="520" 
-										y2="{chartHeight - (value / 200)}" 
+										y2="{chartHeight - ((value + 10000) / 150)}" 
 										stroke="#ffffff" 
 										stroke-opacity="0.15" 
 										stroke-dasharray="2,2"
 									/>
 									<text 
 										x="-10" 
-										y="{chartHeight - (value / 200)}" 
+										y="{chartHeight - ((value + 10000) / 150)}" 
 										text-anchor="end" 
 										dominant-baseline="middle"
 										fill="#ffffff"
@@ -431,11 +481,22 @@ This is the dashboard area of the proposals view that:
 									</text>
 								{/each}
 								
+								<!-- Zero line highlighted -->
+								<line 
+									x1="0" 
+									y1="{chartHeight - ((0 + 10000) / 150)}" 
+									x2="520" 
+									y2="{chartHeight - ((0 + 10000) / 150)}" 
+									stroke="#ffffff" 
+									stroke-opacity="0.4" 
+									stroke-width="1.5"
+								/>
+								
 								<!-- Simplified X-axis -->
 								{#each staticChartData as point, i}
 									<text 
 										x="{i * 100}" 
-										y="200" 
+										y="{chartHeight + 20}" 
 										text-anchor="middle" 
 										fill="#ffffff" 
 										font-size="14px"
@@ -453,7 +514,7 @@ This is the dashboard area of the proposals view that:
 									class="filter-glow"
 								/>
 								
-								<!-- Simplified data points and lines -->
+								<!-- Detailed line segments for smoother curve -->
 								{#each lineSegments as segment}
 									<line 
 										x1="{segment.x1}" 
@@ -461,12 +522,13 @@ This is the dashboard area of the proposals view that:
 										x2="{segment.x2}" 
 										y2="{segment.y2}" 
 										stroke="#6366f1" 
-										stroke-width="2.5"
+										stroke-width="2"
 										class="filter-glow"
 									/>
 								{/each}
 								
-								{#each linePoints as point}
+								<!-- Only show circles for main month points -->
+								{#each linePoints as point, i}
 									<circle 
 										cx="{point.x}" 
 										cy="{point.y}" 
