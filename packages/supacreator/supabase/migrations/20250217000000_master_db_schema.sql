@@ -87,12 +87,14 @@ CREATE INDEX idx_db_archive_prev ON public.db_archive(prev);
 -- Create version update function
 CREATE OR REPLACE FUNCTION public.update_db_version(
     p_id uuid,
-    p_json jsonb
+    p_json jsonb,
+    p_current_user_id uuid DEFAULT NULL
 ) RETURNS "public"."db" AS $$
 DECLARE
     v_old_version "public"."db";
     v_new_id uuid;
     v_result "public"."db";
+    v_author_id uuid;
 BEGIN
     -- Get the current version
     SELECT * INTO v_old_version 
@@ -102,6 +104,10 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Record with ID % not found', p_id;
     END IF;
+
+    -- Determine the author ID to use
+    -- If p_current_user_id is provided, use it; otherwise, keep the original author
+    v_author_id := COALESCE(p_current_user_id, v_old_version.author);
 
     -- Generate new ID
     v_new_id := gen_random_uuid();
@@ -118,7 +124,7 @@ BEGIN
     ) VALUES (
         v_new_id,
         p_json,
-        v_old_version.author,
+        v_author_id,
         v_old_version.schema,
         v_old_version.version + 1,
         now(),

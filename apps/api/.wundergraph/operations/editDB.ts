@@ -344,7 +344,8 @@ export default createOperation.mutation({
                 // Now update the clone with the new content
                 const { data: updateResult, error: updateError } = await context.supabase.rpc('update_db_version', {
                     p_id: newId,
-                    p_json: newJson
+                    p_json: newJson,
+                    p_current_user_id: user.customClaims.id
                 });
 
                 if (updateError) {
@@ -385,7 +386,8 @@ export default createOperation.mutation({
             console.log('[editDB] Calling update_db_version procedure with cleaned json');
             const { data: result, error } = await context.supabase.rpc('update_db_version', {
                 p_id: input.id,
-                p_json: cleanJson
+                p_json: cleanJson,
+                p_current_user_id: user.customClaims.id
             });
 
             if (error) {

@@ -85,7 +85,7 @@ This component handles:
 	let isCreatingVariation = false;
 	let newVariationTitle = '';
 	let newVariationDescription = '';
-	let newVariationType = 'design';
+	let newVariationType: string | undefined = undefined;
 
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
@@ -353,7 +353,7 @@ This component handles:
 			newVariationDescription = `Variation of ${
 				selectedCompositeId ? selectedComposite?.title : compose_data?.title
 			}`;
-			newVariationType = 'design';
+			newVariationType = undefined; // No default variation type
 		}
 	}
 
@@ -370,7 +370,7 @@ This component handles:
 				sourceCompositeId: sourceId,
 				title: newVariationTitle,
 				description: newVariationDescription,
-				variationType: newVariationType,
+				variationType: newVariationType, // Optional variation type
 				applyPendingChanges: !!selectedEditRequestId,
 				pendingEditRequestId: selectedEditRequestId
 			});
@@ -379,7 +379,7 @@ This component handles:
 				sourceCompositeId: sourceId,
 				title: newVariationTitle,
 				description: newVariationDescription,
-				variationType: newVariationType,
+				variationType: newVariationType, // Optional variation type
 				applyPendingChanges: !!selectedEditRequestId,
 				pendingEditRequestId: selectedEditRequestId
 			});
@@ -512,26 +512,6 @@ This component handles:
 	$: variationTree = compose_data?.related_composites
 		? organizeCompositesIntoTree(compose_data.related_composites)
 		: [];
-
-	// Debug function to log the current state
-	function debugTreeStructure() {
-		console.log('DEBUG: Current compose_data:', compose_data);
-		console.log('DEBUG: Related composites:', compose_data?.related_composites);
-		console.log('DEBUG: Variation tree:', variationTree);
-
-		// Check for any composites with self-references
-		const selfRefs = compose_data?.related_composites.filter(
-			(c) => c.metadata?.target_composite_id === c.id
-		);
-		console.log('DEBUG: Self-referencing composites:', selfRefs);
-
-		// Check for any composites with missing targets
-		const missingTargets = compose_data?.related_composites.filter((c) => {
-			const targetId = c.metadata?.target_composite_id;
-			return targetId && !compose_data.related_composites.some((rc) => rc.id === targetId);
-		});
-		console.log('DEBUG: Composites with missing targets:', missingTargets);
-	}
 </script>
 
 <div class="flex h-full bg-surface-800">
@@ -706,12 +686,6 @@ This component handles:
 									>
 										Edit
 									</button>
-									<button
-										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-										on:click={debugTreeStructure}
-									>
-										Debug
-									</button>
 								{/if}
 							</div>
 						</div>
@@ -803,22 +777,6 @@ This component handles:
 						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500 h-24"
 						placeholder="Variation Description"
 					/>
-				</div>
-
-				<div>
-					<label for="variation-type" class="block text-sm font-medium text-surface-300 mb-1"
-						>Variation Type</label
-					>
-					<select
-						id="variation-type"
-						bind:value={newVariationType}
-						class="w-full p-2 rounded-lg bg-surface-900 border border-surface-700 text-surface-100 focus:outline-none focus:border-primary-500"
-					>
-						<option value="design">Design</option>
-						<option value="vision">Vision</option>
-						<option value="alternative">Alternative</option>
-						<option value="experimental">Experimental</option>
-					</select>
 				</div>
 
 				{#if selectedEditRequestId}

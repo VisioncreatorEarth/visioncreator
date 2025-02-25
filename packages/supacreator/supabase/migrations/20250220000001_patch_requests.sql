@@ -8,6 +8,8 @@ DROP FUNCTION IF EXISTS public.approve_patch_request(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.reject_patch_request(uuid) CASCADE;
 DROP TRIGGER IF EXISTS update_patch_requests_updated_at ON public.patch_requests;
 DROP FUNCTION IF EXISTS public.update_patch_request_updated_at() CASCADE;
+DROP TRIGGER IF EXISTS auto_approve_own_patch_requests ON public.patch_requests;
+DROP FUNCTION IF EXISTS public.auto_approve_own_patch_requests() CASCADE;
 DROP TABLE IF EXISTS public.patch_requests CASCADE;
 
 -- Create patch-requests table
@@ -202,6 +204,95 @@ BEGIN
     RETURN v_patch_request;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Create function to auto-approve patch requests when the author is editing their own content
+CREATE OR REPLACE FUNCTION public.auto_approve_own_patch_requests()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_composite_author uuid;
+    v_old_content_record record;
+    v_new_content_record record;
+BEGIN
+    -- Get the author of the composite
+    SELECT author INTO v_composite_author
+    FROM public.composites
+    WHERE id = NEW.composite_id;
+    
+    IF v_composite_author IS NULL THEN
+        RAISE WARNING 'Composite % not found or has no author for patch request %', NEW.composite_id, NEW.id;
+        RETURN NULL;
+    END IF;
+    
+    -- Get the old content record
+    SELECT * INTO v_old_content_record
+    FROM public.db_archive
+    WHERE id = NEW.old_version_id;
+    
+    -- If not found in archive, check active db
+    IF v_old_content_record IS NULL THEN
+        SELECT * INTO v_old_content_record
+        FROM public.db
+        WHERE id = NEW.old_version_id;
+    END IF;
+    
+    IF v_old_content_record IS NULL OR v_old_content_record.author IS NULL THEN
+        RAISE WARNING 'Old content version % not found or has no author for patch request %', NEW.old_version_id, NEW.id;
+        RETURN NULL;
+    END IF;
+    
+    -- Get the new content record
+    SELECT * INTO v_new_content_record
+    FROM public.db
+    WHERE id = NEW.new_version_id;
+    
+    IF v_new_content_record IS NULL OR v_new_content_record.author IS NULL THEN
+        RAISE WARNING 'New content version % not found or has no author for patch request %', NEW.new_version_id, NEW.id;
+        RETURN NULL;
+    END IF;
+    
+    -- Log detailed information for debugging
+    RAISE NOTICE 'Patch request details: id=%, author=%, composite_id=%, composite_author=%, old_version_id=%, old_version_author=%, new_version_id=%, new_version_author=%',
+        NEW.id, 
+        NEW.author, 
+        NEW.composite_id, 
+        v_composite_author, 
+        NEW.old_version_id, 
+        v_old_content_record.author, 
+        NEW.new_version_id, 
+        v_new_content_record.author;
+    
+    -- Only auto-approve if the user is editing their own content
+    -- This means:
+    -- 1. The user must be the author of the composite
+    -- 2. The user must be the author of the old content version
+    -- 3. The user must be the author of the new content version
+    IF NEW.author = v_composite_author AND 
+       NEW.author = v_old_content_record.author AND 
+       NEW.author = v_new_content_record.author THEN
+        
+        -- Log that we're auto-approving
+        RAISE NOTICE 'Auto-approving patch request % - user is editing their own content', NEW.id;
+        
+        -- Call the approve function
+        PERFORM public.approve_patch_request(NEW.id);
+    ELSE
+        -- Log why we're not auto-approving
+        RAISE NOTICE 'Not auto-approving patch request % - conditions not met: author_match_composite=%, author_match_old_content=%, author_match_new_content=%',
+            NEW.id,
+            (NEW.author = v_composite_author),
+            (NEW.author = v_old_content_record.author),
+            (NEW.author = v_new_content_record.author);
+    END IF;
+    
+    RETURN NULL; -- For AFTER triggers, the return value is ignored
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to auto-approve own patch requests
+CREATE TRIGGER auto_approve_own_patch_requests
+    AFTER INSERT ON public.patch_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION public.auto_approve_own_patch_requests();
 
 -- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_patch_requests_composite_id ON public.patch_requests(composite_id);

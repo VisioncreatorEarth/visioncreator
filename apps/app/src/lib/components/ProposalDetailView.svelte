@@ -189,7 +189,13 @@ HOW THIS COMPONENT WORKS:
 
 	// Handle mobile view
 	function updateViewport() {
+		const wasMobileView = isMobileView;
 		isMobileView = window.innerWidth < 768;
+
+		// If switching to mobile view and currently on compose tab, switch to details
+		if (!wasMobileView && isMobileView && $activeTab === 'compose') {
+			activeTab.set('details');
+		}
 	}
 
 	onMount(() => {
@@ -215,6 +221,10 @@ HOW THIS COMPONENT WORKS:
 
 	// Handle tab changes with explicit functions
 	function setTab(tab: 'details' | 'info' | 'chat' | 'compose') {
+		// Prevent switching to compose tab on mobile devices
+		if (tab === 'compose' && isMobileView) {
+			return;
+		}
 		activeTab.set(tab);
 	}
 
@@ -458,17 +468,6 @@ HOW THIS COMPONENT WORKS:
 					>
 						<Icon icon="mdi:information-outline" class="w-5 h-5 mt-1" />
 						<span class="-mt-1 text-[10px]">Info</span>
-					</button>
-
-					<button
-						class="flex flex-col items-center justify-center w-12 h-10 transition-colors rounded-lg {$activeTab ===
-						'compose'
-							? 'bg-tertiary-300/10 text-tertiary-500'
-							: 'text-tertiary-300 hover:bg-surface-700/50'}"
-						on:click={() => setTab('compose')}
-					>
-						<Icon icon="mdi:pencil-ruler" class="w-5 h-5 mt-1" />
-						<span class="-mt-1 text-[10px]">Compose</span>
 					</button>
 				</div>
 
