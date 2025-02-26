@@ -5,14 +5,45 @@
   
   // Generate background colors based on slide type
   let bgGradient = 'from-cyan-400 to-blue-600';
+  let icon = '✨';
   
-  // Set different color schemes based on slide type or index for visual variety
-  if (index === 0) {
-    bgGradient = 'from-cyan-400 to-emerald-500'; // Title slide
-  } else if (index === 1) {
-    bgGradient = 'from-indigo-400 to-purple-500'; // Question slide
-  } else if (index === 2) {
-    bgGradient = 'from-orange-400 to-red-500'; // Autonomy slide
+  // Set different color schemes and icons based on slide type or index for visual variety
+  if (index === 0) { // Title slide
+    bgGradient = 'from-cyan-400 to-emerald-500'; 
+    icon = '🚀';
+  } else if (index === 1) { // Question slide
+    bgGradient = 'from-indigo-400 to-purple-500';
+    icon = '❓';
+  } else if (index === 2) { // Autonomy slide
+    bgGradient = 'from-orange-400 to-red-500';
+    icon = '🔑';
+  } else if (index === 3) { // Autonomy Crisis slide
+    bgGradient = 'from-red-400 to-amber-500';
+    icon = '⛓️';
+  } else if (index === 4) { // True Autonomy Unleashed slide
+    bgGradient = 'from-teal-400 to-emerald-500';
+    icon = '⏱️';
+  } else if (index === 5) { // Beyond the False Binary slide
+    bgGradient = 'from-purple-400 to-indigo-500';
+    icon = '👑';
+  } else if (index === 6) { // Freedom Dimensions slide
+    bgGradient = 'from-blue-400 to-cyan-500';
+    icon = '🌐';
+  } else if (index === 7) { // New Work Paradigm slide
+    bgGradient = 'from-violet-400 to-fuchsia-500';
+    icon = '✅';
+  } else if (index === 8) { // Autonomous Life slide
+    bgGradient = 'from-amber-400 to-orange-500';
+    icon = '👩‍💻';
+  } else if (index === 9) { // Interdependence slide
+    bgGradient = 'from-blue-400 to-indigo-500';
+    icon = '🌱';
+  } else if (index === 10) { // Path to Freedom slide
+    bgGradient = 'from-green-400 to-teal-500';
+    icon = '🛤️';
+  } else if (index === 11) { // Reclaim Work slide
+    bgGradient = 'from-cyan-400 to-emerald-500';
+    icon = '🔄';
   } else if (index % 4 === 0) {
     bgGradient = 'from-emerald-400 to-teal-600';
   } else if (index % 4 === 1) {
@@ -32,26 +63,102 @@
     {#if index === 0}
       <!-- Title slide layout -->
       <div class="relative z-10 text-center px-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Title Slide</div>
-        <div class="text-lg font-bold text-white leading-tight">{title}</div>
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Title</div>
+        <div class="text-md font-bold text-white">
+          Freedom to Create,<br>Right to Own
+        </div>
       </div>
     {:else if index === 1}
       <!-- Question slide layout -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Question</div>
-        <div class="text-sm font-medium text-white">What does a human fundamentally strive for?</div>
+        <div class="text-sm font-medium text-white">
+          What does a human<br>fundamentally strive for?
+        </div>
       </div>
     {:else if index === 2}
       <!-- Answer slide layout -->
       <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Answer</div>
         <div class="text-xl font-bold text-white">AUTONOMY</div>
       </div>
+    {:else if index === 3}
+      <!-- Autonomy Crisis slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Crisis</div>
+        <div class="text-sm font-medium text-white">
+          Dependency vs Possibility
+        </div>
+      </div>
+    {:else if index === 4}
+      <!-- True Autonomy slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Unleashed</div>
+        <div class="text-sm font-medium text-white">
+          Time, Location & Financial<br>Autonomy
+        </div>
+      </div>
+    {:else if index === 5}
+      <!-- False Binary slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Beyond</div>
+        <div class="text-sm font-medium text-white">
+          Employee to Owner-Contributor
+        </div>
+      </div>
+    {:else if index === 6}
+      <!-- Freedom Dimensions slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Dimensions</div>
+        <div class="text-sm font-medium text-white">
+          Multiple Types of Freedom
+        </div>
+      </div>
+    {:else if index === 7}
+      <!-- New Paradigm slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Paradigm</div>
+        <div class="text-sm font-medium text-white">
+          Eliminating False Choices
+        </div>
+      </div>
+    {:else if index === 8}
+      <!-- Autonomous Life slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Life</div>
+        <div class="text-sm font-medium text-white">
+          Elena's Autonomous Journey
+        </div>
+      </div>
+    {:else if index === 9}
+      <!-- Interdependence slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Journey</div>
+        <div class="text-sm font-medium text-white">
+          From Dependence to<br>Interdependence
+        </div>
+      </div>
+    {:else if index === 10}
+      <!-- Path to Freedom slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Path</div>
+        <div class="text-sm font-medium text-white">
+          5-Step Journey to Freedom
+        </div>
+      </div>
+    {:else if index === 11}
+      <!-- Reclaim Work slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Reclaim</div>
+        <div class="text-sm font-medium text-white">
+          Your Work, Your Life
+        </div>
+      </div>
     {:else}
-      <!-- Generic slide layout with elements representing content -->
-      <div class="relative z-10 flex flex-col items-center">
-        <div class="w-16 h-1 bg-white/30 mb-3"></div>
-        <div class="w-24 h-2 bg-white/20 mb-1 rounded-full"></div>
-        <div class="w-16 h-2 bg-white/20 rounded-full"></div>
+      <!-- Generic slide layout with text only -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">{title.split(' ')[0]}</div>
+        <div class="text-sm font-medium text-white">{title}</div>
       </div>
     {/if}
     
