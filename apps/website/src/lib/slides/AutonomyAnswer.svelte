@@ -37,12 +37,12 @@
     <!-- Explanation Text -->
     <div class="max-w-3xl mx-auto space-y-8 transform transition-all duration-1000 ease-out {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}">
       <p class="text-2xl text-slate-200 leading-relaxed">
-        Humans fundamentally strive to <span class="text-cyan-300 font-semibold">own their time</span> and <span class="text-cyan-300 font-semibold">own their creation</span>.
+        Humans fundamentally strive for autonomy - the freedom to control our <span class="text-cyan-300 font-semibold">own time</span>, <span class="text-cyan-300 font-semibold">location</span>, <span class="text-cyan-300 font-semibold">projects</span> and <span class="text-cyan-300 font-semibold">worth</span>.
       </p>
       
       <div class="bg-slate-800/30 backdrop-blur-sm rounded-xl p-5 border border-cyan-500/20 mt-6">
         <p class="text-xl text-slate-200">
-          VisionCreator exists to restore this fundamental human need, enabling people to break free from the ancient practice of time-for-money exchange.
+          VisionCreator exists to restore this fundamental human need, breaking the ancient practice of time-for-money exchange.
         </p>
       </div>
       
