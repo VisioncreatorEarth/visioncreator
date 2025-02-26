@@ -124,7 +124,7 @@ This is the dashboard area of the proposals view that:
 
 	// Get distribution percentages from the API
 	$: eurePercentage = Math.round($ccpQuery.data?.distribution?.eure ?? 0);
-	$: vcePercentage = Math.round($ccpQuery.data?.distribution?.vce ?? 0);
+	$: vcrPercentage = Math.round($ccpQuery.data?.distribution?.vce ?? 0);
 
 	// Extract the current VC count from the 'activeVC' endpoint (0 if not loaded)
 	$: totalVCs = $activeVCQuery.data?.totalVCs ?? 0;
@@ -424,12 +424,12 @@ This is the dashboard area of the proposals view that:
 						<h3 class="text-sm font-medium text-tertiary-200">Pool Distribution</h3>
 						<p class="text-2xl font-bold text-tertiary-100">
 							{#if $ccpQuery.data}
-								{eurePercentage}% / {vcePercentage}%
+								{eurePercentage}% / {vcrPercentage}%
 							{:else}
 								Loading…
 							{/if}
 						</p>
-						<p class="text-sm text-tertiary-300 mt-2">EURe / VCE ratio</p>
+						<p class="text-sm text-tertiary-300 mt-2">EURe / VCR ratio</p>
 					</div>
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
@@ -441,7 +441,7 @@ This is the dashboard area of the proposals view that:
 								Loading…
 							{/if}
 						</p>
-						<p class="text-sm text-tertiary-300 mt-2">Combined value of EURe and VCE</p>
+						<p class="text-sm text-tertiary-300 mt-2">Combined value of EURe and VCR</p>
 					</div>
 				</div>
 
