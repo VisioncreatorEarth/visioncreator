@@ -11,6 +11,7 @@ BEGIN
     
     -- Drop functions regardless of table existence
     DROP FUNCTION IF EXISTS public.process_db_operations() CASCADE;
+    DROP FUNCTION IF EXISTS public.validate_content_against_schema() CASCADE;
 END
 $$;
 
@@ -36,6 +37,266 @@ CREATE TABLE IF NOT EXISTS "public"."db_operations" (
     constraint "db_operations_patch_request_fkey" foreign key ("patch_request_id") references public.patch_requests(id) on delete cascade,
     constraint "db_operations_operation_type_check" check (operation_type in ('add', 'remove', 'replace', 'move', 'copy', 'test'))
 );
+
+-- Create content validation function
+CREATE OR REPLACE FUNCTION public.validate_content_against_schema(
+    p_content jsonb,
+    p_schema_id uuid
+) RETURNS jsonb AS $$
+DECLARE
+    v_schema_data jsonb;
+    v_schema_found boolean := false;
+    v_meta_schema_id uuid := '00000000-0000-0000-0000-000000000001';
+    v_meta_schema boolean := false;
+    v_validation_result jsonb;
+BEGIN
+    -- Check if this is the meta-schema
+    IF p_schema_id = v_meta_schema_id THEN
+        v_meta_schema := true;
+    END IF;
+    
+    -- Get the schema from active db
+    SELECT json INTO v_schema_data
+    FROM public.db
+    WHERE id = p_schema_id;
+    
+    IF v_schema_data IS NOT NULL THEN
+        v_schema_found := true;
+    ELSE
+        -- Try archive if not found in active
+        SELECT json INTO v_schema_data
+        FROM public.db_archive
+        WHERE id = p_schema_id;
+        
+        IF v_schema_data IS NOT NULL THEN
+            v_schema_found := true;
+        END IF;
+    END IF;
+    
+    IF NOT v_schema_found THEN
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'Schema not found',
+            'details', format('Schema with ID %s not found in db or db_archive', p_schema_id)
+        );
+    END IF;
+    
+    -- For meta-schema validation (schemas themselves)
+    IF v_meta_schema THEN
+        -- Define the meta-schema inline
+        DECLARE
+            v_meta_schema_def jsonb := jsonb_build_object(
+                'type', 'object',
+                'required', ARRAY['type', 'properties'],
+                'properties', jsonb_build_object(
+                    'type', jsonb_build_object(
+                        'type', 'string',
+                        'enum', ARRAY['object']
+                    ),
+                    'title', jsonb_build_object('type', 'string'),
+                    'description', jsonb_build_object('type', 'string'),
+                    'properties', jsonb_build_object(
+                        'type', 'object',
+                        'additionalProperties', jsonb_build_object(
+                            'type', 'object',
+                            'required', ARRAY['type', 'title'],
+                            'properties', jsonb_build_object(
+                                'type', jsonb_build_object('type', 'string'),
+                                'title', jsonb_build_object('type', 'string'),
+                                'description', jsonb_build_object('type', 'string'),
+                                'format', jsonb_build_object('type', 'string'),
+                                'pattern', jsonb_build_object('type', 'string'),
+                                'minimum', jsonb_build_object('type', 'number'),
+                                'maximum', jsonb_build_object('type', 'number'),
+                                'minLength', jsonb_build_object('type', 'integer', 'minimum', 0),
+                                'maxLength', jsonb_build_object('type', 'integer', 'minimum', 0),
+                                'required', jsonb_build_object(
+                                    'oneOf', jsonb_build_array(
+                                        jsonb_build_object('type', 'boolean'),
+                                        jsonb_build_object(
+                                            'type', 'array',
+                                            'items', jsonb_build_object('type', 'string')
+                                        )
+                                    )
+                                ),
+                                'nullable', jsonb_build_object('type', 'boolean'),
+                                'properties', jsonb_build_object('type', 'object'),
+                                'items', jsonb_build_object('type', 'object'),
+                                'errorMessage', jsonb_build_object('type', 'object'),
+                                'validate', jsonb_build_object('type', 'object'),
+                                'x-relation', jsonb_build_object(
+                                    'type', 'object',
+                                    'properties', jsonb_build_object(
+                                        'schemaId', jsonb_build_object('type', 'string', 'format', 'uuid'),
+                                        'type', jsonb_build_object('type', 'string', 'enum', ARRAY['single', 'multiple'])
+                                    ),
+                                    'required', ARRAY['schemaId']
+                                )
+                            )
+                        )
+                    ),
+                    'required', jsonb_build_object(
+                        'type', 'array',
+                        'items', jsonb_build_object('type', 'string')
+                    ),
+                    'display_field', jsonb_build_object('type', 'string'),
+                    'additionalProperties', jsonb_build_object('type', 'boolean')
+                )
+            );
+        BEGIN
+            -- Validate schema against meta-schema
+            -- This is simplified and would need a proper JSON Schema validator in production
+            IF NOT p_content ? 'type' OR p_content->>'type' != 'object' THEN
+                RETURN jsonb_build_object(
+                    'valid', false,
+                    'error', 'Schema validation failed',
+                    'details', 'Schema must have "type": "object"'
+                );
+            END IF;
+            
+            IF NOT p_content ? 'properties' OR jsonb_typeof(p_content->'properties') != 'object' THEN
+                RETURN jsonb_build_object(
+                    'valid', false,
+                    'error', 'Schema validation failed',
+                    'details', 'Schema must have "properties" as an object'
+                );
+            END IF;
+            
+            -- More validations would be implemented in a production system
+            
+            -- If we reach here, validation passed
+            RETURN jsonb_build_object('valid', true);
+        END;
+    END IF;
+    
+    -- For regular content validation, we'd need a proper JSON Schema validator
+    -- This is a simplified placeholder
+    DECLARE
+        v_properties jsonb;
+        v_required text[];
+        v_prop_name text;
+        v_prop_def jsonb;
+    BEGIN
+        -- Basic validation
+        IF jsonb_typeof(p_content) != 'object' AND v_schema_data->>'type' = 'object' THEN
+            RETURN jsonb_build_object(
+                'valid', false,
+                'error', 'Content must be an object',
+                'details', format('Content is %s but schema type is object', jsonb_typeof(p_content))
+            );
+        END IF;
+        
+        -- Get properties and required fields
+        v_properties := v_schema_data->'properties';
+        
+        IF v_schema_data ? 'required' AND jsonb_typeof(v_schema_data->'required') = 'array' THEN
+            SELECT array_agg(x) INTO v_required
+            FROM jsonb_array_elements_text(v_schema_data->'required') x;
+        ELSE
+            v_required := ARRAY[]::text[];
+        END IF;
+        
+        -- Check required fields
+        FOR i IN 1..array_length(v_required, 1) LOOP
+            IF NOT p_content ? v_required[i] THEN
+                RETURN jsonb_build_object(
+                    'valid', false,
+                    'error', 'Required field missing',
+                    'details', format('Required field "%s" is missing', v_required[i])
+                );
+            END IF;
+        END LOOP;
+        
+        -- Check property types (simplified)
+        FOR v_prop_name, v_prop_def IN SELECT * FROM jsonb_each(v_properties) LOOP
+            IF p_content ? v_prop_name THEN
+                -- Skip null values if nullable
+                IF p_content->v_prop_name IS NULL AND (v_prop_def->'nullable')::boolean = true THEN
+                    CONTINUE;
+                END IF;
+                
+                -- Type checking (simplified)
+                IF v_prop_def ? 'type' AND jsonb_typeof(p_content->v_prop_name) != v_prop_def->>'type' THEN
+                    -- Special case for x-relation fields
+                    IF v_prop_def ? 'x-relation' THEN
+                        -- For relation fields, allow string (ID) or object
+                        IF jsonb_typeof(p_content->v_prop_name) != 'string' AND 
+                           jsonb_typeof(p_content->v_prop_name) != 'object' AND
+                           p_content->v_prop_name IS NOT NULL THEN
+                            RETURN jsonb_build_object(
+                                'valid', false,
+                                'error', 'Type validation failed',
+                                'details', format('Field "%s" is relation but has invalid type %s', 
+                                                 v_prop_name, jsonb_typeof(p_content->v_prop_name))
+                            );
+                        END IF;
+                    ELSE
+                        RETURN jsonb_build_object(
+                            'valid', false,
+                            'error', 'Type validation failed',
+                            'details', format('Field "%s" has type %s but schema expects %s', 
+                                             v_prop_name, jsonb_typeof(p_content->v_prop_name), v_prop_def->>'type')
+                        );
+                    END IF;
+                END IF;
+            END IF;
+        END LOOP;
+        
+        -- If we reach here, validation passed
+        RETURN jsonb_build_object('valid', true);
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to edit content with validation
+CREATE OR REPLACE FUNCTION public.edit_content_with_validation(
+    p_id uuid,
+    p_json jsonb,
+    p_user_id uuid
+) RETURNS jsonb AS $$
+DECLARE
+    v_current_item record;
+    v_schema_id uuid;
+    v_validation_result jsonb;
+BEGIN
+    -- First, check if the item exists in active db
+    SELECT * INTO v_current_item
+    FROM public.db
+    WHERE id = p_id;
+    
+    -- If not found in active db, check archive
+    IF v_current_item IS NULL THEN
+        SELECT * INTO v_current_item
+        FROM public.db_archive
+        WHERE id = p_id;
+    END IF;
+    
+    IF v_current_item IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Item not found',
+            'details', format('Could not find content with id %s', p_id)
+        );
+    END IF;
+    
+    -- Get the schema ID
+    v_schema_id := v_current_item.schema;
+    
+    -- Validate content against schema
+    v_validation_result := public.validate_content_against_schema(p_json, v_schema_id);
+    
+    IF NOT (v_validation_result->>'valid')::boolean THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Validation failed',
+            'details', v_validation_result
+        );
+    END IF;
+    
+    -- If validation passes, proceed with the update
+    RETURN public.handle_content_update(p_id, p_json, p_user_id);
+END;
+$$ LANGUAGE plpgsql;
 
 -- Add indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_db_operations_patch_request ON public.db_operations(patch_request_id);

@@ -41,9 +41,28 @@ CREATE TABLE IF NOT EXISTS "public"."patch_requests" (
     constraint "patch_requests_pkey" primary key ("id"),
     constraint "patch_requests_author_fkey" foreign key ("author") references public.profiles(id),
     constraint "patch_requests_composite_id_fkey" foreign key ("composite_id") references public.composites(id),
-    constraint "patch_requests_old_version_fkey" foreign key ("old_version_id") references public.db_archive(id),
     constraint "patch_requests_status_check" check (status in ('pending', 'approved', 'rejected'))
 );
+
+-- Create a trigger to validate old_version_id exists in either db or db_archive
+CREATE OR REPLACE FUNCTION public.validate_old_version_id() 
+RETURNS trigger AS $$
+BEGIN
+  -- Check if the old_version_id exists in either active or archive table
+  IF EXISTS (SELECT 1 FROM public.db WHERE id = NEW.old_version_id) 
+     OR EXISTS (SELECT 1 FROM public.db_archive WHERE id = NEW.old_version_id) THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Referenced old_version_id % not found in db or db_archive', NEW.old_version_id;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to validate old_version_id
+CREATE TRIGGER validate_old_version_id
+  BEFORE INSERT OR UPDATE ON public.patch_requests
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_old_version_id();
 
 -- Add updated_at trigger
 CREATE OR REPLACE FUNCTION public.update_patch_request_updated_at()
@@ -64,7 +83,7 @@ CREATE OR REPLACE FUNCTION public.generate_patch_request(
     p_old_version_id uuid,
     p_new_version_id uuid
 )
-RETURNS void AS $$
+RETURNS uuid AS $$
 DECLARE
     v_title text;
     v_description text;
@@ -72,6 +91,7 @@ DECLARE
     v_new_version record;
     v_old_version record;
     v_existing_request record;
+    v_patch_request_id uuid;
 BEGIN
     -- Get the new version details
     SELECT * INTO v_new_version 
@@ -137,9 +157,26 @@ BEGIN
                 p_old_version_id,
                 p_new_version_id,
                 v_composite_record.id
-            );
+            )
+            RETURNING id INTO v_patch_request_id;
+            
+            -- Generate operations for this patch request if the function exists
+            IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'generate_operations_from_diff') THEN
+                PERFORM public.generate_operations_from_diff(
+                    v_old_version.json,
+                    v_new_version.json,
+                    v_patch_request_id,
+                    v_new_version.author,
+                    v_composite_record.id,
+                    p_new_version_id
+                );
+            END IF;
+        ELSE
+            v_patch_request_id := v_existing_request.id;
         END IF;
     END LOOP;
+    
+    RETURN v_patch_request_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -164,11 +201,12 @@ CREATE TRIGGER on_version_updated_trigger
     EXECUTE FUNCTION public.on_version_updated();
 
 -- Add function to approve patch request
-CREATE OR REPLACE FUNCTION public.approve_patch_request(p_patch_request_id uuid)
+CREATE OR REPLACE FUNCTION public.approve_patch_request(p_patch_request_id uuid, p_user_id uuid DEFAULT NULL)
 RETURNS "public"."patch_requests" AS $$
 DECLARE
     v_patch_request "public"."patch_requests";
     v_composite "public"."composites";
+    v_operations record;
 BEGIN
     -- Get the patch request
     SELECT * INTO v_patch_request 
@@ -177,6 +215,23 @@ BEGIN
 
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Patch request not found or not in pending status';
+    END IF;
+
+    -- Get the composite
+    SELECT * INTO v_composite
+    FROM public.composites
+    WHERE id = v_patch_request.composite_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Composite not found for patch request';
+    END IF;
+    
+    -- Check permissions if a user ID is provided
+    IF p_user_id IS NOT NULL THEN
+        -- Only the composite author can approve patch requests
+        IF p_user_id != v_composite.author THEN
+            RAISE EXCEPTION 'Only the composite author can approve patch requests';
+        END IF;
     END IF;
 
     -- Update the composite to point to the new version
@@ -315,6 +370,32 @@ BEGIN
         
         -- Call the approve function
         PERFORM public.approve_patch_request(NEW.id, NULL);
+    -- Special case: Auto-approve if this is a variation (user creating their own new composite)
+    -- In this case, the user is the author of the new composite and the new content
+    ELSIF NEW.author = v_composite_author AND 
+         NEW.author = v_new_content_record.author THEN
+        
+        -- Check if there's a composite relationship indicating this is a variation
+        DECLARE
+            v_is_variation boolean := false;
+        BEGIN
+            SELECT EXISTS (
+                SELECT 1 
+                FROM public.composite_relationships cr
+                WHERE cr.source_composite_id = NEW.composite_id
+                AND cr.relationship_type = 'variation_of'
+            ) INTO v_is_variation;
+            
+            IF v_is_variation THEN
+                -- Log that we're auto-approving a variation
+                RAISE NOTICE 'Auto-approving patch request % - this is a new variation created by the composite author', NEW.id;
+                
+                -- Call the approve function
+                PERFORM public.approve_patch_request(NEW.id, NULL);
+            ELSE
+                RAISE NOTICE 'Not auto-approving patch request % - this appears to be a content update, not a variation', NEW.id;
+            END IF;
+        END;
     ELSE
         -- Log why we're not auto-approving
         RAISE NOTICE 'Not auto-approving patch request % - conditions not met: author_match_composite=%, author_match_old_content=%, author_match_new_content=%',

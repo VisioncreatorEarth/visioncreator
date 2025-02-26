@@ -25,6 +25,223 @@ CREATE TABLE composite_relationships (
     UNIQUE (source_composite_id, target_composite_id, relationship_type)
 );
 
+-- Add function to create variations of composites
+CREATE OR REPLACE FUNCTION public.create_composite_variation(
+    p_user_id uuid,
+    p_composite_id uuid,
+    p_new_json jsonb
+) RETURNS jsonb AS $$
+DECLARE
+    v_source_composite record;
+    v_source_content record;
+    v_clone_content_id uuid;
+    v_cloned_content record;
+    v_new_content_id uuid;
+    v_new_content record;
+    v_new_composite_id uuid;
+    v_new_composite record;
+    v_patch_request_id uuid;
+    v_patch_request record;
+    v_old_json jsonb;
+    v_new_json jsonb;
+    v_key text;
+    v_is_archived boolean := false;
+    v_source_in_archive boolean := false;
+BEGIN
+    -- 1. Get the source composite
+    SELECT id, title, description, compose_id, author 
+    INTO v_source_composite
+    FROM public.composites
+    WHERE id = p_composite_id;
+    
+    IF v_source_composite IS NULL THEN
+        RAISE EXCEPTION 'Source composite % not found', p_composite_id;
+    END IF;
+
+    -- 2. Get the content from the source composite - first check active DB
+    SELECT id, json, author, schema, version
+    INTO v_source_content
+    FROM public.db
+    WHERE id = v_source_composite.compose_id;
+    
+    -- If not in active DB, check archive
+    IF v_source_content IS NULL THEN
+        SELECT id, json, author, schema, version
+        INTO v_source_content
+        FROM public.db_archive
+        WHERE id = v_source_composite.compose_id;
+        
+        IF v_source_content IS NOT NULL THEN
+            v_source_in_archive := true;
+        END IF;
+    END IF;
+    
+    IF v_source_content IS NULL THEN
+        RAISE EXCEPTION 'Source content % not found in either active or archive DB', v_source_composite.compose_id;
+    END IF;
+
+    -- 3. Create a clone of the original content to serve as our "before" state
+    v_clone_content_id := gen_random_uuid();
+    
+    INSERT INTO public.db (
+        id,
+        json,
+        author,
+        schema,
+        version
+    ) VALUES (
+        v_clone_content_id,
+        v_source_content.json,
+        p_user_id,
+        v_source_content.schema,
+        1
+    )
+    RETURNING * INTO v_cloned_content;
+
+    -- 4. Create a new content entry with the new JSON (the "after" state)
+    v_new_content_id := gen_random_uuid();
+    
+    INSERT INTO public.db (
+        id,
+        json,
+        author,
+        schema,
+        version
+    ) VALUES (
+        v_new_content_id,
+        p_new_json,
+        p_user_id,
+        v_source_content.schema,
+        1
+    )
+    RETURNING * INTO v_new_content;
+
+    -- 5. Create a new composite
+    v_new_composite_id := gen_random_uuid();
+    
+    -- Set a title based on whether this is a variation due to non-author edit or archived content
+    DECLARE
+        v_variation_type text;
+        v_variation_title text;
+        v_variation_description text;
+    BEGIN
+        IF v_source_in_archive THEN
+            v_variation_type := 'archive_variation';
+            v_variation_title := 'Restored version of ' || v_source_composite.title;
+            v_variation_description := 'Created by ' || p_user_id || ' from archived content ' || v_source_composite.compose_id;
+        ELSE
+            v_variation_type := 'edit_variation';
+            v_variation_title := 'Variation of ' || v_source_composite.title;
+            v_variation_description := 'Created by ' || p_user_id || ' as a variation of composite ' || p_composite_id;
+        END IF;
+        
+        INSERT INTO public.composites (
+            id,
+            title,
+            description,
+            compose_id,
+            author
+        ) VALUES (
+            v_new_composite_id,
+            v_variation_title,
+            v_variation_description,
+            v_new_content_id,
+            p_user_id
+        )
+        RETURNING * INTO v_new_composite;
+    END;
+
+    -- 6. Create a relationship between the new and original composite
+    INSERT INTO public.composite_relationships (
+        source_composite_id,
+        target_composite_id,
+        relationship_type,
+        metadata
+    ) VALUES (
+        v_new_composite_id,
+        v_source_composite.id,
+        'variation_of',
+        jsonb_build_object(
+            'created_at', now(),
+            'variation_type', CASE WHEN v_source_in_archive THEN 'archive_variation' ELSE 'edit_variation' END,
+            'description', CASE 
+                WHEN v_source_in_archive THEN format('Created automatically when %s edited archived content', p_user_id)
+                ELSE format('Created automatically when %s tried to edit a composite they don''t own', p_user_id)
+            END,
+            'target_composite_id', v_source_composite.id,
+            'is_from_archive', v_source_in_archive
+        )
+    );
+
+    -- 7. Create a patch request to track the changes
+    DECLARE
+        v_patch_title text;
+        v_patch_description text;
+    BEGIN
+        -- Set the title and description based on the variation type
+        IF v_source_in_archive THEN
+            v_patch_title := 'Restored archive version for ' || v_source_composite.title;
+            v_patch_description := 'Changes made by ' || p_user_id || ' to restore archived content for ' || v_source_composite.title;
+        ELSE
+            v_patch_title := 'Edit variation for ' || v_source_composite.title;
+            v_patch_description := 'Changes made by ' || p_user_id || ' to create a variation of ' || v_source_composite.title;
+        END IF;
+        
+        -- Create the patch request using the clone as the old version (which is now in the active DB)
+        INSERT INTO public.patch_requests (
+            title,
+            description,
+            author,
+            old_version_id,
+            new_version_id,
+            composite_id,
+            status
+        ) VALUES (
+            v_patch_title,
+            v_patch_description,
+            p_user_id,
+            v_clone_content_id,  -- Using the clone we just created which is guaranteed to be in the active DB
+            v_new_content_id,
+            v_new_composite_id,
+            'pending'  -- Set as pending so the auto-approve trigger can process it
+        )
+        RETURNING * INTO v_patch_request;
+        
+        v_patch_request_id := v_patch_request.id;
+    END;
+
+    -- 8. Create operations to track the changes
+    -- Compare the old and new JSON to find differences
+    v_old_json := v_cloned_content.json;
+    v_new_json := p_new_json;
+    
+    -- Use the generate_operations_from_diff function if it exists
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'generate_operations_from_diff') THEN
+        PERFORM public.generate_operations_from_diff(
+            v_old_json,
+            v_new_json,
+            v_patch_request_id,
+            p_user_id,
+            v_new_composite_id,
+            v_new_content_id
+        );
+    END IF;
+
+    -- Return a JSON object with the result
+    RETURN jsonb_build_object(
+        'success', true,
+        'createdVariation', true,
+        'fromArchive', v_source_in_archive,
+        'newCompositeId', v_new_composite_id,
+        'patchRequestId', v_patch_request_id,
+        'message', CASE
+            WHEN v_source_in_archive THEN 'Created a new variation from archived content'
+            ELSE 'Created a new variation instead of editing the original content'
+        END
+    );
+END;
+$$ LANGUAGE plpgsql;
+
 -- Add indexes for better query performance
 CREATE INDEX idx_composites_compose ON composites(compose_id);
 CREATE INDEX idx_composites_author ON composites(author);
@@ -94,7 +311,7 @@ INSERT INTO composites (
     author
 ) VALUES (
     '33333333-3333-3333-3333-333333333333',
-    'Markdown Content Composite',
+    'Hello Composite',
     'A composite for storing and versioning markdown content',
     '22222222-2222-2222-2222-222222222222',
     '00000000-0000-0000-0000-000000000001'  -- System user as author

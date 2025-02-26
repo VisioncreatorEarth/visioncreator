@@ -7,8 +7,12 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'db') THEN
         -- Drop triggers and functions only if the table exists
         DROP TRIGGER IF EXISTS on_db_update_archive ON public.db CASCADE;
+        DROP TRIGGER IF EXISTS check_author_permissions ON public.db CASCADE;
         DROP FUNCTION IF EXISTS public.update_db_version CASCADE;
         DROP FUNCTION IF EXISTS public.archive_db_version CASCADE;
+        DROP FUNCTION IF EXISTS public.check_author_permissions CASCADE;
+        DROP FUNCTION IF EXISTS public.handle_content_update CASCADE;
+        DROP FUNCTION IF EXISTS public.edit_content_with_validation CASCADE;
     END IF;
 END
 $$;
@@ -92,12 +96,92 @@ CREATE INDEX idx_db_version ON public.db(version);
 CREATE INDEX idx_db_archive_schema ON public.db_archive(schema);
 CREATE INDEX idx_db_archive_prev ON public.db_archive(prev);
 
+-- Create function to handle content updates with permissions check
+CREATE OR REPLACE FUNCTION public.handle_content_update(
+    p_id uuid,
+    p_json jsonb,
+    p_user_id uuid
+) RETURNS jsonb AS $$
+DECLARE
+    v_is_author boolean;
+    v_current_item record;
+    v_is_archived boolean := false;
+    v_composite record;
+    v_result jsonb;
+    v_new_json jsonb;
+BEGIN
+    -- Initialize the result
+    v_result := jsonb_build_object('success', false);
+    
+    -- First, check if the item exists in active db
+    SELECT * INTO v_current_item
+    FROM public.db
+    WHERE id = p_id;
+    
+    -- If not found in active db, check archive
+    IF v_current_item IS NULL THEN
+        SELECT * INTO v_current_item
+        FROM public.db_archive
+        WHERE id = p_id;
+        
+        IF v_current_item IS NOT NULL THEN
+            v_is_archived := true;
+        ELSE
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'Item not found',
+                'details', format('Could not find content with id %s', p_id)
+            );
+        END IF;
+    END IF;
+    
+    -- Check if the current user is the author
+    v_is_author := (v_current_item.author = p_user_id);
+    
+    -- Clean the JSON input
+    v_new_json := p_json;
+    -- Remove any system fields if they were accidentally included
+    v_new_json := v_new_json - 'version';
+    v_new_json := v_new_json - 'prev';
+    v_new_json := v_new_json - 'created_at';
+    v_new_json := v_new_json - 'author';
+    v_new_json := v_new_json - 'schema';
+
+    -- Find the composite that uses this content
+    SELECT * INTO v_composite
+    FROM public.composites
+    WHERE compose_id = p_id
+    LIMIT 1;
+    
+    IF v_composite IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'No composite found for this content',
+            'details', format('Content with id %s is not referenced by any composite', p_id)
+        );
+    END IF;
+    
+    -- If the user is not the author OR the content is archived, create a variation instead
+    IF NOT v_is_author OR v_is_archived THEN
+        -- Create a variation using the same function for both cases
+        RETURN public.create_composite_variation(
+            p_user_id,
+            v_composite.id,
+            v_new_json
+        );
+    END IF;
+    
+    -- For active content where user is the author, update directly
+    RETURN public.update_db_version(p_id, v_new_json, p_user_id);
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create version update function
 CREATE OR REPLACE FUNCTION public.update_db_version(
     p_id uuid,
     p_json jsonb,
     p_current_user_id uuid DEFAULT NULL
-) RETURNS "public"."db" AS $$
+) RETURNS jsonb AS $$
 DECLARE
     v_old_version "public"."db";
     v_new_id uuid;
@@ -167,9 +251,83 @@ BEGIN
     -- Finally delete the old version
     DELETE FROM "public"."db" WHERE id = p_id;
 
-    RETURN v_result;
+    -- Return a JSON result
+    RETURN jsonb_build_object(
+        'success', true,
+        'updatedData', jsonb_build_object(
+            'id', v_result.id,
+            'version', v_result.version,
+            'schema', v_result.schema,
+            'prev', v_old_version.id
+        )
+    );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create RPC wrapper function to validate and edit content
+CREATE OR REPLACE FUNCTION public.edit_content_with_validation(
+    p_id uuid,
+    p_json jsonb,
+    p_user_id uuid
+) RETURNS jsonb AS $$
+DECLARE
+    v_current_item record;
+    v_schema_id uuid;
+    v_validation_result jsonb;
+    v_is_meta_schema boolean := false;
+BEGIN
+    -- First, check if the item exists in active db
+    SELECT * INTO v_current_item
+    FROM public.db
+    WHERE id = p_id;
+    
+    -- If not found in active db, check archive
+    IF v_current_item IS NULL THEN
+        SELECT * INTO v_current_item
+        FROM public.db_archive
+        WHERE id = p_id;
+    END IF;
+    
+    IF v_current_item IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Item not found',
+            'details', format('Could not find content with id %s', p_id)
+        );
+    END IF;
+    
+    -- Get the schema ID
+    v_schema_id := v_current_item.schema;
+    
+    -- Check if this is the meta-schema
+    IF v_schema_id = '00000000-0000-0000-0000-000000000001' THEN
+        v_is_meta_schema := true;
+    END IF;
+    
+    -- Validate content against schema
+    -- First check if the validate_content_against_schema function exists
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'validate_content_against_schema') THEN
+        v_validation_result := public.validate_content_against_schema(p_json, v_schema_id);
+        
+        IF NOT (v_validation_result->>'valid')::boolean THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'Validation failed',
+                'details', v_validation_result
+            );
+        END IF;
+    END IF;
+    
+    -- If validation passes, let handle_content_update function decide what to do based on:
+    -- 1. Whether content is archived
+    -- 2. Whether user is the author
+    -- 3. Whether appropriate composite exists
+    -- The handle_content_update function will route to:
+    -- - create_composite_variation for non-authors or archived content
+    -- - update_db_version for authors editing active content
+    RETURN public.handle_content_update(p_id, p_json, p_user_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Enable RLS
 ALTER TABLE "public"."db" ENABLE ROW LEVEL SECURITY;

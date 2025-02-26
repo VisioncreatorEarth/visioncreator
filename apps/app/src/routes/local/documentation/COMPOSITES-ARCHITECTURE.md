@@ -15,6 +15,7 @@ The system uses a versioned database structure with three main components:
   - Maintains schema references
   - Tracks authorship and metadata
   - Handles immediate state
+  - Provides database functions for content editing and validation
 
 - **db_archive**: Historical content versions
   - Archives previous versions
@@ -112,6 +113,7 @@ Similar to Pull Requests in Git, Patch Requests manage proposed changes:
 - Support approval/rejection workflows
 - Include detailed operations history
 - Enable collaborative review processes
+- Auto-approve when users edit their own content
 
 ## Fullstack Architecture Flow
 
@@ -121,45 +123,48 @@ Similar to Pull Requests in Git, Patch Requests manage proposed changes:
 graph TD
     A[User Action] --> B[SvelteKit Component]
     B --> C[WunderGraph Operation]
-    C --> D[Operation Queue]
-    D --> E[Batch Processor]
-    E --> F[Server Request]
+    C --> D[Database Functions]
+    D --> E[Data Processing]
+    E --> F[Client Updates]
 ```
 
 1. **User Interface Layer**
    - Components handle user interactions
    - Manages local state with Svelte stores
    - Implements optimistic updates
-   - Queues operations for processing
+   - Triggers database operations via WunderGraph
 
 2. **WunderGraph Integration**
    - Handles API communication
    - Manages authentication state
    - Provides type-safe operations
-   - Enables real-time subscriptions
+   - Calls database functions directly
 
 ### 2. Server-Side Processing
 
 ```mermaid
 graph TD
-    A[WunderGraph API] --> B[Operation Handler]
+    A[WunderGraph API] --> B[Database Functions]
     B --> C[Validation Layer]
-    C --> D[Database Operations]
-    D --> E[Event System]
-    E --> F[Client Updates]
+    C --> D[Permission Checks]
+    D --> E[Transaction Handling]
+    E --> F[Event System]
+    F --> G[Client Updates]
 ```
 
-1. **Operation Processing**
-   - Validates incoming operations
-   - Checks permissions and constraints
-   - Applies business logic
-   - Manages transaction boundaries
+1. **Database Functions**
+   - Validate incoming content
+   - Check permissions and constraints
+   - Apply business logic
+   - Manage transaction boundaries
+   - Handle variations and cloning
 
 2. **Database Interaction**
    - Executes operations atomically
    - Maintains ACID properties
    - Handles concurrent access
    - Manages version control
+   - Creates variations when needed
 
 ### 3. Operation Flow (Yjs-Inspired)
 
@@ -299,6 +304,19 @@ CREATE OR REPLACE FUNCTION detect_operation_conflicts(
     -- Implementation handles conflict detection
     -- and classification
 $$;
+
+-- Edit content with validation
+CREATE OR REPLACE FUNCTION edit_content_with_validation(
+    p_id uuid,
+    p_json jsonb,
+    p_user_id uuid
+) RETURNS jsonb AS $$
+    -- Validates content against schema
+    -- Checks user permissions
+    -- Creates variations for non-authors
+    -- Creates clones for archived content
+    -- Manages versioning
+$$;
 ```
 
 ### 2. API Layer
@@ -306,10 +324,10 @@ $$;
 The WunderGraph API layer provides:
 
 1. **Operation Endpoints**
-   - Create/Update/Delete operations
-   - Batch operation processing
-   - Real-time subscriptions
-   - State synchronization
+   - Simple interface to database functions
+   - Authentication and authorization
+   - Error handling and reporting
+   - Client-side type safety
 
 2. **Query Capabilities**
    - Version history retrieval
@@ -326,9 +344,9 @@ The WunderGraph API layer provides:
    - Rate limiting and quotas
 
 2. **Performance Optimizations**
-   - Operation batching
+   - Database functions reduce round trips
    - Efficient indexing
-   - Caching strategies
+   - Transaction boundaries
    - Lazy loading
 
 ## Best Practices
@@ -365,8 +383,9 @@ graph TD
 ```
 
 **Implementation Details:**
-- Handled by `createCompositeVariation.ts`
-- Supports applying pending changes from existing edit requests
+- Handled by database functions in SQL
+- Automatic variation creation when non-authors edit content
+- Automatic variation creation when editing archived content
 - Maintains relationship metadata
 - Auto-generates version tracking
 
@@ -374,17 +393,22 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User edits content] --> B[System creates new version]
-    B --> C[Generates patch request]
-    C --> D[Records operations]
-    D --> E[Auto-approves if owner/Awaits approval]
+    A[User edits content] --> B[Permission Check]
+    B -->|Author| C[Create new version]
+    B -->|Non-author| D[Create variation]
+    B -->|Archived content| D[Create variation]
+    C --> E[Generate operations]
+    D --> E
+    E --> F[Create patch request]
+    F --> G[Auto-approve if owner]
 ```
 
 **Implementation Details:**
+- Permission checks done in database
 - Changes tracked through `db_operations`
 - Automatic patch request generation
 - Granular operation tracking (add/remove/replace)
-- Supports concurrent editing
+- Variations created for both non-author edits and archived content edits
 
 ### 3. Review and Approval Process
 
@@ -442,9 +466,9 @@ Manages:
 - Handles content versioning
 
 #### EditDB
-- Manages content modifications
-- Generates operations
-- Handles schema validation
+- Simple wrapper around database functions
+- Passes user authentication to database
+- Handles errors and responses
 
 ## Error Handling
 
