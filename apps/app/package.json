@@ -54,6 +54,7 @@
 		"openai": "^4.67.3",
 		"papaparse": "^5.5.2",
 		"qrcode": "^1.5.3",
+		"scrollama": "^3.2.0",
 		"svelte-markdown": "^0.4.1",
 		"sveltekit-superforms": "^1.7.2",
 		"ultravox-client": "^0.3.2",
