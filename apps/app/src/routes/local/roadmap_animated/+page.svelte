@@ -320,7 +320,7 @@
                     </div>
                     
                     <h3 class="text-xl font-semibold mb-3">Additional Metrics</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr">
                       <div class="bg-surface-800 p-4 rounded-lg">
                         <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Minimum Valuation</h4>
                         <p class="text-xl font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
