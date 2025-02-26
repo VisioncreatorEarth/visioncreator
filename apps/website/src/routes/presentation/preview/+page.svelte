@@ -11,6 +11,11 @@
   import FalseBinary from '$lib/slides/FalseBinary.svelte';
   import FreedomDimensions from '$lib/slides/FreedomDimensions.svelte';
   import NewParadigm from '$lib/slides/NewParadigm.svelte';
+  import DAOIntro from '$lib/slides/DAOIntro.svelte';
+  import DAOExplained from '$lib/slides/DAOExplained.svelte';
+  import TokenSystem from '$lib/slides/TokenSystem.svelte';
+  import VisionCreatorPool from '$lib/slides/VisionCreatorPool.svelte';
+  import ProposalSystem from '$lib/slides/ProposalSystem.svelte';
   import AutonomousLife from '$lib/slides/AutonomousLife.svelte';
   import Interdependence from '$lib/slides/Interdependence.svelte';
   import PathToFreedom from '$lib/slides/PathToFreedom.svelte';
@@ -55,6 +60,26 @@
     {
       component: NewParadigm,
       title: 'The New Work Paradigm'
+    },
+    {
+      component: DAOIntro,
+      title: 'Own What You Help Build'
+    },
+    {
+      component: DAOExplained,
+      title: 'What is a DAO?'
+    },
+    {
+      component: TokenSystem,
+      title: 'VCR Token System'
+    },
+    {
+      component: VisionCreatorPool,
+      title: 'The 75% Community Pool'
+    },
+    {
+      component: ProposalSystem,
+      title: 'Your Voice, Your Vote'
     },
     {
       component: AutonomousLife,

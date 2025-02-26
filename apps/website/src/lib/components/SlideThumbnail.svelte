@@ -5,45 +5,42 @@
   
   // Generate background colors based on slide type
   let bgGradient = 'from-cyan-400 to-blue-600';
-  let icon = '✨';
   
-  // Set different color schemes and icons based on slide type or index for visual variety
+  // Set different color schemes based on slide type or index for visual variety
   if (index === 0) { // Title slide
     bgGradient = 'from-cyan-400 to-emerald-500'; 
-    icon = '🚀';
   } else if (index === 1) { // Question slide
     bgGradient = 'from-indigo-400 to-purple-500';
-    icon = '❓';
   } else if (index === 2) { // Autonomy slide
     bgGradient = 'from-orange-400 to-red-500';
-    icon = '🔑';
   } else if (index === 3) { // Autonomy Crisis slide
     bgGradient = 'from-red-400 to-amber-500';
-    icon = '⛓️';
   } else if (index === 4) { // True Autonomy Unleashed slide
     bgGradient = 'from-teal-400 to-emerald-500';
-    icon = '⏱️';
   } else if (index === 5) { // Beyond the False Binary slide
     bgGradient = 'from-purple-400 to-indigo-500';
-    icon = '👑';
   } else if (index === 6) { // Freedom Dimensions slide
     bgGradient = 'from-blue-400 to-cyan-500';
-    icon = '🌐';
   } else if (index === 7) { // New Work Paradigm slide
     bgGradient = 'from-violet-400 to-fuchsia-500';
-    icon = '✅';
-  } else if (index === 8) { // Autonomous Life slide
+  } else if (index === 8) { // DAO Intro slide
+    bgGradient = 'from-blue-400 to-teal-500';
+  } else if (index === 9) { // What is a DAO slide
+    bgGradient = 'from-blue-500 to-indigo-500';
+  } else if (index === 10) { // VCR Token System slide
+    bgGradient = 'from-teal-400 to-emerald-500';
+  } else if (index === 11) { // VisionCreator Pool slide
+    bgGradient = 'from-emerald-400 to-green-500';
+  } else if (index === 12) { // Proposal System slide
+    bgGradient = 'from-purple-400 to-blue-500';
+  } else if (index === 13) { // Autonomous Life slide
     bgGradient = 'from-amber-400 to-orange-500';
-    icon = '👩‍💻';
-  } else if (index === 9) { // Interdependence slide
+  } else if (index === 14) { // Interdependence slide
     bgGradient = 'from-blue-400 to-indigo-500';
-    icon = '🌱';
-  } else if (index === 10) { // Path to Freedom slide
+  } else if (index === 15) { // Path to Freedom slide
     bgGradient = 'from-green-400 to-teal-500';
-    icon = '🛤️';
-  } else if (index === 11) { // Reclaim Work slide
+  } else if (index === 16) { // Reclaim Work slide
     bgGradient = 'from-cyan-400 to-emerald-500';
-    icon = '🔄';
   } else if (index % 4 === 0) {
     bgGradient = 'from-emerald-400 to-teal-600';
   } else if (index % 4 === 1) {
@@ -123,6 +120,46 @@
         </div>
       </div>
     {:else if index === 8}
+      <!-- DAO Intro slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Ownership</div>
+        <div class="text-sm font-medium text-white">
+          Own What You Help Build
+        </div>
+      </div>
+    {:else if index === 9}
+      <!-- DAO Explained slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">DAO</div>
+        <div class="text-sm font-medium text-white">
+          Decentralized Autonomous<br>Organization
+        </div>
+      </div>
+    {:else if index === 10}
+      <!-- Token System slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Tokens</div>
+        <div class="text-sm font-medium text-white">
+          VCR Token System
+        </div>
+      </div>
+    {:else if index === 11}
+      <!-- VisionCreator Pool slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Funding</div>
+        <div class="text-sm font-bold text-white">
+          75% Community Pool
+        </div>
+      </div>
+    {:else if index === 12}
+      <!-- Proposal System slide -->
+      <div class="relative z-10 text-center px-4">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Governance</div>
+        <div class="text-sm font-medium text-white">
+          Your Voice, Your Vote
+        </div>
+      </div>
+    {:else if index === 13}
       <!-- Autonomous Life slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Life</div>
@@ -130,7 +167,7 @@
           Elena's Autonomous Journey
         </div>
       </div>
-    {:else if index === 9}
+    {:else if index === 14}
       <!-- Interdependence slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Journey</div>
@@ -138,7 +175,7 @@
           From Dependence to<br>Interdependence
         </div>
       </div>
-    {:else if index === 10}
+    {:else if index === 15}
       <!-- Path to Freedom slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Path</div>
@@ -146,7 +183,7 @@
           5-Step Journey to Freedom
         </div>
       </div>
-    {:else if index === 11}
+    {:else if index === 16}
       <!-- Reclaim Work slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Reclaim</div>

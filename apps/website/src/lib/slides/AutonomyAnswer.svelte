@@ -8,53 +8,56 @@
   onMount(() => {
     setTimeout(() => {
       revealed = true;
-    }, 500);
+    }, 400);
     
     setTimeout(() => {
       explanationRevealed = true;
-    }, 2000);
+    }, 1500);
   });
 </script>
 
-<div class="slide-content flex flex-col items-center justify-center h-full">
-  <div class="max-w-5xl w-full mx-auto text-center">
-    <!-- Dramatic Answer Reveal -->
-    <div class="relative mb-16">
-      <div class="transform transition-all duration-1500 ease-out {revealed ? 'scale-100 opacity-100' : 'scale-150 opacity-0'}">
-        <h1 class="text-8xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
-          AUTONOMY
-        </h1>
-      </div>
-      
-      <!-- Subtle pulse animation after reveal -->
-      {#if revealed}
-        <div class="absolute inset-0 -z-10 animate-pulse-slow">
-          <div class="w-full h-full bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 rounded-full blur-3xl"></div>
-        </div>
-      {/if}
+<div class="slide-content flex flex-col items-center justify-center h-full p-8">
+  <div class="max-w-5xl w-full mx-auto">
+    <!-- Answer Reveal -->
+    <div class="text-center mb-12 transform transition-all duration-1000 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}">
+      <h2 class="text-7xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+        AUTONOMY
+      </h2>
     </div>
     
     <!-- Explanation Text -->
-    <div class="max-w-3xl mx-auto space-y-8 transform transition-all duration-1000 ease-out {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}">
-      <p class="text-2xl text-slate-200 leading-relaxed">
-        Humans fundamentally strive for autonomy - the freedom to control our <span class="text-cyan-300 font-semibold">own time</span>, <span class="text-cyan-300 font-semibold">location</span>, <span class="text-cyan-300 font-semibold">projects</span> and <span class="text-cyan-300 font-semibold">worth</span>.
-      </p>
-      
-      <div class="bg-slate-800/30 backdrop-blur-sm rounded-xl p-5 border border-cyan-500/20 mt-6">
-        <p class="text-xl text-slate-200">
-          VisionCreator exists to restore this fundamental human need, breaking the ancient practice of time-for-money exchange.
+    <div class="transform transition-all duration-700 {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}" style="transition-delay: 300ms;">
+      <div class="bg-gradient-to-b from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-xl p-8 border border-orange-500/20 max-w-3xl mx-auto">
+        <p class="text-xl md:text-2xl text-slate-300 mb-6 text-center">
+          Humans fundamentally strive for autonomy - the freedom to control our own:
         </p>
-      </div>
-      
-      <div class="flex items-center justify-center gap-6 mt-8 flex-wrap text-slate-300 text-xl">
-        <div class="flex items-center px-6 py-2 rounded-full bg-slate-800/50 border border-cyan-600/20">
-          <span class="text-cyan-400 mr-2">→</span> Self-Direction
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="bg-slate-900/30 p-5 rounded-lg border border-orange-500/10 transform transition-all duration-700 {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}" style="transition-delay: 500ms;">
+            <h3 class="text-xl font-semibold text-orange-300 mb-2">Time</h3>
+            <p class="text-slate-300">Freedom from rigid schedules and external control of your most precious asset</p>
+          </div>
+          
+          <div class="bg-slate-900/30 p-5 rounded-lg border border-orange-500/10 transform transition-all duration-700 {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}" style="transition-delay: 700ms;">
+            <h3 class="text-xl font-semibold text-orange-300 mb-2">Location</h3>
+            <p class="text-slate-300">The ability to work and live wherever you thrive, not where you're tethered</p>
+          </div>
+          
+          <div class="bg-slate-900/30 p-5 rounded-lg border border-orange-500/10 transform transition-all duration-700 {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}" style="transition-delay: 900ms;">
+            <h3 class="text-xl font-semibold text-orange-300 mb-2">Projects</h3>
+            <p class="text-slate-300">Creating work that aligns with your passions, skills and purpose</p>
+          </div>
+          
+          <div class="bg-slate-900/30 p-5 rounded-lg border border-orange-500/10 transform transition-all duration-700 {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}" style="transition-delay: 1100ms;">
+            <h3 class="text-xl font-semibold text-orange-300 mb-2">Worth</h3>
+            <p class="text-slate-300">Receiving fair value for the contributions you make, owning your economic destiny</p>
+          </div>
         </div>
-        <div class="flex items-center px-6 py-2 rounded-full bg-slate-800/50 border border-cyan-600/20">
-          <span class="text-cyan-400 mr-2">→</span> Creative Control
-        </div>
-        <div class="flex items-center px-6 py-2 rounded-full bg-slate-800/50 border border-cyan-600/20">
-          <span class="text-cyan-400 mr-2">→</span> Value Ownership
+        
+        <div class="text-center transform transition-all duration-700 {explanationRevealed ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}" style="transition-delay: 1300ms;">
+          <p class="text-xl text-slate-300">
+            VisionCreator exists to restore this fundamental human need, breaking the ancient practice of <span class="text-orange-300 font-medium">time-for-money exchange</span>.
+          </p>
         </div>
       </div>
     </div>
