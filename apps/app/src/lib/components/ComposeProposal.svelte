@@ -15,7 +15,7 @@ This component handles:
 	import { createQuery, createMutation } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
 	import JsonEditor from './JsonEditor.svelte';
-	import EditRequests from './EditRequests.svelte';
+	import PatchRequests from './PatchRequests.svelte';
 	import JsonDiffViewer from './JsonDiffViewer.svelte';
 	import VariationTreeItem from './VariationTreeItem.svelte';
 
@@ -721,7 +721,7 @@ This component handles:
 		<div class="flex-1 overflow-y-auto">
 			{#if compose_data}
 				{#if selectedCompositeId}
-					<EditRequests
+					<PatchRequests
 						compositeId={selectedCompositeId}
 						selectedRequestId={selectedEditRequestId}
 						on:select={handleEditRequestSelect}
@@ -732,7 +732,7 @@ This component handles:
 					/>
 				{:else}
 					<!-- For main composite, we need to find its ID from the composites table -->
-					<EditRequests
+					<PatchRequests
 						compositeId={'33333333-3333-3333-3333-333333333333'}
 						selectedRequestId={selectedEditRequestId}
 						on:select={handleEditRequestSelect}
