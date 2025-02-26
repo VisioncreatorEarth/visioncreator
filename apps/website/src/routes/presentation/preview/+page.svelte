@@ -6,11 +6,8 @@
   import HelloEarth from '$lib/slides/HelloEarth.svelte';
   import HumanQuestion from '$lib/slides/HumanQuestion.svelte';
   import AutonomyAnswer from '$lib/slides/AutonomyAnswer.svelte';
-  import AutonomyCrisis from '$lib/slides/AutonomyCrisis.svelte';
-  import TrueAutonomy from '$lib/slides/TrueAutonomy.svelte';
   import FalseBinary from '$lib/slides/FalseBinary.svelte';
   import FreedomDimensions from '$lib/slides/FreedomDimensions.svelte';
-  import NewParadigm from '$lib/slides/NewParadigm.svelte';
   import DAOIntro from '$lib/slides/DAOIntro.svelte';
   import DAOExplained from '$lib/slides/DAOExplained.svelte';
   import TokenSystem from '$lib/slides/TokenSystem.svelte';
@@ -42,24 +39,12 @@
       title: 'Autonomy'
     },
     {
-      component: AutonomyCrisis,
-      title: 'The Autonomy Crisis'
-    },
-    {
-      component: TrueAutonomy,
-      title: 'True Autonomy Unleashed'
-    },
-    {
       component: FalseBinary,
       title: 'Beyond the False Binary'
     },
     {
       component: FreedomDimensions,
-      title: 'Freedom in Multiple Dimensions'
-    },
-    {
-      component: NewParadigm,
-      title: 'The New Work Paradigm'
+      title: 'The Five Dimensions of Freedom'
     },
     {
       component: DAOIntro,

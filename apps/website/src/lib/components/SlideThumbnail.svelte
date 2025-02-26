@@ -3,52 +3,38 @@
   export let index: number = 0;
   export let slideType: string = 'default';
   
-  // Generate background colors based on slide type
-  let bgGradient = 'from-cyan-400 to-blue-600';
-  
-  // Set different color schemes based on slide type or index for visual variety
-  if (index === 0) { // Title slide
-    bgGradient = 'from-cyan-400 to-emerald-500'; 
-  } else if (index === 1) { // Question slide
-    bgGradient = 'from-indigo-400 to-purple-500';
-  } else if (index === 2) { // Autonomy slide
-    bgGradient = 'from-orange-400 to-red-500';
-  } else if (index === 3) { // Autonomy Crisis slide
-    bgGradient = 'from-red-400 to-amber-500';
-  } else if (index === 4) { // True Autonomy Unleashed slide
-    bgGradient = 'from-teal-400 to-emerald-500';
-  } else if (index === 5) { // Beyond the False Binary slide
-    bgGradient = 'from-purple-400 to-indigo-500';
-  } else if (index === 6) { // Freedom Dimensions slide
-    bgGradient = 'from-blue-400 to-cyan-500';
-  } else if (index === 7) { // New Work Paradigm slide
-    bgGradient = 'from-violet-400 to-fuchsia-500';
-  } else if (index === 8) { // DAO Intro slide
-    bgGradient = 'from-blue-400 to-teal-500';
-  } else if (index === 9) { // What is a DAO slide
-    bgGradient = 'from-blue-500 to-indigo-500';
-  } else if (index === 10) { // VCR Token System slide
-    bgGradient = 'from-teal-400 to-emerald-500';
-  } else if (index === 11) { // VisionCreator Pool slide
-    bgGradient = 'from-emerald-400 to-green-500';
-  } else if (index === 12) { // Proposal System slide
-    bgGradient = 'from-purple-400 to-blue-500';
-  } else if (index === 13) { // Autonomous Life slide
-    bgGradient = 'from-amber-400 to-orange-500';
-  } else if (index === 14) { // Interdependence slide
-    bgGradient = 'from-blue-400 to-indigo-500';
-  } else if (index === 15) { // Path to Freedom slide
-    bgGradient = 'from-green-400 to-teal-500';
-  } else if (index === 16) { // Reclaim Work slide
-    bgGradient = 'from-cyan-400 to-emerald-500';
-  } else if (index % 4 === 0) {
-    bgGradient = 'from-emerald-400 to-teal-600';
-  } else if (index % 4 === 1) {
-    bgGradient = 'from-cyan-400 to-blue-600';
-  } else if (index % 4 === 2) {
-    bgGradient = 'from-purple-400 to-indigo-600';
-  } else if (index % 4 === 3) {
-    bgGradient = 'from-amber-400 to-orange-600';
+  // Determine background gradient based on slide index and type
+  let bgGradient = "";
+  if (index === 0) {
+    bgGradient = "from-cyan-400 to-blue-600 border-cyan-500"; // HelloEarth
+  } else if (index === 1) {
+    bgGradient = "from-indigo-400 to-purple-600 border-indigo-500"; // HumanQuestion
+  } else if (index === 2) {
+    bgGradient = "from-orange-400 to-red-500 border-orange-500"; // AutonomyAnswer
+  } else if (index === 3) {
+    bgGradient = "from-purple-400 to-indigo-500 border-purple-500"; // FalseBinary
+  } else if (index === 4) {
+    bgGradient = "from-blue-400 to-cyan-500 border-blue-500"; // FreedomDimensions
+  } else if (index === 5) {
+    bgGradient = "from-blue-400 to-teal-500 border-blue-500"; // DAOIntro
+  } else if (index === 6) {
+    bgGradient = "from-blue-500 to-indigo-500 border-blue-500"; // DAOExplained
+  } else if (index === 7) {
+    bgGradient = "from-teal-400 to-emerald-500 border-teal-500"; // TokenSystem
+  } else if (index === 8) {
+    bgGradient = "from-emerald-400 to-green-500 border-emerald-500"; // VisionCreatorPool
+  } else if (index === 9) {
+    bgGradient = "from-purple-400 to-blue-500 border-purple-500"; // ProposalSystem
+  } else if (index === 10) {
+    bgGradient = "from-amber-400 to-orange-500 border-amber-500"; // AutonomousLife
+  } else if (index === 11) {
+    bgGradient = "from-blue-400 to-indigo-500 border-blue-500"; // Interdependence
+  } else if (index === 12) {
+    bgGradient = "from-green-400 to-teal-500 border-green-500"; // PathToFreedom
+  } else if (index === 13) {
+    bgGradient = "from-cyan-400 to-emerald-500 border-cyan-500"; // ReclaimWork
+  } else {
+    bgGradient = "from-slate-400 to-slate-600 border-slate-500"; // Default
   }
 </script>
 
@@ -58,44 +44,30 @@
     
     <!-- Different layout for each slide type -->
     {#if index === 0}
-      <!-- Title slide layout -->
+      <!-- Hello Earth slide -->
       <div class="relative z-10 text-center px-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Title</div>
-        <div class="text-md font-bold text-white">
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Welcome</div>
+        <div class="text-sm font-bold text-white">
           Freedom to Create,<br>Right to Own
         </div>
       </div>
     {:else if index === 1}
-      <!-- Question slide layout -->
+      <!-- Human question slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Question</div>
         <div class="text-sm font-medium text-white">
-          What does a human<br>fundamentally strive for?
+          What do humans<br>fundamentally need?
         </div>
       </div>
     {:else if index === 2}
-      <!-- Answer slide layout -->
+      <!-- Autonomy answer slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Answer</div>
-        <div class="text-xl font-bold text-white">AUTONOMY</div>
+        <div class="text-sm font-bold text-white">
+          AUTONOMY
+        </div>
       </div>
     {:else if index === 3}
-      <!-- Autonomy Crisis slide -->
-      <div class="relative z-10 text-center px-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Crisis</div>
-        <div class="text-sm font-medium text-white">
-          Dependency vs Possibility
-        </div>
-      </div>
-    {:else if index === 4}
-      <!-- True Autonomy slide -->
-      <div class="relative z-10 text-center px-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Unleashed</div>
-        <div class="text-sm font-medium text-white">
-          Time, Location & Financial<br>Autonomy
-        </div>
-      </div>
-    {:else if index === 5}
       <!-- False Binary slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Beyond</div>
@@ -103,23 +75,15 @@
           Employee to Owner-Contributor
         </div>
       </div>
-    {:else if index === 6}
+    {:else if index === 4}
       <!-- Freedom Dimensions slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Dimensions</div>
         <div class="text-sm font-medium text-white">
-          Multiple Types of Freedom
+          Five Dimensions of Freedom
         </div>
       </div>
-    {:else if index === 7}
-      <!-- New Paradigm slide -->
-      <div class="relative z-10 text-center px-4">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Paradigm</div>
-        <div class="text-sm font-medium text-white">
-          Eliminating False Choices
-        </div>
-      </div>
-    {:else if index === 8}
+    {:else if index === 5}
       <!-- DAO Intro slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Ownership</div>
@@ -127,7 +91,7 @@
           Own What You Help Build
         </div>
       </div>
-    {:else if index === 9}
+    {:else if index === 6}
       <!-- DAO Explained slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">DAO</div>
@@ -135,7 +99,7 @@
           Decentralized Autonomous<br>Organization
         </div>
       </div>
-    {:else if index === 10}
+    {:else if index === 7}
       <!-- Token System slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Tokens</div>
@@ -143,7 +107,7 @@
           VCR Token System
         </div>
       </div>
-    {:else if index === 11}
+    {:else if index === 8}
       <!-- VisionCreator Pool slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Funding</div>
@@ -151,7 +115,7 @@
           75% Community Pool
         </div>
       </div>
-    {:else if index === 12}
+    {:else if index === 9}
       <!-- Proposal System slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Governance</div>
@@ -159,7 +123,7 @@
           Your Voice, Your Vote
         </div>
       </div>
-    {:else if index === 13}
+    {:else if index === 10}
       <!-- Autonomous Life slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Life</div>
@@ -167,7 +131,7 @@
           Elena's Autonomous Journey
         </div>
       </div>
-    {:else if index === 14}
+    {:else if index === 11}
       <!-- Interdependence slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Journey</div>
@@ -175,7 +139,7 @@
           From Dependence to<br>Interdependence
         </div>
       </div>
-    {:else if index === 15}
+    {:else if index === 12}
       <!-- Path to Freedom slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Path</div>
@@ -183,7 +147,7 @@
           5-Step Journey to Freedom
         </div>
       </div>
-    {:else if index === 16}
+    {:else if index === 13}
       <!-- Reclaim Work slide -->
       <div class="relative z-10 text-center px-4">
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Reclaim</div>
