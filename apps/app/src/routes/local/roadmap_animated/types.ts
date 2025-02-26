@@ -12,7 +12,8 @@ export interface TokenDataPoint {
   communityTokenPool: number;
   addedTokensToPool: number;
   investmentPool: number;
-  adminPool: number;
+  /** Platform Pool value (25% of investments) - in the JSON this is called "Platform Pool (SumInvest * 0,25)" */
+  platformPool: number;
   totalPoolValue: number;
   addedPoolValue: number;
   capitalIncrease: number;

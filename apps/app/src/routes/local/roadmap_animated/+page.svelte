@@ -96,7 +96,7 @@
             communityTokenPool: round["Sum of token in com. token pool"],
             addedTokensToPool: round["Added tokens to community token pool"],
             investmentPool: parseCurrency(round["Investment pool (SumInvests *0,75)"]),
-            adminPool: parseCurrency(round["Admin Pool (SumInvest * 0,25)"]),
+            platformPool: parseCurrency(round["Platform Pool (SumInvest * 0,25)"]),
             totalPoolValue: parseCurrency(round["Total value of both pools in €"]),
             addedPoolValue: parseCurrency(round["Added value to both pools in this round in €"]),
             capitalIncrease: parsePercentage(round["Capital increase in % (from reg. capital)"]),
@@ -129,7 +129,7 @@
             communityTokenPool: 0,
             addedTokensToPool: 0,
             investmentPool: 0,
-            adminPool: 0,
+            platformPool: 0,
             totalPoolValue: 0,
             addedPoolValue: 0,
             capitalIncrease: 0,
@@ -272,7 +272,7 @@
                     <h2 class="text-2xl font-bold mb-2">Round {$currentRoundData.round} {$currentRoundData.description ? `- ${$currentRoundData.description}` : ''}</h2>
                     <p class="text-tertiary-300 mb-4">Overview of token emission for investment round {$currentRoundData.round}</p>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 2fr 1.5fr 1.5fr">
                       <div class="bg-surface-800 p-4 rounded-lg">
                         <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Vision Creators</h3>
                         <p class="text-2xl font-bold">{$currentRoundData.totalVCs}</p>
@@ -313,8 +313,8 @@
                       </div>
                       
                       <div class="bg-surface-800 p-4 rounded-lg border-l-4 border-secondary-500">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Admin Pool</h4>
-                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.adminPool)}</p>
+                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Platform Pool</h4>
+                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.platformPool)}</p>
                         <p class="text-sm text-tertiary-300">25% of investments</p>
                       </div>
                     </div>
