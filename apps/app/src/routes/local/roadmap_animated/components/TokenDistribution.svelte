@@ -1,143 +1,96 @@
 <script lang="ts">
-  import { onMount, afterUpdate } from 'svelte';
-  import { browser } from '$app/environment';
+  import type { TokenDataPoint } from '../types';
   
-  // Import D3 modules
-  import { select } from 'd3-selection';
-  import { pie, arc } from 'd3-shape';
-  import { scaleOrdinal } from 'd3-scale';
+  export let data: TokenDataPoint;
   
-  // Props
-  export let data: {
-    round: number;
-    tokenEmittedInRound: number;
-    communityTokenPool: number;
-    description?: string;
+  type PieDataItem = {
+    name: string;
+    value: number;
+    percentage: number;
+    color: string;
   };
   
-  let svg: SVGElement;
-  let width = 320;
-  let height = 320;
-  let radius = Math.min(width, height) / 2;
+  let pieData: PieDataItem[] = [];
   
-  function createChart() {
-    if (!browser || !data) return;
+  // Calculate token distribution data
+  $: {
+    const totalTokens = data.totalShares;
+    const communityPool = data.communityTokenPool;
+    const foundersShare = Math.round((data.foundersDAOTreasuryShare - data.daoTreasuryShare) * totalTokens);
+    const vcShare = totalTokens - communityPool - foundersShare;
     
-    // Clear previous chart
-    select(svg).selectAll('*').remove();
-    
-    // Setup colors
-    const colorScale = scaleOrdinal<string>()
-      .domain(['VCs', 'Community Pool'])
-      .range(['#e9c96e', '#dad3be']);
-    
-    // Create data for pie
-    const pieData = [
-      { label: 'VCs', value: data.tokenEmittedInRound },
-      { label: 'Community Pool', value: data.communityTokenPool }
+    pieData = [
+      { name: 'Community Pool', value: communityPool, percentage: communityPool / totalTokens, color: '#e9c96e' },
+      { name: 'VCs', value: vcShare, percentage: vcShare / totalTokens, color: '#40b7c8' },
+      { name: 'Founders', value: foundersShare, percentage: foundersShare / totalTokens, color: '#a36cdc' }
     ];
-    
-    // Setup the pie chart layout
-    const pieGenerator = pie<typeof pieData[0]>()
-      .sort(null)
-      .value(d => d.value);
-    
-    // Generate arcs
-    const arcGenerator = arc<any>()
-      .innerRadius(radius * 0.5) // Donut chart
-      .outerRadius(radius * 0.8);
-    
-    const labelArc = arc<any>()
-      .innerRadius(radius * 0.85)
-      .outerRadius(radius * 0.85);
-    
-    // Create chart container
-    const chart = select(svg)
-      .attr('width', width)
-      .attr('height', height)
-      .append('g')
-      .attr('transform', `translate(${width / 2}, ${height / 2})`);
-    
-    // Add slices
-    const slices = chart.selectAll('.arc')
-      .data(pieGenerator(pieData))
-      .enter()
-      .append('g')
-      .attr('class', 'arc');
-    
-    // Add path elements for slices with animation
-    slices.append('path')
-      .attr('d', d => arcGenerator(d))
-      .attr('fill', d => colorScale(d.data.label))
-      .attr('stroke', '#0d1132')
-      .attr('stroke-width', 2)
-      .style('opacity', 0.9);
-    
-    // Add text labels outside the arcs
-    slices.append('text')
-      .attr('transform', d => `translate(${labelArc.centroid(d)})`)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#f0ede5')
-      .text(d => d.data.label);
-    
-    // Add percentage labels inside slices
-    const totalTokens = pieData.reduce((sum, item) => sum + item.value, 0);
-    
-    slices.append('text')
-      .attr('transform', d => `translate(${arcGenerator.centroid(d)})`)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#0d1132')
-      .attr('font-weight', 'bold')
-      .attr('font-size', '14px')
-      .text(d => {
-        const percent = Math.round((d.data.value / totalTokens) * 100);
-        return `${percent}%`;
-      });
-    
-    // Add center text
-    chart.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '-0.5em')
-      .attr('fill', '#f0ede5')
-      .attr('font-size', '16px')
-      .text(`Round ${data.round}`);
-    
-    chart.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('dy', '1em')
-      .attr('fill', '#f0ede5')
-      .attr('font-size', '14px')
-      .text(`Total: ${totalTokens.toLocaleString()} tokens`);
   }
   
-  // Create chart on mount and update
-  onMount(createChart);
-  afterUpdate(createChart);
+  // Format numbers for display
+  function formatNumber(num: number): string {
+    return new Intl.NumberFormat().format(Math.round(num));
+  }
+  
+  function formatPercentage(value: number): string {
+    return new Intl.NumberFormat('en', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+  }
+  
+  function formatCurrency(value: number): string {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+  }
 </script>
 
-<div class="token-distribution-chart flex justify-center my-4">
-  <svg bind:this={svg}></svg>
-</div>
-
-<div class="token-data-summary grid grid-cols-2 gap-4 max-w-sm mx-auto">
-  <div class="bg-surface-800 p-3 rounded-lg border-l-4 border-primary-500">
-    <h4 class="text-sm uppercase text-tertiary-300 opacity-70">VCs</h4>
-    <p class="text-xl font-bold">{data.tokenEmittedInRound.toLocaleString()}</p>
-    <p class="text-xs text-tertiary-300">Tokens in this round</p>
+<div class="flex flex-col lg:flex-row items-center gap-8 max-w-sm mx-auto">
+  <div class="token-chart bg-surface-700 p-4 rounded-lg">
+    <h2 class="text-center text-lg font-bold mb-3">Token Distribution Round {data.round}</h2>
+    
+    <!-- Simple pie representation -->
+    <div class="flex flex-col items-center gap-2 mb-4">
+      <div class="flex flex-wrap justify-center gap-2">
+        {#each pieData as item}
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-4 my-1" style="background-color: {item.color};"></div>
+            <div class="text-xs">{item.name}</div>
+            <div class="text-xs font-bold">{formatPercentage(item.percentage)}</div>
+          </div>
+        {/each}
+      </div>
+      
+      <div class="mt-2 text-center">
+        <div class="text-sm font-bold">{formatNumber(data.totalShares)}</div>
+        <div class="text-xs">Total Tokens</div>
+      </div>
+    </div>
   </div>
   
-  <div class="bg-surface-800 p-3 rounded-lg border-l-4 border-tertiary-500">
-    <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Community Pool</h4>
-    <p class="text-xl font-bold">{data.communityTokenPool.toLocaleString()}</p>
-    <p class="text-xs text-tertiary-300">Total pool size</p>
+  <div class="token-data">
+    <h2 class="text-xl font-bold mb-4">Distribution for Round {data.round}</h2>
+    
+    <div class="space-y-4">
+      {#each pieData as item}
+        <div class="flex items-center gap-3">
+          <div class="w-4 h-4 rounded-full" style="background-color: {item.color}"></div>
+          <div>
+            <p class="font-medium">{item.name}</p>
+            <p class="text-sm opacity-80">{formatNumber(item.value)} tokens ({formatPercentage(item.percentage)})</p>
+          </div>
+        </div>
+      {/each}
+    </div>
+    
+    <div class="mt-6 p-4 bg-surface-700 rounded-lg">
+      <h3 class="text-sm uppercase opacity-70 mb-2">Token Price</h3>
+      <p class="text-2xl font-bold">{formatCurrency(data.tokenEmissionPrice)}</p>
+    </div>
   </div>
 </div>
 
 <style>
-  .token-distribution-chart {
-    width: 100%;
-    height: 320px;
+  .token-chart {
+    border-radius: 0.5rem;
+  }
+  
+  .token-data {
+    flex-grow: 1;
   }
 </style> 

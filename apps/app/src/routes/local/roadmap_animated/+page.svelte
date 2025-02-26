@@ -1,13 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { writable, derived } from 'svelte/store';
-  import Papa from 'papaparse';
   import { browser } from '$app/environment';
+  import type { TokenDataPoint } from './types';
   
   // Import visualization components
   import TokenDistribution from './components/TokenDistribution.svelte';
   import InvestmentData from './components/InvestmentData.svelte';
   import RoundComparison from './components/RoundComparison.svelte';
+  
+  // Import token emission data
+  import tokenEmissionData from './token_emission.json';
   
   // Stores for state management
   const tokenData = writable<TokenDataPoint[]>([]);
@@ -19,91 +22,139 @@
   const currentRoundData = derived(
     [tokenData, selectedRound],
     ([$tokenData, $selectedRound]) => {
-      if ($tokenData.length === 0) return null;
-      return $tokenData.find(d => d.round === $selectedRound) || $tokenData[0];
+      console.log('Deriving currentRoundData, tokenData length:', $tokenData.length, 'selectedRound:', $selectedRound);
+      if ($tokenData.length === 0) {
+        console.log('No token data available');
+        return null;
+      }
+      const foundRound = $tokenData.find(d => d.round === $selectedRound);
+      console.log('Found round data:', foundRound || 'Not found');
+      return foundRound || $tokenData[0];
     }
   );
   
-  // Interface for our data
-  interface TokenDataPoint {
-    round: number;
-    totalVCs: number;
-    newVCs: number;
-    investRound: number;
-    totalInvestSum: number;
-    tokenEmissionPrice: number;
-    tokenPerVC: number;
-    tokenEmittedInRound: number;
-    totalShares: number;
-    communityTokenPool: number;
-    investmentPool: number;
-    adminPool: number;
-    totalPoolValue: number;
-    description?: string;
+  // Function to parse currency string to number
+  function parseCurrency(value: string | undefined | null): number {
+    if (!value || typeof value !== 'string') {
+      console.warn('Invalid value for parseCurrency:', value);
+      console.trace('Stack trace for invalid currency value');
+      return 0;
+    }
+    try {
+      // Remove currency symbol, spaces, and replace comma with dot
+      return parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+    } catch (error) {
+      console.error('Error parsing currency:', error);
+      return 0;
+    }
   }
   
-  // Function to generate mock data instead of parsing CSV
-  function generateMockData() {
+  // Function to parse percentage string to number
+  function parsePercentage(value: string | undefined | null): number {
+    if (!value || typeof value !== 'string') {
+      console.warn('Invalid value for parsePercentage:', value);
+      return 0;
+    }
+    try {
+      // Remove percentage symbol, spaces, and replace comma with dot
+      return parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) / 100 || 0;
+    } catch (error) {
+      console.error('Error parsing percentage:', error);
+      return 0;
+    }
+  }
+  
+  // Load data from JSON file
+  function loadTokenEmissionData() {
     isLoading.set(true);
     
-    // Generate 10 rounds of mock data
-    const mockData: TokenDataPoint[] = [];
-    
-    for (let i = 1; i <= 10; i++) {
-      // Growth factors - each round gets bigger
-      const growthFactor = 1 + (i * 0.15);
-      const priceGrowthFactor = 1 + (i * 0.1);
+    try {
+      console.log('Loading token emission data from JSON...');
       
-      // Base values for round 1
-      const baseVCs = 15;
-      const baseInvestment = 5475; // 15 VCs * 365€
-      const baseTokenPrice = 1;
-      const baseTokenPerVC = 365;
-      
-      // Calculate values with growth
-      const totalVCs = Math.round(baseVCs * Math.pow(growthFactor, i - 1));
-      const newVCs = i === 1 ? totalVCs : Math.round(totalVCs - (baseVCs * Math.pow(growthFactor, i - 2)));
-      const investRound = newVCs * 365;
-      const totalInvestSum = totalVCs * 365;
-      const tokenEmissionPrice = baseTokenPrice * Math.pow(priceGrowthFactor, i - 1);
-      const tokenPerVC = baseTokenPerVC;
-      const tokenEmittedInRound = newVCs * tokenPerVC;
-      const totalShares = totalVCs * tokenPerVC;
-      
-      // Pool values
-      const communityTokenPool = Math.round(totalShares * 0.5); // 50% of tokens go to community pool
-      const investmentPool = totalInvestSum * 0.75; // 75% of investments
-      const adminPool = totalInvestSum * 0.25; // 25% of investments
-      const totalPoolValue = investmentPool + adminPool;
-      
-      // Description based on round
-      let description = "";
-      if (i === 1) description = "Initial Launch";
-      else if (i === 4) description = "Token Expansion";
-      else if (i === 7) description = "Scaling Phase";
-      else if (i === 10) description = "Growth Acceleration";
-      
-      mockData.push({
-        round: i,
-        totalVCs,
-        newVCs,
-        investRound,
-        totalInvestSum,
-        tokenEmissionPrice,
-        tokenPerVC,
-        tokenEmittedInRound,
-        totalShares,
-        communityTokenPool,
-        investmentPool,
-        adminPool,
-        totalPoolValue,
-        description
+      // Transform the data to match our interface
+      const transformedData = tokenEmissionData.map(round => {
+        console.log('Processing round:', round.Round);
+        
+        // Add descriptions to specific rounds
+        let description = "";
+        if (round.Round === 1) description = "Initial Launch";
+        else if (round.Round === 4) description = "Token Expansion";
+        else if (round.Round === 7) description = "Scaling Phase";
+        else if (round.Round === 10) description = "Growth Acceleration";
+        
+        try {
+          const data: TokenDataPoint = {
+            round: round.Round,
+            totalVCs: round["Total VCs (VisionCreators)"],
+            newVCs: round["New VCs"],
+            investRound: parseCurrency(round["Invest Round (= new VCs * 365€)"]),
+            totalInvestSum: parseCurrency(round["Total Invest Sum"]),
+            tokenEmissionPrice: parseCurrency(round["Token Emission Price"]),
+            tokenPerVC: parseFloat(String(round["Token Per VC"]).replace(',', '.')),
+            tokenEmittedInRound: round["Token emitted in this round"],
+            totalShares: round["Total Shares (Token + reg. Capital)"],
+            communityTokenPool: round["Sum of token in com. token pool"],
+            addedTokensToPool: round["Added tokens to community token pool"],
+            investmentPool: parseCurrency(round["Investment pool (SumInvests *0,75)"]),
+            adminPool: parseCurrency(round["Admin Pool (SumInvest * 0,25)"]),
+            totalPoolValue: parseCurrency(round["Total value of both pools in €"]),
+            addedPoolValue: parseCurrency(round["Added value to both pools in this round in €"]),
+            capitalIncrease: parsePercentage(round["Capital increase in % (from reg. capital)"]),
+            regCapitalShare: parsePercentage(round["Reg. capital share of value"]),
+            foundersDAOTreasuryShare: parsePercentage(round["Founders + DAO Treasury (in % of all tokens)"]),
+            daoTreasuryShare: parsePercentage(round["DAO Treasury (in % of all tokens)"]),
+            perFounderShare: parsePercentage(round["Per Founder Share (in % of all tokens)"]),
+            minValuation: parseCurrency(round["Min Valuation in €"]),
+            daoTreasuryFoundersValue: parseCurrency(round["DAO Treasury + Founders value in €"]),
+            firstRoundEmissionValue: parseCurrency(round["First round emission value (per VC)"]),
+            daoTreasuryValue: parseCurrency(round["DAO Treasury's value  in € "]),
+            foundersShareValue: parseCurrency(round["All founders initial share combined value in €"]),
+            description
+          };
+          console.log('Transformed data for round', round.Round, ':', data);
+          return data;
+        } catch (roundError) {
+          console.error('Error processing round:', round.Round, roundError);
+          // Return a complete object with default values to match the interface
+          return {
+            round: round.Round || 0,
+            totalVCs: round["Total VCs (VisionCreators)"] || 0,
+            newVCs: round["New VCs"] || 0,
+            investRound: 0,
+            totalInvestSum: 0,
+            tokenEmissionPrice: 0,
+            tokenPerVC: 0,
+            tokenEmittedInRound: 0,
+            totalShares: 0,
+            communityTokenPool: 0,
+            addedTokensToPool: 0,
+            investmentPool: 0,
+            adminPool: 0,
+            totalPoolValue: 0,
+            addedPoolValue: 0,
+            capitalIncrease: 0,
+            regCapitalShare: 0,
+            foundersDAOTreasuryShare: 0,
+            daoTreasuryShare: 0,
+            perFounderShare: 0,
+            minValuation: 0,
+            daoTreasuryFoundersValue: 0,
+            firstRoundEmissionValue: 0,
+            daoTreasuryValue: 0,
+            foundersShareValue: 0,
+            description: description || ""
+          };
+        }
       });
+      
+      console.log('Transformed token emission data:', transformedData);
+      tokenData.set(transformedData);
+    } catch (error) {
+      console.error('Error loading token emission data:', error);
+      tokenData.set([]);
+    } finally {
+      isLoading.set(false);
     }
-    
-    console.log('Generated mock data:', mockData);
-    tokenData.set(mockData);
-    isLoading.set(false);
   }
   
   // Format currency values
@@ -122,22 +173,27 @@
     }
   }
   
-  // Handle round selection
-  function selectRound(round: number) {
-    selectedRound.set(round);
+  // Format percentage values
+  function formatPercentage(value: number): string {
+    return new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 2 }).format(value);
   }
   
   // Handle view selection
   function selectView(view: string) {
     selectedView.set(view);
+    console.log('Selected view:', view);
   }
   
-  // Initialize on mount
+  // Handle round selection
+  function selectRound(round: number) {
+    selectedRound.set(round);
+    console.log('Selected round:', round);
+  }
+  
+  // Initialize data on component mount
   onMount(() => {
-    if (browser) {
-      // Use mock data instead of CSV
-      generateMockData();
-    }
+    console.log('Component mounted, loading token emission data...');
+    loadTokenEmissionData();
   });
 </script>
 
@@ -159,7 +215,7 @@
       <!-- Main Layout: Sidebar + Content -->
       <div class="flex flex-col md:flex-row gap-6">
         <!-- Sidebar with round selection -->
-        <aside class="md:w-56 flex-shrink-0 bg-surface-800 rounded-lg p-4 max-h-[500px] overflow-y-auto">
+        <aside class="md:w-56 flex-shrink-0 bg-surface-800 rounded-lg p-4">
           <h2 class="text-xl font-semibold mb-4 text-tertiary-300">Investment Rounds</h2>
           <div class="space-y-2">
             {#each $tokenData as round}
@@ -243,11 +299,11 @@
                     </div>
                     
                     <h3 class="text-xl font-semibold mb-3">Pool Distribution</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div class="bg-surface-800 p-4 rounded-lg border-l-4 border-primary-500">
                         <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Community Token Pool</h4>
                         <p class="text-2xl font-bold">{formatNumber($currentRoundData.communityTokenPool)}</p>
-                        <p class="text-sm text-tertiary-300">Total tokens</p>
+                        <p class="text-sm text-tertiary-300">+{$currentRoundData.addedTokensToPool} this round</p>
                       </div>
                       
                       <div class="bg-surface-800 p-4 rounded-lg border-l-4 border-tertiary-500">
@@ -260,6 +316,32 @@
                         <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Admin Pool</h4>
                         <p class="text-2xl font-bold">{formatCurrency($currentRoundData.adminPool)}</p>
                         <p class="text-sm text-tertiary-300">25% of investments</p>
+                      </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-semibold mb-3">Additional Metrics</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Minimum Valuation</h4>
+                        <p class="text-xl font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">DAO Treasury Share</h4>
+                        <p class="text-xl font-bold">{formatPercentage($currentRoundData.daoTreasuryShare)}</p>
+                        <p class="text-sm text-tertiary-300">{formatCurrency($currentRoundData.daoTreasuryValue)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Founders Share</h4>
+                        <p class="text-xl font-bold">{formatPercentage($currentRoundData.perFounderShare)}</p>
+                        <p class="text-sm text-tertiary-300">per founder</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Capital Increase</h4>
+                        <p class="text-xl font-bold">{formatPercentage($currentRoundData.capitalIncrease)}</p>
+                        <p class="text-sm text-tertiary-300">from regular capital</p>
                       </div>
                     </div>
                   </div>
