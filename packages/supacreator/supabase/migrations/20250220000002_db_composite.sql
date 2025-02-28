@@ -351,7 +351,8 @@ INSERT INTO db (id, json, author, schema, snapshot_id) VALUES
       "format": "markdown"
     }
   },
-  "required": ["content"]
+  "required": ["content"],
+  "additionalProperties": false
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '00000000-0000-0000-0000-000000000001',  -- Meta schema

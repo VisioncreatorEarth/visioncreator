@@ -597,6 +597,7 @@ INSERT INTO "public"."db" (id, json, author, schema) VALUES
   "type": "object",
   "title": "Meta Schema",
   "description": "Root schema for defining all other schemas",
+  "additionalProperties": false,
   "properties": {
     "type": {
       "type": "string",
@@ -631,6 +632,12 @@ INSERT INTO "public"."db" (id, json, author, schema) VALUES
       "items": {"type": "string"},
       "title": "Required Fields",
       "description": "List of required properties"
+    },
+    "additionalProperties": {
+      "type": "boolean",
+      "title": "Allow Additional Properties",
+      "description": "Whether to allow properties not defined in the schema",
+      "default": false
     }
   },
   "required": ["type", "title", "description", "properties"]

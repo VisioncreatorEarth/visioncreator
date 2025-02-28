@@ -49,53 +49,46 @@ CREATE OR REPLACE FUNCTION public.validate_content_against_schema(
 ) RETURNS jsonb AS $$
 DECLARE
     v_schema_data jsonb;
-    v_schema_found boolean := false;
-    v_meta_schema_id uuid := '00000000-0000-0000-0000-000000000001';
-    v_meta_schema boolean := false;
-    v_validation_result jsonb;
+    v_is_meta_schema boolean := false;
 BEGIN
-    -- Check if this is the meta-schema
-    IF p_schema_id = v_meta_schema_id THEN
-        v_meta_schema := true;
-    END IF;
-    
-    -- Get the schema from active db
+    -- Check if schema is found
     SELECT json INTO v_schema_data
     FROM public.db
     WHERE id = p_schema_id;
     
-    IF v_schema_data IS NOT NULL THEN
-        v_schema_found := true;
-    ELSE
-        -- Try archive if not found in active
+    IF v_schema_data IS NULL THEN
+        -- Try archive if not in active db
         SELECT json INTO v_schema_data
         FROM public.db_archive
         WHERE id = p_schema_id;
         
-        IF v_schema_data IS NOT NULL THEN
-            v_schema_found := true;
+        IF v_schema_data IS NULL THEN
+            RETURN jsonb_build_object(
+                'valid', false,
+                'error', 'Schema not found',
+                'details', format('Could not find schema with id %s', p_schema_id)
+            );
         END IF;
     END IF;
     
-    IF NOT v_schema_found THEN
-        RETURN jsonb_build_object(
-            'valid', false,
-            'error', 'Schema not found',
-            'details', format('Schema with ID %s not found in db or db_archive', p_schema_id)
-        );
+    -- Check if this is the meta-schema (self-validating)
+    IF p_schema_id = '00000000-0000-0000-0000-000000000001' THEN
+        v_is_meta_schema := true;
     END IF;
     
-    -- For meta-schema validation (schemas themselves)
-    IF v_meta_schema THEN
-        -- Define the meta-schema inline
+    -- Enforce schema restrictions before validation
+    v_schema_data := public.ensure_schema_restrictions(v_schema_data);
+    
+    -- Special case for meta-schema validation
+    IF v_is_meta_schema THEN
+        -- Define a simplified meta-schema to validate against
         DECLARE
-            v_meta_schema_def jsonb := jsonb_build_object(
+            v_meta_schema jsonb := jsonb_build_object(
                 'type', 'object',
-                'required', ARRAY['type', 'properties'],
                 'properties', jsonb_build_object(
                     'type', jsonb_build_object(
                         'type', 'string',
-                        'enum', ARRAY['object']
+                        'enum', jsonb_build_array('object', 'array', 'string', 'number', 'integer', 'boolean', 'null')
                     ),
                     'title', jsonb_build_object('type', 'string'),
                     'description', jsonb_build_object('type', 'string'),
@@ -103,26 +96,13 @@ BEGIN
                         'type', 'object',
                         'additionalProperties', jsonb_build_object(
                             'type', 'object',
-                            'required', ARRAY['type', 'title'],
                             'properties', jsonb_build_object(
-                                'type', jsonb_build_object('type', 'string'),
+                                'type', jsonb_build_object(
+                                    'type', 'string',
+                                    'enum', jsonb_build_array('object', 'array', 'string', 'number', 'integer', 'boolean', 'null')
+                                ),
                                 'title', jsonb_build_object('type', 'string'),
                                 'description', jsonb_build_object('type', 'string'),
-                                'format', jsonb_build_object('type', 'string'),
-                                'pattern', jsonb_build_object('type', 'string'),
-                                'minimum', jsonb_build_object('type', 'number'),
-                                'maximum', jsonb_build_object('type', 'number'),
-                                'minLength', jsonb_build_object('type', 'integer', 'minimum', 0),
-                                'maxLength', jsonb_build_object('type', 'integer', 'minimum', 0),
-                                'required', jsonb_build_object(
-                                    'oneOf', jsonb_build_array(
-                                        jsonb_build_object('type', 'boolean'),
-                                        jsonb_build_object(
-                                            'type', 'array',
-                                            'items', jsonb_build_object('type', 'string')
-                                        )
-                                    )
-                                ),
                                 'nullable', jsonb_build_object('type', 'boolean'),
                                 'properties', jsonb_build_object('type', 'object'),
                                 'items', jsonb_build_object('type', 'object'),
@@ -982,64 +962,83 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION public.process_content_update IS 'Unified function to handle content updates and variations in a single place';
 
--- Create function to get content schema for validation
-CREATE OR REPLACE FUNCTION public.get_content_schema(p_id uuid)
-RETURNS jsonb AS $$
+-- Create or replace function to ensure additionalProperties: false is set
+CREATE OR REPLACE FUNCTION public.ensure_schema_restrictions(
+    p_schema_data jsonb
+) RETURNS jsonb AS $$
+BEGIN
+    -- If additionalProperties is not specified, add it as false
+    IF NOT p_schema_data ? 'additionalProperties' THEN
+        p_schema_data := jsonb_set(p_schema_data, '{additionalProperties}', 'false'::jsonb);
+    END IF;
+    
+    RETURN p_schema_data;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create or replace get_content_schema to enforce schema restrictions
+CREATE OR REPLACE FUNCTION public.get_content_schema(
+    p_id uuid
+) RETURNS jsonb AS $$
 DECLARE
     v_content record;
     v_schema_id uuid;
     v_schema_data jsonb;
+    v_is_archived boolean := false;
 BEGIN
-    -- First check active database
+    -- Try to find content in active db
     SELECT * INTO v_content
     FROM public.db
     WHERE id = p_id;
     
-    -- If not found, check archive
     IF v_content IS NULL THEN
+        -- Try archive if not in active db
         SELECT * INTO v_content
         FROM public.db_archive
         WHERE id = p_id;
+        
+        IF v_content IS NULL THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'Content not found',
+                'details', format('Could not find content with id %s', p_id)
+            );
+        END IF;
+        
+        v_is_archived := true;
     END IF;
     
-    -- Return error if content not found
-    IF v_content IS NULL THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'Content not found',
-            'details', format('Could not find content with id %s', p_id)
-        );
-    END IF;
-    
-    -- Get schema ID from content
+    -- Get schema id
     v_schema_id := v_content.schema;
     
-    -- Get schema data from active database
+    -- Get schema data from active db
     SELECT json INTO v_schema_data
     FROM public.db
     WHERE id = v_schema_id;
     
-    -- If not found, check archive
     IF v_schema_data IS NULL THEN
+        -- Try archive if not in active db
         SELECT json INTO v_schema_data
         FROM public.db_archive
         WHERE id = v_schema_id;
+        
+        IF v_schema_data IS NULL THEN
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'Schema not found',
+                'details', format('Could not find schema with id %s', v_schema_id)
+            );
+        END IF;
     END IF;
     
-    -- Return error if schema not found
-    IF v_schema_data IS NULL THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error', 'Schema not found',
-            'details', format('Could not find schema with id %s', v_schema_id)
-        );
-    END IF;
+    -- Enforce schema restrictions
+    v_schema_data := public.ensure_schema_restrictions(v_schema_data);
     
-    -- Return schema data
     RETURN jsonb_build_object(
         'success', true,
         'schema_id', v_schema_id,
-        'schema_data', v_schema_data
+        'schema_data', v_schema_data,
+        'is_archived', v_is_archived
     );
 END;
 $$ LANGUAGE plpgsql; 
