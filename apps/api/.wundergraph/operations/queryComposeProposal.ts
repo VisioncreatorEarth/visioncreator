@@ -34,6 +34,8 @@ interface ComposeData {
         name: string;
     };
     related_composites: RelatedComposite[];
+    schema_id?: string;
+    schema_data?: any;
 }
 
 interface CompositeData {
@@ -101,16 +103,19 @@ export default createOperation.query({
             // Get main composite's content
             const { data: mainContent, error: mainError } = await context.supabase
                 .from('db')
-                .select('json')
+                .select('json, schema')
                 .eq('id', proposal.compose.compose_id)
                 .single();
 
             let mainCompose: ComposeJson;
+            let schemaId: string | undefined = undefined;
+            let schemaData: any = null;
+
             if (mainError) {
                 // Try archive if not in active db
                 const { data: archivedContent, error: archiveError } = await context.supabase
                     .from('db_archive')
-                    .select('json')
+                    .select('json, schema')
                     .eq('id', proposal.compose.compose_id)
                     .single();
 
@@ -122,8 +127,37 @@ export default createOperation.query({
                     throw new Error('Failed to fetch main content');
                 }
                 mainCompose = archivedContent.json as ComposeJson;
+                schemaId = archivedContent.schema as string | undefined;
             } else {
                 mainCompose = mainContent.json as ComposeJson;
+                schemaId = mainContent.schema as string | undefined;
+            }
+
+            // Fetch the schema data if we have a schema ID
+            if (schemaId) {
+                // First try to get schema from active db
+                const { data: activeSchema, error: activeSchemaError } = await context.supabase
+                    .from('db')
+                    .select('json')
+                    .eq('id', schemaId)
+                    .single();
+
+                if (!activeSchemaError && activeSchema) {
+                    schemaData = activeSchema.json;
+                } else {
+                    // Try archive if not in active db
+                    const { data: archivedSchema, error: archivedSchemaError } = await context.supabase
+                        .from('db_archive')
+                        .select('json')
+                        .eq('id', schemaId)
+                        .single();
+
+                    if (!archivedSchemaError && archivedSchema) {
+                        schemaData = archivedSchema.json;
+                    } else {
+                        console.warn('[queryComposeProposal] Schema not found:', schemaId);
+                    }
+                }
             }
 
             // Get ALL relationships from the database
@@ -231,7 +265,9 @@ export default createOperation.query({
                         author: typeof proposal.compose.author === 'string'
                             ? { name: proposal.compose.author }
                             : proposal.compose.author || { name: 'Unknown' },
-                        related_composites: []
+                        related_composites: [],
+                        schema_id: schemaId,
+                        schema_data: schemaData
                     }
                 };
             }
@@ -346,7 +382,9 @@ export default createOperation.query({
                     author: typeof proposal.compose.author === 'string'
                         ? { name: proposal.compose.author }
                         : proposal.compose.author || { name: 'Unknown' },
-                    related_composites: relatedComposites
+                    related_composites: relatedComposites,
+                    schema_id: schemaId,
+                    schema_data: schemaData
                 }
             };
         } catch (error) {

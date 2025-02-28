@@ -27,7 +27,7 @@
   - change: Emitted when content changes (with validation status)
 -->
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 
 	// Props
 	export let json: any;
@@ -44,16 +44,38 @@
 	let editedJsonText = '';
 	let jsonEditError = '';
 	let hasChanges = false;
+	let textarea: HTMLTextAreaElement;
 
 	// Initialize text when json prop changes
 	$: if (json) {
 		editedJsonText = JSON.stringify(json, null, 2);
+		if (readOnly && textarea) {
+			setTimeout(adjustHeight, 0);
+		}
+	}
+
+	onMount(() => {
+		if (readOnly && textarea) {
+			adjustHeight();
+		}
+	});
+
+	// Function to adjust textarea height based on content
+	function adjustHeight() {
+		if (!textarea) return;
+
+		// Reset height temporarily to get the correct scrollHeight
+		textarea.style.height = 'auto';
+
+		// Set the height to match the content
+		const newHeight = Math.max(200, textarea.scrollHeight);
+		textarea.style.height = `${newHeight}px`;
 	}
 
 	// Handle text changes
 	function handleJsonEdit(event: Event) {
-		const textarea = event.target as HTMLTextAreaElement;
-		editedJsonText = textarea.value;
+		const textareaElement = event.target as HTMLTextAreaElement;
+		editedJsonText = textareaElement.value;
 
 		try {
 			const parsed = JSON.parse(editedJsonText);
@@ -86,10 +108,11 @@
 	}
 </script>
 
-<div class="flex flex-col h-full">
+<div class="flex flex-col h-full {readOnly ? 'read-only-editor' : ''}">
 	<!-- Editor Area -->
 	<div class="flex-1 p-4 font-mono text-sm rounded-lg bg-surface-100 dark:bg-surface-800">
 		<textarea
+			bind:this={textarea}
 			class="w-full h-full p-0 font-mono text-sm bg-transparent border-none resize-none focus:ring-0"
 			value={editedJsonText}
 			on:input={handleJsonEdit}
@@ -128,5 +151,14 @@
 <style>
 	textarea {
 		min-height: 200px;
+	}
+
+	:global(.schema-view) textarea {
+		min-height: 500px;
+		height: auto !important;
+	}
+
+	:global(.read-only-editor) textarea {
+		overflow-y: visible;
 	}
 </style>

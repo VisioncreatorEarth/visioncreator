@@ -36,3 +36,10 @@ Please always make sure to use the right comment syntax format, especially take 
 
 IMPORTANT!! 
 Alsways make sure to keep all the orignal functinoallity that exists, without removing anything, when you edit any code. Unless explicitly mentioned by the prompt, that you should remove something that worked already before!!!! 
+
+When asked to debug, always do this:
+Reflect on 5-7 different possible sources of the problem, distill those down to 1-2 most likely sources, and then add logs to validate your assumptions before we move onto implementing the actual code fix"
+
+When asked to work on a larger refactor or doing any other changes:
+Explain the full approach you’d take to implement this. Just tell, don’t code.
+

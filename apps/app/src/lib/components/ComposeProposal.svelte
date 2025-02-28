@@ -23,7 +23,7 @@ This component handles:
 	export let proposalId: string;
 
 	// Create a store for the compose tab - default to Content
-	const activeComposeTab = writable<'content' | 'json' | 'diff'>('content');
+	const activeComposeTab = writable<'content' | 'json' | 'diff' | 'schema'>('content');
 
 	// Add TypeScript interfaces to match backend
 	interface ComposeJson {
@@ -41,6 +41,8 @@ This component handles:
 			name: string;
 		};
 		related_composites: RelatedComposite[];
+		schema_id?: string;
+		schema_data?: any;
 	}
 
 	interface RelatedComposite {
@@ -82,6 +84,43 @@ This component handles:
 	let newVariationTitle = '';
 	let newVariationDescription = '';
 	let newVariationType: string | undefined = undefined;
+	let validationErrors: Array<{
+		path: string;
+		message: string;
+		keyword: string;
+		params: any;
+	}> | null = null;
+	let isSubmitting = false;
+
+	// Toast notification functionality
+	let toastMessage = '';
+	let toastType: 'success' | 'error' | 'info' = 'info';
+	let toastVisible = false;
+	let toastTimeout: number | null = null;
+
+	function showToast(
+		message: string,
+		type: 'success' | 'error' | 'info' = 'info',
+		duration = 3000
+	) {
+		if (toastTimeout) clearTimeout(toastTimeout);
+
+		toastMessage = message;
+		toastType = type;
+		toastVisible = true;
+
+		toastTimeout = window.setTimeout(() => {
+			toastVisible = false;
+		}, duration);
+	}
+
+	function toastSuccess(message: string) {
+		showToast(message, 'success');
+	}
+
+	function toastError(message: string) {
+		showToast(message, 'error');
+	}
 
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
@@ -118,7 +157,7 @@ This component handles:
 		: compose_data?.compose_id; // Use compose_id for main composite
 
 	// Handle tab changes
-	function handleTabChange(tab: 'content' | 'json' | 'diff') {
+	function handleTabChange(tab: 'content' | 'json' | 'diff' | 'schema') {
 		$activeComposeTab = tab;
 	}
 
@@ -216,6 +255,10 @@ This component handles:
 			return;
 		}
 
+		// Reset validation errors
+		validationErrors = null;
+		isSubmitting = true;
+
 		try {
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
@@ -227,6 +270,15 @@ This component handles:
 			interface EditResult {
 				success?: boolean;
 				error?: string;
+				details?: {
+					message?: string;
+					errors?: Array<{
+						path: string;
+						message: string;
+						keyword: string;
+						params: any;
+					}>;
+				};
 			}
 
 			// Cast the result to the expected type
@@ -235,9 +287,24 @@ This component handles:
 			if (typedResult && typedResult.success) {
 				await $composeQuery.refetch();
 				editMode = false;
+				toastSuccess('Content saved successfully');
+			} else {
+				// Handle validation errors
+				if (typedResult.details?.errors) {
+					validationErrors = typedResult.details.errors;
+					toastError('Validation failed. Please check the form for errors.');
+				} else if (typedResult.error) {
+					toastError(typedResult.error);
+				} else {
+					toastError('An unknown error occurred while saving');
+				}
+				console.error('Failed to save changes:', typedResult);
 			}
 		} catch (error) {
+			toastError('An error occurred while saving');
 			console.error('Failed to save changes:', error);
+		} finally {
+			isSubmitting = false;
 		}
 	}
 
@@ -404,6 +471,37 @@ This component handles:
 </script>
 
 <div class="flex h-full bg-surface-800">
+	<!-- Toast notification -->
+	{#if toastVisible}
+		<div class="fixed top-4 right-4 z-50 max-w-sm">
+			<div
+				class="p-4 rounded-lg shadow-lg transition-all transform translate-y-0 opacity-100 flex items-center gap-3
+				{toastType === 'success'
+					? 'bg-green-800 text-green-100'
+					: toastType === 'error'
+					? 'bg-red-800 text-red-100'
+					: 'bg-blue-800 text-blue-100'}"
+			>
+				<span class="text-lg">
+					{#if toastType === 'success'}
+						<Icon icon="mdi:check-circle" />
+					{:else if toastType === 'error'}
+						<Icon icon="mdi:alert-circle" />
+					{:else}
+						<Icon icon="mdi:information" />
+					{/if}
+				</span>
+				<p>{toastMessage}</p>
+				<button
+					class="ml-auto text-lg opacity-70 hover:opacity-100 transition-opacity"
+					on:click={() => (toastVisible = false)}
+				>
+					<Icon icon="mdi:close" />
+				</button>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Left Aside: Variations List -->
 	<aside class="flex flex-col border-r w-80 border-surface-700">
 		<div class="p-4 border-b border-surface-700">
@@ -460,6 +558,14 @@ This component handles:
 			>
 				JSON
 			</button>
+			<button
+				class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'schema'
+					? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+					: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+				on:click={() => handleTabChange('schema')}
+			>
+				Schema
+			</button>
 			{#if selectedEditRequest && selectedEditRequest.operations && selectedEditRequest.operations.length > 0}
 				<button
 					class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'diff'
@@ -493,10 +599,63 @@ This component handles:
 								{selectedComposite?.title || compose_data.title}
 							</h2>
 						</div>
+
+						{#if validationErrors && validationErrors.length > 0}
+							<div class="mb-4 p-4 border border-red-500/30 bg-red-900/20 rounded-md">
+								<h3 class="font-medium text-red-400 mb-2">Validation Errors</h3>
+								<ul class="list-disc list-inside text-sm space-y-1">
+									{#each validationErrors as error}
+										<li class="text-red-300">
+											<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
+												>{error.path || 'root'}</span
+											>:
+											{error.message}
+											{#if error.keyword === 'additionalProperties' && error.params.additionalProperty}
+												- <span class="font-mono">{error.params.additionalProperty}</span> is not allowed
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							</div>
+						{/if}
+
 						<JsonEditor
 							json={selectedComposite?.compose_json || compose_data.compose_json}
 							on:save={saveChanges}
 						/>
+					</div>
+				{:else if $activeComposeTab === 'schema'}
+					<div class="flex flex-col h-full">
+						<div class="flex items-center justify-between mb-4">
+							<div>
+								<h2 class="text-xl font-semibold text-surface-100">Schema Definition</h2>
+								{#if compose_data?.schema_id}
+									<p class="mt-1 text-sm text-surface-300">
+										Schema ID: <span class="font-mono">{compose_data.schema_id}</span>
+									</p>
+								{/if}
+							</div>
+						</div>
+
+						{#if compose_data?.schema_data}
+							<div class="flex flex-col gap-4 flex-grow">
+								<div class="p-3 rounded-lg bg-surface-700/50">
+									<p class="text-sm text-surface-200">
+										<Icon icon="heroicons:information-circle" class="inline-block w-4 h-4 mr-1" />
+										This is the schema that defines the structure and validation rules for this content.
+										Content must conform to this schema to be valid.
+									</p>
+								</div>
+
+								<div class="schema-view flex-grow">
+									<JsonEditor json={compose_data.schema_data} readOnly={true} />
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-center justify-center p-8 rounded-lg bg-surface-700/30">
+								<p class="text-surface-400">No schema available for this content</p>
+							</div>
+						{/if}
 					</div>
 				{:else if $activeComposeTab === 'diff' && selectedEditRequest}
 					<div class="flex flex-col h-full">
@@ -584,6 +743,21 @@ This component handles:
 
 						{#if editMode}
 							<div class="flex flex-col gap-4">
+								{#if validationErrors && validationErrors.length > 0}
+									<div class="mb-4 p-4 border border-red-500/30 bg-red-900/20 rounded-md">
+										<h3 class="font-medium text-red-400 mb-2">Validation Errors</h3>
+										<ul class="list-disc list-inside text-sm space-y-1">
+											{#each validationErrors as error}
+												<li class="text-red-300">
+													<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
+														>{error.path || 'root'}</span
+													>:
+													{error.message}
+												</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
 								<textarea
 									bind:value={editContent}
 									class="w-full h-[calc(100vh-12rem)] p-4 border rounded-lg bg-surface-900 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100"
@@ -726,5 +900,12 @@ This component handles:
 	}
 	:global(.prose pre code) {
 		@apply bg-transparent;
+	}
+
+	/* Ensure content area has sufficient height */
+	:global(.schema-view) {
+		min-height: calc(100vh - 20rem);
+		display: flex;
+		flex-direction: column;
 	}
 </style>

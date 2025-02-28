@@ -180,6 +180,10 @@ BEGIN
         v_required text[];
         v_prop_name text;
         v_prop_def jsonb;
+        v_additional_properties_allowed boolean := true;
+        v_content_keys text[];
+        v_schema_keys text[];
+        v_extra_key text;
     BEGIN
         -- Basic validation
         IF jsonb_typeof(p_content) != 'object' AND v_schema_data->>'type' = 'object' THEN
@@ -198,6 +202,36 @@ BEGIN
             FROM jsonb_array_elements_text(v_schema_data->'required') x;
         ELSE
             v_required := ARRAY[]::text[];
+        END IF;
+        
+        -- Check if additionalProperties is restricted
+        IF v_schema_data ? 'additionalProperties' THEN
+            IF jsonb_typeof(v_schema_data->'additionalProperties') = 'boolean' THEN
+                v_additional_properties_allowed := (v_schema_data->>'additionalProperties')::boolean;
+            END IF;
+        END IF;
+        
+        -- If additionalProperties is false, check that no extra properties exist
+        IF NOT v_additional_properties_allowed THEN
+            -- Get all keys in the content
+            SELECT array_agg(key) INTO v_content_keys 
+            FROM jsonb_object_keys(p_content) AS key;
+            
+            -- Get all keys defined in the schema
+            SELECT array_agg(key) INTO v_schema_keys 
+            FROM jsonb_object_keys(v_properties) AS key;
+            
+            -- Check for keys in content that aren't in the schema
+            FOREACH v_extra_key IN ARRAY v_content_keys
+            LOOP
+                IF NOT v_extra_key = ANY(v_schema_keys) THEN
+                    RETURN jsonb_build_object(
+                        'valid', false,
+                        'error', 'Additional property not allowed',
+                        'details', format('Property "%s" is not defined in the schema and additionalProperties is false', v_extra_key)
+                    );
+                END IF;
+            END LOOP;
         END IF;
         
         -- Check required fields
@@ -946,4 +980,66 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION public.process_content_update IS 'Unified function to handle content updates and variations in a single place'; 
+COMMENT ON FUNCTION public.process_content_update IS 'Unified function to handle content updates and variations in a single place';
+
+-- Create function to get content schema for validation
+CREATE OR REPLACE FUNCTION public.get_content_schema(p_id uuid)
+RETURNS jsonb AS $$
+DECLARE
+    v_content record;
+    v_schema_id uuid;
+    v_schema_data jsonb;
+BEGIN
+    -- First check active database
+    SELECT * INTO v_content
+    FROM public.db
+    WHERE id = p_id;
+    
+    -- If not found, check archive
+    IF v_content IS NULL THEN
+        SELECT * INTO v_content
+        FROM public.db_archive
+        WHERE id = p_id;
+    END IF;
+    
+    -- Return error if content not found
+    IF v_content IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Content not found',
+            'details', format('Could not find content with id %s', p_id)
+        );
+    END IF;
+    
+    -- Get schema ID from content
+    v_schema_id := v_content.schema;
+    
+    -- Get schema data from active database
+    SELECT json INTO v_schema_data
+    FROM public.db
+    WHERE id = v_schema_id;
+    
+    -- If not found, check archive
+    IF v_schema_data IS NULL THEN
+        SELECT json INTO v_schema_data
+        FROM public.db_archive
+        WHERE id = v_schema_id;
+    END IF;
+    
+    -- Return error if schema not found
+    IF v_schema_data IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Schema not found',
+            'details', format('Could not find schema with id %s', v_schema_id)
+        );
+    END IF;
+    
+    -- Return schema data
+    RETURN jsonb_build_object(
+        'success', true,
+        'schema_id', v_schema_id,
+        'schema_data', v_schema_data
+    );
+END;
+$$ LANGUAGE plpgsql; 
