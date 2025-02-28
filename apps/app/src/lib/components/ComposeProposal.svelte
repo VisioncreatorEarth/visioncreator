@@ -650,8 +650,11 @@ This component handles:
 									{selectedEditRequest.title}
 								</h2>
 								<p class="mt-1 text-sm text-surface-300">
-									Showing changes from v{selectedEditRequest.previousVersion.version || '?'} to v{selectedEditRequest
-										.changes.version || '?'}
+									Showing changes from {selectedEditRequest.previousVersion.snapshot_id
+										? selectedEditRequest.previousVersion.snapshot_id.slice(0, 8)
+										: '?'} to {selectedEditRequest.changes.snapshot_id
+										? selectedEditRequest.changes.snapshot_id.slice(0, 8)
+										: '?'}
 								</p>
 							</div>
 							<div class="flex items-center gap-2">

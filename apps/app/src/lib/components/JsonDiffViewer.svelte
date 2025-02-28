@@ -19,6 +19,7 @@
   3. Integration with Patch Requests:
      - Works with the operations from patch requests
      - Can be used to preview changes before approval
+     - Supports the snapshot-based versioning system
   
   Props:
   - baseJson: The original JSON object
@@ -28,6 +29,54 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Icon from '@iconify/svelte';
+
+	// Define types for diff objects
+	type DiffType = 'add' | 'remove' | 'replace';
+
+	interface DiffAddNode {
+		__diff_type: 'add';
+		__value: any;
+	}
+
+	interface DiffRemoveNode {
+		__diff_type: 'remove';
+		__value: any;
+	}
+
+	interface DiffReplaceNode {
+		__diff_type: 'replace';
+		__old_value: any;
+		__new_value: any;
+	}
+
+	type DiffNode = DiffAddNode | DiffRemoveNode | DiffReplaceNode;
+
+	// Type guards
+	function isAddNode(node: any): node is DiffAddNode {
+		return node && typeof node === 'object' && node.__diff_type === 'add' && '__value' in node;
+	}
+
+	function isRemoveNode(node: any): node is DiffRemoveNode {
+		return node && typeof node === 'object' && node.__diff_type === 'remove' && '__value' in node;
+	}
+
+	function isReplaceNode(node: any): node is DiffReplaceNode {
+		return (
+			node &&
+			typeof node === 'object' &&
+			node.__diff_type === 'replace' &&
+			'__old_value' in node &&
+			'__new_value' in node
+		);
+	}
+
+	// Helper function to safely get the operation type
+	function getDiffType(node: any): string {
+		if (node && typeof node === 'object' && '__diff_type' in node) {
+			return String(node.__diff_type);
+		}
+		return '';
+	}
 
 	// Props
 	export let baseJson: any = {};
@@ -43,7 +92,7 @@
 	export let expanded: boolean = true;
 
 	// State
-	let processedJson: any = {};
+	let processedJson: Record<string, any> = {};
 	let expandedPaths: Set<string> = new Set();
 
 	// Process operations to create a diff view
@@ -252,17 +301,17 @@
 				<div class="mb-2">
 					<div class="flex items-start">
 						<span class="mr-2 text-tertiary-200">"{key}":</span>
-						{#if value && typeof value === 'object' && value.__diff_type}
+						{#if value && typeof value === 'object' && '__diff_type' in value}
 							<div class="flex items-start">
-								<span class="{getOperationColor(value.__diff_type)} mr-2">
-									<Icon icon={getOperationIcon(value.__diff_type)} class="w-4 h-4" />
+								<span class="{getOperationColor(getDiffType(value))} mr-2">
+									<Icon icon={getOperationIcon(getDiffType(value))} class="w-4 h-4" />
 								</span>
 
-								{#if value.__diff_type === 'add'}
+								{#if isAddNode(value)}
 									<span class="text-green-400">{formatValue(value.__value)}</span>
-								{:else if value.__diff_type === 'remove'}
+								{:else if isRemoveNode(value)}
 									<span class="text-red-400">{formatValue(value.__value)}</span>
-								{:else if value.__diff_type === 'replace'}
+								{:else if isReplaceNode(value)}
 									<div class="flex flex-col">
 										<span class="text-red-400">- {formatValue(value.__old_value)}</span>
 										<span class="text-green-400">+ {formatValue(value.__new_value)}</span>
@@ -289,17 +338,20 @@
 										{#each Object.entries(value) as [subKey, subValue], i}
 											<div class="flex items-start">
 												<span class="mr-2 text-tertiary-200">"{subKey}":</span>
-												{#if subValue && typeof subValue === 'object' && subValue.__diff_type}
+												{#if subValue && typeof subValue === 'object' && '__diff_type' in subValue}
 													<div class="flex items-start">
-														<span class="{getOperationColor(subValue.__diff_type)} mr-2">
-															<Icon icon={getOperationIcon(subValue.__diff_type)} class="w-4 h-4" />
+														<span class="{getOperationColor(getDiffType(subValue))} mr-2">
+															<Icon
+																icon={getOperationIcon(getDiffType(subValue))}
+																class="w-4 h-4"
+															/>
 														</span>
 
-														{#if subValue.__diff_type === 'add'}
+														{#if isAddNode(subValue)}
 															<span class="text-green-400">{formatValue(subValue.__value)}</span>
-														{:else if subValue.__diff_type === 'remove'}
+														{:else if isRemoveNode(subValue)}
 															<span class="text-red-400">{formatValue(subValue.__value)}</span>
-														{:else if subValue.__diff_type === 'replace'}
+														{:else if isReplaceNode(subValue)}
 															<div class="flex flex-col">
 																<span class="text-red-400"
 																	>- {formatValue(subValue.__old_value)}</span
