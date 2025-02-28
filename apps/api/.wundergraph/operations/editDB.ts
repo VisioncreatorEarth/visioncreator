@@ -349,10 +349,12 @@ async function createCompositeVariation(
     }
 }
 
+// Significantly simplified editDB operation that uses the unified database function
 export default createOperation.mutation({
     input: z.object({
         id: z.string().uuid(),
         json: z.any(),
+        createVariation: z.boolean().optional().default(false),
     }),
     requireAuthentication: true,
     rbac: {
@@ -366,14 +368,16 @@ export default createOperation.mutation({
         try {
             console.log('[editDB] Starting edit operation with input:', {
                 id: input.id,
-                jsonKeys: typeof input.json === 'object' && input.json ? Object.keys(input.json) : []
+                jsonKeys: typeof input.json === 'object' && input.json ? Object.keys(input.json) : [],
+                createVariation: input.createVariation
             });
 
-            // Call the database function that handles all the logic
+            // Call the simplified database function that handles all the logic
             const { data, error } = await context.supabase.rpc('edit_content_with_validation', {
                 p_id: input.id,
                 p_json: input.json,
-                p_user_id: user.customClaims.id
+                p_user_id: user.customClaims.id,
+                p_create_variation: input.createVariation
             });
 
             if (error) {

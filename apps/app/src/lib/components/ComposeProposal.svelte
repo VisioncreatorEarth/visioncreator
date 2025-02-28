@@ -72,10 +72,6 @@ This component handles:
 		operationName: 'editDB'
 	});
 
-	const createVariationMutation = createMutation({
-		operationName: 'createCompositeVariation'
-	});
-
 	// State management
 	let editMode = false;
 	let editContent = '';
@@ -330,7 +326,8 @@ This component handles:
 
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
-				json: jsonToSave
+				json: jsonToSave,
+				createVariation: false
 			});
 
 			if (result?.success) {
@@ -358,43 +355,59 @@ This component handles:
 	}
 
 	// Create a new variation
-	async function createVariation() {
+	async function handleCreateVariation(sourceId: string) {
+		console.log('Creating variation of composite:', sourceId);
 		try {
-			const sourceId = selectedCompositeId || compose_data?.compose_id;
-			if (!sourceId) {
-				console.error('No source composite ID available');
+			// Find the source composite data
+			let sourceComposite;
+			if (sourceId === compose_data?.compose_id) {
+				// This is the main composite
+				sourceComposite = {
+					id: compose_data?.compose_id,
+					title: compose_data?.title,
+					compose_json: compose_data?.compose_json
+				};
+			} else {
+				// This is a related composite
+				sourceComposite = compose_data?.related_composites?.find((rc) => rc.id === sourceId);
+			}
+
+			if (!sourceComposite) {
+				console.error('Source composite not found:', sourceId);
 				return;
 			}
 
-			console.log('Creating variation:', {
-				sourceCompositeId: sourceId,
-				title: newVariationTitle,
-				description: newVariationDescription,
-				variationType: newVariationType, // Optional variation type
-				applyPendingChanges: !!selectedEditRequestId,
-				pendingEditRequestId: selectedEditRequestId
+			console.log('Source composite info:', {
+				id: sourceComposite.id,
+				title: sourceComposite.title
 			});
 
-			const result = await $createVariationMutation.mutateAsync({
-				sourceCompositeId: sourceId,
+			// Log the variation data we're about to create
+			console.log('Creating variation with data:', {
+				sourceId,
 				title: newVariationTitle,
 				description: newVariationDescription,
-				variationType: newVariationType, // Optional variation type
-				applyPendingChanges: !!selectedEditRequestId,
-				pendingEditRequestId: selectedEditRequestId
+				variationType: newVariationType
 			});
 
-			if (result?.success) {
+			// Use the editDB API with createVariation flag instead of createCompositeVariation
+			const result = await $editDBMutation.mutateAsync({
+				id: sourceComposite.compose_id,
+				json: sourceComposite.compose_json,
+				createVariation: true
+			});
+
+			if (result && result.success) {
 				console.log('Variation created successfully:', result);
 				await $composeQuery.refetch();
 				isCreatingVariation = false;
 
 				// Select the newly created variation
-				if (result.composite && typeof result.composite.id === 'string') {
-					handleCompositeSelect(result.composite.id);
+				if (result.compositeId) {
+					handleCompositeSelect(result.compositeId);
 				}
 			} else {
-				console.error('Failed to create variation:', result?.message);
+				console.error('Failed to create variation:', result && result.error);
 			}
 		} catch (error) {
 			console.error('Error creating variation:', error);
@@ -789,19 +802,18 @@ This component handles:
 				{/if}
 			</div>
 
-			<div class="flex justify-end gap-2 mt-6">
-				<button
-					class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-surface-300 bg-surface-700 hover:bg-surface-600"
-					on:click={toggleVariationModal}
-				>
-					Cancel
-				</button>
+			<div class="mt-6 flex justify-end">
 				<button
 					class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
-					on:click={createVariation}
-					disabled={$createVariationMutation.isLoading}
+					on:click={() => {
+						const sourceId = selectedCompositeId || compose_data?.compose_id;
+						if (sourceId) {
+							handleCreateVariation(sourceId);
+						}
+					}}
+					disabled={$editDBMutation.isLoading}
 				>
-					{$createVariationMutation.isLoading ? 'Creating...' : 'Create Variation'}
+					{$editDBMutation.isLoading ? 'Creating...' : 'Create Variation'}
 				</button>
 			</div>
 		</div>

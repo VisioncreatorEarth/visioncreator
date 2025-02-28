@@ -647,4 +647,298 @@ BEGIN
 
     RETURN v_patch_request;
 END;
-$$ LANGUAGE plpgsql; 
+$$ LANGUAGE plpgsql;
+
+-- Create unified content update function that handles both direct edits and variations
+CREATE OR REPLACE FUNCTION public.process_content_update(
+    p_id uuid,                    -- ID of the content to update
+    p_json jsonb,                 -- New content JSON
+    p_user_id uuid,               -- User making the edit
+    p_create_variation boolean    -- Force variation creation regardless of ownership
+) RETURNS jsonb AS $$
+DECLARE
+    v_is_author boolean;
+    v_current_item record;
+    v_is_archived boolean := false;
+    v_composite record;
+    v_result jsonb;
+    v_new_content_id uuid;
+    v_patch_request_id uuid;
+    v_new_composite_id uuid := null;
+    v_operations_created boolean := false;
+    v_new_json jsonb;
+BEGIN
+    -- Initialize the result
+    v_result := jsonb_build_object('success', false);
+    
+    -- First, check if the item exists in active db
+    SELECT * INTO v_current_item
+    FROM public.db
+    WHERE id = p_id;
+    
+    -- If not found in active db, check archive
+    IF v_current_item IS NULL THEN
+        SELECT * INTO v_current_item
+        FROM public.db_archive
+        WHERE id = p_id;
+        
+        IF v_current_item IS NOT NULL THEN
+            v_is_archived := true;
+        ELSE
+            RETURN jsonb_build_object(
+                'success', false,
+                'error', 'Item not found',
+                'details', format('Could not find content with id %s', p_id)
+            );
+        END IF;
+    END IF;
+    
+    -- Check if the current user is the author
+    v_is_author := (v_current_item.author = p_user_id);
+    
+    -- Clean the JSON input
+    v_new_json := p_json;
+    -- Remove any system fields if they were accidentally included
+    v_new_json := v_new_json - 'version';
+    v_new_json := v_new_json - 'prev';
+    v_new_json := v_new_json - 'created_at';
+    v_new_json := v_new_json - 'author';
+    v_new_json := v_new_json - 'schema';
+
+    -- Find the composite that uses this content
+    SELECT * INTO v_composite
+    FROM public.composites
+    WHERE compose_id = p_id
+    LIMIT 1;
+    
+    IF v_composite IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'No composite found for this content',
+            'details', format('Content with id %s is not referenced by any composite', p_id)
+        );
+    END IF;
+    
+    -- Determine whether to create a variation or update directly
+    -- Create variation if:
+    -- 1. Explicitly requested via p_create_variation OR
+    -- 2. User is not the author OR
+    -- 3. Content is archived
+    IF p_create_variation OR NOT v_is_author OR v_is_archived THEN
+        -- Create a new content version
+        v_new_content_id := gen_random_uuid();
+        
+        -- Insert new content
+        INSERT INTO public.db (
+            id,
+            json,
+            author,
+            schema,
+            version
+        ) VALUES (
+            v_new_content_id,
+            v_new_json,
+            p_user_id,
+            v_current_item.schema,
+            1
+        );
+        
+        -- Create a new composite for this variation
+        v_new_composite_id := gen_random_uuid();
+        
+        INSERT INTO public.composites (
+            id,
+            title,
+            description,
+            compose_id,
+            author
+        ) VALUES (
+            v_new_composite_id,
+            CASE 
+                WHEN v_is_archived THEN format('Restored version of %s', v_composite.title)
+                ELSE format('Variation of %s', v_composite.title)
+            END,
+            CASE 
+                WHEN v_is_archived THEN format('Created by %s from archived content', p_user_id)
+                ELSE format('Created by %s as a variation of composite %s', p_user_id, v_composite.id)
+            END,
+            v_new_content_id,
+            p_user_id
+        );
+        
+        -- Create relationship between new and original composite
+        INSERT INTO public.composite_relationships (
+            source_composite_id,
+            target_composite_id,
+            relationship_type,
+            metadata
+        ) VALUES (
+            v_new_composite_id,
+            v_composite.id,
+            'variation_of',
+            jsonb_build_object(
+                'created_at', now(),
+                'variation_type', CASE WHEN v_is_archived THEN 'archive_variation' ELSE 'edit_variation' END,
+                'description', CASE 
+                    WHEN v_is_archived THEN format('Created by %s from archived content', p_user_id)
+                    ELSE format('Created by %s as a variation of composite %s', p_user_id, v_composite.id)
+                END,
+                'target_composite_id', v_composite.id,
+                'is_from_archive', v_is_archived
+            )
+        );
+        
+        -- Create a patch request for this variation
+        INSERT INTO public.patch_requests (
+            title,
+            description,
+            author,
+            old_version_id,
+            new_version_id,
+            composite_id,
+            status
+        ) VALUES (
+            CASE 
+                WHEN v_is_archived THEN format('Restored archive version for %s', v_composite.title)
+                ELSE format('Edit variation for %s', v_composite.title)
+            END,
+            CASE 
+                WHEN v_is_archived THEN format('Changes made by %s to restore archived content', p_user_id)
+                ELSE format('Changes made by %s to create a variation of %s', p_user_id, v_composite.title)
+            END,
+            p_user_id,
+            p_id,  -- Original content ID as old version
+            v_new_content_id,
+            v_new_composite_id,
+            'pending'  -- Will be auto-approved if the user is the author
+        )
+        RETURNING id INTO v_patch_request_id;
+        
+        -- Generate operations for this patch request
+        IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'generate_operations_from_diff') THEN
+            PERFORM public.generate_operations_from_diff(
+                v_current_item.json,
+                v_new_json,
+                v_patch_request_id,
+                p_user_id,
+                v_new_composite_id,
+                v_new_content_id
+            );
+            v_operations_created := true;
+        END IF;
+        
+        RETURN jsonb_build_object(
+            'success', true,
+            'createdVariation', true,
+            'fromArchive', v_is_archived,
+            'compositeId', v_new_composite_id,
+            'contentId', v_new_content_id,
+            'patchRequestId', v_patch_request_id,
+            'operationsCreated', v_operations_created,
+            'message', CASE
+                WHEN v_is_archived THEN 'Created a new variation from archived content'
+                ELSE 'Created a new variation instead of editing the original content'
+            END
+        );
+    ELSE
+        -- For direct updates (user is author and content is not archived)
+        -- Create a patch request for tracking changes
+        v_new_content_id := gen_random_uuid();
+        
+        -- First create the new content
+        INSERT INTO public.db (
+            id,
+            json,
+            author,
+            schema,
+            version,
+            prev
+        ) VALUES (
+            v_new_content_id,
+            v_new_json,
+            p_user_id,
+            v_current_item.schema,
+            v_current_item.version + 1,
+            NULL  -- Will update after creating patch request
+        );
+        
+        -- Create a patch request
+        INSERT INTO public.patch_requests (
+            title,
+            description,
+            author,
+            old_version_id,
+            new_version_id,
+            composite_id,
+            status
+        ) VALUES (
+            format('Update to %s', v_composite.title),
+            format('Changes made by %s', p_user_id),
+            p_user_id,
+            p_id,
+            v_new_content_id,
+            v_composite.id,
+            'pending'  -- Will be auto-approved since user is the author
+        )
+        RETURNING id INTO v_patch_request_id;
+        
+        -- Generate operations for this patch request
+        IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'generate_operations_from_diff') THEN
+            PERFORM public.generate_operations_from_diff(
+                v_current_item.json,
+                v_new_json,
+                v_patch_request_id,
+                p_user_id,
+                v_composite.id,
+                v_new_content_id
+            );
+            v_operations_created := true;
+        END IF;
+        
+        -- Archive the old version
+        INSERT INTO public.db_archive (
+            id,
+            json,
+            author,
+            schema,
+            version,
+            created_at,
+            prev
+        ) VALUES (
+            v_current_item.id,
+            v_current_item.json,
+            v_current_item.author,
+            v_current_item.schema,
+            v_current_item.version,
+            v_current_item.created_at,
+            v_current_item.prev
+        );
+        
+        -- Update the new version's prev to point to the archived version
+        UPDATE public.db
+        SET prev = v_current_item.id
+        WHERE id = v_new_content_id;
+        
+        -- Update the composite to point to the new content
+        UPDATE public.composites
+        SET compose_id = v_new_content_id,
+            updated_at = NOW()
+        WHERE id = v_composite.id;
+        
+        -- Finally delete the old version from active db
+        DELETE FROM public.db WHERE id = p_id;
+        
+        RETURN jsonb_build_object(
+            'success', true,
+            'createdVariation', false,
+            'compositeId', v_composite.id,
+            'contentId', v_new_content_id,
+            'patchRequestId', v_patch_request_id,
+            'operationsCreated', v_operations_created,
+            'message', 'Successfully updated content'
+        );
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.process_content_update IS 'Unified function to handle content updates and variations in a single place'; 

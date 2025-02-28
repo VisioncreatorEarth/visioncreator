@@ -268,7 +268,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION public.edit_content_with_validation(
     p_id uuid,
     p_json jsonb,
-    p_user_id uuid
+    p_user_id uuid,
+    p_create_variation boolean DEFAULT false
 ) RETURNS jsonb AS $$
 DECLARE
     v_current_item record;
@@ -318,14 +319,8 @@ BEGIN
         END IF;
     END IF;
     
-    -- If validation passes, let handle_content_update function decide what to do based on:
-    -- 1. Whether content is archived
-    -- 2. Whether user is the author
-    -- 3. Whether appropriate composite exists
-    -- The handle_content_update function will route to:
-    -- - create_composite_variation for non-authors or archived content
-    -- - update_db_version for authors editing active content
-    RETURN public.handle_content_update(p_id, p_json, p_user_id);
+    -- If validation passes, use our new unified process function
+    RETURN public.process_content_update(p_id, p_json, p_user_id, p_create_variation);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

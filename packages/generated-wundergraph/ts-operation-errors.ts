@@ -12,7 +12,6 @@ export type OperationErrors = {
 	checkCapabilities: CheckCapabilitiesErrors;
 	checkInvestmentEligibility: CheckInvestmentEligibilityErrors;
 	checkNotificationSubscription: CheckNotificationSubscriptionErrors;
-	createCompositeVariation: CreateCompositeVariationErrors;
 	createInvite: CreateInviteErrors;
 	createMessage: CreateMessageErrors;
 	createProposal: CreateProposalErrors;
@@ -43,7 +42,6 @@ export type OperationErrors = {
 	queryComposeProposal: QueryComposeProposalErrors;
 	queryComposer: QueryComposerErrors;
 	queryDB: QueryDBErrors;
-	queryEditRequests: QueryEditRequestsErrors;
 	queryLeaderboard: QueryLeaderboardErrors;
 	queryMails: QueryMailsErrors;
 	queryMe: QueryMeErrors;
@@ -95,7 +93,6 @@ export type AskHominioErrors =
 export type CheckCapabilitiesErrors = ClientOperationErrors;
 export type CheckInvestmentEligibilityErrors = ClientOperationErrors;
 export type CheckNotificationSubscriptionErrors = ClientOperationErrors;
-export type CreateCompositeVariationErrors = ClientOperationErrors;
 export type CreateInviteErrors = ClientOperationErrors;
 export type CreateMessageErrors = ClientOperationErrors;
 export type CreateProposalErrors = ClientOperationErrors;
@@ -126,7 +123,6 @@ export type QueryCallsAndTimeStatsErrors = ClientOperationErrors;
 export type QueryComposeProposalErrors = ClientOperationErrors;
 export type QueryComposerErrors = ClientOperationErrors;
 export type QueryDBErrors = ClientOperationErrors;
-export type QueryEditRequestsErrors = ClientOperationErrors;
 export type QueryLeaderboardErrors = ClientOperationErrors;
 export type QueryMailsErrors = ClientOperationErrors;
 export type QueryMeErrors = ClientOperationErrors;
