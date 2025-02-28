@@ -18,6 +18,7 @@ This component handles:
 	import PatchRequests from './PatchRequests.svelte';
 	import JsonDiffViewer from './JsonDiffViewer.svelte';
 	import VariationTreeItem from './VariationTreeItem.svelte';
+	import MergeDialog from './MergeDialog.svelte';
 
 	// Props
 	export let proposalId: string;
@@ -97,6 +98,9 @@ This component handles:
 	let toastType: 'success' | 'error' | 'info' = 'info';
 	let toastVisible = false;
 	let toastTimeout: number | null = null;
+
+	// State management for merge dialog
+	let showMergeDialog = false;
 
 	function showToast(
 		message: string,
@@ -468,6 +472,28 @@ This component handles:
 	$: variationTree = compose_data?.related_composites
 		? organizeCompositesIntoTree(compose_data.related_composites)
 		: [];
+
+	// Handle opening the merge dialog
+	function handleOpenMergeDialog() {
+		showMergeDialog = true;
+	}
+
+	// Handle closing the merge dialog
+	function handleCloseMergeDialog() {
+		showMergeDialog = false;
+	}
+
+	// Handle merge completion
+	function handleMergeComplete(event: CustomEvent<{ patchRequestId: string }>) {
+		const patchRequestId = event.detail.patchRequestId;
+		console.log('[ComposeProposal] Merge completed, patch request created:', patchRequestId);
+
+		// Close the dialog
+		showMergeDialog = false;
+
+		// Refetch data to show the updated state
+		$composeQuery.refetch();
+	}
 </script>
 
 <div class="flex h-full bg-surface-800">
@@ -725,6 +751,13 @@ This component handles:
 									</button>
 								{:else}
 									<button
+										class="px-4 py-2 text-sm font-medium text-green-400 transition-colors rounded-lg bg-green-500/10 hover:bg-green-500/20"
+										on:click={handleOpenMergeDialog}
+									>
+										<Icon icon="heroicons:code-bracket-merge" class="inline-block w-4 h-4 mr-1" />
+										Merge
+									</button>
+									<button
 										class="px-4 py-2 text-sm font-medium text-purple-400 transition-colors rounded-lg bg-purple-500/10 hover:bg-purple-500/20"
 										on:click={toggleVariationModal}
 									>
@@ -871,6 +904,16 @@ This component handles:
 			</div>
 		</div>
 	</div>
+{/if}
+
+<!-- Merge Dialog -->
+{#if showMergeDialog && compose_data}
+	<MergeDialog
+		targetCompositeId={selectedCompositeId || compose_data.compose_id || ''}
+		open={showMergeDialog}
+		on:close={handleCloseMergeDialog}
+		on:mergeComplete={handleMergeComplete}
+	/>
 {/if}
 
 <style>

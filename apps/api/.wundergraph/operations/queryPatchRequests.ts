@@ -11,6 +11,8 @@ interface PatchRequest {
     new_version_id: string;
     composite_id: string;
     composite_author: string;
+    operation_type: string | null;
+    metadata: Record<string, any> | null;
     author: {
         id: string;
         name: string;
@@ -39,6 +41,8 @@ interface RawPatchRequest {
     title: string;
     description: string | null;
     status: 'pending' | 'approved' | 'rejected';
+    operation_type: string | null;
+    metadata: Record<string, any> | null;
     created_at: string;
     updated_at: string;
     old_version_id: string;
@@ -85,6 +89,8 @@ export default createOperation.query({
                     title,
                     description,
                     status,
+                    operation_type,
+                    metadata,
                     created_at,
                     updated_at,
                     old_version_id,
@@ -236,6 +242,8 @@ export default createOperation.query({
                     description: request.description || '',
                     created_at: request.created_at,
                     updated_at: request.updated_at,
+                    operation_type: request.operation_type,
+                    metadata: request.metadata,
                     author: {
                         id: author?.id || '',
                         name: author?.name || 'Unknown'

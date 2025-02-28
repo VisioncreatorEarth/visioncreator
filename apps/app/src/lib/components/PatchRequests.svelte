@@ -7,6 +7,7 @@ This component handles:
 3. Showing the changes between versions
 4. Managing the patch request lifecycle
 5. Displaying granular operations for each patch request
+6. Showing merge information for three-way merges
 
 Props:
 - compositeId: string - The ID of the composite to show patch requests for
@@ -182,6 +183,35 @@ Props:
 		}
 	}
 
+	// Helper function to get operation type badge for merge operations
+	function getOperationTypeBadge(request: any): { color: string; icon: string; text: string } {
+		if (request.metadata?.merge_strategy === 'three_way') {
+			return {
+				color: 'text-purple-400 bg-purple-400/10',
+				icon: 'heroicons:code-bracket-square',
+				text: 'Three-way Merge'
+			};
+		} else if (request.operation_type === 'merge') {
+			return {
+				color: 'text-blue-400 bg-blue-400/10',
+				icon: 'heroicons:arrow-path',
+				text: 'Simple Merge'
+			};
+		} else if (request.operation_type === 'branch') {
+			return {
+				color: 'text-green-400 bg-green-400/10',
+				icon: 'heroicons:git-branch',
+				text: 'Branch'
+			};
+		} else {
+			return {
+				color: 'text-tertiary-400 bg-tertiary-400/10',
+				icon: 'heroicons:pencil-square',
+				text: 'Edit'
+			};
+		}
+	}
+
 	// Format date for display
 	function formatDate(dateString: string): string {
 		const date = new Date(dateString);
@@ -249,6 +279,42 @@ Props:
 							<p class="mt-1 text-xs text-tertiary-300">
 								{request.author.name} • {formatDate(request.created_at)}
 							</p>
+
+							<!-- Operation type badge -->
+							{#if request.operation_type}
+								{@const badge = getOperationTypeBadge(request)}
+								<span
+									class="inline-flex items-center gap-1 px-2 py-1 mt-2 text-xs font-medium rounded-full {badge.color}"
+								>
+									<Icon icon={badge.icon} class="w-3.5 h-3.5" />
+									{badge.text}
+								</span>
+							{/if}
+
+							<!-- Merge info (for three-way merges) -->
+							{#if request.metadata?.merge_strategy === 'three_way' && request.metadata?.ancestor_id}
+								<div class="mt-2 text-xs text-tertiary-400">
+									<span class="flex items-center gap-1">
+										<Icon icon="heroicons:code-bracket-square" class="w-3.5 h-3.5" />
+										Used common ancestor:
+										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
+											{request.metadata.ancestor_id.slice(0, 8)}
+										</span>
+									</span>
+									{#if request.metadata.conflicts_detected > 0}
+										<span class="flex items-center gap-1 mt-1 text-yellow-400">
+											<Icon icon="heroicons:exclamation-triangle" class="w-3.5 h-3.5" />
+											{request.metadata.conflicts_detected} conflicts auto-resolved
+										</span>
+									{:else}
+										<span class="flex items-center gap-1 mt-1 text-green-400">
+											<Icon icon="heroicons:check-circle" class="w-3.5 h-3.5" />
+											No conflicts detected
+										</span>
+									{/if}
+								</div>
+							{/if}
+
 							<div class="mt-2 space-y-1">
 								<p class="text-xs text-tertiary-400">
 									From:
@@ -334,6 +400,20 @@ Props:
 											{:else}
 												<div class="pl-5 mt-1">
 													<div class="text-red-400">- {formatValue(operation.old_value)}</div>
+												</div>
+											{/if}
+
+											<!-- Metadata for merge operations -->
+											{#if operation.metadata?.merge_source_id || operation.metadata?.ancestor_id}
+												<div
+													class="pl-5 mt-1 pt-1 border-t border-surface-700/50 text-[10px] text-tertiary-400"
+												>
+													{#if operation.metadata.merge_source_id}
+														<div>Source: {operation.metadata.merge_source_id.slice(0, 8)}</div>
+													{/if}
+													{#if operation.metadata.ancestor_id}
+														<div>Ancestor: {operation.metadata.ancestor_id.slice(0, 8)}</div>
+													{/if}
 												</div>
 											{/if}
 										</div>

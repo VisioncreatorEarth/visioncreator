@@ -43,3 +43,8 @@ Reflect on 5-7 different possible sources of the problem, distill those down to 
 When asked to work on a larger refactor or doing any other changes:
 Explain the full approach you’d take to implement this. Just tell, don’t code.
 
+When working with the Supabase Database you can reset the localhost state with (inside the folder packages/supacreator/supabase)
+````
+npx supabase db reset
+````
+and use the MCP Supabase Tool in read only to query the Database for debugging 
