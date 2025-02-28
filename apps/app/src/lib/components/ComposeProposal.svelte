@@ -330,7 +330,16 @@ This component handles:
 				createVariation: false
 			});
 
-			if (result?.success) {
+			// Define a type for the expected result
+			interface EditResult {
+				success?: boolean;
+				error?: string;
+			}
+
+			// Cast the result to the expected type
+			const typedResult = result as EditResult;
+
+			if (typedResult && typedResult.success) {
 				await $composeQuery.refetch();
 				editMode = false;
 			}
@@ -365,7 +374,8 @@ This component handles:
 				sourceComposite = {
 					id: compose_data?.compose_id,
 					title: compose_data?.title,
-					compose_json: compose_data?.compose_json
+					compose_json: compose_data?.compose_json,
+					compose_id: compose_data?.compose_id
 				};
 			} else {
 				// This is a related composite
@@ -392,22 +402,32 @@ This component handles:
 
 			// Use the editDB API with createVariation flag instead of createCompositeVariation
 			const result = await $editDBMutation.mutateAsync({
-				id: sourceComposite.compose_id,
+				id: sourceComposite.compose_id as string,
 				json: sourceComposite.compose_json,
 				createVariation: true
 			});
 
-			if (result && result.success) {
-				console.log('Variation created successfully:', result);
+			// Define a type for the expected result
+			interface EditResult {
+				success?: boolean;
+				compositeId?: string;
+				error?: string;
+			}
+
+			// Cast the result to the expected type
+			const typedResult = result as EditResult;
+
+			if (typedResult && typedResult.success) {
+				console.log('Variation created successfully:', typedResult);
 				await $composeQuery.refetch();
 				isCreatingVariation = false;
 
 				// Select the newly created variation
-				if (result.compositeId) {
-					handleCompositeSelect(result.compositeId);
+				if (typedResult.compositeId) {
+					handleCompositeSelect(typedResult.compositeId);
 				}
 			} else {
-				console.error('Failed to create variation:', result && result.error);
+				console.error('Failed to create variation:', typedResult && typedResult.error);
 			}
 		} catch (error) {
 			console.error('Error creating variation:', error);

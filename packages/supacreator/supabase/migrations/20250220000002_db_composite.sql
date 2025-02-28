@@ -47,6 +47,9 @@ DECLARE
     v_key text;
     v_is_archived boolean := false;
     v_source_in_archive boolean := false;
+    v_vector_clock jsonb := '{}'::jsonb;
+    v_new_snapshot_id uuid := gen_random_uuid();
+    v_operation_ids uuid[];
 BEGIN
     -- 1. Get the source composite
     SELECT id, title, description, compose_id, author 
@@ -59,14 +62,14 @@ BEGIN
     END IF;
 
     -- 2. Get the content from the source composite - first check active DB
-    SELECT id, json, author, schema, version
+    SELECT id, json, author, schema, snapshot_id
     INTO v_source_content
     FROM public.db
     WHERE id = v_source_composite.compose_id;
     
     -- If not in active DB, check archive
     IF v_source_content IS NULL THEN
-        SELECT id, json, author, schema, version
+        SELECT id, json, author, schema, snapshot_id
         INTO v_source_content
         FROM public.db_archive
         WHERE id = v_source_composite.compose_id;
@@ -88,13 +91,17 @@ BEGIN
         json,
         author,
         schema,
-        version
+        created_at,
+        last_modified_at,
+        snapshot_id
     ) VALUES (
         v_clone_content_id,
         v_source_content.json,
         p_user_id,
         v_source_content.schema,
-        1
+        now(),
+        now(),
+        v_source_content.snapshot_id
     )
     RETURNING * INTO v_cloned_content;
 
@@ -106,13 +113,17 @@ BEGIN
         json,
         author,
         schema,
-        version
+        created_at,
+        last_modified_at,
+        snapshot_id
     ) VALUES (
         v_new_content_id,
         p_new_json,
         p_user_id,
         v_source_content.schema,
-        1
+        now(),
+        now(),
+        v_new_snapshot_id
     )
     RETURNING * INTO v_new_content;
 
@@ -177,14 +188,17 @@ BEGIN
     DECLARE
         v_patch_title text;
         v_patch_description text;
+        v_operation_type text;
     BEGIN
         -- Set the title and description based on the variation type
         IF v_source_in_archive THEN
             v_patch_title := 'Restored archive version for ' || v_source_composite.title;
             v_patch_description := 'Changes made by ' || p_user_id || ' to restore archived content for ' || v_source_composite.title;
+            v_operation_type := 'branch';
         ELSE
             v_patch_title := 'Edit variation for ' || v_source_composite.title;
             v_patch_description := 'Changes made by ' || p_user_id || ' to create a variation of ' || v_source_composite.title;
+            v_operation_type := 'branch';
         END IF;
         
         -- Create the patch request using the clone as the old version (which is now in the active DB)
@@ -195,7 +209,8 @@ BEGIN
             old_version_id,
             new_version_id,
             composite_id,
-            status
+            status,
+            operation_type
         ) VALUES (
             v_patch_title,
             v_patch_description,
@@ -203,7 +218,8 @@ BEGIN
             v_clone_content_id,  -- Using the clone we just created which is guaranteed to be in the active DB
             v_new_content_id,
             v_new_composite_id,
-            'pending'  -- Set as pending so the auto-approve trigger can process it
+            'pending',  -- Set as pending so the auto-approve trigger can process it
+            v_operation_type
         )
         RETURNING * INTO v_patch_request;
         
@@ -215,17 +231,66 @@ BEGIN
     v_old_json := v_cloned_content.json;
     v_new_json := p_new_json;
     
-    -- Use the generate_operations_from_diff function if it exists
-    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'generate_operations_from_diff') THEN
-        PERFORM public.generate_operations_from_diff(
-            v_old_json,
-            v_new_json,
-            v_patch_request_id,
-            p_user_id,
-            v_new_composite_id,
-            v_new_content_id
-        );
-    END IF;
+    -- Generate diff and create operations
+    DECLARE
+        v_diff jsonb;
+        v_operations jsonb;
+    BEGIN
+        -- Generate diff between old and new content
+        v_diff := public.generate_diff(v_old_json, v_new_json);
+        v_operations := v_diff -> 'operations';
+        
+        -- Update vector clock
+        v_vector_clock := public.update_vector_clock(v_vector_clock, p_user_id);
+        
+        -- Create an array to store operation IDs
+        v_operation_ids := ARRAY[]::uuid[];
+        
+        -- Process each operation from the diff
+        FOR i IN 0..jsonb_array_length(v_operations) - 1 LOOP
+            DECLARE
+                v_op jsonb := v_operations -> i;
+                v_op_id uuid;
+            BEGIN
+                INSERT INTO public.db_operations (
+                    patch_request_id,
+                    operation_type,
+                    path,
+                    old_value,
+                    new_value,
+                    author,
+                    composite_id,
+                    content_id,
+                    vector_clock,
+                    metadata
+                ) VALUES (
+                    v_patch_request_id,
+                    v_op ->> 'op',
+                    string_to_array(substring((v_op ->> 'path'), 2), '/'),  -- Remove leading '/' and split
+                    CASE WHEN v_op ? 'old_value' THEN v_op -> 'old_value' ELSE NULL END,
+                    CASE WHEN v_op ? 'value' THEN v_op -> 'value' ELSE NULL END,
+                    p_user_id,
+                    v_new_composite_id,
+                    v_new_content_id,
+                    v_vector_clock,
+                    jsonb_build_object(
+                        'timestamp', now(),
+                        'snapshot_id', v_new_snapshot_id
+                    )
+                )
+                RETURNING id INTO v_op_id;
+                
+                -- Add to operation IDs array
+                v_operation_ids := array_append(v_operation_ids, v_op_id);
+            END;
+        END LOOP;
+    END;
+
+    -- 9. Auto-approve the patch request
+    UPDATE public.patch_requests
+    SET status = 'approved',
+        updated_at = now()
+    WHERE id = v_patch_request_id;
 
     -- Return a JSON object with the result
     RETURN jsonb_build_object(
@@ -234,6 +299,8 @@ BEGIN
         'fromArchive', v_source_in_archive,
         'newCompositeId', v_new_composite_id,
         'patchRequestId', v_patch_request_id,
+        'operationCount', array_length(v_operation_ids, 1),
+        'snapshotId', v_new_snapshot_id,
         'message', CASE
             WHEN v_source_in_archive THEN 'Created a new variation from archived content'
             ELSE 'Created a new variation instead of editing the original content'
@@ -270,7 +337,7 @@ COMMENT ON TABLE composite_relationships IS 'Tracks relationships between compos
 
 -- Insert example data
 -- First, insert the markdown schema
-INSERT INTO db (id, json, author, schema, version) VALUES 
+INSERT INTO db (id, json, author, schema, snapshot_id) VALUES 
 ('11111111-1111-1111-1111-111111111111', 
 '{
   "type": "object",
@@ -288,18 +355,18 @@ INSERT INTO db (id, json, author, schema, version) VALUES
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user
 '00000000-0000-0000-0000-000000000001',  -- Meta schema
-1  -- Initial version
+gen_random_uuid()  -- Generate a random UUID for snapshot_id
 );
 
 -- Insert main instance
-INSERT INTO db (id, json, author, schema, version) VALUES 
+INSERT INTO db (id, json, author, schema, snapshot_id) VALUES 
 ('22222222-2222-2222-2222-222222222222', 
 '{
   "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version"
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',
 '11111111-1111-1111-1111-111111111111',
-1
+gen_random_uuid()  -- Generate a random UUID for snapshot_id
 );
 
 -- Create main composite

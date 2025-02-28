@@ -29,8 +29,9 @@ interface PatchRequest {
 interface DBVersion {
     id: string;
     json: Record<string, any>;
-    version: number;
+    snapshot_id: string;
     created_at: string;
+    last_modified_at: string;
 }
 
 interface RawPatchRequest {
@@ -49,8 +50,9 @@ interface RawPatchRequest {
 interface RawDBVersion {
     id: string;
     json: Record<string, any>;
-    version: number;
+    snapshot_id: string;
     created_at: string;
+    last_modified_at: string;
 }
 
 interface RawOperation {
@@ -141,7 +143,7 @@ export default createOperation.query({
             // First, try to get versions from active db
             const { data: rawDbVersions } = await context.supabase
                 .from('db')
-                .select('id, json, version, created_at')
+                .select('id, json, snapshot_id, created_at, last_modified_at')
                 .in('id', versionIds);
 
             const dbVersions = (rawDbVersions || []) as RawDBVersion[];
@@ -151,8 +153,9 @@ export default createOperation.query({
                 versionsMap.set(v.id, {
                     id: v.id,
                     json: v.json,
-                    version: v.version,
-                    created_at: v.created_at
+                    snapshot_id: v.snapshot_id,
+                    created_at: v.created_at,
+                    last_modified_at: v.last_modified_at
                 });
             });
 
@@ -161,18 +164,19 @@ export default createOperation.query({
             if (remainingIds.length > 0) {
                 const { data: rawArchiveVersions } = await context.supabase
                     .from('db_archive')
-                    .select('id, json, version, created_at')
+                    .select('id, json, snapshot_id, created_at, archived_at')
                     .in('id', remainingIds);
 
-                const archiveVersions = (rawArchiveVersions || []) as RawDBVersion[];
+                const archiveVersions = (rawArchiveVersions || []) as any[];
 
                 // Add archived versions to the map
                 archiveVersions.forEach((v) => {
                     versionsMap.set(v.id, {
                         id: v.id,
                         json: v.json,
-                        version: v.version,
-                        created_at: v.created_at
+                        snapshot_id: v.snapshot_id,
+                        created_at: v.created_at,
+                        last_modified_at: v.archived_at
                     });
                 });
             }
@@ -241,14 +245,14 @@ export default createOperation.query({
                         content: newVersion?.json?.content,
                         schema: newVersion?.json?.schema,
                         instance: newVersion?.json,
-                        version: newVersion?.version,
+                        snapshot_id: newVersion?.snapshot_id,
                         created_at: newVersion?.created_at
                     },
                     previousVersion: {
                         content: oldVersion?.json?.content,
                         schema: oldVersion?.json?.schema,
                         instance: oldVersion?.json,
-                        version: oldVersion?.version,
+                        snapshot_id: oldVersion?.snapshot_id,
                         created_at: oldVersion?.created_at
                     },
                     status: request.status || 'pending',

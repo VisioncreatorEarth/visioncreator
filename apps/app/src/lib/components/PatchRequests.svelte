@@ -76,11 +76,11 @@ Props:
 					operationsCount: r.operations?.length || 0,
 					previousVersion: {
 						id: r.previousVersion?.instance?.id,
-						version: r.previousVersion?.version
+						snapshot_id: r.previousVersion?.instance?.snapshot_id
 					},
 					changes: {
 						id: r.changes?.instance?.id,
-						version: r.changes?.version
+						snapshot_id: r.changes?.instance?.snapshot_id
 					}
 				}))
 			});
@@ -304,7 +304,7 @@ Props:
 							</p>
 							<div class="mt-2 space-y-1">
 								<p class="text-xs text-tertiary-400">
-									From: v{request.previousVersion.version || '?'}
+									From:
 									{#if request.previousVersion.instance?.id}
 										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
 											{request.previousVersion.instance.id.slice(0, 8)}
@@ -312,7 +312,7 @@ Props:
 									{/if}
 								</p>
 								<p class="text-xs text-tertiary-400">
-									To: v{request.changes.version || '?'}
+									To:
 									{#if request.changes.instance?.id}
 										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
 											{request.changes.instance.id.slice(0, 8)}

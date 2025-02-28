@@ -31,12 +31,16 @@ CREATE TABLE IF NOT EXISTS "public"."db_operations" (
     "author" uuid not null,
     "composite_id" uuid not null,
     "content_id" uuid not null,
+    "vector_clock" jsonb default '{}',
     constraint "db_operations_pkey" primary key ("id"),
     constraint "db_operations_author_fkey" foreign key ("author") references public.profiles(id),
     constraint "db_operations_composite_id_fkey" foreign key ("composite_id") references public.composites(id),
     constraint "db_operations_patch_request_fkey" foreign key ("patch_request_id") references public.patch_requests(id) on delete cascade,
     constraint "db_operations_operation_type_check" check (operation_type in ('add', 'remove', 'replace', 'move', 'copy', 'test'))
 );
+
+-- Create index on vector_clock
+CREATE INDEX idx_db_operations_vector_clock ON public.db_operations USING gin (vector_clock);
 
 -- Create content validation function
 CREATE OR REPLACE FUNCTION public.validate_content_against_schema(
@@ -699,11 +703,11 @@ BEGIN
     -- Clean the JSON input
     v_new_json := p_json;
     -- Remove any system fields if they were accidentally included
-    v_new_json := v_new_json - 'version';
-    v_new_json := v_new_json - 'prev';
     v_new_json := v_new_json - 'created_at';
+    v_new_json := v_new_json - 'last_modified_at';
     v_new_json := v_new_json - 'author';
     v_new_json := v_new_json - 'schema';
+    v_new_json := v_new_json - 'snapshot_id';
 
     -- Find the composite that uses this content
     SELECT * INTO v_composite
@@ -734,13 +738,17 @@ BEGIN
             json,
             author,
             schema,
-            version
+            created_at,
+            last_modified_at,
+            snapshot_id
         ) VALUES (
             v_new_content_id,
             v_new_json,
             p_user_id,
             v_current_item.schema,
-            1
+            NOW(),
+            NOW(),
+            gen_random_uuid()
         );
         
         -- Create a new composite for this variation
@@ -851,15 +859,17 @@ BEGIN
             json,
             author,
             schema,
-            version,
-            prev
+            created_at,
+            last_modified_at,
+            snapshot_id
         ) VALUES (
             v_new_content_id,
             v_new_json,
             p_user_id,
             v_current_item.schema,
-            v_current_item.version + 1,
-            NULL  -- Will update after creating patch request
+            NOW(),
+            NOW(),
+            gen_random_uuid()
         );
         
         -- Create a patch request
@@ -901,23 +911,18 @@ BEGIN
             json,
             author,
             schema,
-            version,
             created_at,
-            prev
+            archived_at,
+            snapshot_id
         ) VALUES (
             v_current_item.id,
             v_current_item.json,
             v_current_item.author,
             v_current_item.schema,
-            v_current_item.version,
             v_current_item.created_at,
-            v_current_item.prev
+            NOW(),
+            v_current_item.snapshot_id
         );
-        
-        -- Update the new version's prev to point to the archived version
-        UPDATE public.db
-        SET prev = v_current_item.id
-        WHERE id = v_new_content_id;
         
         -- Update the composite to point to the new content
         UPDATE public.composites

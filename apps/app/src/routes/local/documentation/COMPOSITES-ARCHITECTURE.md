@@ -29,73 +29,67 @@ The system uses a versioned database structure with three main components:
   - Enables collaborative editing
   - Maintains operation history
 
-### Version Property Explained
+### Snapshot ID System
 
-The version property in our Yjs-inspired operation-based system serves a different purpose than traditional sequential versioning:
+The system uses a `snapshot_id` field (UUID) to uniquely identify each version of content:
 
-1. **Clock Vector Component**
-   - Acts as part of the logical clock vector in our CRDT system
-   - Represents local sequence number for a particular client/node
-   - NOT used for traditional optimistic concurrency control
+1. **Version Identification**
+   - Each content version has a unique `snapshot_id`
+   - Generated as a UUID when content is created or updated
+   - Used to track the exact state of content at a specific point in time
    - Example:
      ```typescript
-     interface ClockVector {
-         clientId: string;
-         localVersion: number;
-         timestamp: number;
+     interface ContentVersion {
+         id: string;
+         snapshot_id: string;
+         json: any;
+         author: string;
+         created_at: string;
+         last_modified_at: string;
      }
      ```
 
 2. **Performance Optimization**
-   - Quick way to check if ANY changes occurred
-   - Helps with cache invalidation decisions
-   - Does NOT determine the exact state
+   - Enables quick identification of specific content versions
+   - Facilitates efficient content retrieval
+   - Supports caching strategies
    - Example usage:
      ```typescript
-     async function hasAnyChanges(contentId: string, lastKnownVector: ClockVector) {
-         const currentVector = await getClockVector(contentId);
-         return !vectorsEqual(currentVector, lastKnownVector);
+     async function getContentBySnapshot(snapshot_id: string) {
+         // First check active content
+         let content = await db.findOne({ snapshot_id });
+         
+         // If not found, check archive
+         if (!content) {
+             content = await db_archive.findOne({ snapshot_id });
+         }
+         
+         return content;
      }
      ```
 
-3. **Monitoring and Debugging**
-   - Tracks update frequency per client
-   - Helps identify high-activity clients
-   - Assists in troubleshooting sync patterns
-   - Example monitoring:
+3. **Tracking and Auditing**
+   - Provides immutable reference to specific content versions
+   - Enables precise tracking of content lineage
+   - Supports audit requirements
+   - Example query:
      ```sql
-     SELECT client_id, MAX(local_version) as version_height
-     FROM db_operations 
-     GROUP BY client_id 
-     ORDER BY version_height DESC;
+     SELECT * FROM db_operations 
+     WHERE content_snapshot_id = '123e4567-e89b-12d3-a456-426614174000';
      ```
 
-4. **Migration and Compatibility**
-   - Supports legacy system integrations
-   - Helps with transitional architectures
-   - NOT used for state resolution
-   - Example bridge:
-     ```typescript
-     interface StateCompatibility {
-         yjsState: Array<Operation>;
-         legacyVersion: number;  // For backwards compatibility only
-     }
-     ```
+### Important Note on Content Versioning
 
-### Important Note on Concurrent Edits
+In our system, content versioning is managed through:
+1. The `snapshot_id` field for unique version identification
+2. The complete operation log for tracking changes
+3. The patch request system for managing updates
 
-In our Yjs-inspired system, the source of truth for the document state comes from:
-1. The complete operation log
-2. The CRDT merge rules
-3. The vector clock timestamps
-
-The version number is NOT used for:
-- State resolution
-- Conflict detection
-- Determining document equality
-- Operation ordering
-
-This is a significant departure from traditional version control systems, where version numbers determine the document state. In our system, concurrent edits are handled through the operation log and CRDT rules, making the version number primarily useful for performance optimization and monitoring.
+This approach provides several benefits:
+- Immutable content versions
+- Clear lineage tracking
+- Support for branching and variations
+- Efficient storage of historical versions
 
 ### 2. Composites
 
@@ -261,14 +255,14 @@ graph TD
 
 1. **State Management**
    - Maintains operation log
-   - Tracks version vectors
+   - Tracks snapshot IDs
    - Handles state convergence
    - Ensures eventual consistency
 
 2. **Synchronization Process**
    ```typescript
    interface StateSync {
-       version: number;
+       snapshot_id: string;
        operations: Operation[];
        timestamp: number;
        metadata: {
@@ -305,8 +299,8 @@ CREATE OR REPLACE FUNCTION detect_operation_conflicts(
     -- and classification
 $$;
 
--- Edit content with validation
-CREATE OR REPLACE FUNCTION edit_content_with_validation(
+-- Process edit with validation
+CREATE OR REPLACE FUNCTION process_edit(
     p_id uuid,
     p_json jsonb,
     p_user_id uuid
@@ -315,7 +309,9 @@ CREATE OR REPLACE FUNCTION edit_content_with_validation(
     -- Checks user permissions
     -- Creates variations for non-authors
     -- Creates clones for archived content
-    -- Manages versioning
+    -- Manages versioning with snapshot_id
+    -- Archives old versions
+    -- Creates patch requests
 $$;
 ```
 
@@ -383,11 +379,11 @@ graph TD
 ```
 
 **Implementation Details:**
-- Handled by database functions in SQL
+- Handled by `create_composite_variation` function in SQL
 - Automatic variation creation when non-authors edit content
 - Automatic variation creation when editing archived content
 - Maintains relationship metadata
-- Auto-generates version tracking
+- Auto-generates snapshot IDs for tracking
 
 ### 2. Making Content Changes
 
@@ -404,7 +400,7 @@ graph TD
 ```
 
 **Implementation Details:**
-- Permission checks done in database
+- Permission checks done in `process_edit` function
 - Changes tracked through `db_operations`
 - Automatic patch request generation
 - Granular operation tracking (add/remove/replace)
@@ -421,6 +417,13 @@ graph TD
     E -->|Approve| F[Changes Applied]
     E -->|Reject| G[Changes Rejected]
 ```
+
+**Implementation Details:**
+- Auto-approval handled by `auto_approve_own_patch_requests` trigger
+- Manual approval through `approve_patch_request` function
+- Rejection through `reject_patch_request` function
+- UI components in `PatchRequests.svelte` for review interface
+- WunderGraph operation `updateEditRequest.ts` for API integration
 
 ## Technical Components
 

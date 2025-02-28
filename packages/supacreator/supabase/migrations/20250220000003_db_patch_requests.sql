@@ -38,10 +38,14 @@ CREATE TABLE IF NOT EXISTS "public"."patch_requests" (
     "old_version_id" uuid not null,
     "new_version_id" uuid not null,
     "composite_id" uuid not null,
+    "operation_type" text,
+    "parent_patch_id" uuid,
     constraint "patch_requests_pkey" primary key ("id"),
     constraint "patch_requests_author_fkey" foreign key ("author") references public.profiles(id),
     constraint "patch_requests_composite_id_fkey" foreign key ("composite_id") references public.composites(id),
-    constraint "patch_requests_status_check" check (status in ('pending', 'approved', 'rejected'))
+    constraint "patch_requests_parent_patch_fkey" foreign key ("parent_patch_id") references public.patch_requests(id),
+    constraint "patch_requests_status_check" check (status in ('pending', 'approved', 'rejected')),
+    constraint "patch_requests_operation_type_check" check (operation_type in ('edit', 'merge', 'branch', 'rebase', null))
 );
 
 -- Create a trigger to validate old_version_id exists in either db or db_archive
@@ -184,20 +188,18 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION public.on_version_updated()
 RETURNS trigger AS $$
 BEGIN
-    -- Only proceed if prev field was updated and is not null
-    IF NEW.prev IS NOT NULL THEN
-        -- Call the patch request generation with the correct version IDs
-        PERFORM public.generate_patch_request(NEW.prev, NEW.id);
-    END IF;
+    -- This function is now deprecated as we no longer use the prev field
+    -- Instead, patch requests are created directly by the process_edit function
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger to watch for prev field updates
+-- Create trigger to watch for snapshot_id updates
+-- Note: This trigger is now deprecated as we use a different approach
+-- We're keeping it with a modified definition for backward compatibility
 CREATE TRIGGER on_version_updated_trigger
-    AFTER UPDATE OF prev ON public.db
+    AFTER UPDATE OF snapshot_id ON public.db
     FOR EACH ROW
-    WHEN (NEW.prev IS NOT NULL)
     EXECUTE FUNCTION public.on_version_updated();
 
 -- Add function to approve patch request
@@ -421,6 +423,8 @@ CREATE INDEX IF NOT EXISTS idx_patch_requests_status ON public.patch_requests(st
 CREATE INDEX IF NOT EXISTS idx_patch_requests_author ON public.patch_requests(author);
 CREATE INDEX IF NOT EXISTS idx_patch_requests_old_version ON public.patch_requests(old_version_id);
 CREATE INDEX IF NOT EXISTS idx_patch_requests_new_version ON public.patch_requests(new_version_id);
+CREATE INDEX idx_patch_requests_operation_type ON public.patch_requests(operation_type);
+CREATE INDEX idx_patch_requests_parent_patch_id ON public.patch_requests(parent_patch_id);
 
 -- Enable RLS on patch_requests
 ALTER TABLE "public"."patch_requests" ENABLE ROW LEVEL SECURITY;
