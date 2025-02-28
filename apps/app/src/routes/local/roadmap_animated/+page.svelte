@@ -10,7 +10,7 @@
   import RoundComparison from './components/RoundComparison.svelte';
   
   // Import token emission data
-  import tokenEmissionData from './token_emission.json';
+  import tokenEmissionData from './token_emission_30_rounds.json';
   
   // Stores for state management
   const tokenData = writable<TokenDataPoint[]>([]);
@@ -81,6 +81,10 @@
         else if (round.Round === 4) description = "Token Expansion";
         else if (round.Round === 7) description = "Scaling Phase";
         else if (round.Round === 10) description = "Growth Acceleration";
+        else if (round.Round === 15) description = "Market Expansion";
+        else if (round.Round === 20) description = "Global Scale";
+        else if (round.Round === 25) description = "Maturity Phase";
+        else if (round.Round === 30) description = "Full Adoption";
         
         try {
           const data: TokenDataPoint = {
@@ -92,11 +96,11 @@
             tokenEmissionPrice: parseCurrency(round["Token Emission Price"]),
             tokenPerVC: parseFloat(String(round["Token Per VC"]).replace(',', '.')),
             tokenEmittedInRound: round["Token emitted in this round"],
-            totalShares: round["Total Shares (Token + reg. Capital)"],
+            totalShares: parseCurrency(String(round["Total Shares (Token + reg. Capital)"])),
             communityTokenPool: round["Sum of token in com. token pool"],
             addedTokensToPool: round["Added tokens to community token pool"],
             investmentPool: parseCurrency(round["Investment pool (SumInvests *0,75)"]),
-            platformPool: parseCurrency(round["Platform Pool (SumInvest * 0,25)"]),
+            platformPool: parseCurrency(round["Admin Pool (SumInvest * 0,25)"]),
             totalPoolValue: parseCurrency(round["Total value of both pools in €"]),
             addedPoolValue: parseCurrency(round["Added value to both pools in this round in €"]),
             capitalIncrease: parsePercentage(round["Capital increase in % (from reg. capital)"]),
@@ -149,51 +153,51 @@
       
       console.log('Transformed token emission data:', transformedData);
       tokenData.set(transformedData);
+      isLoading.set(false);
     } catch (error) {
-      console.error('Error loading token emission data:', error);
-      tokenData.set([]);
-    } finally {
+      console.error('Failed to load token emission data:', error);
       isLoading.set(false);
     }
   }
   
-  // Format currency values
-  function formatCurrency(value: number): string {
-    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
-  }
-  
-  // Format large numbers (tokens, shares)
-  function formatNumber(value: number): string {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    } else {
-      return value.toFixed(0);
-    }
-  }
-  
-  // Format percentage values
-  function formatPercentage(value: number): string {
-    return new Intl.NumberFormat('de-DE', { style: 'percent', maximumFractionDigits: 2 }).format(value);
-  }
-  
-  // Handle view selection
-  function selectView(view: string) {
-    selectedView.set(view);
-    console.log('Selected view:', view);
-  }
-  
-  // Handle round selection
+  // Utility functions
   function selectRound(round: number) {
     selectedRound.set(round);
-    console.log('Selected round:', round);
   }
   
-  // Initialize data on component mount
+  function selectView(view: string) {
+    selectedView.set(view);
+  }
+  
+  // Format currency values for display
+  function formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+  
+  // Format percentages for display
+  function formatPercentage(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'percent',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }).format(value);
+  }
+  
+  // Format numbers for display
+  function formatNumber(value: number): string {
+    return new Intl.NumberFormat('en-US').format(value);
+  }
+  
+  // Load data on component mount
   onMount(() => {
-    console.log('Component mounted, loading token emission data...');
-    loadTokenEmissionData();
+    if (browser) {
+      loadTokenEmissionData();
+    }
   });
 </script>
 
@@ -214,10 +218,10 @@
     {:else}
       <!-- Main Layout: Sidebar + Content -->
       <div class="flex flex-col md:flex-row gap-6">
-        <!-- Sidebar with round selection -->
+        <!-- Sidebar with round selection - no more inner scrollbar -->
         <aside class="md:w-56 flex-shrink-0 bg-surface-800 rounded-lg p-4">
           <h2 class="text-xl font-semibold mb-4 text-tertiary-300">Investment Rounds</h2>
-          <div class="space-y-2">
+          <div class="grid grid-cols-1 gap-2">
             {#each $tokenData as round}
               <button 
                 class="w-full text-left p-2 rounded-md transition-colors flex items-center justify-between {$selectedRound === round.round ? 'bg-primary-500 text-surface-900' : 'hover:bg-surface-700'}"
@@ -298,52 +302,34 @@
                       </div>
                     </div>
                     
-                    <h3 class="text-xl font-semibold mb-3">Pool Distribution</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div class="bg-surface-800 p-4 rounded-lg border-l-4 border-primary-500">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Community Token Pool</h4>
-                        <p class="text-2xl font-bold">{formatNumber($currentRoundData.communityTokenPool)}</p>
-                        <p class="text-sm text-tertiary-300">+{$currentRoundData.addedTokensToPool} this round</p>
+                    <!-- Additional metrics in a grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 1.7fr 1.2fr 1.5fr">
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Platform Pool</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.platformPool)}</p>
                       </div>
                       
-                      <div class="bg-surface-800 p-4 rounded-lg border-l-4 border-tertiary-500">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Investment Pool</h4>
-                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.investmentPool)}</p>
-                        <p class="text-sm text-tertiary-300">75% of investments</p>
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Investment Pool</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.investmentPool)}</p>
                       </div>
                       
-                      <div class="bg-surface-800 p-4 rounded-lg border-l-4 border-secondary-500">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Platform Pool</h4>
-                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.platformPool)}</p>
-                        <p class="text-sm text-tertiary-300">25% of investments</p>
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Capital Increase</h3>
+                        <p class="text-lg font-bold">{formatPercentage($currentRoundData.capitalIncrease)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Minimum Valuation</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
                       </div>
                     </div>
-                    
-                    <h3 class="text-xl font-semibold mb-3">Additional Metrics</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" style="grid-template-columns: 2fr 1.5fr 1.5fr 1fr">
-                      <div class="bg-surface-800 p-4 rounded-lg">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Minimum Valuation</h4>
-                        <p class="text-xl font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
-                      </div>
-                      
-                      <div class="bg-surface-800 p-4 rounded-lg">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">DAO Treasury Share</h4>
-                        <p class="text-xl font-bold">{formatPercentage($currentRoundData.daoTreasuryShare)}</p>
-                        <p class="text-sm text-tertiary-300">{formatCurrency($currentRoundData.daoTreasuryValue)}</p>
-                      </div>
-                      
-                      <div class="bg-surface-800 p-4 rounded-lg">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Founders Share</h4>
-                        <p class="text-xl font-bold">{formatPercentage($currentRoundData.perFounderShare)}</p>
-                        <p class="text-sm text-tertiary-300">per founder</p>
-                      </div>
-                      
-                      <div class="bg-surface-800 p-4 rounded-lg">
-                        <h4 class="text-sm uppercase text-tertiary-300 opacity-70">Capital Increase</h4>
-                        <p class="text-xl font-bold">{formatPercentage($currentRoundData.capitalIncrease)}</p>
-                        <p class="text-sm text-tertiary-300">from regular capital</p>
-                      </div>
-                    </div>
+                  </div>
+                  
+                  <!-- Current round data visualization components go here -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <TokenDistribution data={$currentRoundData} />
+                    <InvestmentData data={$currentRoundData} />
                   </div>
                 {/if}
               </div>
