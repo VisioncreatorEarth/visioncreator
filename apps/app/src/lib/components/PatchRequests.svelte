@@ -52,58 +52,15 @@ Props:
 	// Get current user ID
 	$: userId = $userQuery.data?.id;
 
-	// Debug logging for props and query changes
-	$: {
-		console.log('[EditRequests] Props and State:', {
-			compositeId,
-			selectedRequestId,
-			queryEnabled: !!compositeId,
-			currentUserId: userId
-		});
-	}
-
-	// Debug logging for query results
-	$: {
-		if ($patchRequestsQuery.data) {
-			console.log('[EditRequests] Patch Requests Query Result:', {
-				compositeId,
-				requestCount: $patchRequestsQuery.data.patch_requests.length,
-				requests: $patchRequestsQuery.data.patch_requests.map((r) => ({
-					id: r.id,
-					title: r.title,
-					status: r.status,
-					composite_id: r.composite_id,
-					operationsCount: r.operations?.length || 0,
-					previousVersion: {
-						id: r.previousVersion?.instance?.id,
-						snapshot_id: r.previousVersion?.snapshot_id
-					},
-					changes: {
-						id: r.changes?.instance?.id,
-						snapshot_id: r.changes?.snapshot_id
-					}
-				}))
-			});
-		} else if ($patchRequestsQuery.error) {
-			console.error('[EditRequests] Query Error:', $patchRequestsQuery.error);
-		}
-	}
-
 	// Refetch when composite ID changes
 	$: {
 		if (compositeId && !$patchRequestsQuery.isLoading && $patchRequestsQuery.isFetched) {
-			console.log('[EditRequests] Composite ID changed, refetching:', compositeId);
 			$patchRequestsQuery.refetch();
 		}
 	}
 
 	// Handle request selection with logging
 	function handleRequestSelect(request: any) {
-		console.log('[EditRequests] Request Selected:', {
-			requestId: request.id,
-			compositeId: request.composite_id,
-			status: request.status
-		});
 		dispatch('select', { request });
 	}
 
@@ -115,14 +72,12 @@ Props:
 
 	// Handle request approval with logging
 	async function handleApprove(requestId: string) {
-		console.log('[EditRequests] Approving Request:', { requestId });
 		try {
 			const result = await $updatePatchRequestMutation.mutateAsync({
 				id: requestId,
 				action: 'approve'
 			});
 
-			console.log('[EditRequests] Approve Result:', { result });
 			if (result?.success) {
 				// Immediately refetch both queries to update UI
 				await Promise.all([
@@ -138,14 +93,12 @@ Props:
 
 	// Handle request rejection with logging
 	async function handleReject(requestId: string) {
-		console.log('[EditRequests] Rejecting Request:', { requestId });
 		try {
 			const result = await $updatePatchRequestMutation.mutateAsync({
 				id: requestId,
 				action: 'reject'
 			});
 
-			console.log('[EditRequests] Reject Result:', { result });
 			if (result?.success) {
 				await $patchRequestsQuery.refetch();
 			}
@@ -157,7 +110,6 @@ Props:
 	// Listen for approve events from the diff view
 	function handleExternalApprove(event: CustomEvent<{ requestId: string }>) {
 		const { requestId } = event.detail;
-		console.log('[EditRequests] External Approve Event:', { requestId });
 		handleApprove(requestId);
 	}
 
@@ -264,11 +216,6 @@ Props:
 	function isAuthor(request: any): boolean {
 		// Get the composite author from the request
 		const compositeAuthor = request.composite_author;
-		console.log('[EditRequests] Checking authorship:', {
-			userId,
-			compositeAuthor,
-			isAuthor: userId === compositeAuthor
-		});
 		return userId === compositeAuthor;
 	}
 </script>
@@ -376,7 +323,7 @@ Props:
 												</span>
 											</div>
 											{#if operation.operation_type !== 'remove'}
-												<div class="mt-1 pl-5">
+												<div class="pl-5 mt-1">
 													{#if operation.old_value !== null && operation.old_value !== undefined}
 														<div class="text-red-400">- {formatValue(operation.old_value)}</div>
 													{/if}
@@ -385,7 +332,7 @@ Props:
 													{/if}
 												</div>
 											{:else}
-												<div class="mt-1 pl-5">
+												<div class="pl-5 mt-1">
 													<div class="text-red-400">- {formatValue(operation.old_value)}</div>
 												</div>
 											{/if}

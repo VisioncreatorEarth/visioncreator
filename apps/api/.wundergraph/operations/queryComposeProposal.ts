@@ -141,7 +141,6 @@ export default createOperation.query({
                 throw new Error('Failed to fetch relationships');
             }
 
-            console.log('[queryComposeProposal] Found relationships:', allRelationships?.length || 0);
 
             // Create a map to store the correct target for each composite
             const correctTargetMap = new Map<string, string>();
@@ -153,7 +152,6 @@ export default createOperation.query({
 
                 // Check for self-reference
                 if (rel.source_composite_id === rel.target_composite_id) {
-                    console.log(`[queryComposeProposal] Found self-reference: ${rel.source_composite_id}`);
 
                     // Look for other relationships where this composite is the source
                     const otherRels = allRelationships?.filter(
@@ -164,11 +162,9 @@ export default createOperation.query({
                     if (otherRels && otherRels.length > 0) {
                         // Use the first non-self target as the correct target
                         correctTargetMap.set(rel.source_composite_id, otherRels[0].target_composite_id);
-                        console.log(`[queryComposeProposal] Fixed self-reference for ${rel.source_composite_id} to point to ${otherRels[0].target_composite_id}`);
                     } else {
                         // If no other relationships, point to the main composite
                         correctTargetMap.set(rel.source_composite_id, proposal.compose.id);
-                        console.log(`[queryComposeProposal] Fixed self-reference for ${rel.source_composite_id} to point to main composite ${proposal.compose.id}`);
                     }
                 } else {
                     // Store the correct target
@@ -221,7 +217,6 @@ export default createOperation.query({
                 }
             }
 
-            console.log('[queryComposeProposal] Found related composites:', relatedCompositeIds.size);
 
             // Fetch details for all related composites
             const relatedCompositeIdsArray = Array.from(relatedCompositeIds);
@@ -257,7 +252,6 @@ export default createOperation.query({
                 throw new Error('Failed to fetch related composites');
             }
 
-            console.log('[queryComposeProposal] Fetched composite details:', relatedCompositesData?.length || 0);
 
             // Create a map of composite data for quick lookup
             const compositesDataMap = new Map();
@@ -315,14 +309,12 @@ export default createOperation.query({
                 const correctTargetId = correctTargetMap.get(composite.id as string);
                 if (correctTargetId) {
                     metadata.target_composite_id = correctTargetId;
-                    console.log(`[queryComposeProposal] Using corrected target for ${composite.id} (${composite.title}): ${correctTargetId}`);
                 } else if (relationshipInfo && relationshipInfo.sourceId) {
                     metadata.target_composite_id = relationshipInfo.sourceId;
                 }
 
                 // Check if this is a self-reference
                 if (metadata.target_composite_id === composite.id) {
-                    console.log(`[queryComposeProposal] Detected remaining self-reference for ${composite.id} (${composite.title}), pointing to main composite`);
                     metadata.target_composite_id = proposal.compose.id;
                 }
 
@@ -340,11 +332,9 @@ export default createOperation.query({
                 });
             }
 
-            console.log('[queryComposeProposal] Processed related composites:', relatedComposites.length);
 
             // Log some debug info about the relationships
             for (const composite of relatedComposites) {
-                console.log(`[queryComposeProposal] Composite ${composite.id} (${composite.title}) has target: ${composite.metadata?.target_composite_id || 'none'}`);
             }
 
             return {

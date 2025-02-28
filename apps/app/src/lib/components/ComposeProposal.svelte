@@ -99,39 +99,12 @@ This component handles:
 					variation_type: 'main'
 				}
 			};
-
-			console.log('[ComposeProposal] Compose Data Loaded:', {
-				composites: [
-					mainComposite,
-					...compose_data.related_composites.map((rc) => ({
-						id: rc.id,
-						title: rc.title,
-						description: rc.description,
-						compose_id: rc.compose_id,
-						relationship_type: rc.relationship_type,
-						author: rc.author,
-						metadata: rc.metadata
-					}))
-				],
-				selectedCompositeId,
-				currentComposeId
-			});
 		}
 	}
 	$: content = compose_data?.compose_json?.content || '';
 	$: selectedComposite = compose_data?.related_composites?.find(
 		(c) => c.id === selectedCompositeId
 	);
-	$: {
-		if (selectedComposite) {
-			console.log('Selected composite details:', {
-				id: selectedComposite.id,
-				compose_id: selectedComposite.compose_id,
-				title: selectedComposite.title,
-				content: selectedComposite.compose_json?.content?.substring(0, 50) + '...'
-			});
-		}
-	}
 
 	// Format markdown content
 	$: formattedContent = content ? marked(content) : '';
@@ -143,14 +116,6 @@ This component handles:
 	$: currentComposeId = selectedCompositeId
 		? selectedComposite?.compose_id // Use compose_id for sister composites
 		: compose_data?.compose_id; // Use compose_id for main composite
-
-	$: {
-		console.log('Current compose ID:', {
-			currentComposeId,
-			selectedCompositeId,
-			isMainComposite: !selectedCompositeId
-		});
-	}
 
 	// Handle tab changes
 	function handleTabChange(tab: 'content' | 'json' | 'diff') {
@@ -167,19 +132,6 @@ This component handles:
 					relationship_type: 'main',
 					metadata: { variation_type: 'main' }
 			  };
-
-		console.log('[ComposeProposal] Composite Selected:', {
-			previousId: selectedCompositeId,
-			newId: compositeId,
-			composite: targetComposite
-				? {
-						id: targetComposite.id,
-						compose_id: targetComposite.compose_id,
-						relationship_type: targetComposite.relationship_type,
-						metadata: targetComposite.metadata || { variation_type: 'main' }
-				  }
-				: null
-		});
 
 		selectedCompositeId = compositeId;
 		editMode = false; // Reset edit mode when switching composites
@@ -199,33 +151,13 @@ This component handles:
 			relationship_type: 'main'
 		};
 
-		console.log('[ComposeProposal] Edit Request Selected:', {
-			requestId: request.id,
-			compositeId: request.composite_id,
-			currentCompositeId: selectedCompositeId || compose_data?.compose_id,
-			targetComposite: {
-				id: targetComposite.id,
-				compose_id: targetComposite.compose_id,
-				relationship_type: targetComposite.relationship_type
-			},
-			willSwitchComposite: request.composite_id !== compose_data?.compose_id
-		});
-
 		selectedEditRequestId = request.id;
 		selectedEditRequest = request;
 
 		// If this is a request for a related composite, select it
 		if (request.composite_id !== compose_data?.compose_id) {
-			console.log('[ComposeProposal] Switching to Related Composite:', {
-				from: selectedCompositeId,
-				to: request.composite_id,
-				relationship_type: targetComposite.relationship_type
-			});
 			selectedCompositeId = request.composite_id;
 		} else {
-			console.log('[ComposeProposal] Switching to Main Composite:', {
-				relationship_type: 'main'
-			});
 			selectedCompositeId = null;
 		}
 
@@ -236,39 +168,9 @@ This component handles:
 
 		// Update content based on the request
 		if (request.changes?.content) {
-			console.log('[ComposeProposal] Updating Edit Content:', {
-				contentLength: request.changes.content.length,
-				compositeType: targetComposite.relationship_type
-			});
 			editContent = request.changes.content;
 			editMode = true;
 		}
-	}
-
-	// Format relationship type for display
-	function formatRelationshipType(type: string): string {
-		return type.startsWith('target_')
-			? type.replace('target_', '').replace(/_/g, ' ') + ' of'
-			: type.replace(/_/g, ' ');
-	}
-
-	// Custom date formatting function
-	function formatDate(dateString: string): string {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-		if (diffInSeconds < 60) return 'just now';
-		const diffInMinutes = Math.floor(diffInSeconds / 60);
-		if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-		const diffInHours = Math.floor(diffInMinutes / 60);
-		if (diffInHours < 24) return `${diffInHours}h ago`;
-		const diffInDays = Math.floor(diffInHours / 24);
-		if (diffInDays < 30) return `${diffInDays}d ago`;
-		const diffInMonths = Math.floor(diffInDays / 30);
-		if (diffInMonths < 12) return `${diffInMonths}mo ago`;
-		const diffInYears = Math.floor(diffInMonths / 12);
-		return `${diffInYears}y ago`;
 	}
 
 	// Handle edit mode toggle
@@ -315,15 +217,6 @@ This component handles:
 		}
 
 		try {
-			console.log('Saving changes for composite:', {
-				id: currentComposeId,
-				isVariation: !!selectedCompositeId,
-				jsonKeys: Object.keys(jsonToSave),
-				contentPreview: jsonToSave.content
-					? jsonToSave.content.substring(0, 50) + '...'
-					: 'No content'
-			});
-
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
 				json: jsonToSave,
@@ -365,7 +258,6 @@ This component handles:
 
 	// Create a new variation
 	async function handleCreateVariation(sourceId: string) {
-		console.log('Creating variation of composite:', sourceId);
 		try {
 			// Find the source composite data
 			let sourceComposite;
@@ -387,19 +279,6 @@ This component handles:
 				return;
 			}
 
-			console.log('Source composite info:', {
-				id: sourceComposite.id,
-				title: sourceComposite.title
-			});
-
-			// Log the variation data we're about to create
-			console.log('Creating variation with data:', {
-				sourceId,
-				title: newVariationTitle,
-				description: newVariationDescription,
-				variationType: newVariationType
-			});
-
 			// Use the editDB API with createVariation flag instead of createCompositeVariation
 			const result = await $editDBMutation.mutateAsync({
 				id: sourceComposite.compose_id as string,
@@ -418,7 +297,6 @@ This component handles:
 			const typedResult = result as EditResult;
 
 			if (typedResult && typedResult.success) {
-				console.log('Variation created successfully:', typedResult);
 				await $composeQuery.refetch();
 				isCreatingVariation = false;
 
@@ -436,8 +314,6 @@ This component handles:
 
 	// Add a function to organize composites into a tree structure
 	function organizeCompositesIntoTree(composites: RelatedComposite[]) {
-		console.log('[organizeCompositesIntoTree] Organizing composites into tree:', composites.length);
-
 		// Define a recursive type for nested composites
 		type CompositeNode = RelatedComposite & { children: CompositeNode[] };
 
@@ -447,9 +323,6 @@ This component handles:
 		// Initialize each composite with an empty children array
 		composites.forEach((composite) => {
 			compositesMap.set(composite.id, { ...composite, children: [] });
-			console.log(
-				`[organizeCompositesIntoTree] Added composite to map: ${composite.id} (${composite.title})`
-			);
 		});
 
 		// Create a root array for top-level variations (direct variations of the main composite)
@@ -465,15 +338,8 @@ This component handles:
 					? (composite.metadata.target_composite_id as string)
 					: undefined;
 
-			console.log(
-				`[organizeCompositesIntoTree] Processing composite: ${composite.id} (${
-					composite.title
-				}), target: ${targetId || 'none'}`
-			);
-
 			// Skip self-referencing relationships (where target is the same as the composite id)
 			if (targetId && targetId === composite.id) {
-				console.log(`[organizeCompositesIntoTree] Skipping self-reference for: ${composite.id}`);
 				rootVariations.push(compositeWithChildren);
 				return;
 			}
@@ -484,20 +350,16 @@ This component handles:
 					// This is a variation of another composite in our map
 					const parent = compositesMap.get(targetId)!;
 					parent.children.push(compositeWithChildren);
-					console.log(`[organizeCompositesIntoTree] Added as child to: ${targetId}`);
 				} else if (targetId === compose_data?.compose_id) {
 					// This is a direct variation of the main composite (by compose_id)
 					rootVariations.push(compositeWithChildren);
-					console.log(`[organizeCompositesIntoTree] Added as root variation (by compose_id match)`);
 				} else {
 					// This is a direct variation of the main composite or an unknown composite
 					rootVariations.push(compositeWithChildren);
-					console.log(`[organizeCompositesIntoTree] Added as root variation (fallback)`);
 				}
 			} else {
 				// No target ID found, assume it's a direct variation of the main composite
 				rootVariations.push(compositeWithChildren);
-				console.log(`[organizeCompositesIntoTree] Added as root variation (no target)`);
 			}
 		});
 
@@ -520,15 +382,9 @@ This component handles:
 		rootVariations.sort(sortByDate);
 		rootVariations.forEach(sortChildrenRecursively);
 
-		// Log the tree structure for debugging
-		console.log(
-			`[organizeCompositesIntoTree] Final tree: ${rootVariations.length} root variations`
-		);
-
 		// Recursive function to log the tree structure
 		const logTreeNode = (node: CompositeNode, depth = 0, prefix = '') => {
 			const indent = '  '.repeat(depth);
-			console.log(`${indent}${prefix}${node.id} (${node.title}): ${node.children.length} children`);
 			node.children.forEach((child, index) => {
 				logTreeNode(child, depth + 1, `${index + 1}. `);
 			});
@@ -825,7 +681,7 @@ This component handles:
 				{/if}
 			</div>
 
-			<div class="mt-6 flex justify-end">
+			<div class="flex justify-end mt-6">
 				<button
 					class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
 					on:click={() => {

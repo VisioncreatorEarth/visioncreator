@@ -50,11 +50,6 @@ export default createOperation.mutation({
         }
 
         try {
-            console.log('[editDB] Starting edit operation with input:', {
-                id: input.id,
-                jsonKeys: typeof input.json === 'object' && input.json ? Object.keys(input.json) : [],
-                createVariation: input.createVariation
-            });
 
             // Call the simplified database function that handles all the logic
             const { data, error } = await context.supabase.rpc('edit_content_with_validation', {
@@ -72,10 +67,6 @@ export default createOperation.mutation({
                     details: error.details
                 };
             }
-
-            console.log('[editDB] Successfully edited content:', {
-                result: data
-            });
 
             return data;
 
