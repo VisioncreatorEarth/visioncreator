@@ -193,10 +193,35 @@
     return new Intl.NumberFormat('en-US').format(value);
   }
   
+  // For debugging scroll issues
+  let roundsContainerHeight = 0;
+  let mainContainerHeight = 0;
+  
+  // Track dimensions for debugging
+  function updateDebugInfo() {
+    if (browser) {
+      const roundsEl = document.querySelector('.rounds-container');
+      const mainEl = document.querySelector('main');
+      
+      if (roundsEl) roundsContainerHeight = roundsEl.scrollHeight;
+      if (mainEl) mainContainerHeight = mainEl.scrollHeight;
+    }
+  }
+  
   // Load data on component mount
   onMount(() => {
     if (browser) {
       loadTokenEmissionData();
+      
+      // Update debug info after data loads
+      setTimeout(updateDebugInfo, 1000);
+      
+      // Listen for window resize
+      window.addEventListener('resize', updateDebugInfo);
+      
+      return () => {
+        window.removeEventListener('resize', updateDebugInfo);
+      };
     }
   });
 </script>
@@ -206,16 +231,24 @@
   <meta name="description" content="Visioncreator Token Emission Data Visualization">
 </svelte:head>
 
-<main class="min-h-screen bg-surface-900 text-tertiary-300 font-base">
+<!-- Debug info overlay -->
+{#if browser}
+<div class="debug-height">
+  Rounds height: {roundsContainerHeight}px<br>
+  Main height: {mainContainerHeight}px
+</div>
+{/if}
+
+<main class="bg-surface-900 text-tertiary-300 font-base">
   <div class="container mx-auto py-8 px-4 max-w-[1800px]">
     <h1 class="text-4xl font-heading mb-8 text-center">Token Emission Explorer</h1>
     
     <div class="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-8">
       <!-- Sidebar with Rounds -->
-      <div class="bg-surface-800 p-4 rounded-lg md:sticky md:top-4 self-start overflow-y-auto max-h-[calc(100vh-120px)]">
+      <div class="bg-surface-800 p-4 rounded-lg rounds-container">
         <h2 class="text-2xl font-heading mb-4">Investment Rounds</h2>
         
-        <div class="grid grid-cols-1 gap-2 overflow-y-auto pb-4">
+        <div class="grid grid-cols-1 gap-2 pb-4">
           {#each $tokenData as data}
             <button
               class="p-3 rounded-md text-left transition-all duration-200 {$selectedRound === data.round ? 'bg-surface-700 border-l-4 border-primary-500' : 'hover:bg-surface-700'}"
@@ -231,9 +264,9 @@
       </div>
       
       <!-- Main content area -->
-      <div class="flex-1 bg-surface-800 rounded-lg">
-        <!-- View selector tabs -->
-        <div class="border-b border-surface-700 px-4">
+      <div class="flex-1 bg-surface-800 rounded-lg flex flex-col">
+        <!-- View selector tabs - make them sticky -->
+        <div class="border-b border-surface-700 px-4 sticky top-0 bg-surface-800 z-10">
           <div class="flex overflow-x-auto">
             <button 
               class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'summary' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
@@ -354,11 +387,34 @@
     font-family: var(--theme-font-family-base);
     min-height: 100vh;
     overflow-y: auto;
+    margin: 0;
+    padding: 0;
   }
   
   :global(html) {
     overflow-y: auto;
     height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  main {
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+    padding-bottom: 4rem;
+  }
+  
+  /* Debug styles to help identify overflow issues */
+  .debug-height {
+    position: fixed;
+    top: 0;
+    right: 0;
+    background: rgba(255,0,0,0.2);
+    color: white;
+    padding: 4px;
+    z-index: 1000;
+    font-size: 12px;
   }
   
   /* Define CSS variables with fallbacks */
