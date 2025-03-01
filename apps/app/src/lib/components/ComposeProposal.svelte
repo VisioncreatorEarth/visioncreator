@@ -17,8 +17,8 @@ This component handles:
 	import JsonEditor from './JsonEditor.svelte';
 	import PatchRequests from './PatchRequests.svelte';
 	import JsonDiffViewer from './JsonDiffViewer.svelte';
-	import VariationTreeItem from './VariationTreeItem.svelte';
 	import MergeDialog from './MergeDialog.svelte';
+	import Avatar from './Avatar.svelte';
 
 	// Props
 	export let proposalId: string;
@@ -159,6 +159,32 @@ This component handles:
 	$: currentComposeId = selectedCompositeId
 		? selectedComposite?.compose_id // Use compose_id for sister composites
 		: compose_data?.compose_id; // Use compose_id for main composite
+
+	// Format composites for display in a flat list
+	$: formattedComposites = compose_data?.related_composites
+		? compose_data.related_composites
+				.map((composite) => {
+					// Extract relationship type from metadata or relationship field
+					const relationshipType =
+						composite.metadata?.relationship_type ||
+						composite.metadata?.variation_type ||
+						'variation';
+
+					// Create a formatted display item for each composite
+					return {
+						...composite,
+						displayTitle: `${composite.title} (${relationshipType})`,
+						authorName: composite.author?.name || 'Unknown',
+						createdAt: composite.metadata?.created_at || ''
+					};
+				})
+				.sort((a, b) => {
+					// Sort by creation date (newest first)
+					const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+					const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+					return dateB - dateA;
+				})
+		: [];
 
 	// Handle tab changes
 	function handleTabChange(tab: 'content' | 'json' | 'diff' | 'schema') {
@@ -393,96 +419,6 @@ This component handles:
 		}
 	}
 
-	// Add a function to organize composites into a tree structure
-	function organizeCompositesIntoTree(composites: RelatedComposite[]) {
-		// Define a recursive type for nested composites
-		type CompositeNode = RelatedComposite & { children: CompositeNode[] };
-
-		// Create a map of all composites by ID for quick lookup
-		const compositesMap = new Map<string, CompositeNode>();
-
-		// Initialize each composite with an empty children array
-		composites.forEach((composite) => {
-			compositesMap.set(composite.id, { ...composite, children: [] });
-		});
-
-		// Create a root array for top-level variations (direct variations of the main composite)
-		const rootVariations: CompositeNode[] = [];
-
-		// First pass: identify parent-child relationships
-		composites.forEach((composite) => {
-			const compositeWithChildren = compositesMap.get(composite.id)!;
-
-			// Check if this is a variation of another variation by looking at the relationship metadata
-			const targetId =
-				composite.metadata && typeof composite.metadata === 'object'
-					? (composite.metadata.target_composite_id as string)
-					: undefined;
-
-			// Skip self-referencing relationships (where target is the same as the composite id)
-			if (targetId && targetId === composite.id) {
-				rootVariations.push(compositeWithChildren);
-				return;
-			}
-
-			if (targetId) {
-				// This is a variation of another composite
-				if (compositesMap.has(targetId)) {
-					// This is a variation of another composite in our map
-					const parent = compositesMap.get(targetId)!;
-					parent.children.push(compositeWithChildren);
-				} else if (targetId === compose_data?.compose_id) {
-					// This is a direct variation of the main composite (by compose_id)
-					rootVariations.push(compositeWithChildren);
-				} else {
-					// This is a direct variation of the main composite or an unknown composite
-					rootVariations.push(compositeWithChildren);
-				}
-			} else {
-				// No target ID found, assume it's a direct variation of the main composite
-				rootVariations.push(compositeWithChildren);
-			}
-		});
-
-		// Sort variations by creation date (newest first)
-		const sortByDate = (a: RelatedComposite, b: RelatedComposite) => {
-			const dateA = a.metadata?.created_at ? new Date(a.metadata.created_at).getTime() : 0;
-			const dateB = b.metadata?.created_at ? new Date(b.metadata.created_at).getTime() : 0;
-			return dateB - dateA;
-		};
-
-		// Recursive function to sort children at all levels
-		const sortChildrenRecursively = (node: CompositeNode) => {
-			if (node.children && node.children.length > 0) {
-				node.children.sort(sortByDate);
-				node.children.forEach(sortChildrenRecursively);
-			}
-		};
-
-		// Sort root variations and recursively sort all children
-		rootVariations.sort(sortByDate);
-		rootVariations.forEach(sortChildrenRecursively);
-
-		// Recursive function to log the tree structure
-		const logTreeNode = (node: CompositeNode, depth = 0, prefix = '') => {
-			const indent = '  '.repeat(depth);
-			node.children.forEach((child, index) => {
-				logTreeNode(child, depth + 1, `${index + 1}. `);
-			});
-		};
-
-		rootVariations.forEach((root, index) => {
-			logTreeNode(root, 0, `${index + 1}. `);
-		});
-
-		return rootVariations;
-	}
-
-	// Organize composites into a tree structure when data changes
-	$: variationTree = compose_data?.related_composites
-		? organizeCompositesIntoTree(compose_data.related_composites)
-		: [];
-
 	// Handle opening the merge dialog
 	function handleOpenMergeDialog() {
 		showMergeDialog = true;
@@ -554,20 +490,70 @@ This component handles:
 							: 'bg-surface-900 hover:bg-surface-700'}"
 						on:click={() => handleCompositeSelect(null)}
 					>
-						<div class="flex flex-col gap-1">
-							<div class="flex items-center justify-between">
-								<div class="font-medium text-surface-100">{compose_data.title}</div>
-								<span class="px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300">
-									Current
-								</span>
+						<div class="flex items-start gap-3">
+							<!-- Author Avatar -->
+							<Avatar
+								me={{
+									data: { seed: compose_data.author.name },
+									design: { highlight: !selectedCompositeId },
+									size: '2xs'
+								}}
+							/>
+
+							<div class="flex-1 min-w-0">
+								<div class="flex items-center justify-between">
+									<div class="font-medium text-surface-100 truncate max-w-[150px]">
+										{compose_data.title}
+									</div>
+									<span class="px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300">
+										Latest
+									</span>
+								</div>
+								<div class="text-xs font-medium text-surface-300">
+									by {compose_data.author.name}
+								</div>
 							</div>
-							<div class="text-xs text-surface-400">by {compose_data.author.name}</div>
 						</div>
 					</button>
 
-					<!-- Tree-structured Variations -->
-					{#each variationTree as composite}
-						<VariationTreeItem {composite} {selectedCompositeId} onSelect={handleCompositeSelect} />
+					<!-- Flat list of all variations -->
+					{#each formattedComposites as composite}
+						<button
+							class="w-full p-3 rounded-lg transition-colors text-left
+								{selectedCompositeId === composite.id
+								? 'bg-surface-700 border-l-4 border-primary-500'
+								: 'bg-surface-900 hover:bg-surface-700'}"
+							on:click={() => handleCompositeSelect(composite.id)}
+						>
+							<div class="flex items-start gap-3">
+								<!-- Author Avatar -->
+								<Avatar
+									me={{
+										data: { seed: composite.author?.name || 'Unknown' },
+										design: { highlight: selectedCompositeId === composite.id },
+										size: '2xs'
+									}}
+								/>
+
+								<div class="flex-1 min-w-0">
+									<div class="flex items-center justify-between">
+										<div class="font-medium text-surface-100 truncate max-w-[150px]">
+											{composite.title}
+										</div>
+
+										<!-- Single unified tag with blue color -->
+										<span class="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-300">
+											{composite.metadata?.variation_type ||
+												composite.relationship_type ||
+												'variation'}
+										</span>
+									</div>
+									<div class="text-xs font-medium text-surface-300">
+										by {composite.author?.name || 'Unknown'}
+									</div>
+								</div>
+							</div>
+						</button>
 					{/each}
 				</div>
 			{/if}

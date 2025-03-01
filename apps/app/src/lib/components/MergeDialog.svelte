@@ -245,7 +245,7 @@ Props:
 						<div class="mt-2 text-xs text-tertiary-400">
 							Selected: {selectedSourceId || 'None'}
 						</div>
-					{:else if $mergeCandidatesQuery.data?.candidates?.length > 0}
+					{:else if $mergeCandidatesQuery.data?.candidates && $mergeCandidatesQuery.data.candidates.length > 0}
 						<div class="p-3 text-sm rounded-lg bg-yellow-400/10 text-yellow-400">
 							All found candidates were filtered out (including the current composite)
 						</div>
