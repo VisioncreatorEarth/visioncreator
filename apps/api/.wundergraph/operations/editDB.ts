@@ -58,6 +58,16 @@ export default createOperation.mutation({
         }
 
         try {
+            // Extract variation metadata if it exists
+            let jsonToValidate = { ...input.json };
+            let variationMetadata: { title?: string; description?: string; type?: string } = {};
+
+            if (input.createVariation && jsonToValidate.__variation_metadata) {
+                variationMetadata = jsonToValidate.__variation_metadata;
+                // Remove the metadata from the JSON to be validated
+                delete jsonToValidate.__variation_metadata;
+            }
+
             // First, get the schema for this content to perform client-side validation
             const { data: contentData, error: contentError } = await context.supabase.rpc('get_content_schema', {
                 p_id: input.id
@@ -79,7 +89,7 @@ export default createOperation.mutation({
             if (schemaResponse.success && schemaResponse.schema_data) {
                 const schema = schemaResponse.schema_data;
                 const validate = ajv.compile(schema);
-                const isValid = validate(input.json);
+                const isValid = validate(jsonToValidate);
 
                 if (!isValid) {
                     const validationErrors = validate.errors || [];
@@ -109,13 +119,23 @@ export default createOperation.mutation({
                 console.warn('[editDB] No schema found for validation, proceeding without client-side validation');
             }
 
-            // Call the simplified database function that handles all the logic
-            const { data, error } = await context.supabase.rpc('edit_content_with_validation', {
+            // Prepare parameters for the database function
+            const params: any = {
                 p_id: input.id,
-                p_json: input.json,
+                p_json: jsonToValidate,
                 p_user_id: user.customClaims.id,
                 p_create_variation: input.createVariation
-            });
+            };
+
+            // Add variation metadata if available
+            if (input.createVariation && Object.keys(variationMetadata).length > 0) {
+                if (variationMetadata.title) params.p_variation_title = variationMetadata.title;
+                if (variationMetadata.description) params.p_variation_description = variationMetadata.description;
+                if (variationMetadata.type) params.p_variation_type = variationMetadata.type;
+            }
+
+            // Call the simplified database function that handles all the logic
+            const { data, error } = await context.supabase.rpc('edit_content_with_validation', params);
 
             if (error) {
                 console.error('[editDB] Error calling edit_content_with_validation:', error);

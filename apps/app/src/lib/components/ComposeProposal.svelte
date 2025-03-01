@@ -350,10 +350,20 @@ This component handles:
 				return;
 			}
 
+			// Create a modified JSON that includes metadata for the title and description
+			const modifiedJson = {
+				...sourceComposite.compose_json,
+				__variation_metadata: {
+					title: newVariationTitle,
+					description: newVariationDescription,
+					type: newVariationType
+				}
+			};
+
 			// Use the editDB API with createVariation flag instead of createCompositeVariation
 			const result = await $editDBMutation.mutateAsync({
 				id: sourceComposite.compose_id as string,
-				json: sourceComposite.compose_json,
+				json: modifiedJson,
 				createVariation: true
 			});
 
@@ -499,7 +509,7 @@ This component handles:
 <div class="flex h-full bg-surface-800">
 	<!-- Toast notification -->
 	{#if toastVisible}
-		<div class="fixed top-4 right-4 z-50 max-w-sm">
+		<div class="fixed z-50 max-w-sm top-4 right-4">
 			<div
 				class="p-4 rounded-lg shadow-lg transition-all transform translate-y-0 opacity-100 flex items-center gap-3
 				{toastType === 'success'
@@ -519,7 +529,7 @@ This component handles:
 				</span>
 				<p>{toastMessage}</p>
 				<button
-					class="ml-auto text-lg opacity-70 hover:opacity-100 transition-opacity"
+					class="ml-auto text-lg transition-opacity opacity-70 hover:opacity-100"
 					on:click={() => (toastVisible = false)}
 				>
 					<Icon icon="mdi:close" />
@@ -627,9 +637,9 @@ This component handles:
 						</div>
 
 						{#if validationErrors && validationErrors.length > 0}
-							<div class="mb-4 p-4 border border-red-500/30 bg-red-900/20 rounded-md">
-								<h3 class="font-medium text-red-400 mb-2">Validation Errors</h3>
-								<ul class="list-disc list-inside text-sm space-y-1">
+							<div class="p-4 mb-4 border rounded-md border-red-500/30 bg-red-900/20">
+								<h3 class="mb-2 font-medium text-red-400">Validation Errors</h3>
+								<ul class="space-y-1 text-sm list-disc list-inside">
 									{#each validationErrors as error}
 										<li class="text-red-300">
 											<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
@@ -664,7 +674,7 @@ This component handles:
 						</div>
 
 						{#if compose_data?.schema_data}
-							<div class="flex flex-col gap-4 flex-grow">
+							<div class="flex flex-col flex-grow gap-4">
 								<div class="p-3 rounded-lg bg-surface-700/50">
 									<p class="text-sm text-surface-200">
 										<Icon icon="heroicons:information-circle" class="inline-block w-4 h-4 mr-1" />
@@ -673,7 +683,7 @@ This component handles:
 									</p>
 								</div>
 
-								<div class="schema-view flex-grow">
+								<div class="flex-grow schema-view">
 									<JsonEditor json={compose_data.schema_data} readOnly={true} />
 								</div>
 							</div>
@@ -777,9 +787,9 @@ This component handles:
 						{#if editMode}
 							<div class="flex flex-col gap-4">
 								{#if validationErrors && validationErrors.length > 0}
-									<div class="mb-4 p-4 border border-red-500/30 bg-red-900/20 rounded-md">
-										<h3 class="font-medium text-red-400 mb-2">Validation Errors</h3>
-										<ul class="list-disc list-inside text-sm space-y-1">
+									<div class="p-4 mb-4 border rounded-md border-red-500/30 bg-red-900/20">
+										<h3 class="mb-2 font-medium text-red-400">Validation Errors</h3>
+										<ul class="space-y-1 text-sm list-disc list-inside">
 											{#each validationErrors as error}
 												<li class="text-red-300">
 													<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
@@ -832,7 +842,7 @@ This component handles:
 				{:else}
 					<!-- For main composite, we need to find its ID from the composites table -->
 					<PatchRequests
-						compositeId={'33333333-3333-3333-3333-333333333333'}
+						compositeId={compose_data?.compose_id}
 						selectedRequestId={selectedEditRequestId}
 						on:select={handleEditRequestSelect}
 						on:refetch={() => {

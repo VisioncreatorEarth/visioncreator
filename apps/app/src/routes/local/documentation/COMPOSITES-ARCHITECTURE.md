@@ -242,7 +242,108 @@ The system uses a Yjs-inspired approach to handle conflicts:
    - Three-way merge for complex conflicts
    - Manual resolution for unresolvable conflicts
 
-### 5. State Synchronization
+### 5. Advanced Merging System
+
+The system implements a sophisticated merging system inspired by Git's three-way merge:
+
+#### A. Three-Way Merge
+
+```mermaid
+graph TD
+    A[Base/Ancestor Version] --> B[Source Version]
+    A --> C[Target Version]
+    B --> D[Three-Way Merge]
+    C --> D
+    A --> D
+    D --> E[Merged Result]
+```
+
+1. **Common Ancestor Detection**
+   - Identifies a common ancestor between source and target composites
+   - Examines variation relationships and direct connections
+   - Supports multi-level ancestry relationships
+   - Falls back to simple merge when no common ancestor is found
+
+2. **Key-Level Differential Analysis**
+   - Analyzes differences at the JSON key level
+   - Compares source, target, and ancestor for each property
+   - Handles 7 different merge scenarios:
+     - One branch changed, one didn't (take the changed value)
+     - Both branches changed differently (conflict)
+     - Added in one branch only (include it)
+     - Deleted in one branch only (delete it)
+     - Deleted in one branch, modified in the other (conflict)
+     - Same change in both branches (keep it)
+     - Added in both branches with different values (conflict)
+
+3. **Automatic Conflict Resolution**
+   - Identifies and automatically resolves conflicts
+   - Prefers source values for conflicted keys (source-wins strategy)
+   - Tracks conflict statistics for transparency
+   - Creates detailed metadata for review
+
+4. **Example Conflict Resolution**
+   ```json
+   // Ancestor
+   { "title": "Original", "count": 5 }
+   
+   // Source
+   { "title": "Updated", "count": 5 }
+   
+   // Target
+   { "title": "Modified", "count": 10 }
+   
+   // Merged (with conflicts)
+   { "title": "Updated", "count": 10 }
+   // "title" was a conflict, resolved with source's value
+   // "count" was changed only in target, so target's value is used
+   ```
+
+#### B. Simple Merge Strategy (Fallback)
+
+When no common ancestor is found, the system falls back to a simple merge strategy:
+
+1. **Target-Base Overlay**
+   - Starts with the target composite's content as a base
+   - Overlays all source properties on top of it
+   - Effectively implements a "source-wins" strategy for all keys
+
+2. **Key-by-Key Processing**
+   - Iterates through all keys in the source document
+   - Adds or replaces each key in the target document
+   - Creates a unified document that prioritizes source changes
+
+3. **Metadata Tracking**
+   - Records that a simple merge strategy was used
+   - Documents the absence of a common ancestor
+   - Provides transparency in the patch request
+
+#### C. Merge Candidate Discovery
+
+The system includes an intelligent algorithm to find potential merge candidates:
+
+1. **Relationship-Based Discovery**
+   - Identifies composites with direct relationships to the current composite
+   - Finds variations, branches, and past merge relationships
+   - Discovers siblings that share a common parent
+   - Examines composites by the same author
+
+2. **Relevance Ranking**
+   - Sorts candidates by relationship relevance:
+     1. Parent composites (highest priority)
+     2. Variations of the current composite
+     3. Branched composites
+     4. Previously merged composites
+     5. Sibling composites (sharing a parent)
+     6. Other composites by the same author (lowest priority)
+   - Further sorts by last updated date to prioritize recent changes
+
+3. **Adaptive Result Set**
+   - Returns a limited set of the most relevant candidates
+   - Includes same-author composites only if few other candidates exist
+   - Ensures efficient UI presentation with manageable choices
+
+### 6. State Synchronization
 
 ```mermaid
 graph TD
@@ -313,6 +414,51 @@ CREATE OR REPLACE FUNCTION process_edit(
     -- Archives old versions
     -- Creates patch requests
 $$;
+
+-- Find nearest common ancestor between two composites
+CREATE OR REPLACE FUNCTION find_nearest_common_ancestor(
+    p_composite_a uuid,
+    p_composite_b uuid
+) RETURNS uuid AS $$
+    -- Identifies ancestral relationships
+    -- Checks direct variations
+    -- Examines common parents
+    -- Returns NULL if no common ancestor found
+$$;
+
+-- Three-way merge composites using common ancestor
+CREATE OR REPLACE FUNCTION three_way_merge_composites(
+    p_user_id uuid,
+    p_source_composite_id uuid,
+    p_target_composite_id uuid
+) RETURNS jsonb AS $$
+    -- Finds common ancestor
+    -- Gets content from all three versions
+    -- Performs key-by-key three-way merge
+    -- Handles conflict resolution
+    -- Creates patch request with result
+$$;
+
+-- Simple merge when no common ancestor found
+CREATE OR REPLACE FUNCTION simple_merge_composites(
+    p_user_id uuid,
+    p_source_composite_id uuid,
+    p_target_composite_id uuid
+) RETURNS jsonb AS $$
+    -- Gets content from source and target
+    -- Performs simple "source wins" merge
+    -- Creates patch request with result
+$$;
+
+-- Find merge candidates for a composite
+CREATE OR REPLACE FUNCTION find_merge_candidates(
+    p_composite_id uuid
+) RETURNS SETOF json AS $$
+    -- Identifies related composites
+    -- Finds variations, branches, siblings
+    -- Ranks by relevance and recency
+    -- Returns formatted candidate list
+$$;
 ```
 
 ### 2. API Layer
@@ -330,6 +476,11 @@ The WunderGraph API layer provides:
    - Operation log access
    - State snapshots
    - Relationship queries
+   - Merge candidate discovery
+
+3. **Merge Operations**
+   - `findMergeCandidates`: Discovers potential merge candidates
+   - `threeWayMerge`: Initiates a merge between two composites
 
 ## Security and Performance
 
@@ -364,6 +515,12 @@ The WunderGraph API layer provides:
    - Implement automatic resolution where possible
    - Provide manual resolution UI
    - Maintain operation history
+
+4. **Merging Best Practices**
+   - Identify suitable merge candidates
+   - Prefer composites with close relationships
+   - Review auto-resolved conflicts
+   - Understand the merge strategy being used
 
 ## User Flows
 
@@ -425,6 +582,30 @@ graph TD
 - UI components in `PatchRequests.svelte` for review interface
 - WunderGraph operation `updateEditRequest.ts` for API integration
 
+### 4. Merging Content
+
+```mermaid
+graph TD
+    A[User selects Merge in UI] --> B[System finds merge candidates]
+    B --> C[User selects source composite]
+    C --> D[System attempts to find common ancestor]
+    D -->|Ancestor found| E[Three-way merge]
+    D -->|No ancestor| F[Simple merge]
+    E --> G[Create patch request]
+    F --> G
+    G --> H[User reviews merged result]
+    H --> I[User approves or rejects]
+```
+
+**Implementation Details:**
+- Uses `find_merge_candidates` to identify potential merge sources
+- `MergeDialog.svelte` provides UI for candidate selection
+- `three_way_merge_composites` performs intelligent merging with ancestor
+- `simple_merge_composites` used as fallback when no ancestor exists
+- Automatic conflict resolution with source preference
+- Detailed metadata about conflict detection and resolution
+- Creates a reviewable patch request for the merge
+
 ## Technical Components
 
 ### 1. Database Operations (`db_operations.sql`)
@@ -451,27 +632,38 @@ Manages:
 - Version transitions
 - Operation aggregation
 
-### 4. Query and Mutation APIs
+### 4. Merging System (`db_merging.sql`)
+
+Implements:
+- Common ancestor detection
+- Three-way merge algorithm
+- Simple merge fallback
+- Merge candidate discovery
+- Conflict resolution
+
+### 5. Query and Mutation APIs
 
 #### ComposeProposal
 - Manages content composition
 - Handles variation creation
 - Supports relationship management
+- Provides merge UI integration
 
 #### PatchRequests
 - Lists and manages change requests
 - Provides detailed change information
 - Supports approval workflows
+- Shows merge-related metadata
 
-#### QueryComposeProposal
-- Retrieves composite details
-- Resolves relationships
-- Handles content versioning
+#### MergeDialog
+- Displays potential merge candidates
+- Filters by relationship relevance
+- Initiates merge operations
+- Shows merge results and conflicts
 
-#### EditDB
-- Simple wrapper around database functions
-- Passes user authentication to database
-- Handles errors and responses
+#### Operations
+- `findMergeCandidates`: Discovers related composites
+- `threeWayMerge`: Performs intelligent content merging
 
 ## Error Handling
 
@@ -481,6 +673,7 @@ The system includes robust error handling for:
 - Invalid operations
 - Missing permissions
 - Version conflicts
+- Merge failures
 
 ## Security Considerations
 

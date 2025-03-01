@@ -490,7 +490,9 @@ CREATE OR REPLACE FUNCTION public.edit_content_with_validation(
     p_id uuid,
     p_json jsonb,
     p_user_id uuid,
-    p_create_variation boolean DEFAULT false
+    p_create_variation boolean DEFAULT false,
+    p_variation_title text DEFAULT NULL,
+    p_variation_description text DEFAULT NULL
 ) RETURNS jsonb AS $$
 DECLARE
     v_current_item record;
@@ -563,7 +565,9 @@ BEGIN
             RETURN public.create_composite_variation(
                 p_user_id,
                 v_composite.id,
-                p_json
+                p_json,
+                p_variation_title,
+                p_variation_description
             );
         END;
     ELSE

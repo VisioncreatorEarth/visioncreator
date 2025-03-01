@@ -29,7 +29,9 @@ CREATE TABLE composite_relationships (
 CREATE OR REPLACE FUNCTION public.create_composite_variation(
     p_user_id uuid,
     p_composite_id uuid,
-    p_new_json jsonb
+    p_new_json jsonb,
+    p_variation_title text DEFAULT NULL,
+    p_variation_description text DEFAULT NULL
 ) RETURNS jsonb AS $$
 DECLARE
     v_source_composite record;
@@ -138,12 +140,12 @@ BEGIN
     BEGIN
         IF v_source_in_archive THEN
             v_variation_type := 'archive_variation';
-            v_variation_title := 'Restored version of ' || v_source_composite.title;
-            v_variation_description := 'Created by ' || p_user_id || ' from archived content ' || v_source_composite.compose_id;
+            v_variation_title := COALESCE(p_variation_title, 'Restored version of ' || v_source_composite.title);
+            v_variation_description := COALESCE(p_variation_description, 'Created by ' || p_user_id || ' from archived content ' || v_source_composite.compose_id);
         ELSE
             v_variation_type := 'edit_variation';
-            v_variation_title := 'Variation of ' || v_source_composite.title;
-            v_variation_description := 'Created by ' || p_user_id || ' as a variation of composite ' || p_composite_id;
+            v_variation_title := COALESCE(p_variation_title, 'Variation of ' || v_source_composite.title);
+            v_variation_description := COALESCE(p_variation_description, 'Created by ' || p_user_id || ' as a variation of composite ' || p_composite_id);
         END IF;
         
         INSERT INTO public.composites (
