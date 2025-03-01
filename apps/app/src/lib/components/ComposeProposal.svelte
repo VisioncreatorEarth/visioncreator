@@ -19,9 +19,13 @@ This component handles:
 	import JsonDiffViewer from './JsonDiffViewer.svelte';
 	import MergeDialog from './MergeDialog.svelte';
 	import Avatar from './Avatar.svelte';
+	import { onMount } from 'svelte';
 
 	// Props
 	export let proposalId: string;
+
+	// DOM references
+	let contentEditableRef: HTMLElement;
 
 	// Create a store for the compose tab - default to Content
 	const activeComposeTab = writable<'content' | 'json' | 'diff' | 'schema'>('content');
@@ -84,6 +88,7 @@ This component handles:
 	// State management
 	let editMode = false;
 	let editContent = '';
+	let hasChanges = false;
 	let selectedCompositeId: string | null = null;
 	let selectedEditRequestId: string | undefined;
 	let selectedEditRequest: any = null;
@@ -98,6 +103,7 @@ This component handles:
 		params: any;
 	}> | null = null;
 	let isSubmitting = false;
+	let contentBeforeEdit = ''; // Store original content for comparison
 
 	// Toast notification functionality
 	let toastMessage = '';
@@ -202,15 +208,27 @@ This component handles:
 
 	// Handle tab changes
 	function handleTabChange(tab: 'content' | 'json' | 'diff' | 'schema') {
-		// If we're in edit mode, confirm the user wants to switch tabs
-		if (editMode) {
+		// If we have unsaved changes, confirm the user wants to switch tabs
+		if (hasChanges) {
 			if (!confirm('You have unsaved changes. Are you sure you want to switch tabs?')) {
 				return;
 			}
-			editMode = false;
+			hasChanges = false;
 		}
 
 		$activeComposeTab = tab;
+
+		// If we're switching to content or JSON tab, prepare for possible editing
+		if (tab === 'content') {
+			editContent = selectedCompositeId ? selectedComposite?.compose_json?.content || '' : content;
+			contentBeforeEdit = editContent;
+		} else if (tab === 'json') {
+			const currentJson = selectedCompositeId
+				? selectedComposite?.compose_json
+				: compose_data?.compose_json;
+			editContent = JSON.stringify(currentJson, null, 2);
+			contentBeforeEdit = editContent;
+		}
 	}
 
 	// Handle composite selection
@@ -282,8 +300,62 @@ This component handles:
 					? selectedComposite?.compose_json?.content || ''
 					: content;
 			}
+			contentBeforeEdit = editContent; // Store original content
 		}
 		editMode = !editMode;
+		hasChanges = false; // Reset changes flag
+	}
+
+	// Check if content has been modified
+	function checkForChanges(newContent: string) {
+		hasChanges = newContent !== contentBeforeEdit;
+	}
+
+	// Set up editor for markdown with proper styling
+	function setupMarkdownEditor() {
+		if (contentEditableRef) {
+			const currentContent = selectedCompositeId
+				? selectedComposite?.compose_json?.content || ''
+				: content;
+
+			// Store the initial content for comparison
+			contentBeforeEdit = currentContent;
+			editContent = currentContent;
+
+			// Set initial content
+			contentEditableRef.innerText = currentContent;
+
+			// Apply basic styling
+			contentEditableRef.style.whiteSpace = 'pre-wrap';
+			contentEditableRef.style.fontFamily = 'monospace';
+		}
+	}
+
+	// Handle focus on markdown editor
+	function handleContentFocus() {
+		if (!hasChanges && contentEditableRef) {
+			setupMarkdownEditor();
+		}
+	}
+
+	// Handle content changes in the markdown editor
+	function handleContentInput(e: Event) {
+		if (contentEditableRef) {
+			// Get the plain text content
+			editContent = contentEditableRef.innerText;
+			checkForChanges(editContent);
+		}
+	}
+
+	// Cancel editing and revert changes
+	function cancelEditing() {
+		editContent = contentBeforeEdit;
+		hasChanges = false;
+
+		// Reset editors
+		if (contentEditableRef && $activeComposeTab === 'content') {
+			contentEditableRef.innerText = contentBeforeEdit;
+		}
 	}
 
 	// Handle content save
@@ -310,7 +382,7 @@ This component handles:
 			console.log('Current compose ID (content):', currentComposeId);
 
 			if ($activeComposeTab === 'json') {
-				if (editMode) {
+				if (hasChanges) {
 					// In edit mode, parse the full JSON from textarea
 					try {
 						// Parse the JSON from the editor - keep everything as is
@@ -373,10 +445,10 @@ This component handles:
 			// for root composite use rootCompositeId from our query
 			const compositeIdToUse = selectedCompositeId || rootCompositeId;
 
-			// Pass both the content ID (currentComposeId) and the composite ID
+			// Pass both the content ID (currentComposeId) and the composite ID - making sure compositeId is a string
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
-				compositeId: compositeIdToUse,
+				compositeId: compositeIdToUse || undefined,
 				json: jsonToSave,
 				createVariation: false
 			});
@@ -402,7 +474,8 @@ This component handles:
 
 			if (typedResult && typedResult.success) {
 				await $composeQuery.refetch();
-				editMode = false;
+				hasChanges = false;
+				contentBeforeEdit = editContent;
 				toastSuccess('Content saved successfully');
 			} else {
 				// Enhanced error handling for validation failures
@@ -732,7 +805,7 @@ This component handles:
 								{selectedComposite?.title || compose_data.title}
 							</h2>
 							<div class="flex items-center gap-2">
-								{#if editMode}
+								{#if hasChanges}
 									<button
 										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
 										on:click={saveChanges}
@@ -741,16 +814,9 @@ This component handles:
 									</button>
 									<button
 										class="px-4 py-2 text-sm font-medium text-red-400 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
-										on:click={toggleEditMode}
+										on:click={cancelEditing}
 									>
 										Cancel
-									</button>
-								{:else}
-									<button
-										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20"
-										on:click={toggleEditMode}
-									>
-										Edit
 									</button>
 								{/if}
 							</div>
@@ -775,19 +841,26 @@ This component handles:
 							</div>
 						{/if}
 
-						{#if editMode}
-							<textarea
-								bind:value={editContent}
-								class="w-full h-[calc(100vh-12rem)] p-4 border rounded-lg bg-surface-900 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100 font-mono"
-								placeholder="Enter JSON content..."
-							/>
-						{:else}
+						<!-- JSON editor with direct inline editing -->
+						<div class="w-full h-[calc(100vh-12rem)] overflow-y-auto">
 							<JsonEditor
 								json={selectedComposite?.compose_json || compose_data?.compose_json}
 								on:save={saveChanges}
 								readOnly={false}
+								on:change={(event) => {
+									if (event.detail && event.detail.json) {
+										// Use the direct JSON data instead of string conversion
+										const newJson = event.detail.json;
+										const oldJson = selectedComposite?.compose_json || compose_data?.compose_json;
+										// Check if JSON has changed
+										hasChanges = JSON.stringify(newJson) !== JSON.stringify(oldJson);
+										if (hasChanges) {
+											editContent = JSON.stringify(newJson, null, 2);
+										}
+									}
+								}}
 							/>
-						{/if}
+						</div>
 					</div>
 				{:else if $activeComposeTab === 'schema'}
 					<div class="flex flex-col h-full">
@@ -861,7 +934,7 @@ This component handles:
 								{selectedComposite?.title || compose_data.title}
 							</h2>
 							<div class="flex items-center gap-2">
-								{#if editMode}
+								{#if hasChanges}
 									<button
 										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
 										on:click={saveChanges}
@@ -870,7 +943,7 @@ This component handles:
 									</button>
 									<button
 										class="px-4 py-2 text-sm font-medium text-red-400 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
-										on:click={toggleEditMode}
+										on:click={cancelEditing}
 									>
 										Cancel
 									</button>
@@ -889,49 +962,56 @@ This component handles:
 										<Icon icon="heroicons:code-bracket-square" class="inline-block w-4 h-4 mr-1" />
 										New Variation
 									</button>
-									<button
-										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20"
-										on:click={() => {
-											// Check if the user is the author of the proposal
-											const isAuthor = currentUser?.name === compose_data?.author?.name;
-											// Allow editing for all users for now
-											toggleEditMode();
-										}}
-									>
-										Edit
-									</button>
 								{/if}
 							</div>
 						</div>
 
-						{#if editMode}
-							<div class="flex flex-col gap-4">
-								{#if validationErrors && validationErrors.length > 0}
-									<div class="p-4 mb-4 border rounded-md border-red-500/30 bg-red-900/20">
-										<h3 class="mb-2 font-medium text-red-400">Validation Errors</h3>
-										<ul class="space-y-1 text-sm list-disc list-inside">
-											{#each validationErrors as error}
-												<li class="text-red-300">
-													<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
-														>{error.path || 'root'}</span
-													>:
-													{error.message}
-												</li>
-											{/each}
-										</ul>
+						<div class="flex flex-col gap-4">
+							{#if validationErrors && validationErrors.length > 0}
+								<div class="p-4 mb-4 border rounded-md border-red-500/30 bg-red-900/20">
+									<h3 class="mb-2 font-medium text-red-400">Validation Errors</h3>
+									<ul class="space-y-1 text-sm list-disc list-inside">
+										{#each validationErrors as error}
+											<li class="text-red-300">
+												<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
+													>{error.path || 'root'}</span
+												>:
+												{error.message}
+											</li>
+										{/each}
+									</ul>
+								</div>
+							{/if}
+
+							<!-- Content editor with direct inline editing -->
+							<div class="w-full h-[calc(100vh-12rem)] overflow-y-auto">
+								{#if hasChanges}
+									<!-- Show markdown editor with styled appearance -->
+									<div
+										bind:this={contentEditableRef}
+										contenteditable={true}
+										class="w-full h-full p-4 font-mono whitespace-pre-wrap border rounded-lg bg-surface-850 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100"
+										on:input={handleContentInput}
+									/>
+								{:else}
+									<!-- Show formatted content with click-to-edit capability -->
+									<div
+										class="p-4 prose transition-colors rounded-lg prose-invert max-w-none cursor-text hover:bg-surface-700/20"
+										on:click={() => {
+											hasChanges = true;
+											setTimeout(() => {
+												setupMarkdownEditor();
+												if (contentEditableRef) {
+													contentEditableRef.focus();
+												}
+											}, 0);
+										}}
+									>
+										{@html selectedComposite ? formattedSelectedContent : formattedContent}
 									</div>
 								{/if}
-								<textarea
-									bind:value={editContent}
-									class="w-full h-[calc(100vh-12rem)] p-4 border rounded-lg bg-surface-900 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100"
-									placeholder="Enter markdown content..."
-								/>
 							</div>
-						{:else}
-							<div class="overflow-y-auto prose prose-invert max-w-none">
-								{@html selectedComposite ? formattedSelectedContent : formattedContent}
-							</div>
-						{/if}
+						</div>
 					</div>
 				{/if}
 			{:else}
