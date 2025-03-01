@@ -51,24 +51,17 @@ DECLARE
     v_schema_data jsonb;
     v_is_meta_schema boolean := false;
 BEGIN
-    -- Check if schema is found
+    -- Check if schema is found in db
     SELECT json INTO v_schema_data
     FROM public.db
     WHERE id = p_schema_id;
     
     IF v_schema_data IS NULL THEN
-        -- Try archive if not in active db
-        SELECT json INTO v_schema_data
-        FROM public.db_archive
-        WHERE id = p_schema_id;
-        
-        IF v_schema_data IS NULL THEN
-            RETURN jsonb_build_object(
-                'valid', false,
-                'error', 'Schema not found',
-                'details', format('Could not find schema with id %s', p_schema_id)
-            );
-        END IF;
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'Schema not found',
+            'details', format('Could not find schema with id %s', p_schema_id)
+        );
     END IF;
     
     -- Check if this is the meta-schema (self-validating)
@@ -277,17 +270,10 @@ DECLARE
     v_schema_id uuid;
     v_validation_result jsonb;
 BEGIN
-    -- First, check if the item exists in active db
+    -- Check if the item exists in db
     SELECT * INTO v_current_item
     FROM public.db
     WHERE id = p_id;
-    
-    -- If not found in active db, check archive
-    IF v_current_item IS NULL THEN
-        SELECT * INTO v_current_item
-        FROM public.db_archive
-        WHERE id = p_id;
-    END IF;
     
     IF v_current_item IS NULL THEN
         RETURN jsonb_build_object(
@@ -464,20 +450,13 @@ BEGIN
         RAISE EXCEPTION 'New version % not found in db', p_new_version_id;
     END IF;
 
-    -- Try to get the old version from archive first
+    -- Get the old version from db
     SELECT * INTO v_old_version 
-    FROM public.db_archive 
+    FROM public.db 
     WHERE id = p_old_version_id;
 
-    -- If not in archive, it might be in active db (about to be archived)
     IF v_old_version IS NULL THEN
-        SELECT * INTO v_old_version 
-        FROM public.db 
-        WHERE id = p_old_version_id;
-    END IF;
-
-    IF v_old_version IS NULL THEN
-        RAISE EXCEPTION 'Old version % not found in either db or db_archive', p_old_version_id;
+        RAISE EXCEPTION 'Old version % not found in db', p_old_version_id;
     END IF;
 
     -- Find all composites that reference this content version
@@ -677,7 +656,6 @@ CREATE OR REPLACE FUNCTION public.process_content_update(
 DECLARE
     v_is_author boolean;
     v_current_item record;
-    v_is_archived boolean := false;
     v_composite record;
     v_result jsonb;
     v_new_content_id uuid;
@@ -689,26 +667,17 @@ BEGIN
     -- Initialize the result
     v_result := jsonb_build_object('success', false);
     
-    -- First, check if the item exists in active db
+    -- Check if the item exists in db
     SELECT * INTO v_current_item
     FROM public.db
     WHERE id = p_id;
     
-    -- If not found in active db, check archive
     IF v_current_item IS NULL THEN
-        SELECT * INTO v_current_item
-        FROM public.db_archive
-        WHERE id = p_id;
-        
-        IF v_current_item IS NOT NULL THEN
-            v_is_archived := true;
-        ELSE
-            RETURN jsonb_build_object(
-                'success', false,
-                'error', 'Item not found',
-                'details', format('Could not find content with id %s', p_id)
-            );
-        END IF;
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Item not found',
+            'details', format('Could not find content with id %s', p_id)
+        );
     END IF;
     
     -- Check if the current user is the author
@@ -740,9 +709,8 @@ BEGIN
     -- Determine whether to create a variation or update directly
     -- Create variation if:
     -- 1. Explicitly requested via p_create_variation OR
-    -- 2. User is not the author OR
-    -- 3. Content is archived
-    IF p_create_variation OR NOT v_is_author OR v_is_archived THEN
+    -- 2. User is not the author
+    IF p_create_variation OR NOT v_is_author THEN
         -- Create a new content version
         v_new_content_id := gen_random_uuid();
         
@@ -776,14 +744,8 @@ BEGIN
             author
         ) VALUES (
             v_new_composite_id,
-            CASE 
-                WHEN v_is_archived THEN format('Restored version of %s', v_composite.title)
-                ELSE format('Variation of %s', v_composite.title)
-            END,
-            CASE 
-                WHEN v_is_archived THEN format('Created by %s from archived content', p_user_id)
-                ELSE format('Created by %s as a variation of composite %s', p_user_id, v_composite.id)
-            END,
+            format('Variation of %s', v_composite.title),
+            format('Created by %s as a variation of composite %s', p_user_id, v_composite.id),
             v_new_content_id,
             p_user_id
         );
@@ -800,13 +762,9 @@ BEGIN
             'variation_of',
             jsonb_build_object(
                 'created_at', now(),
-                'variation_type', CASE WHEN v_is_archived THEN 'archive_variation' ELSE 'edit_variation' END,
-                'description', CASE 
-                    WHEN v_is_archived THEN format('Created by %s from archived content', p_user_id)
-                    ELSE format('Created by %s as a variation of composite %s', p_user_id, v_composite.id)
-                END,
-                'target_composite_id', v_composite.id,
-                'is_from_archive', v_is_archived
+                'variation_type', 'edit_variation',
+                'description', format('Created by %s as a variation of composite %s', p_user_id, v_composite.id),
+                'target_composite_id', v_composite.id
             )
         );
         
@@ -820,14 +778,8 @@ BEGIN
             composite_id,
             status
         ) VALUES (
-            CASE 
-                WHEN v_is_archived THEN format('Restored archive version for %s', v_composite.title)
-                ELSE format('Edit variation for %s', v_composite.title)
-            END,
-            CASE 
-                WHEN v_is_archived THEN format('Changes made by %s to restore archived content', p_user_id)
-                ELSE format('Changes made by %s to create a variation of %s', p_user_id, v_composite.title)
-            END,
+            format('Edit variation for %s', v_composite.title),
+            format('Changes made by %s to create a variation of %s', p_user_id, v_composite.title),
             p_user_id,
             p_id,  -- Original content ID as old version
             v_new_content_id,
@@ -852,110 +804,15 @@ BEGIN
         RETURN jsonb_build_object(
             'success', true,
             'createdVariation', true,
-            'fromArchive', v_is_archived,
             'compositeId', v_new_composite_id,
             'contentId', v_new_content_id,
             'patchRequestId', v_patch_request_id,
             'operationsCreated', v_operations_created,
-            'message', CASE
-                WHEN v_is_archived THEN 'Created a new variation from archived content'
-                ELSE 'Created a new variation instead of editing the original content'
-            END
+            'message', 'Created a new variation instead of editing the original content'
         );
     ELSE
-        -- For direct updates (user is author and content is not archived)
-        -- Create a patch request for tracking changes
-        v_new_content_id := gen_random_uuid();
-        
-        -- First create the new content
-        INSERT INTO public.db (
-            id,
-            json,
-            author,
-            schema,
-            created_at,
-            last_modified_at,
-            snapshot_id
-        ) VALUES (
-            v_new_content_id,
-            v_new_json,
-            p_user_id,
-            v_current_item.schema,
-            NOW(),
-            NOW(),
-            gen_random_uuid()
-        );
-        
-        -- Create a patch request
-        INSERT INTO public.patch_requests (
-            title,
-            description,
-            author,
-            old_version_id,
-            new_version_id,
-            composite_id,
-            status
-        ) VALUES (
-            format('Update to %s', v_composite.title),
-            format('Changes made by %s', p_user_id),
-            p_user_id,
-            p_id,
-            v_new_content_id,
-            v_composite.id,
-            'pending'  -- Will be auto-approved since user is the author
-        )
-        RETURNING id INTO v_patch_request_id;
-        
-        -- Generate operations for this patch request
-        IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'generate_operations_from_diff') THEN
-            PERFORM public.generate_operations_from_diff(
-                v_current_item.json,
-                v_new_json,
-                v_patch_request_id,
-                p_user_id,
-                v_composite.id,
-                v_new_content_id
-            );
-            v_operations_created := true;
-        END IF;
-        
-        -- Archive the old version
-        INSERT INTO public.db_archive (
-            id,
-            json,
-            author,
-            schema,
-            created_at,
-            archived_at,
-            snapshot_id
-        ) VALUES (
-            v_current_item.id,
-            v_current_item.json,
-            v_current_item.author,
-            v_current_item.schema,
-            v_current_item.created_at,
-            NOW(),
-            v_current_item.snapshot_id
-        );
-        
-        -- Update the composite to point to the new content
-        UPDATE public.composites
-        SET compose_id = v_new_content_id,
-            updated_at = NOW()
-        WHERE id = v_composite.id;
-        
-        -- Finally delete the old version from active db
-        DELETE FROM public.db WHERE id = p_id;
-        
-        RETURN jsonb_build_object(
-            'success', true,
-            'createdVariation', false,
-            'compositeId', v_composite.id,
-            'contentId', v_new_content_id,
-            'patchRequestId', v_patch_request_id,
-            'operationsCreated', v_operations_created,
-            'message', 'Successfully updated content'
-        );
+        -- For content where user is the author, process the edit
+        RETURN public.process_edit(p_id, v_new_json, p_user_id);
     END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -984,51 +841,34 @@ DECLARE
     v_content record;
     v_schema_id uuid;
     v_schema_data jsonb;
-    v_is_archived boolean := false;
 BEGIN
-    -- Try to find content in active db
+    -- Try to find content in db
     SELECT * INTO v_content
     FROM public.db
     WHERE id = p_id;
     
     IF v_content IS NULL THEN
-        -- Try archive if not in active db
-        SELECT * INTO v_content
-        FROM public.db_archive
-        WHERE id = p_id;
-        
-        IF v_content IS NULL THEN
-            RETURN jsonb_build_object(
-                'success', false,
-                'error', 'Content not found',
-                'details', format('Could not find content with id %s', p_id)
-            );
-        END IF;
-        
-        v_is_archived := true;
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Content not found',
+            'details', format('Could not find content with id %s', p_id)
+        );
     END IF;
     
     -- Get schema id
     v_schema_id := v_content.schema;
     
-    -- Get schema data from active db
+    -- Get schema data from db
     SELECT json INTO v_schema_data
     FROM public.db
     WHERE id = v_schema_id;
     
     IF v_schema_data IS NULL THEN
-        -- Try archive if not in active db
-        SELECT json INTO v_schema_data
-        FROM public.db_archive
-        WHERE id = v_schema_id;
-        
-        IF v_schema_data IS NULL THEN
-            RETURN jsonb_build_object(
-                'success', false,
-                'error', 'Schema not found',
-                'details', format('Could not find schema with id %s', v_schema_id)
-            );
-        END IF;
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Schema not found',
+            'details', format('Could not find schema with id %s', v_schema_id)
+        );
     END IF;
     
     -- Enforce schema restrictions
@@ -1037,8 +877,7 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'schema_id', v_schema_id,
-        'schema_data', v_schema_data,
-        'is_archived', v_is_archived
+        'schema_data', v_schema_data
     );
 END;
 $$ LANGUAGE plpgsql; 

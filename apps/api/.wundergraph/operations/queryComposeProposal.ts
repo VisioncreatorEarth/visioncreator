@@ -13,7 +13,6 @@ interface RelatedComposite {
     compose_json: ComposeJson;
     compose_id: string;
     relationship_type: string;
-    is_archived: boolean;
     author: {
         name: string;
     };
@@ -31,7 +30,6 @@ interface ComposeData {
     description: string;
     compose_json: ComposeJson;
     compose_id: string;
-    is_archived: boolean;
     author: {
         name: string;
     };
@@ -46,7 +44,6 @@ interface CompositeData {
     description: string;
     compose_id: string;
     author: string;
-    is_archived: boolean;
 }
 
 interface ProposalWithComposite {
@@ -94,8 +91,7 @@ export default createOperation.query({
                         title,
                         description,
                         compose_id,
-                        author:profiles(name),
-                        is_archived
+                        author:profiles(name)
                     )
                 `)
                 .eq('id', input.proposalId)
@@ -113,56 +109,29 @@ export default createOperation.query({
                 .eq('id', proposal.compose.compose_id)
                 .single();
 
-            let mainCompose: ComposeJson;
+            if (mainError || !mainContent) {
+                console.error('[queryComposeProposal] Failed to fetch main content:', mainError);
+                throw new Error('Failed to fetch main content');
+            }
+
+            let mainCompose = mainContent.json as ComposeJson;
             let schemaId: string | undefined = undefined;
             let schemaData: any = null;
 
-            if (mainError) {
-                // Try archive if not in active db
-                const { data: archivedContent, error: archiveError } = await context.supabase
-                    .from('db_archive')
-                    .select('json, schema')
-                    .eq('id', proposal.compose.compose_id)
-                    .single();
-
-                if (archiveError || !archivedContent) {
-                    console.error('[queryComposeProposal] Failed to fetch main content:', {
-                        mainError,
-                        archiveError
-                    });
-                    throw new Error('Failed to fetch main content');
-                }
-                mainCompose = archivedContent.json as ComposeJson;
-                schemaId = archivedContent.schema as string | undefined;
-            } else {
-                mainCompose = mainContent.json as ComposeJson;
-                schemaId = mainContent.schema as string | undefined;
-            }
+            schemaId = mainContent.schema as string | undefined;
 
             // Fetch the schema data if we have a schema ID
             if (schemaId) {
-                // First try to get schema from active db
-                const { data: activeSchema, error: activeSchemaError } = await context.supabase
+                const { data: schemaContent, error: schemaError } = await context.supabase
                     .from('db')
                     .select('json')
                     .eq('id', schemaId)
                     .single();
 
-                if (!activeSchemaError && activeSchema) {
-                    schemaData = activeSchema.json;
+                if (!schemaError && schemaContent) {
+                    schemaData = schemaContent.json;
                 } else {
-                    // Try archive if not in active db
-                    const { data: archivedSchema, error: archivedSchemaError } = await context.supabase
-                        .from('db_archive')
-                        .select('json')
-                        .eq('id', schemaId)
-                        .single();
-
-                    if (!archivedSchemaError && archivedSchema) {
-                        schemaData = archivedSchema.json;
-                    } else {
-                        console.warn('[queryComposeProposal] Schema not found:', schemaId);
-                    }
+                    console.warn('[queryComposeProposal] Schema not found:', schemaId);
                 }
             }
 
@@ -268,7 +237,6 @@ export default createOperation.query({
                         description: proposal.compose.description,
                         compose_json: mainCompose,
                         compose_id: proposal.compose.compose_id,
-                        is_archived: proposal.compose.is_archived,
                         author: typeof proposal.compose.author === 'string'
                             ? { name: proposal.compose.author }
                             : proposal.compose.author || { name: 'Unknown' },
@@ -286,8 +254,7 @@ export default createOperation.query({
                     title,
                     description,
                     compose_id,
-                    author:profiles(name),
-                    is_archived
+                    author:profiles(name)
                 `)
                 .in('id', Array.from(relatedCompositeIds)) as {
                     data: Array<{
@@ -295,8 +262,7 @@ export default createOperation.query({
                         title: string,
                         description: string,
                         compose_id: string,
-                        author: { name: string },
-                        is_archived: boolean
+                        author: { name: string }
                     }> | null;
                     error: any
                 };
@@ -324,25 +290,12 @@ export default createOperation.query({
                     .single();
 
                 let composeJson: ComposeJson;
-                if (relContentError || !relContent) {
-                    // Try archive if not in active db
-                    const { data: archiveContent, error: archiveError } = await context.supabase
-                        .from('db_archive')
-                        .select('json')
-                        .eq('id', composite.compose_id as string)
-                        .single();
 
-                    if (archiveError || !archiveContent) {
-                        console.error('[queryComposeProposal] Failed to fetch related content:', {
-                            relContentError,
-                            archiveError
-                        });
-                        continue;
-                    }
-                    composeJson = archiveContent.json as ComposeJson;
-                } else {
-                    composeJson = relContent.json as ComposeJson;
+                if (relContentError || !relContent) {
+                    console.error('[queryComposeProposal] Failed to fetch related content:', relContentError);
+                    continue;
                 }
+                composeJson = relContent.json as ComposeJson;
 
                 // Find the relationship info for this composite
                 const relationships = relationshipMap.get(composite.id as string)?.relationships || [];
@@ -379,7 +332,6 @@ export default createOperation.query({
                     compose_json: composeJson,
                     compose_id: composite.compose_id as string,
                     relationship_type: relationshipType,
-                    is_archived: composite.is_archived,
                     author: typeof composite.author === 'string'
                         ? { name: composite.author }
                         : composite.author || { name: 'Unknown' },
@@ -398,7 +350,6 @@ export default createOperation.query({
                     description: proposal.compose.description,
                     compose_json: mainCompose,
                     compose_id: proposal.compose.compose_id,
-                    is_archived: proposal.compose.is_archived,
                     author: typeof proposal.compose.author === 'string'
                         ? { name: proposal.compose.author }
                         : proposal.compose.author || { name: 'Unknown' },

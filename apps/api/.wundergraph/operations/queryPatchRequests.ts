@@ -146,15 +146,15 @@ export default createOperation.query({
             // Create a map to store all versions
             const versionsMap = new Map<string, DBVersion>();
 
-            // First, try to get versions from active db
+            // Get all versions from the db table
             const { data: rawDbVersions } = await context.supabase
                 .from('db')
                 .select('id, json, snapshot_id, created_at, last_modified_at')
                 .in('id', versionIds);
 
-            const dbVersions = (rawDbVersions || []) as RawDBVersion[];
+            const dbVersions = (rawDbVersions || []) as any[];
 
-            // Add active versions to the map
+            // Add all versions to the map
             dbVersions.forEach((v) => {
                 versionsMap.set(v.id, {
                     id: v.id,
@@ -164,28 +164,6 @@ export default createOperation.query({
                     last_modified_at: v.last_modified_at
                 });
             });
-
-            // Get remaining versions from archive
-            const remainingIds = versionIds.filter(id => !versionsMap.has(id));
-            if (remainingIds.length > 0) {
-                const { data: rawArchiveVersions } = await context.supabase
-                    .from('db_archive')
-                    .select('id, json, snapshot_id, created_at, archived_at')
-                    .in('id', remainingIds);
-
-                const archiveVersions = (rawArchiveVersions || []) as any[];
-
-                // Add archived versions to the map
-                archiveVersions.forEach((v) => {
-                    versionsMap.set(v.id, {
-                        id: v.id,
-                        json: v.json,
-                        snapshot_id: v.snapshot_id,
-                        created_at: v.created_at,
-                        last_modified_at: v.archived_at
-                    });
-                });
-            }
 
             // Get operations for each patch request
             const operationsMap = new Map<string, RawOperation[]>();

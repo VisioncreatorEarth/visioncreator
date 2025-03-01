@@ -48,16 +48,15 @@ CREATE TABLE IF NOT EXISTS "public"."patch_requests" (
     constraint "patch_requests_operation_type_check" check (operation_type in ('edit', 'merge', 'branch', 'rebase', null))
 );
 
--- Create a trigger to validate old_version_id exists in either db or db_archive
+-- Create a trigger to validate old_version_id exists in db
 CREATE OR REPLACE FUNCTION public.validate_old_version_id() 
 RETURNS trigger AS $$
 BEGIN
-  -- Check if the old_version_id exists in either active or archive table
-  IF EXISTS (SELECT 1 FROM public.db WHERE id = NEW.old_version_id) 
-     OR EXISTS (SELECT 1 FROM public.db_archive WHERE id = NEW.old_version_id) THEN
+  -- Check if the old_version_id exists in db
+  IF EXISTS (SELECT 1 FROM public.db WHERE id = NEW.old_version_id) THEN
     RETURN NEW;
   ELSE
-    RAISE EXCEPTION 'Referenced old_version_id % not found in db or db_archive', NEW.old_version_id;
+    RAISE EXCEPTION 'Referenced old_version_id % not found in db', NEW.old_version_id;
   END IF;
 END;
 $$ LANGUAGE plpgsql;
@@ -106,20 +105,13 @@ BEGIN
         RAISE EXCEPTION 'New version % not found in db', p_new_version_id;
     END IF;
 
-    -- Try to get the old version from archive first
+    -- Get the old version from db
     SELECT * INTO v_old_version 
-    FROM public.db_archive 
+    FROM public.db 
     WHERE id = p_old_version_id;
 
-    -- If not in archive, it might be in active db (about to be archived)
     IF v_old_version IS NULL THEN
-        SELECT * INTO v_old_version 
-        FROM public.db 
-        WHERE id = p_old_version_id;
-    END IF;
-
-    IF v_old_version IS NULL THEN
-        RAISE EXCEPTION 'Old version % not found in either db or db_archive', p_old_version_id;
+        RAISE EXCEPTION 'Old version % not found in db', p_old_version_id;
     END IF;
 
     -- Find all composites that reference this content version
@@ -349,17 +341,10 @@ BEGIN
         RETURN NULL;
     END IF;
     
-    -- Get the old content record
+    -- Get the old content record from db
     SELECT * INTO v_old_content_record
-    FROM public.db_archive
+    FROM public.db
     WHERE id = NEW.old_version_id;
-    
-    -- If not found in archive, check active db
-    IF v_old_content_record IS NULL THEN
-        SELECT * INTO v_old_content_record
-        FROM public.db
-        WHERE id = NEW.old_version_id;
-    END IF;
     
     IF v_old_content_record IS NULL OR v_old_content_record.author IS NULL THEN
         RAISE WARNING 'Old content version % not found or has no author for patch request %', NEW.old_version_id, NEW.id;

@@ -22,20 +22,7 @@ $$;
 DROP TABLE IF EXISTS "public"."db_archive" CASCADE;
 DROP TABLE IF EXISTS "public"."db" CASCADE;
 
--- Create archive table first since it's referenced by db table
-CREATE TABLE "public"."db_archive" (
-    "id" uuid not null,
-    "json" jsonb,
-    "author" uuid,
-    "schema" uuid,
-    "created_at" timestamptz not null,
-    "archived_at" timestamptz not null default now(),
-    "snapshot_id" uuid not null,
-    constraint "db_archive_pkey" primary key ("id"),
-    constraint "db_archive_author_fkey" foreign key ("author") references profiles(id)
-);
-
--- Then create the main db table
+-- Create a single consolidated db table without archive flags
 create table "public"."db" (
     "id" uuid not null default gen_random_uuid(),
     "json" jsonb,
@@ -48,11 +35,10 @@ create table "public"."db" (
     constraint "db_author_fkey" foreign key ("author") references profiles(id) on delete set null
 );
 
--- First drop existing constraints
+-- First drop existing constraints if they exist
 ALTER TABLE "public"."db" DROP CONSTRAINT IF EXISTS "db_schema_fkey";
-ALTER TABLE "public"."db_archive" DROP CONSTRAINT IF EXISTS "db_archive_schema_fkey";
 
--- Create a function to validate schema references across both tables
+-- Create a function to validate schema references
 CREATE OR REPLACE FUNCTION public.validate_schema_reference() 
 RETURNS trigger AS $$
 BEGIN
@@ -62,24 +48,18 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  -- Check if the schema exists in either active or archive table
-  IF EXISTS (SELECT 1 FROM public.db WHERE id = NEW.schema) 
-     OR EXISTS (SELECT 1 FROM public.db_archive WHERE id = NEW.schema) THEN
+  -- Check if the schema exists in the db table (active or archived)
+  IF EXISTS (SELECT 1 FROM public.db WHERE id = NEW.schema) THEN
     RETURN NEW;
   ELSE
-    RAISE EXCEPTION 'Referenced schema % not found in db or db_archive', NEW.schema;
+    RAISE EXCEPTION 'Referenced schema % not found in db', NEW.schema;
   END IF;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers to validate schema references
+-- Create trigger to validate schema references
 CREATE TRIGGER validate_schema_ref_db
   BEFORE INSERT OR UPDATE ON public.db
-  FOR EACH ROW
-  EXECUTE FUNCTION public.validate_schema_reference();
-
-CREATE TRIGGER validate_schema_ref_archive
-  BEFORE INSERT OR UPDATE ON public.db_archive
   FOR EACH ROW
   EXECUTE FUNCTION public.validate_schema_reference();
 
@@ -87,8 +67,6 @@ CREATE TRIGGER validate_schema_ref_archive
 CREATE INDEX idx_db_author ON public.db(author);
 CREATE INDEX idx_db_schema ON public.db(schema);
 CREATE INDEX idx_db_snapshot_id ON public.db(snapshot_id);
-CREATE INDEX idx_db_archive_schema ON public.db_archive(schema);
-CREATE INDEX idx_db_archive_snapshot_id ON public.db_archive(snapshot_id);
 
 -- Create function to handle content updates with permissions check
 CREATE OR REPLACE FUNCTION public.handle_content_update(
@@ -99,7 +77,6 @@ CREATE OR REPLACE FUNCTION public.handle_content_update(
 DECLARE
     v_is_author boolean;
     v_current_item record;
-    v_is_archived boolean := false;
     v_composite record;
     v_result jsonb;
     v_new_json jsonb;
@@ -107,26 +84,17 @@ BEGIN
     -- Initialize the result
     v_result := jsonb_build_object('success', false);
     
-    -- First, check if the item exists in active db
+    -- Check if the item exists
     SELECT * INTO v_current_item
     FROM public.db
     WHERE id = p_id;
     
-    -- If not found in active db, check archive
     IF v_current_item IS NULL THEN
-        SELECT * INTO v_current_item
-        FROM public.db_archive
-        WHERE id = p_id;
-        
-        IF v_current_item IS NOT NULL THEN
-            v_is_archived := true;
-        ELSE
-            RETURN jsonb_build_object(
-                'success', false,
-                'error', 'Item not found',
-                'details', format('Could not find content with id %s', p_id)
-            );
-        END IF;
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Item not found',
+            'details', format('Could not find content with id %s', p_id)
+        );
     END IF;
     
     -- Check if the current user is the author
@@ -155,8 +123,8 @@ BEGIN
         );
     END IF;
     
-    -- If the user is not the author OR the content is archived, create a variation instead
-    IF NOT v_is_author OR v_is_archived THEN
+    -- If the user is not the author, create a variation instead
+    IF NOT v_is_author THEN
         -- Create a variation using the same function for both cases
         RETURN public.create_composite_variation(
             p_user_id,
@@ -165,7 +133,7 @@ BEGIN
         );
     END IF;
     
-    -- For active content where user is the author, process the edit
+    -- For content where user is the author, process the edit
     RETURN public.process_edit(p_id, v_new_json, p_user_id);
 END;
 $$ LANGUAGE plpgsql;
@@ -272,33 +240,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create function to update vector clock
+-- Create function to update vector clock for tracking changes
 CREATE OR REPLACE FUNCTION public.update_vector_clock(
     p_vector_clock jsonb,
     p_user_id uuid
 ) RETURNS jsonb AS $$
 DECLARE
-    v_result jsonb;
-    v_timestamp text;
+    v_current_timestamp bigint;
+    v_user_key text;
 BEGIN
-    -- Create a new vector clock if null
+    -- Convert UUID to text for use as a JSON key
+    v_user_key := p_user_id::text;
+    
+    -- Get current Unix timestamp in milliseconds
+    v_current_timestamp := (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint;
+    
+    -- Return updated vector clock with this user's timestamp updated
     IF p_vector_clock IS NULL THEN
-        v_result := '{}'::jsonb;
+        RETURN jsonb_build_object(v_user_key, v_current_timestamp);
     ELSE
-        v_result := p_vector_clock;
+        RETURN jsonb_set(p_vector_clock, ARRAY[v_user_key], to_jsonb(v_current_timestamp));
     END IF;
-    
-    -- Generate ISO timestamp
-    v_timestamp := to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
-    
-    -- Update the vector clock with the new timestamp for this user
-    v_result := jsonb_set(v_result, ARRAY[p_user_id::text], to_jsonb(v_timestamp));
-    
-    RETURN v_result;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create function to process edits with the new flow
+-- Process edit function that generates operations and patch requests
 CREATE OR REPLACE FUNCTION public.process_edit(
     p_id uuid,
     p_json jsonb,
@@ -306,14 +272,16 @@ CREATE OR REPLACE FUNCTION public.process_edit(
 ) RETURNS jsonb AS $$
 DECLARE
     v_old_content record;
+    v_new_content_id uuid := gen_random_uuid();
+    v_new_snapshot_id uuid := gen_random_uuid();
+    v_vector_clock jsonb := '{}'::jsonb;
+    v_patch_request_id uuid;
+    v_operation_ids uuid[] := ARRAY[]::uuid[];
+    v_composite record;
     v_diff jsonb;
     v_operations jsonb;
-    v_patch_request_id uuid;
-    v_new_snapshot_id uuid := gen_random_uuid();
-    v_new_content_id uuid := gen_random_uuid();
-    v_composite record;
-    v_operation_ids uuid[];
-    v_vector_clock jsonb := '{}'::jsonb;
+    v_op jsonb;
+    v_op_id uuid;
 BEGIN
     -- 1. Get the current content
     SELECT * INTO v_old_content
@@ -324,27 +292,15 @@ BEGIN
         RETURN jsonb_build_object(
             'success', false,
             'error', 'Content not found',
-            'details', format('Could not find content with id %s', p_id)
+            'details', format('Content with id %s not found', p_id)
         );
     END IF;
     
-    -- 2. Generate diff between old and new content
-    v_diff := public.generate_diff(v_old_content.json, p_json);
-    v_operations := v_diff -> 'operations';
-    
-    -- If no changes, return early
-    IF jsonb_array_length(v_operations) = 0 THEN
-        RETURN jsonb_build_object(
-            'success', true,
-            'message', 'No changes detected',
-            'id', p_id
-        );
-    END IF;
-    
-    -- 3. Find the composite that references this content
+    -- 2. Get the composite that references this content
     SELECT * INTO v_composite
     FROM public.composites
-    WHERE compose_id = p_id;
+    WHERE compose_id = p_id
+    LIMIT 1;
     
     IF v_composite IS NULL THEN
         RETURN jsonb_build_object(
@@ -354,38 +310,35 @@ BEGIN
         );
     END IF;
     
-    -- 4. Create a patch request
+    -- 3. Create a patch request
     INSERT INTO public.patch_requests (
         title,
         description,
         author,
         old_version_id,
         new_version_id,
-        composite_id,
-        operation_type
+        composite_id
     ) VALUES (
         'Update to ' || v_composite.title,
-        'Content update generated from edit operation',
+        'Content update for ' || v_composite.title,
         p_user_id,
         p_id,
         v_new_content_id,
-        v_composite.id,
-        'edit'
+        v_composite.id
     )
     RETURNING id INTO v_patch_request_id;
     
-    -- 5. Create operations with vector clocks
+    -- 4. Generate diff
+    v_diff := public.generate_diff(v_old_content.json, p_json);
+    v_operations := v_diff -> 'operations';
+    
+    -- 5. Update vector clock and create operations from diff
     v_vector_clock := public.update_vector_clock(v_vector_clock, p_user_id);
     
-    -- Create an array to store operation IDs
-    v_operation_ids := ARRAY[]::uuid[];
-    
-    -- Process each operation from the diff
     FOR i IN 0..jsonb_array_length(v_operations) - 1 LOOP
-        DECLARE
-            v_op jsonb := v_operations -> i;
-            v_op_id uuid;
         BEGIN
+            v_op := v_operations -> i;
+            
             INSERT INTO public.db_operations (
                 patch_request_id,
                 operation_type,
@@ -438,40 +391,17 @@ BEGIN
         v_new_snapshot_id
     );
     
-    -- 7. Archive old content
-    INSERT INTO public.db_archive (
-        id,
-        json,
-        author,
-        schema,
-        created_at,
-        archived_at,
-        snapshot_id
-    ) VALUES (
-        v_old_content.id,
-        v_old_content.json,
-        v_old_content.author,
-        v_old_content.schema,
-        v_old_content.created_at,
-        now(),
-        v_old_content.snapshot_id
-    );
-    
-    -- 8. Update composite to point to new content
+    -- 7. Update composite to point to new content
     UPDATE public.composites
     SET compose_id = v_new_content_id,
         updated_at = now()
     WHERE id = v_composite.id;
     
-    -- 9. Auto-approve the patch request (since it's the author's own edit)
+    -- 8. Auto-approve the patch request (since it's the author's own edit)
     UPDATE public.patch_requests
     SET status = 'approved',
         updated_at = now()
     WHERE id = v_patch_request_id;
-    
-    -- 10. Delete old content from active db
-    DELETE FROM public.db
-    WHERE id = p_id;
     
     -- Return success result
     RETURN jsonb_build_object(
@@ -502,17 +432,10 @@ DECLARE
     v_is_meta_schema boolean := false;
     v_composite record;
 BEGIN
-    -- First, check if the item exists in active db
+    -- Check if the item exists in db
     SELECT * INTO v_current_item
     FROM public.db
     WHERE id = p_id;
-    
-    -- If not found in active db, check archive
-    IF v_current_item IS NULL THEN
-        SELECT * INTO v_current_item
-        FROM public.db_archive
-        WHERE id = p_id;
-    END IF;
     
     IF v_current_item IS NULL THEN
         RETURN jsonb_build_object(
@@ -646,18 +569,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Enable RLS
 ALTER TABLE "public"."db" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "public"."db_archive" ENABLE ROW LEVEL SECURITY;
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON TABLE "public"."db" TO service_role;
-GRANT ALL PRIVILEGES ON TABLE "public"."db_archive" TO service_role;
 
 -- RLS Policies
 CREATE POLICY "service_role_all" ON "public"."db"
-AS PERMISSIVE FOR ALL TO service_role
-USING (true) WITH CHECK (true);
-
-CREATE POLICY "service_role_all" ON "public"."db_archive"
 AS PERMISSIVE FOR ALL TO service_role
 USING (true) WITH CHECK (true);
 

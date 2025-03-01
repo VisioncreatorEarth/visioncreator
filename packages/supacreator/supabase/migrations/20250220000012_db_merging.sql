@@ -149,19 +149,10 @@ BEGIN
     
     -- 3. Get content from all three
     SELECT json INTO v_source_content FROM public.db WHERE id = v_source_composite.compose_id;
-    IF v_source_content IS NULL THEN
-        SELECT json INTO v_source_content FROM public.db_archive WHERE id = v_source_composite.compose_id;
-    END IF;
     
     SELECT json INTO v_target_content FROM public.db WHERE id = v_target_composite.compose_id;
-    IF v_target_content IS NULL THEN
-        SELECT json INTO v_target_content FROM public.db_archive WHERE id = v_target_composite.compose_id;
-    END IF;
     
     SELECT json INTO v_ancestor_content FROM public.db WHERE id = v_ancestor_composite.compose_id;
-    IF v_ancestor_content IS NULL THEN
-        SELECT json INTO v_ancestor_content FROM public.db_archive WHERE id = v_ancestor_composite.compose_id;
-    END IF;
     
     IF v_source_content IS NULL OR v_target_content IS NULL OR v_ancestor_content IS NULL THEN
         RETURN jsonb_build_object(
@@ -424,14 +415,8 @@ BEGIN
     
     -- 2. Get content from both composites
     SELECT json INTO v_source_content FROM public.db WHERE id = v_source_composite.compose_id;
-    IF v_source_content IS NULL THEN
-        SELECT json INTO v_source_content FROM public.db_archive WHERE id = v_source_composite.compose_id;
-    END IF;
     
     SELECT json INTO v_target_content FROM public.db WHERE id = v_target_composite.compose_id;
-    IF v_target_content IS NULL THEN
-        SELECT json INTO v_target_content FROM public.db_archive WHERE id = v_target_composite.compose_id;
-    END IF;
     
     IF v_source_content IS NULL OR v_target_content IS NULL THEN
         RETURN jsonb_build_object(

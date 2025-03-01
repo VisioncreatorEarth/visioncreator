@@ -109,8 +109,6 @@ DECLARE
     v_old_json jsonb;
     v_new_json jsonb;
     v_key text;
-    v_is_archived boolean := false;
-    v_source_in_archive boolean := false;
     v_vector_clock jsonb := '{}'::jsonb;
     v_new_snapshot_id uuid := gen_random_uuid();
     v_operation_ids uuid[];
@@ -125,26 +123,14 @@ BEGIN
         RAISE EXCEPTION 'Source composite % not found', p_composite_id;
     END IF;
 
-    -- 2. Get the content from the source composite - first check active DB
+    -- 2. Get the content from the source composite
     SELECT id, json, author, schema, snapshot_id
     INTO v_source_content
     FROM public.db
     WHERE id = v_source_composite.compose_id;
     
-    -- If not in active DB, check archive
     IF v_source_content IS NULL THEN
-        SELECT id, json, author, schema, snapshot_id
-        INTO v_source_content
-        FROM public.db_archive
-        WHERE id = v_source_composite.compose_id;
-        
-        IF v_source_content IS NOT NULL THEN
-            v_source_in_archive := true;
-        END IF;
-    END IF;
-    
-    IF v_source_content IS NULL THEN
-        RAISE EXCEPTION 'Source content % not found in either active or archive DB', v_source_composite.compose_id;
+        RAISE EXCEPTION 'Source content % not found in DB', v_source_composite.compose_id;
     END IF;
 
     -- 3. Create a clone of the original content to serve as our "before" state
@@ -194,21 +180,14 @@ BEGIN
     -- 5. Create a new composite
     v_new_composite_id := gen_random_uuid();
     
-    -- Set a title based on whether this is a variation due to non-author edit or archived content
+    -- Set a title and description for the variation
     DECLARE
-        v_variation_type text;
+        v_variation_type text := 'edit_variation';
         v_variation_title text;
         v_variation_description text;
     BEGIN
-        IF v_source_in_archive THEN
-            v_variation_type := 'archive_variation';
-            v_variation_title := COALESCE(p_variation_title, 'Restored version of ' || v_source_composite.title);
-            v_variation_description := COALESCE(p_variation_description, 'Created by ' || p_user_id || ' from archived content ' || v_source_composite.compose_id);
-        ELSE
-            v_variation_type := 'edit_variation';
-            v_variation_title := COALESCE(p_variation_title, 'Variation of ' || v_source_composite.title);
-            v_variation_description := COALESCE(p_variation_description, 'Created by ' || p_user_id || ' as a variation of composite ' || p_composite_id);
-        END IF;
+        v_variation_title := COALESCE(p_variation_title, 'Variation of ' || v_source_composite.title);
+        v_variation_description := COALESCE(p_variation_description, 'Created by ' || p_user_id || ' as a variation of composite ' || p_composite_id);
         
         INSERT INTO public.composites (
             id,
@@ -238,13 +217,9 @@ BEGIN
         'variation_of',
         jsonb_build_object(
             'created_at', now(),
-            'variation_type', CASE WHEN v_source_in_archive THEN 'archive_variation' ELSE 'edit_variation' END,
-            'description', CASE 
-                WHEN v_source_in_archive THEN format('Created automatically when %s edited archived content', p_user_id)
-                ELSE format('Created automatically when %s tried to edit a composite they don''t own', p_user_id)
-            END,
-            'target_composite_id', v_source_composite.id,
-            'is_from_archive', v_source_in_archive
+            'variation_type', 'edit_variation',
+            'description', format('Created automatically when %s tried to edit a composite they don''t own', p_user_id),
+            'target_composite_id', v_source_composite.id
         )
     );
 
@@ -254,16 +229,10 @@ BEGIN
         v_patch_description text;
         v_operation_type text;
     BEGIN
-        -- Set the title and description based on the variation type
-        IF v_source_in_archive THEN
-            v_patch_title := 'Restored archive version for ' || v_source_composite.title;
-            v_patch_description := 'Changes made by ' || p_user_id || ' to restore archived content for ' || v_source_composite.title;
-            v_operation_type := 'branch';
-        ELSE
-            v_patch_title := 'Edit variation for ' || v_source_composite.title;
-            v_patch_description := 'Changes made by ' || p_user_id || ' to create a variation of ' || v_source_composite.title;
-            v_operation_type := 'branch';
-        END IF;
+        -- Set the title and description for the variation
+        v_patch_title := 'Edit variation for ' || v_source_composite.title;
+        v_patch_description := 'Changes made by ' || p_user_id || ' to create a variation of ' || v_source_composite.title;
+        v_operation_type := 'branch';
         
         -- Create the patch request using the clone as the old version (which is now in the active DB)
         INSERT INTO public.patch_requests (
@@ -360,15 +329,11 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'createdVariation', true,
-        'fromArchive', v_source_in_archive,
         'newCompositeId', v_new_composite_id,
         'patchRequestId', v_patch_request_id,
         'operationCount', array_length(v_operation_ids, 1),
         'snapshotId', v_new_snapshot_id,
-        'message', CASE
-            WHEN v_source_in_archive THEN 'Created a new variation from archived content'
-            ELSE 'Created a new variation instead of editing the original content'
-        END
+        'message', 'Created a new variation instead of editing the original content'
     );
 END;
 $$ LANGUAGE plpgsql;
