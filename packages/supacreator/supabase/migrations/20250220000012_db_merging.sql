@@ -354,7 +354,24 @@ BEGIN
             'conflicts_detected', v_conflicts_detected,
             'conflicts_resolved', v_conflicts_resolved
         )
-    );
+    )
+    -- Handle the case when this relationship already exists (re-merging)
+    ON CONFLICT (source_composite_id, target_composite_id, relationship_type) 
+    DO UPDATE SET 
+        metadata = jsonb_build_object(
+            'merged_at', now(),
+            'merged_by', p_user_id,
+            'patch_request_id', v_patch_request_id,
+            'strategy', 'three_way',
+            'ancestor_id', v_ancestor_id,
+            'conflicts_detected', v_conflicts_detected,
+            'conflicts_resolved', v_conflicts_resolved,
+            'previous_merges', 
+            COALESCE(
+                composite_relationships.metadata->'previous_merges', 
+                '[]'::jsonb
+            ) || jsonb_build_array(composite_relationships.metadata)
+        );
     
     RETURN jsonb_build_object(
         'success', true,
@@ -509,7 +526,21 @@ BEGIN
             'patch_request_id', v_patch_request_id,
             'strategy', 'simple'
         )
-    );
+    )
+    -- Handle the case when this relationship already exists (re-merging)
+    ON CONFLICT (source_composite_id, target_composite_id, relationship_type) 
+    DO UPDATE SET 
+        metadata = jsonb_build_object(
+            'merged_at', now(),
+            'merged_by', p_user_id,
+            'patch_request_id', v_patch_request_id,
+            'strategy', 'simple',
+            'previous_merges', 
+            COALESCE(
+                composite_relationships.metadata->'previous_merges', 
+                '[]'::jsonb
+            ) || jsonb_build_array(composite_relationships.metadata)
+        );
     
     RETURN jsonb_build_object(
         'success', true,

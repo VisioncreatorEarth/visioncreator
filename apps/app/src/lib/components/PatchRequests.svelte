@@ -1,6 +1,6 @@
 <!--
 @component
-EditRequests.svelte - A component for displaying and managing patch requests for composites.
+PatchRequests.svelte - A component for displaying and managing patch requests for composites.
 This component handles:
 1. Displaying pending patch requests for the currently selected composite
 2. Approving or rejecting patch requests (only for authors of the composite)

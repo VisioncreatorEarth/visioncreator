@@ -209,6 +209,7 @@ DECLARE
     v_patch_request "public"."patch_requests";
     v_composite "public"."composites";
     v_operations record;
+    v_source_composite_id uuid;
 BEGIN
     -- Get the patch request
     SELECT * INTO v_patch_request 
@@ -249,6 +250,34 @@ BEGIN
         updated_at = now()
     WHERE id = p_patch_request_id
     RETURNING * INTO v_patch_request;
+    
+    -- Auto-archive other pending merge requests for this composite from the same author
+    -- This prevents conflicts when the same author has multiple pending merge requests
+    IF v_patch_request.operation_type = 'merge' THEN
+        UPDATE public.patch_requests
+        SET status = 'rejected',
+            updated_at = now(),
+            metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('auto_archived', true, 'archived_reason', 'Newer merge request was approved')
+        WHERE 
+            id != p_patch_request_id 
+            AND composite_id = v_patch_request.composite_id
+            AND author = v_patch_request.author
+            AND operation_type = 'merge'
+            AND status = 'pending';
+            
+        -- Get the source composite ID from the metadata
+        v_source_composite_id := (v_patch_request.metadata->>'source_id')::uuid;
+        
+        -- Auto-archive the source composite after the merge is approved
+        -- This ensures the source composite is marked as archived after successfully merging
+        IF v_source_composite_id IS NOT NULL THEN
+            PERFORM public.toggle_composite_archive_status(
+                COALESCE(p_user_id, v_patch_request.author), -- Use the provided user ID or fall back to patch request author
+                v_source_composite_id, -- The source composite to archive (the one being merged from)
+                TRUE -- Set to archived
+            );
+        END IF;
+    END IF;
 
     RETURN v_patch_request;
 END;

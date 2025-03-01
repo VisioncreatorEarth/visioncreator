@@ -406,13 +406,48 @@ INSERT INTO db (id, json, author, schema, snapshot_id) VALUES
 '{
   "type": "object",
   "title": "Markdown Content",
-  "description": "A simple schema for markdown content",
+  "description": "A schema for markdown content with strict validation",
   "properties": {
     "content": {
       "type": "string",
       "title": "Content",
       "description": "Markdown formatted content",
-      "format": "markdown"
+      "format": "markdown",
+      "minLength": 1,
+      "pattern": "^[\\s\\S]*$"
+    },
+    "title": {
+      "type": "string",
+      "title": "Title",
+      "description": "Title of the content"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description",
+      "description": "Brief description of the content"
+    },
+    "metadata": {
+      "type": "object",
+      "title": "Metadata",
+      "description": "Optional metadata for content",
+      "properties": {
+        "benefits": {
+          "type": "string",
+          "description": "Benefits provided by this content"
+        },
+        "pain": {
+          "type": "string",
+          "description": "Pain points addressed by this content"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags associated with this content"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "required": ["content"],
@@ -427,7 +462,14 @@ gen_random_uuid()  -- Generate a random UUID for snapshot_id
 INSERT INTO db (id, json, author, schema, snapshot_id) VALUES 
 ('22222222-2222-2222-2222-222222222222', 
 '{
-  "content": "# Example Content\n\nThis is a sample markdown content instance.\n\n## Features\n- Supports full markdown\n- Can be used in proposals\n- Easy to edit and version"
+  "content": "# Business Model Proposal for a Community-Owned Organization\n\n## The FORGE: Where Visioncreators Thrive\n\nThe FORGE is a community-owned ecosystem where Visioncreators craft AI solutions for SMBs, earn substantial income working on their terms, and build co-owned infrastructure that increases in value over time.\n\n## Key Stakeholders\n\n- **SMBs**: Businesses needing AI solutions\n- **Visioncreators**: Community members with AI expertise\n- **FORGE Platform**: Community-owned infrastructure\n\n## Value Proposition\n\n- Visioncreators earn €125/hour while maintaining flexibility\n- SMBs get affordable AI expertise without hiring full-time experts\n- Platform reinvests 25% of revenue into shared infrastructure\n\nThis creates a self-sustaining ecosystem that benefits all stakeholders while building a valuable community asset.",
+  "title": "The FORGE: Where Visioncreators Thrive",
+  "description": "A business model proposal for a community-owned organization where Visioncreators craft AI solutions for SMBs",
+  "metadata": {
+    "benefits": "Launch your own AI business in a supportive ecosystem with built-in infrastructure and client base.",
+    "pain": "Independent creators struggle to find steady work and lack the infrastructure to scale their businesses.",
+    "tags": ["product", "business-model"]
+  }
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',
 '11111111-1111-1111-1111-111111111111',
@@ -443,8 +485,8 @@ INSERT INTO composites (
     author
 ) VALUES (
     '33333333-3333-3333-3333-333333333333',
-    'Hello Composite',
-    'A composite for storing and versioning markdown content',
+    'The FORGE: Where Visioncreators Thrive',
+    'A business model proposal for a community-owned organization where Visioncreators craft AI solutions for SMBs',
     '22222222-2222-2222-2222-222222222222',
     '00000000-0000-0000-0000-000000000001'  -- System user as author
 );
@@ -464,9 +506,9 @@ INSERT INTO proposals (
     compose
 ) VALUES (
     '44444444-4444-4444-4444-444444444444',
-    'The Visioncreator Platform',
+    'The FORGE: Where Visioncreators Thrive',
     '00000000-0000-0000-0000-000000000001',
-    '# The Visioncreator Platform\n\nA collaborative platform for creating, sharing, and evolving visions together.',
+    '# The FORGE: Where Visioncreators Thrive\n\nA community-owned ecosystem where Visioncreators craft AI solutions for SMBs, earning substantial income and building co-owned infrastructure.',
     'idea',
     0,
     0,

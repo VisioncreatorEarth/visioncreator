@@ -769,7 +769,7 @@ This component handles:
 		</nav>
 
 		<!-- Content Area -->
-		<div class="p-6 overflow-y-auto">
+		<div class="p-6 overflow-y-auto h-[calc(100vh-3.5rem)]">
 			{#if $composeQuery.isLoading}
 				<div class="flex items-center justify-center h-full">
 					<div class="text-surface-300">Loading...</div>
@@ -867,20 +867,6 @@ This component handles:
 									<Icon icon="heroicons:code-bracket-square" class="inline-block w-4 h-4 mr-1" />
 									New Variation
 								</button>
-								{#if selectedEditRequest.status === 'pending'}
-									<button
-										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
-										on:click={() => {
-											// Dispatch the same event as the approve button in EditRequests
-											const event = new CustomEvent('approve', {
-												detail: { requestId: selectedEditRequest.id }
-											});
-											document.dispatchEvent(event);
-										}}
-									>
-										Approve
-									</button>
-								{/if}
 							</div>
 						</div>
 
@@ -964,7 +950,7 @@ This component handles:
 								/>
 							</div>
 						{:else}
-							<div class="prose prose-invert max-w-none">
+							<div class="overflow-y-auto prose prose-invert max-w-none">
 								{@html selectedComposite ? formattedSelectedContent : formattedContent}
 							</div>
 						{/if}
@@ -981,7 +967,7 @@ This component handles:
 	<!-- Right Aside: Edit Requests -->
 	<aside class="flex flex-col border-l w-80 border-surface-700">
 		<div class="p-4 border-b border-surface-700">
-			<h3 class="text-lg font-semibold text-surface-100">Edit Requests</h3>
+			<h3 class="text-lg font-semibold text-surface-100">Patch Requests</h3>
 		</div>
 		<div class="flex-1 overflow-y-auto">
 			{#if compose_data}
@@ -1016,7 +1002,15 @@ This component handles:
 {#if isCreatingVariation}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
 		<div class="w-full max-w-md p-6 rounded-lg bg-surface-800">
-			<h3 class="mb-4 text-lg font-semibold text-surface-100">Create New Variation</h3>
+			<div class="flex items-center justify-between mb-4">
+				<h3 class="text-lg font-semibold text-surface-100">Create New Variation</h3>
+				<button
+					class="p-1 rounded-full text-tertiary-400 hover:text-tertiary-100 hover:bg-surface-700"
+					on:click={toggleVariationModal}
+				>
+					<Icon icon="heroicons:x-mark" class="w-5 h-5" />
+				</button>
+			</div>
 
 			<div class="space-y-4">
 				<div>
@@ -1054,7 +1048,13 @@ This component handles:
 				{/if}
 			</div>
 
-			<div class="flex justify-end mt-6">
+			<div class="flex justify-end gap-2 mt-6">
+				<button
+					class="px-4 py-2 text-sm font-medium text-surface-300 transition-colors rounded-lg bg-surface-700 hover:bg-surface-600"
+					on:click={toggleVariationModal}
+				>
+					Cancel
+				</button>
 				<button
 					class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
 					on:click={() => {
