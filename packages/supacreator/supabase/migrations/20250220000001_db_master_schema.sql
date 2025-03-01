@@ -490,6 +490,7 @@ CREATE OR REPLACE FUNCTION public.edit_content_with_validation(
     p_id uuid,
     p_json jsonb,
     p_user_id uuid,
+    p_composite_id uuid DEFAULT NULL,
     p_create_variation boolean DEFAULT false,
     p_variation_title text DEFAULT NULL,
     p_variation_description text DEFAULT NULL
@@ -499,6 +500,7 @@ DECLARE
     v_schema_id uuid;
     v_validation_result jsonb;
     v_is_meta_schema boolean := false;
+    v_composite record;
 BEGIN
     -- First, check if the item exists in active db
     SELECT * INTO v_current_item
@@ -544,10 +546,20 @@ BEGIN
     
     -- If validation passes and create_variation is true, create a variation
     IF p_create_variation THEN
-        -- Find the composite that uses this content
-        DECLARE
-            v_composite record;
-        BEGIN
+        -- If composite ID is provided, use it; otherwise find the composite that uses this content
+        IF p_composite_id IS NOT NULL THEN
+            SELECT * INTO v_composite
+            FROM public.composites
+            WHERE id = p_composite_id;
+            
+            IF v_composite IS NULL THEN
+                RETURN jsonb_build_object(
+                    'success', false,
+                    'error', 'Specified composite not found',
+                    'details', format('Composite with id %s not found', p_composite_id)
+                );
+            END IF;
+        ELSE
             SELECT * INTO v_composite
             FROM public.composites
             WHERE compose_id = p_id
@@ -560,19 +572,74 @@ BEGIN
                     'details', format('Content with id %s is not referenced by any composite', p_id)
                 );
             END IF;
-            
-            -- Create a variation
-            RETURN public.create_composite_variation(
-                p_user_id,
-                v_composite.id,
-                p_json,
-                p_variation_title,
-                p_variation_description
-            );
-        END;
+        END IF;
+        
+        -- Create a variation
+        RETURN public.create_composite_variation(
+            p_user_id,
+            v_composite.id,
+            p_json,
+            p_variation_title,
+            p_variation_description
+        );
     ELSE
-        -- Otherwise use our new process_edit function
-        RETURN public.handle_content_update(p_id, p_json, p_user_id);
+        -- Modify handle_content_update function to use the composite_id parameter if available
+        IF p_composite_id IS NOT NULL THEN
+            -- Find the specified composite
+            SELECT * INTO v_composite
+            FROM public.composites
+            WHERE id = p_composite_id;
+            
+            IF v_composite IS NULL THEN
+                RETURN jsonb_build_object(
+                    'success', false,
+                    'error', 'Specified composite not found',
+                    'details', format('Composite with id %s not found', p_composite_id)
+                );
+            END IF;
+            
+            -- Override the content ID to match the composite's content
+            IF v_composite.compose_id != p_id THEN
+                RAISE NOTICE 'Warning: Content ID (%) does not match the provided composite''s content ID (%). Using composite''s content ID.', p_id, v_composite.compose_id;
+            END IF;
+            
+            -- Pass the composite ID through to handle_content_update (extending it)
+            -- Since we can't modify handle_content_update now, we'll follow its logic here for the specific composite
+            
+            -- Similar to handle_content_update but for a specific composite
+            DECLARE
+                v_is_author boolean;
+                v_is_archived boolean := false;
+                v_result jsonb;
+                v_new_json jsonb;
+            BEGIN
+                -- Check if the current user is the author
+                v_is_author := (v_composite.author = p_user_id);
+                
+                -- Clean the JSON input
+                v_new_json := p_json;
+                v_new_json := v_new_json - 'created_at';
+                v_new_json := v_new_json - 'author';
+                v_new_json := v_new_json - 'schema';
+                v_new_json := v_new_json - 'snapshot_id';
+                v_new_json := v_new_json - 'last_modified_at';
+                
+                -- If the user is not the author, create a variation
+                IF NOT v_is_author THEN
+                    RETURN public.create_composite_variation(
+                        p_user_id,
+                        v_composite.id,
+                        v_new_json
+                    );
+                END IF;
+                
+                -- For active content where user is the author, process the edit
+                RETURN public.process_edit(v_composite.compose_id, v_new_json, p_user_id);
+            END;
+        ELSE
+            -- Use the old behavior if no composite_id is provided
+            RETURN public.handle_content_update(p_id, p_json, p_user_id);
+        END IF;
     END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

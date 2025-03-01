@@ -450,7 +450,7 @@ INSERT INTO db (id, json, author, schema, snapshot_id) VALUES
       "additionalProperties": false
     }
   },
-  "required": ["content"],
+  "required": ["content", "title", "metadata"],
   "additionalProperties": false
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',  -- System user

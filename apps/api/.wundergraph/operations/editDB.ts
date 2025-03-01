@@ -45,6 +45,7 @@ ajv.addKeyword({
 export default createOperation.mutation({
     input: z.object({
         id: z.string().uuid(),
+        compositeId: z.string().uuid().optional(),
         json: z.any(),
         createVariation: z.boolean().optional().default(false),
     }),
@@ -126,6 +127,12 @@ export default createOperation.mutation({
                 p_user_id: user.customClaims.id,
                 p_create_variation: input.createVariation
             };
+
+            // Add composite ID if provided
+            if (input.compositeId) {
+                params.p_composite_id = input.compositeId;
+                console.log('[editDB] Using provided composite ID:', input.compositeId);
+            }
 
             // Add variation metadata if available
             if (input.createVariation && Object.keys(variationMetadata).length > 0) {

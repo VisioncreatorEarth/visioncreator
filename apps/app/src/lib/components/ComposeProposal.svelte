@@ -229,6 +229,14 @@ This component handles:
 
 	// Handle tab changes
 	function handleTabChange(tab: 'content' | 'json' | 'diff' | 'schema') {
+		// If we're in edit mode, confirm the user wants to switch tabs
+		if (editMode) {
+			if (!confirm('You have unsaved changes. Are you sure you want to switch tabs?')) {
+				return;
+			}
+			editMode = false;
+		}
+
 		$activeComposeTab = tab;
 	}
 
@@ -287,52 +295,112 @@ This component handles:
 	function toggleEditMode() {
 		if (!editMode) {
 			// Set initial content based on whether we're editing the main composite or a variation
-			editContent = selectedCompositeId ? selectedComposite?.compose_json?.content || '' : content;
+			if ($activeComposeTab === 'json') {
+				// For JSON tab, initialize with the full JSON structure
+				const currentJson = selectedCompositeId
+					? selectedComposite?.compose_json
+					: compose_data?.compose_json;
+
+				// Convert the full JSON structure to a formatted JSON string for editing
+				editContent = JSON.stringify(currentJson, null, 2);
+			} else {
+				// For content tab, initialize with the content field
+				editContent = selectedCompositeId
+					? selectedComposite?.compose_json?.content || ''
+					: content;
+			}
 		}
 		editMode = !editMode;
 	}
 
 	// Handle content save
 	async function saveChanges(event?: CustomEvent<{ json: any }> | MouseEvent) {
-		// Get the JSON to save - either from the JSON editor or create it from the content
-		let jsonToSave: Record<string, any>;
-
-		// Check if this is a JSON editor save event by checking for CustomEvent with detail property
-		if (
-			event &&
-			event instanceof CustomEvent &&
-			'detail' in event &&
-			event.detail &&
-			'json' in event.detail
-		) {
-			// This is a save event from the JSON editor
-			jsonToSave = event.detail.json;
-		} else {
-			// This is a direct save from the edit mode
-			jsonToSave = { content: editContent };
-
-			if (!editContent) {
-				console.error('Missing content for save');
-				return;
-			}
-		}
-
-		if (!currentComposeId) {
-			console.error('Missing compose ID for save:', {
-				selectedCompositeId,
-				selectedCompose: selectedComposite?.compose_id,
-				mainCompose: compose_data?.compose_id
-			});
-			return;
-		}
-
 		// Reset validation errors
 		validationErrors = null;
 		isSubmitting = true;
 
 		try {
+			let jsonToSave: Record<string, any>;
+
+			// Get current content structure for reference
+			const currentJson = selectedCompositeId
+				? { ...selectedComposite?.compose_json }
+				: { ...compose_data?.compose_json };
+
+			// Get the current composite ID
+			const currentSelectedCompositeId = selectedCompositeId || compose_data?.compose_id;
+
+			console.log('Current tab:', $activeComposeTab);
+			console.log('Edit mode:', editMode);
+			console.log('Current content structure:', currentJson);
+			console.log('Current composite ID:', selectedCompositeId);
+			console.log('Current compose ID (content):', currentComposeId);
+
+			if ($activeComposeTab === 'json') {
+				if (editMode) {
+					// In edit mode, parse the full JSON from textarea
+					try {
+						// Parse the JSON from the editor - keep everything as is
+						jsonToSave = JSON.parse(editContent);
+						console.log('Full JSON parsed from editor:', jsonToSave);
+					} catch (error) {
+						console.error('Invalid JSON format:', error);
+						toastError('Invalid JSON format. Please check your syntax.');
+						isSubmitting = false;
+						return;
+					}
+				} else if (
+					event &&
+					event instanceof CustomEvent &&
+					'detail' in event &&
+					event.detail &&
+					'json' in event.detail
+				) {
+					// From JsonEditor component - use the full JSON object as is
+					jsonToSave = event.detail.json;
+					console.log('Full JSON from editor component:', jsonToSave);
+				} else {
+					console.error('Unexpected save event in JSON mode');
+					toastError('Unexpected save event');
+					isSubmitting = false;
+					return;
+				}
+			} else {
+				// For content tab, update just the content field while preserving other fields
+				jsonToSave = {
+					...currentJson,
+					content: editContent
+				};
+
+				if (!editContent) {
+					console.error('Missing content for save');
+					toastError('Content cannot be empty');
+					isSubmitting = false;
+					return;
+				}
+
+				console.log('Content tab - JSON to save (preserving structure):', jsonToSave);
+			}
+
+			if (!currentComposeId) {
+				console.error('Missing compose ID for save:', {
+					selectedCompositeId,
+					selectedCompose: selectedComposite?.compose_id,
+					mainCompose: compose_data?.compose_id
+				});
+				toastError('Missing compose ID');
+				isSubmitting = false;
+				return;
+			}
+
+			console.log('Saving to compose ID:', currentComposeId);
+			console.log('Composite ID being used:', selectedCompositeId || compose_data?.compose_id);
+			console.log('JSON to save (raw):', jsonToSave);
+
+			// Pass both the content ID (currentComposeId) and the composite ID (selectedCompositeId or compose_data.id)
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
+				compositeId: selectedCompositeId || compose_data?.compose_id, // Send the actual composite ID
 				json: jsonToSave,
 				createVariation: false
 			});
@@ -354,26 +422,52 @@ This component handles:
 
 			// Cast the result to the expected type
 			const typedResult = result as EditResult;
+			console.log('Save result:', typedResult);
 
 			if (typedResult && typedResult.success) {
 				await $composeQuery.refetch();
 				editMode = false;
 				toastSuccess('Content saved successfully');
 			} else {
-				// Handle validation errors
+				// Enhanced error handling for validation failures
 				if (typedResult.details?.errors) {
 					validationErrors = typedResult.details.errors;
-					toastError('Validation failed. Please check the form for errors.');
+
+					// Show more specific error message for common validation issues
+					if (validationErrors.some((e) => e.keyword === 'additionalProperties')) {
+						const invalidProps = validationErrors
+							.filter((e) => e.keyword === 'additionalProperties' && e.params?.additionalProperty)
+							.map((e) => e.params.additionalProperty)
+							.join(', ');
+
+						toastError(`Schema validation failed: Properties not allowed: ${invalidProps}`);
+					} else if (validationErrors.some((e) => e.keyword === 'required')) {
+						const missingProps = validationErrors
+							.filter((e) => e.keyword === 'required' && e.params?.missingProperty)
+							.map((e) => e.params.missingProperty)
+							.join(', ');
+
+						toastError(`Schema validation failed: Missing required properties: ${missingProps}`);
+					} else {
+						toastError('Validation failed. Please check the form for errors.');
+					}
 				} else if (typedResult.error) {
-					toastError(typedResult.error);
+					// Handle specific database errors with more user-friendly messages
+					if (typedResult.error.includes('query returned more than one row')) {
+						toastError(
+							'Database error: Multiple records found with the same ID. Please contact support.'
+						);
+					} else {
+						toastError(typedResult.error);
+					}
 				} else {
 					toastError('An unknown error occurred while saving');
 				}
 				console.error('Failed to save changes:', typedResult);
 			}
 		} catch (error) {
+			console.error('Exception during save:', error);
 			toastError('An error occurred while saving');
-			console.error('Failed to save changes:', error);
 		} finally {
 			isSubmitting = false;
 		}
@@ -785,6 +879,29 @@ This component handles:
 							<h2 class="text-xl font-semibold text-surface-100">
 								{selectedComposite?.title || compose_data.title}
 							</h2>
+							<div class="flex items-center gap-2">
+								{#if editMode}
+									<button
+										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
+										on:click={saveChanges}
+									>
+										Save
+									</button>
+									<button
+										class="px-4 py-2 text-sm font-medium text-red-400 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+										on:click={toggleEditMode}
+									>
+										Cancel
+									</button>
+								{:else}
+									<button
+										class="px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20"
+										on:click={toggleEditMode}
+									>
+										Edit
+									</button>
+								{/if}
+							</div>
 						</div>
 
 						{#if validationErrors && validationErrors.length > 0}
@@ -806,10 +923,19 @@ This component handles:
 							</div>
 						{/if}
 
-						<JsonEditor
-							json={selectedComposite?.compose_json || compose_data.compose_json}
-							on:save={saveChanges}
-						/>
+						{#if editMode}
+							<textarea
+								bind:value={editContent}
+								class="w-full h-[calc(100vh-12rem)] p-4 border rounded-lg bg-surface-900 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100 font-mono"
+								placeholder="Enter JSON content..."
+							/>
+						{:else}
+							<JsonEditor
+								json={selectedComposite?.compose_json || compose_data?.compose_json}
+								on:save={saveChanges}
+								readOnly={false}
+							/>
+						{/if}
 					</div>
 				{:else if $activeComposeTab === 'schema'}
 					<div class="flex flex-col h-full">
@@ -1050,7 +1176,7 @@ This component handles:
 
 			<div class="flex justify-end gap-2 mt-6">
 				<button
-					class="px-4 py-2 text-sm font-medium text-surface-300 transition-colors rounded-lg bg-surface-700 hover:bg-surface-600"
+					class="px-4 py-2 text-sm font-medium transition-colors rounded-lg text-surface-300 bg-surface-700 hover:bg-surface-600"
 					on:click={toggleVariationModal}
 				>
 					Cancel
