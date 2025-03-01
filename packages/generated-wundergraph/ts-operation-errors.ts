@@ -65,6 +65,7 @@ export type OperationErrors = {
 	sendMail: SendMailErrors;
 	sendMailWIP: SendMailWIPErrors;
 	threeWayMerge: ThreeWayMergeErrors;
+	toggleCompositeArchive: ToggleCompositeArchiveErrors;
 	toggleNotificationSubscription: ToggleNotificationSubscriptionErrors;
 	toggleOnboarded: ToggleOnboardedErrors;
 	updateEditRequest: UpdateEditRequestErrors;
@@ -148,6 +149,7 @@ export type SaveMailWIPErrors = ClientOperationErrors;
 export type SendMailErrors = ClientOperationErrors;
 export type SendMailWIPErrors = ClientOperationErrors;
 export type ThreeWayMergeErrors = ClientOperationErrors;
+export type ToggleCompositeArchiveErrors = ClientOperationErrors;
 export type ToggleNotificationSubscriptionErrors = ClientOperationErrors;
 export type ToggleOnboardedErrors = ClientOperationErrors;
 export type UpdateEditRequestErrors = ClientOperationErrors;

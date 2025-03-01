@@ -5,6 +5,7 @@ CREATE TABLE composites (
     description TEXT,
     compose_id UUID NOT NULL,  -- Main content version
     author UUID NOT NULL,      -- Reference to profiles.id
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- Flag to mark a composite as archived
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (author) REFERENCES profiles(id)
@@ -24,6 +25,67 @@ CREATE TABLE composite_relationships (
     FOREIGN KEY (target_composite_id) REFERENCES composites(id),
     UNIQUE (source_composite_id, target_composite_id, relationship_type)
 );
+
+-- Add function to toggle composite archive status
+CREATE OR REPLACE FUNCTION public.toggle_composite_archive_status(
+    p_user_id uuid,
+    p_composite_id uuid,
+    p_archive boolean
+) RETURNS jsonb AS $$
+DECLARE
+    v_composite record;
+    v_is_author boolean;
+BEGIN
+    -- 1. Get the composite
+    SELECT id, title, author, is_archived
+    INTO v_composite
+    FROM public.composites
+    WHERE id = p_composite_id;
+    
+    IF v_composite IS NULL THEN
+        RAISE EXCEPTION 'Composite % not found', p_composite_id;
+    END IF;
+
+    -- 2. Check if user is the author (for permission checking)
+    v_is_author := (v_composite.author = p_user_id);
+    
+    -- Only allow archiving/unarchiving if user is the author
+    IF NOT v_is_author THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Only the author can archive or unarchive a composite'
+        );
+    END IF;
+    
+    -- 3. Don't update if already in desired state
+    IF v_composite.is_archived = p_archive THEN
+        RETURN jsonb_build_object(
+            'success', true,
+            'message', CASE 
+                WHEN p_archive THEN 'Composite was already archived'
+                ELSE 'Composite was already unarchived'
+            END,
+            'changed', false
+        );
+    END IF;
+
+    -- 4. Update the composite
+    UPDATE public.composites
+    SET is_archived = p_archive,
+        updated_at = now()
+    WHERE id = p_composite_id;
+
+    -- 5. Return success message
+    RETURN jsonb_build_object(
+        'success', true,
+        'message', CASE 
+            WHEN p_archive THEN 'Composite archived successfully'
+            ELSE 'Composite unarchived successfully'
+        END,
+        'changed', true
+    );
+END;
+$$ LANGUAGE plpgsql;
 
 -- Add function to create variations of composites
 CREATE OR REPLACE FUNCTION public.create_composite_variation(

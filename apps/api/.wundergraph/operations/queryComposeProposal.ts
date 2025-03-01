@@ -13,6 +13,7 @@ interface RelatedComposite {
     compose_json: ComposeJson;
     compose_id: string;
     relationship_type: string;
+    is_archived: boolean;
     author: {
         name: string;
     };
@@ -30,6 +31,7 @@ interface ComposeData {
     description: string;
     compose_json: ComposeJson;
     compose_id: string;
+    is_archived: boolean;
     author: {
         name: string;
     };
@@ -44,6 +46,7 @@ interface CompositeData {
     description: string;
     compose_id: string;
     author: string;
+    is_archived: boolean;
 }
 
 interface ProposalWithComposite {
@@ -57,6 +60,7 @@ interface RelationshipData {
         description: string;
         compose_id: string;
         author: string;
+        is_archived: boolean;
     };
     target_composite: {
         id: string;
@@ -64,6 +68,7 @@ interface RelationshipData {
         description: string;
         compose_id: string;
         author: string;
+        is_archived: boolean;
     };
     relationship_type: string;
     metadata: {
@@ -89,7 +94,8 @@ export default createOperation.query({
                         title,
                         description,
                         compose_id,
-                        author:profiles(name)
+                        author:profiles(name),
+                        is_archived
                     )
                 `)
                 .eq('id', input.proposalId)
@@ -262,6 +268,7 @@ export default createOperation.query({
                         description: proposal.compose.description,
                         compose_json: mainCompose,
                         compose_id: proposal.compose.compose_id,
+                        is_archived: proposal.compose.is_archived,
                         author: typeof proposal.compose.author === 'string'
                             ? { name: proposal.compose.author }
                             : proposal.compose.author || { name: 'Unknown' },
@@ -272,32 +279,43 @@ export default createOperation.query({
                 };
             }
 
-            const { data: relatedCompositesData, error: compositeError } = await context.supabase
+            const { data: allRelatedComposites, error: relatedError } = await context.supabase
                 .from('composites')
                 .select(`
                     id,
                     title,
                     description,
                     compose_id,
-                    author:profiles(name)
+                    author:profiles(name),
+                    is_archived
                 `)
-                .in('id', relatedCompositeIdsArray);
+                .in('id', Array.from(relatedCompositeIds)) as {
+                    data: Array<{
+                        id: string,
+                        title: string,
+                        description: string,
+                        compose_id: string,
+                        author: { name: string },
+                        is_archived: boolean
+                    }> | null;
+                    error: any
+                };
 
-            if (compositeError) {
-                console.error('[queryComposeProposal] Failed to fetch related composites:', compositeError);
+            if (relatedError) {
+                console.error('[queryComposeProposal] Failed to fetch related composites:', relatedError);
                 throw new Error('Failed to fetch related composites');
             }
 
 
             // Create a map of composite data for quick lookup
             const compositesDataMap = new Map();
-            for (const composite of relatedCompositesData || []) {
+            for (const composite of allRelatedComposites || []) {
                 compositesDataMap.set(composite.id, composite);
             }
 
             // Process each related composite to get its content and relationship info
             const relatedComposites: RelatedComposite[] = [];
-            for (const composite of relatedCompositesData || []) {
+            for (const composite of allRelatedComposites || []) {
                 // Get the content for the related composite
                 const { data: relContent, error: relContentError } = await context.supabase
                     .from('db')
@@ -360,10 +378,11 @@ export default createOperation.query({
                     description: composite.description as string,
                     compose_json: composeJson,
                     compose_id: composite.compose_id as string,
+                    relationship_type: relationshipType,
+                    is_archived: composite.is_archived,
                     author: typeof composite.author === 'string'
                         ? { name: composite.author }
                         : composite.author || { name: 'Unknown' },
-                    relationship_type: relationshipType,
                     metadata: metadata
                 });
             }
@@ -379,6 +398,7 @@ export default createOperation.query({
                     description: proposal.compose.description,
                     compose_json: mainCompose,
                     compose_id: proposal.compose.compose_id,
+                    is_archived: proposal.compose.is_archived,
                     author: typeof proposal.compose.author === 'string'
                         ? { name: proposal.compose.author }
                         : proposal.compose.author || { name: 'Unknown' },
@@ -389,7 +409,9 @@ export default createOperation.query({
             };
         } catch (error) {
             console.error('[queryComposeProposal] Unexpected error:', error);
-            throw error;
+            return {
+                compose_data: null
+            };
         }
     }
 }); 
