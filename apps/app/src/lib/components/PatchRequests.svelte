@@ -47,9 +47,6 @@ Props:
 		operationName: 'updateEditRequest' as const
 	});
 
-	// State for expanded operations
-	let expandedRequestId: string | null = null;
-
 	// Get current user ID
 	$: userId = $userQuery.data?.id;
 
@@ -63,12 +60,6 @@ Props:
 	// Handle request selection with logging
 	function handleRequestSelect(request: any) {
 		dispatch('select', { request });
-	}
-
-	// Toggle operations visibility
-	function toggleOperations(requestId: string, event: MouseEvent) {
-		event.stopPropagation();
-		expandedRequestId = expandedRequestId === requestId ? null : requestId;
 	}
 
 	// Handle request approval with logging
@@ -189,7 +180,7 @@ Props:
 			return {
 				color: 'text-purple-400 bg-purple-400/10',
 				icon: 'heroicons:code-bracket-square',
-				text: 'Three-way Merge'
+				text: '3W Merge'
 			};
 		} else if (request.operation_type === 'merge') {
 			return {
@@ -267,189 +258,122 @@ Props:
 		<div class="divide-y divide-surface-700/50">
 			{#each $patchRequestsQuery.data.patch_requests as request}
 				<div
-					class="p-4 transition-colors cursor-pointer hover:bg-surface-800 {selectedRequestId ===
+					class="p-4 {request.status === 'pending' && isAuthor(request)
+						? 'pb-14'
+						: ''} relative transition-colors border-b cursor-pointer border-surface-700 hover:bg-surface-700 {selectedRequestId ===
 					request.id
-						? 'bg-surface-800'
+						? 'bg-surface-700 border-l-4 border-primary-500'
 						: ''}"
 					on:click={() => handleRequestSelect(request)}
 				>
-					<div class="flex items-start justify-between gap-4">
-						<div class="flex-1 min-w-0">
-							<h4 class="text-sm font-medium truncate text-tertiary-100">{request.title}</h4>
-							<p class="mt-1 text-xs text-tertiary-300">
-								{request.author.name} • {formatDate(request.created_at)}
-							</p>
-
-							<!-- Operation type badge -->
-							{#if request.operation_type}
-								{@const badge = getOperationTypeBadge(request)}
-								<span
-									class="inline-flex items-center gap-1 px-2 py-1 mt-2 text-xs font-medium rounded-full {badge.color}"
-								>
-									<Icon icon={badge.icon} class="w-3.5 h-3.5" />
-									{badge.text}
-								</span>
-							{/if}
-
-							<!-- Merge info (for three-way merges) -->
-							{#if request.metadata?.merge_strategy === 'three_way' && request.metadata?.ancestor_id}
-								<div class="mt-2 text-xs text-tertiary-400">
-									<span class="flex items-center gap-1">
-										<Icon icon="heroicons:code-bracket-square" class="w-3.5 h-3.5" />
-										Used common ancestor:
-										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
-											{request.metadata.ancestor_id.slice(0, 8)}
+					<div class="flex flex-col">
+						<div class="flex items-start justify-between">
+							<div class="flex-1">
+								<div class="mb-1 flex items-center gap-2">
+									{#if request.operation_type === 'branch' || request.metadata?.branch_name}
+										<span
+											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/10 text-green-400"
+										>
+											<Icon icon="heroicons:git-branch" class="w-3.5 h-3.5" />
+											Branch
 										</span>
-									</span>
-									{#if request.metadata.conflicts_detected > 0}
-										<span class="flex items-center gap-1 mt-1 text-yellow-400">
-											<Icon icon="heroicons:exclamation-triangle" class="w-3.5 h-3.5" />
-											{request.metadata.conflicts_detected} conflicts auto-resolved
+									{:else if request.operation_type === 'merge' || request.metadata?.merge_strategy}
+										<span
+											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-500/10 text-purple-400"
+										>
+											<Icon icon="heroicons:code-bracket-square" class="w-3.5 h-3.5" />
+											{request.metadata?.merge_strategy === 'three_way' ? '3W Merge' : 'Merge'}
 										</span>
 									{:else}
-										<span class="flex items-center gap-1 mt-1 text-green-400">
-											<Icon icon="heroicons:check-circle" class="w-3.5 h-3.5" />
-											No conflicts detected
+										<span
+											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-400"
+										>
+											<Icon icon="heroicons:pencil-square" class="w-3.5 h-3.5" />
+											Edit
+										</span>
+									{/if}
+
+									{#if request.operations && request.operations.length > 0}
+										{#each ['add', 'remove', 'replace', 'move', 'copy'] as opType}
+											{@const opCount = request.operations.filter(
+												(op) => op.operation_type === opType
+											).length}
+											{#if opCount > 0}
+												<span
+													class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full {getOperationColor(
+														opType
+													)}"
+												>
+													<Icon icon={getOperationIcon(opType)} class="w-3.5 h-3.5" />
+													{opCount}
+												</span>
+											{/if}
+										{/each}
+									{:else}
+										<span
+											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-surface-600/60 text-surface-300"
+										>
+											<Icon icon="heroicons:document-text" class="w-3.5 h-3.5" />
+											0
 										</span>
 									{/if}
 								</div>
-							{/if}
+							</div>
 
-							<div class="mt-2 space-y-1">
-								<p class="text-xs text-tertiary-400">
-									From:
-									{#if request.previousVersion.snapshot_id}
-										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
-											{request.previousVersion.snapshot_id.slice(0, 8)}
-										</span>
-									{/if}
-								</p>
-								<p class="text-xs text-tertiary-400">
-									To:
-									{#if request.changes.snapshot_id}
-										<span class="px-1.5 py-0.5 text-xs rounded-full bg-surface-600/50">
-											{request.changes.snapshot_id.slice(0, 8)}
-										</span>
-									{/if}
-								</p>
+							<div>
+								{#if request.status === 'approved'}
+									<span
+										class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/10 text-green-400"
+									>
+										<Icon icon="heroicons:check-circle" class="w-3.5 h-3.5" />
+										approved
+									</span>
+								{:else if request.status === 'rejected'}
+									<span
+										class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/10 text-red-400"
+									>
+										<Icon icon="heroicons:x-circle" class="w-3.5 h-3.5" />
+										rejected
+									</span>
+								{:else}
+									<span
+										class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-surface-600/80 text-surface-300"
+									>
+										<Icon icon="heroicons:clock" class="w-3.5 h-3.5" />
+										pending
+									</span>
+								{/if}
 							</div>
 						</div>
-						<div class="flex items-center gap-2">
-							<span
-								class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full {getStatusColor(
-									request.status
-								)}"
-							>
-								<Icon icon={getStatusIcon(request.status)} class="w-3.5 h-3.5" />
-								{request.status}
-							</span>
+
+						<div class="flex justify-between mt-1">
+							<div class="text-xs text-surface-300">
+								{request.author.name || 'Unknown'}
+							</div>
+							<div class="text-xs text-surface-400">{formatDate(request.created_at)}</div>
 						</div>
 					</div>
 
-					<!-- Operations count and toggle button -->
-					{#if request.operations && request.operations.length > 0}
-						<div class="mt-2">
+					<!-- Approve/reject buttons if pending and user is author -->
+					{#if request.status === 'pending' && isAuthor(request)}
+						<div
+							class="absolute left-0 right-0 bottom-0 flex w-full"
+							style="margin-left: -1px; margin-right: -1px; width: calc(100% + 2px);"
+						>
 							<button
-								class="flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors rounded-lg bg-surface-700/50 hover:bg-surface-700 text-tertiary-300"
-								on:click={(e) => toggleOperations(request.id, e)}
+								class="flex-1 flex items-center justify-center h-10 text-xs font-medium bg-green-500/5 text-green-400 hover:bg-green-500/15 border-r border-surface-700"
+								on:click|stopPropagation={() => handleApprove(request.id)}
 							>
-								<Icon
-									icon={expandedRequestId === request.id
-										? 'heroicons:chevron-down'
-										: 'heroicons:chevron-right'}
-									class="w-3.5 h-3.5"
-								/>
-								{request.operations.length} operations
+								<Icon icon="heroicons:check-circle" class="w-4 h-4 mr-1" />
+								Approve
 							</button>
-
-							<!-- Operations list (expanded) -->
-							{#if expandedRequestId === request.id}
-								<div class="mt-2 overflow-hidden rounded-lg bg-surface-900/50">
-									{#each request.operations as operation}
-										<div class="p-2 text-xs border-b border-surface-800 last:border-0">
-											<div class="flex items-center justify-between">
-												<div class="flex items-center gap-1">
-													<span
-														class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-full {getOperationColor(
-															operation.operation_type
-														)}"
-													>
-														<Icon
-															icon={getOperationIcon(operation.operation_type)}
-															class="w-3 h-3"
-														/>
-														{operation.operation_type}
-													</span>
-													<span class="text-tertiary-300">
-														{operation.path.join('.')}
-													</span>
-												</div>
-												<span class="text-tertiary-400 text-[10px]">
-													{formatDate(operation.created_at)}
-												</span>
-											</div>
-											{#if operation.operation_type !== 'remove'}
-												<div class="pl-5 mt-1">
-													{#if operation.old_value !== null && operation.old_value !== undefined}
-														<div class="text-red-400">- {formatValue(operation.old_value)}</div>
-													{/if}
-													{#if operation.new_value !== null && operation.new_value !== undefined}
-														<div class="text-green-400">+ {formatValue(operation.new_value)}</div>
-													{/if}
-												</div>
-											{:else}
-												<div class="pl-5 mt-1">
-													<div class="text-red-400">- {formatValue(operation.old_value)}</div>
-												</div>
-											{/if}
-
-											<!-- Metadata for merge operations -->
-											{#if operation.metadata?.merge_source_id || operation.metadata?.ancestor_id}
-												<div
-													class="pl-5 mt-1 pt-1 border-t border-surface-700/50 text-[10px] text-tertiary-400"
-												>
-													{#if operation.metadata.merge_source_id}
-														<div>Source: {operation.metadata.merge_source_id.slice(0, 8)}</div>
-													{/if}
-													{#if operation.metadata.ancestor_id}
-														<div>Ancestor: {operation.metadata.ancestor_id.slice(0, 8)}</div>
-													{/if}
-												</div>
-											{/if}
-										</div>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
-
-					{#if request.status === 'pending'}
-						<div class="flex items-center gap-2 mt-3">
-							{#if isAuthor(request)}
-								<!-- Show approve/reject buttons only for the author -->
-								<button
-									class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-green-400/10 hover:bg-green-400/20 text-green-400"
-									on:click|stopPropagation={() => handleApprove(request.id)}
-								>
-									<Icon icon="heroicons:check" class="w-3.5 h-3.5" />
-									Approve
-								</button>
-								<button
-									class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium transition-colors rounded-lg bg-red-400/10 hover:bg-red-400/20 text-red-400"
-									on:click|stopPropagation={() => handleReject(request.id)}
-								>
-									<Icon icon="heroicons:x-mark" class="w-3.5 h-3.5" />
-									Reject
-								</button>
-							{:else}
-								<!-- Show waiting message for non-authors -->
-								<div
-									class="flex items-center justify-center flex-1 gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-yellow-400/10 text-yellow-400"
-								>
-									<Icon icon="heroicons:clock" class="w-3.5 h-3.5" />
-									Waiting for author approval
-								</div>
-							{/if}
+							<button
+								class="flex-1 flex items-center justify-center h-10 text-xs font-medium bg-red-500/5 text-red-400 hover:bg-red-500/15"
+								on:click|stopPropagation={() => handleReject(request.id)}
+							>
+								<Icon icon="heroicons:x-circle" class="w-4 h-4 mr-1" />
+								Reject
+							</button>
 						</div>
 					{/if}
 				</div>

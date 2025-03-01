@@ -114,6 +114,62 @@ This component handles:
 	// State management for merge dialog
 	let showMergeDialog = false;
 
+	// Helper functions for operations display
+	// Helper function to get operation type icon
+	function getOperationIcon(type: string): string {
+		switch (type.toLowerCase()) {
+			case 'add':
+				return 'heroicons:plus-circle';
+			case 'remove':
+				return 'heroicons:minus-circle';
+			case 'replace':
+				return 'heroicons:arrow-path';
+			case 'move':
+				return 'heroicons:arrows-right-left';
+			case 'copy':
+				return 'heroicons:document-duplicate';
+			default:
+				return 'heroicons:question-mark-circle';
+		}
+	}
+
+	// Helper function to get operation type color
+	function getOperationColor(type: string): string {
+		switch (type.toLowerCase()) {
+			case 'add':
+				return 'text-green-400 bg-green-400/10';
+			case 'remove':
+				return 'text-red-400 bg-red-400/10';
+			case 'replace':
+				return 'text-blue-400 bg-blue-400/10';
+			case 'move':
+				return 'text-purple-400 bg-purple-400/10';
+			case 'copy':
+				return 'text-yellow-400 bg-yellow-400/10';
+			default:
+				return 'text-gray-400 bg-gray-400/10';
+		}
+	}
+
+	// Format date for display
+	function formatDate(dateString: string): string {
+		const date = new Date(dateString);
+		const now = new Date();
+		const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+		if (diffInSeconds < 60) return 'just now';
+		const diffInMinutes = Math.floor(diffInSeconds / 60);
+		if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+		const diffInHours = Math.floor(diffInMinutes / 60);
+		if (diffInHours < 24) return `${diffInHours}h ago`;
+		const diffInDays = Math.floor(diffInHours / 24);
+		if (diffInDays < 30) return `${diffInDays}d ago`;
+		const diffInMonths = Math.floor(diffInDays / 30);
+		if (diffInMonths < 12) return `${diffInMonths}mo ago`;
+		const diffInYears = Math.floor(diffInMonths / 12);
+		return `${diffInYears}y ago`;
+	}
+
 	// Format composites for display in a flat list
 	$: formattedComposites = compose_data?.related_composites
 		? compose_data.related_composites
@@ -270,10 +326,8 @@ This component handles:
 			selectedCompositeId = null;
 		}
 
-		// Switch to diff view if there are operations
-		if (request.operations && request.operations.length > 0) {
-			$activeComposeTab = 'diff';
-		}
+		// Always switch to diff view when a patch request is selected
+		$activeComposeTab = 'diff';
 
 		// Update content based on the request
 		if (request.changes?.content) {
@@ -747,48 +801,87 @@ This component handles:
 	<!-- Main Content Area -->
 	<div class="flex-1">
 		<!-- Tab Navigation -->
-		<nav class="flex border-b border-surface-700">
-			<button
-				class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'content'
-					? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
-					: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
-				on:click={() => handleTabChange('content')}
-			>
-				Content
-			</button>
-			<button
-				class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'json'
-					? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
-					: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
-				on:click={() => handleTabChange('json')}
-			>
-				JSON
-			</button>
-			<button
-				class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'schema'
-					? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
-					: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
-				on:click={() => handleTabChange('schema')}
-			>
-				Schema
-			</button>
-			{#if selectedEditRequest && selectedEditRequest.operations && selectedEditRequest.operations.length > 0}
-				<button
-					class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'diff'
-						? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
-						: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
-					on:click={() => handleTabChange('diff')}
-				>
-					Changes
+		<nav class="flex items-center justify-between border-b border-surface-700">
+			{#if selectedEditRequest}
+				<!-- When patch request is selected, show merged title with operations count -->
+				<div class="flex items-center px-6 py-3 text-sm font-medium">
+					<span class="text-surface-100">Viewing Patch Request Operations</span>
 					<span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300">
-						{selectedEditRequest.operations.length}
+						{(selectedEditRequest.operations && selectedEditRequest.operations.length) || 0}
 					</span>
+				</div>
+				<button
+					class="flex items-center gap-1 px-4 py-2 mr-4 text-sm font-medium transition-colors rounded-lg text-surface-300 hover:text-surface-100 hover:bg-surface-700/50"
+					on:click={() => {
+						selectedEditRequest = null;
+						selectedEditRequestId = undefined;
+						$activeComposeTab = 'content';
+					}}
+				>
+					<Icon icon="heroicons:x-mark" class="w-4 h-4" />
+					<span>Close</span>
 				</button>
+			{:else}
+				<!-- Normal tab navigation when no patch request is selected -->
+				<div class="flex">
+					<button
+						class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'content'
+							? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+							: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+						on:click={() => handleTabChange('content')}
+					>
+						Content
+					</button>
+					<button
+						class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'json'
+							? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+							: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+						on:click={() => handleTabChange('json')}
+					>
+						JSON
+					</button>
+					<button
+						class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'schema'
+							? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+							: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+						on:click={() => handleTabChange('schema')}
+					>
+						Schema
+					</button>
+					{#if selectedEditRequest && selectedEditRequest.operations && selectedEditRequest.operations.length > 0}
+						<button
+							class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'diff'
+								? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
+								: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
+							on:click={() => handleTabChange('diff')}
+						>
+							Changes
+						</button>
+					{/if}
+				</div>
+
+				<!-- Action buttons aligned to the right -->
+				<div class="flex items-center gap-2 px-4">
+					<button
+						class="p-1.5 text-sm font-medium text-purple-400 transition-colors rounded-lg bg-purple-500/10 hover:bg-purple-500/20 flex items-center gap-1"
+						on:click={toggleVariationModal}
+					>
+						<Icon icon="heroicons:code-bracket-square" class="w-4 h-4" />
+						<span>New Variation</span>
+					</button>
+					<button
+						class="p-1.5 text-sm font-medium text-blue-400 transition-colors rounded-lg bg-blue-500/10 hover:bg-blue-500/20 flex items-center gap-1"
+						on:click={handleOpenMergeDialog}
+					>
+						<Icon icon="heroicons:arrow-path" class="w-4 h-4" />
+						<span>Merge</span>
+					</button>
+				</div>
 			{/if}
 		</nav>
 
 		<!-- Content Area -->
-		<div class="p-6 overflow-y-auto h-[calc(100vh-3.5rem)]">
+		<div class="p-0 overflow-hidden h-[calc(100vh-3.5rem)]">
 			{#if $composeQuery.isLoading}
 				<div class="flex items-center justify-center h-full">
 					<div class="text-surface-300">Loading...</div>
@@ -799,13 +892,10 @@ This component handles:
 				</div>
 			{:else if compose_data}
 				{#if $activeComposeTab === 'json'}
-					<div class="flex flex-col h-full">
-						<div class="flex items-center justify-between mb-4">
-							<h2 class="text-xl font-semibold text-surface-100">
-								{selectedComposite?.title || compose_data.title}
-							</h2>
-							<div class="flex items-center gap-2">
-								{#if hasChanges}
+					<div class="flex flex-col h-full p-6">
+						<div class="flex items-center justify-end mb-4">
+							{#if hasChanges}
+								<div class="flex items-center gap-2">
 									<button
 										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
 										on:click={saveChanges}
@@ -818,8 +908,8 @@ This component handles:
 									>
 										Cancel
 									</button>
-								{/if}
-							</div>
+								</div>
+							{/if}
 						</div>
 
 						{#if validationErrors && validationErrors.length > 0}
@@ -863,28 +953,9 @@ This component handles:
 						</div>
 					</div>
 				{:else if $activeComposeTab === 'schema'}
-					<div class="flex flex-col h-full">
-						<div class="flex items-center justify-between mb-4">
-							<div>
-								<h2 class="text-xl font-semibold text-surface-100">Schema Definition</h2>
-								{#if compose_data?.schema_id}
-									<p class="mt-1 text-sm text-surface-300">
-										Schema ID: <span class="font-mono">{compose_data.schema_id}</span>
-									</p>
-								{/if}
-							</div>
-						</div>
-
+					<div class="flex flex-col h-full p-6">
 						{#if compose_data?.schema_data}
-							<div class="flex flex-col flex-grow gap-4">
-								<div class="p-3 rounded-lg bg-surface-700/50">
-									<p class="text-sm text-surface-200">
-										<Icon icon="heroicons:information-circle" class="inline-block w-4 h-4 mr-1" />
-										This is the schema that defines the structure and validation rules for this content.
-										Content must conform to this schema to be valid.
-									</p>
-								</div>
-
+							<div class="flex flex-col flex-grow">
 								<div class="flex-grow schema-view">
 									<JsonEditor json={compose_data.schema_data} readOnly={true} />
 								</div>
@@ -896,45 +967,162 @@ This component handles:
 						{/if}
 					</div>
 				{:else if $activeComposeTab === 'diff' && selectedEditRequest}
-					<div class="flex flex-col h-full">
-						<div class="flex items-center justify-between mb-4">
-							<div>
-								<h2 class="text-xl font-semibold text-surface-100">
-									{selectedEditRequest.title}
-								</h2>
-								<p class="mt-1 text-sm text-surface-300">
-									Showing changes from {selectedEditRequest.previousVersion.snapshot_id
-										? selectedEditRequest.previousVersion.snapshot_id.slice(0, 8)
-										: '?'} to {selectedEditRequest.changes.snapshot_id
-										? selectedEditRequest.changes.snapshot_id.slice(0, 8)
-										: '?'}
-								</p>
+					<div class="flex flex-col h-full overflow-hidden">
+						<!-- Operations List Header -->
+						{#if !selectedEditRequest}
+							<div
+								class="flex items-center justify-between px-6 py-3 border-b border-surface-700 bg-surface-800"
+							>
+								<h3 class="text-lg font-medium text-surface-100">
+									Operations
+									<span
+										class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300"
+									>
+										{(selectedEditRequest.operations && selectedEditRequest.operations.length) || 0}
+									</span>
+								</h3>
 							</div>
-							<div class="flex items-center gap-2">
-								<button
-									class="px-4 py-2 text-sm font-medium text-purple-400 transition-colors rounded-lg bg-purple-500/10 hover:bg-purple-500/20"
-									on:click={toggleVariationModal}
-								>
-									<Icon icon="heroicons:code-bracket-square" class="inline-block w-4 h-4 mr-1" />
-									New Variation
-								</button>
-							</div>
-						</div>
+						{/if}
 
-						<JsonDiffViewer
-							baseJson={selectedEditRequest.previousVersion.instance || { content: '' }}
-							operations={selectedEditRequest.operations || []}
-							expanded={true}
-						/>
+						<!-- Operations Content -->
+						{#if selectedEditRequest.operations && selectedEditRequest.operations.length > 0}
+							<div class="h-[calc(100vh-7rem)] overflow-y-auto">
+								<!-- Column Headers -->
+								<div
+									class="sticky top-0 z-10 px-4 py-2 font-medium border-b bg-surface-800 border-surface-700"
+								>
+									<div class="grid grid-cols-12 gap-4">
+										<span class="col-span-3 text-xs text-surface-300">Metadata</span>
+										<span class="col-span-9 text-xs text-surface-300">Changes</span>
+									</div>
+								</div>
+
+								<!-- Operations List -->
+								<div class="divide-y divide-surface-700/50">
+									{#each selectedEditRequest.operations as operation}
+										<div class="px-4 py-3 transition-colors hover:bg-surface-800/70">
+											<div class="grid grid-cols-12 gap-4">
+												<!-- Metadata column (left side) -->
+												<div
+													class="flex flex-col col-span-3 gap-2 pr-2 border-r border-surface-700/50"
+												>
+													<!-- Operation type -->
+													<span
+														class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full backdrop-blur-sm {getOperationColor(
+															operation.operation_type
+														)}"
+													>
+														<Icon
+															icon={getOperationIcon(operation.operation_type)}
+															class="w-3 h-3"
+														/>
+														{operation.operation_type}
+													</span>
+
+													<!-- Path -->
+													<div class="text-xs break-words text-tertiary-300">
+														<span class="text-2xs text-surface-400">Path:</span>
+														<div class="font-mono truncate">
+															{operation.path.join('.')}
+														</div>
+													</div>
+
+													<!-- Timestamp -->
+													<div class="text-2xs text-tertiary-400">
+														{formatDate(operation.created_at)}
+													</div>
+
+													<!-- Merge metadata if any -->
+													{#if operation.metadata?.merge_source_id || operation.metadata?.ancestor_id}
+														<div class="flex flex-col gap-1 mt-1">
+															{#if operation.metadata.merge_source_id}
+																<span
+																	class="inline-flex items-center px-1.5 py-0.5 text-2xs rounded-md bg-surface-700/70 text-tertiary-300 backdrop-blur-sm"
+																>
+																	<Icon
+																		icon="heroicons:document-arrow-up"
+																		class="w-2.5 h-2.5 mr-1"
+																	/>
+																	Src: {operation.metadata.merge_source_id.slice(0, 8)}
+																</span>
+															{/if}
+															{#if operation.metadata.ancestor_id}
+																<span
+																	class="inline-flex items-center px-1.5 py-0.5 text-2xs rounded-md bg-surface-700/70 text-tertiary-300 backdrop-blur-sm"
+																>
+																	<Icon
+																		icon="heroicons:document-arrow-down"
+																		class="w-2.5 h-2.5 mr-1"
+																	/>
+																	Anc: {operation.metadata.ancestor_id.slice(0, 8)}
+																</span>
+															{/if}
+														</div>
+													{/if}
+												</div>
+
+												<!-- Main content column (right side) -->
+												<div class="col-span-9">
+													{#if operation.operation_type === 'add'}
+														<div
+															class="pl-2 font-mono text-xs text-green-200 break-words whitespace-pre-wrap border-l-2 border-green-500/50"
+														>
+															+ {typeof operation.new_value === 'object'
+																? JSON.stringify(operation.new_value, null, 2)
+																: operation.new_value}
+														</div>
+													{:else if operation.operation_type === 'remove'}
+														<div
+															class="pl-2 font-mono text-xs text-red-200 break-words whitespace-pre-wrap border-l-2 border-red-500/50"
+														>
+															- {typeof operation.old_value === 'object'
+																? JSON.stringify(operation.old_value, null, 2)
+																: operation.old_value}
+														</div>
+													{:else}
+														<div class="font-mono text-xs break-words whitespace-pre-wrap">
+															{#if operation.old_value !== null && operation.old_value !== undefined}
+																<div class="pl-2 mb-2 text-red-200 border-l-2 border-red-500/50">
+																	- {typeof operation.old_value === 'object'
+																		? JSON.stringify(operation.old_value, null, 2)
+																		: operation.old_value}
+																</div>
+															{/if}
+															{#if operation.new_value !== null && operation.new_value !== undefined}
+																<div class="pl-2 text-green-200 border-l-2 border-green-500/50">
+																	+ {typeof operation.new_value === 'object'
+																		? JSON.stringify(operation.new_value, null, 2)
+																		: operation.new_value}
+																</div>
+															{/if}
+														</div>
+													{/if}
+												</div>
+											</div>
+										</div>
+									{/each}
+								</div>
+							</div>
+						{:else}
+							<div class="h-[calc(100vh-7rem)] flex items-center justify-center">
+								<div class="max-w-md p-6 text-center rounded-lg bg-surface-800/50">
+									<Icon
+										icon="heroicons:document-text"
+										class="w-10 h-10 mx-auto mb-3 text-tertiary-400"
+									/>
+									<p class="mb-1 text-tertiary-300">No operations found in this patch request</p>
+									<p class="text-xs text-tertiary-400">
+										This patch request doesn't contain any changes to review.
+									</p>
+								</div>
+							</div>
+						{/if}
 					</div>
 				{:else}
-					<div class="flex flex-col h-full">
-						<div class="flex items-center justify-between mb-4">
-							<h2 class="text-xl font-semibold text-surface-100">
-								{selectedComposite?.title || compose_data.title}
-							</h2>
-							<div class="flex items-center gap-2">
-								{#if hasChanges}
+					<div class="flex flex-col h-full p-6">
+						{#if hasChanges}
+							<div class="flex items-center justify-end mb-4">
+								<div class="flex items-center gap-2">
 									<button
 										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
 										on:click={saveChanges}
@@ -947,24 +1135,9 @@ This component handles:
 									>
 										Cancel
 									</button>
-								{:else}
-									<button
-										class="px-4 py-2 text-sm font-medium text-green-400 transition-colors rounded-lg bg-green-500/10 hover:bg-green-500/20"
-										on:click={handleOpenMergeDialog}
-									>
-										<Icon icon="heroicons:code-bracket-merge" class="inline-block w-4 h-4 mr-1" />
-										Merge
-									</button>
-									<button
-										class="px-4 py-2 text-sm font-medium text-purple-400 transition-colors rounded-lg bg-purple-500/10 hover:bg-purple-500/20"
-										on:click={toggleVariationModal}
-									>
-										<Icon icon="heroicons:code-bracket-square" class="inline-block w-4 h-4 mr-1" />
-										New Variation
-									</button>
-								{/if}
+								</div>
 							</div>
-						</div>
+						{/if}
 
 						<div class="flex flex-col gap-4">
 							{#if validationErrors && validationErrors.length > 0}
