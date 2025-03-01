@@ -80,7 +80,7 @@ export default createOperation.query({
     input: z.object({
         proposalId: z.string()
     }),
-    handler: async ({ context, input }): Promise<{ compose_data: ComposeData | null }> => {
+    handler: async ({ context, input }): Promise<{ compose_data: ComposeData | null, root_composite_id: string | null }> => {
         try {
             // Get the proposal's composite with author info
             const { data: proposal, error: proposalError } = await context.supabase
@@ -99,8 +99,11 @@ export default createOperation.query({
 
             if (proposalError || !proposal?.compose) {
                 console.error('[queryComposeProposal] Failed to fetch proposal:', proposalError);
-                return { compose_data: null };
+                return { compose_data: null, root_composite_id: null };
             }
+
+            // Store the root composite ID to return to the client
+            const rootCompositeId = proposal.compose.id;
 
             // Get main composite's content
             const { data: mainContent, error: mainError } = await context.supabase
@@ -243,7 +246,8 @@ export default createOperation.query({
                         related_composites: [],
                         schema_id: schemaId,
                         schema_data: schemaData
-                    }
+                    },
+                    root_composite_id: rootCompositeId
                 };
             }
 
@@ -356,12 +360,14 @@ export default createOperation.query({
                     related_composites: relatedComposites,
                     schema_id: schemaId,
                     schema_data: schemaData
-                }
+                },
+                root_composite_id: rootCompositeId
             };
         } catch (error) {
             console.error('[queryComposeProposal] Unexpected error:', error);
             return {
-                compose_data: null
+                compose_data: null,
+                root_composite_id: null
             };
         }
     }

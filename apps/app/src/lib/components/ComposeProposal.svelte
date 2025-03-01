@@ -111,32 +111,6 @@ This component handles:
 	// Format composites for display in a flat list
 	$: formattedComposites = compose_data?.related_composites
 		? compose_data.related_composites
-				.filter((composite) => !composite.is_archived) // Filter out archived composites
-				.map((composite) => {
-					// Extract relationship type from metadata or relationship field
-					const relationshipType =
-						composite.metadata?.variation_type || composite.relationship_type || 'variation';
-
-					// Create a formatted display item for each composite
-					return {
-						...composite,
-						displayTitle: `${composite.title} (${relationshipType})`,
-						authorName: composite.author?.name || 'Unknown',
-						createdAt: composite.metadata?.created_at || ''
-					};
-				})
-				.sort((a, b) => {
-					// Sort by creation date (newest first)
-					const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-					const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-					return dateB - dateA;
-				})
-		: [];
-
-	// Format archived composites separately
-	$: archivedComposites = compose_data?.related_composites
-		? compose_data.related_composites
-				.filter((composite) => composite.is_archived) // Only include archived composites
 				.map((composite) => {
 					// Extract relationship type from metadata or relationship field
 					const relationshipType =
@@ -160,11 +134,6 @@ This component handles:
 
 	// Get current user name from the query
 	$: currentUser = $userQuery.data;
-
-	// Create a mutation for archiving/unarchiving composites
-	const toggleArchiveMutation = createMutation({
-		operationName: 'toggleCompositeArchive'
-	});
 
 	// State for showing/hiding archived composites section
 	let showArchivedComposites = false;
@@ -195,6 +164,10 @@ This component handles:
 
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
+
+	// Get the ID of the root composite from the query results
+	$: rootCompositeId = $composeQuery.data?.root_composite_id || null;
+
 	$: {
 		if (compose_data) {
 			// Transform main composite to match related composite interface
@@ -393,14 +366,17 @@ This component handles:
 				return;
 			}
 
-			console.log('Saving to compose ID:', currentComposeId);
-			console.log('Composite ID being used:', selectedCompositeId || compose_data?.compose_id);
+			console.log('Saving with composite ID:', selectedCompositeId || rootCompositeId);
 			console.log('JSON to save (raw):', jsonToSave);
 
-			// Pass both the content ID (currentComposeId) and the composite ID (selectedCompositeId or compose_data.id)
+			// Get the composite ID - for selected composites use selectedCompositeId,
+			// for root composite use rootCompositeId from our query
+			const compositeIdToUse = selectedCompositeId || rootCompositeId;
+
+			// Pass both the content ID (currentComposeId) and the composite ID
 			const result = await $editDBMutation.mutateAsync({
 				id: currentComposeId,
-				compositeId: selectedCompositeId || compose_data?.compose_id, // Send the actual composite ID
+				compositeId: compositeIdToUse,
 				json: jsonToSave,
 				createVariation: false
 			});
@@ -575,41 +551,6 @@ This component handles:
 		// Refetch data to show the updated state
 		$composeQuery.refetch();
 	}
-
-	// Handle archiving/unarchiving a composite
-	async function handleToggleArchive(compositeId: string, currentArchiveState: boolean) {
-		try {
-			const result = await $toggleArchiveMutation.mutateAsync({
-				compositeId,
-				archive: !currentArchiveState
-			});
-
-			if (result && typeof result === 'object' && 'success' in result) {
-				await $composeQuery.refetch();
-				if (result.success) {
-					// Safely access message property
-					const message =
-						'message' in result ? (result.message as string) : 'Archive status updated';
-					toastSuccess(message);
-				} else {
-					// Safely access error property
-					const error =
-						'error' in result ? (result.error as string) : 'Failed to update archive status';
-					toastError(error);
-				}
-			} else {
-				toastError('Unexpected response from server');
-			}
-		} catch (error) {
-			console.error('Error toggling archive status:', error);
-			toastError('An error occurred while updating archive status');
-		}
-	}
-
-	// Toggle visibility of archived composites section
-	function toggleArchivedCompositeVisibility() {
-		showArchivedComposites = !showArchivedComposites;
-	}
 </script>
 
 <div class="flex h-full bg-surface-800">
@@ -718,102 +659,13 @@ This component handles:
 												'variation'}
 										</span>
 									</div>
-									<div class="flex items-center justify-between text-xs">
-										<span class="font-medium text-surface-300">
-											by {composite.author?.name || 'Unknown'}
-										</span>
-
-										<!-- Archive button - only show for user's own composites -->
-										{#if composite.author?.name === currentUser?.name}
-											<button
-												class="flex items-center p-1 text-xs transition-colors text-surface-400 hover:text-surface-300"
-												on:click|stopPropagation={() =>
-													handleToggleArchive(composite.id, composite.is_archived)}
-											>
-												<Icon icon="mdi:archive-outline" class="mr-1" />
-												Archive
-											</button>
-										{/if}
+									<div class="text-xs font-medium text-surface-300">
+										by {composite.author?.name || 'Unknown'}
 									</div>
 								</div>
 							</div>
 						</button>
 					{/each}
-
-					<!-- Archived composites section (collapsible) -->
-					{#if archivedComposites.length > 0}
-						<div class="pt-4 mt-4 border-t border-surface-700">
-							<button
-								class="flex items-center justify-between w-full p-2 text-sm font-medium transition-colors text-surface-300 hover:text-surface-200"
-								on:click={toggleArchivedCompositeVisibility}
-							>
-								<span class="flex items-center">
-									<Icon icon="mdi:archive" class="mr-2" />
-									Archived Composites ({archivedComposites.length})
-								</span>
-								<Icon icon={showArchivedComposites ? 'mdi:chevron-up' : 'mdi:chevron-down'} />
-							</button>
-
-							{#if showArchivedComposites}
-								<div class="mt-2 space-y-1">
-									{#each archivedComposites as composite}
-										<button
-											class="w-full p-3 rounded-lg transition-colors text-left opacity-70 hover:opacity-100
-												{selectedCompositeId === composite.id
-												? 'bg-surface-700 border-l-4 border-primary-500'
-												: 'bg-surface-900 hover:bg-surface-700'}"
-											on:click={() => handleCompositeSelect(composite.id)}
-										>
-											<div class="flex items-start gap-3">
-												<!-- Author Avatar -->
-												<Avatar
-													me={{
-														data: { seed: composite.author?.name || 'Unknown' },
-														design: { highlight: selectedCompositeId === composite.id },
-														size: '2xs'
-													}}
-												/>
-
-												<div class="flex-1 min-w-0">
-													<div class="flex items-center justify-between">
-														<div class="font-medium text-surface-100 truncate max-w-[150px]">
-															{composite.title}
-														</div>
-
-														<!-- Single unified tag with blue color -->
-														<span
-															class="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-300"
-														>
-															{composite.metadata?.variation_type ||
-																composite.relationship_type ||
-																'variation'}
-														</span>
-													</div>
-													<div class="flex items-center justify-between text-xs">
-														<span class="font-medium text-surface-300">
-															by {composite.author?.name || 'Unknown'}
-														</span>
-
-														<!-- Unarchive button - only show for user's own composites -->
-														{#if composite.author?.name === currentUser?.name}
-															<button
-																class="flex items-center p-1 text-xs transition-colors text-surface-400 hover:text-surface-300"
-																on:click|stopPropagation={() =>
-																	handleToggleArchive(composite.id, composite.is_archived)}
-															>
-																<Icon icon="mdi:archive-restore-outline" class="mr-1" />
-																Unarchive
-															</button>
-														{/if}
-													</div>
-												</div>
-											</div>
-										</button>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
 				</div>
 			{/if}
 		</div>
