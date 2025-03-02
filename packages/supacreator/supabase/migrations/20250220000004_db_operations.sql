@@ -971,7 +971,7 @@ BEGIN
                             v_operation.new_value,
                             TRUE  -- Create if doesn't exist
                         );
-                            END IF;
+                    END IF;
                     
                 WHEN 'remove' THEN
                     -- For nested paths, need careful handling
@@ -997,11 +997,11 @@ BEGIN
                             ARRAY[v_operation.path[1]], 
                             v_operation.new_value
                         );
-                            END IF;
+                    END IF;
             END CASE;
-                        END IF;
-                            END LOOP;
-                            
+        END IF;
+    END LOOP;
+    
     -- Second pass: process array operations path by path
     FOR v_property IN SELECT jsonb_object_keys(v_array_operations) LOOP
         -- Parse path string back to array
@@ -1011,7 +1011,7 @@ BEGIN
         v_array := jsonb_get_deep(v_result, v_current_array_path);
         IF v_array IS NULL OR jsonb_typeof(v_array) != 'array' THEN
             v_array := '[]'::jsonb;
-                            END IF;
+        END IF;
         
         -- Process array operations in position order
         DECLARE
@@ -1021,41 +1021,17 @@ BEGIN
             v_operation_data jsonb;
             v_op_index integer;
             v_position_numeric numeric;
+            v_removed_values jsonb := '[]'::jsonb;   -- Keep track of removed values
+            v_original_array jsonb := v_array;       -- Store original array
+            v_item jsonb;
+            v_i integer;
+            v_found boolean;
         BEGIN
-            -- Process all operations for this array path
+            -- First, collect all values being explicitly added with operations
             FOR v_op_index IN 0..jsonb_array_length(v_array_operations->v_property) - 1 LOOP
                 v_operation_data := v_array_operations->v_property->v_op_index;
                 
-                IF (v_operation_data->>'operation_type') = 'remove' THEN
-                    -- For remove operations, get the position ID
-                    v_position_id := v_operation_data->>'position_id';
-                    
-                    -- Remove this position ID from tracking if it exists
-                    IF v_position_id IS NOT NULL THEN
-                        -- Find and remove position
-                        SELECT array_remove(v_ordered_positions, v_position_id) INTO v_ordered_positions;
-                        
-                        -- Remove from value map
-                        v_value_map := v_value_map - v_position_id;
-                    ELSE
-                        -- Fallback: remove by value if no position ID
-                        DECLARE
-                            v_old_value jsonb := v_operation_data->'old_value';
-                            v_new_array jsonb := '[]'::jsonb;
-                            v_item jsonb;
-                            v_i integer;
-                        BEGIN
-                            -- Filter out the value to remove
-                            FOR v_i IN 0..jsonb_array_length(v_array) - 1 LOOP
-                                v_item := v_array->v_i;
-                                IF v_item IS DISTINCT FROM v_old_value THEN
-                                    v_new_array := v_new_array || jsonb_build_array(v_item);
-                            END IF;
-                            END LOOP;
-                            v_array := v_new_array;
-                        END;
-                        END IF;
-                ELSIF (v_operation_data->>'operation_type') = 'add' THEN
+                IF (v_operation_data->>'operation_type') = 'add' THEN
                     -- For add operations with position ID
                     v_position_id := v_operation_data->>'position_id';
                     
@@ -1070,8 +1046,30 @@ BEGIN
                     ELSE
                         -- Fallback: simply append to array if no position ID
                         v_array := v_array || jsonb_build_array(v_operation_data->'new_value');
-                            END IF;
-                        END IF;
+                    END IF;
+                END IF;
+            END LOOP;
+            
+            -- Now collect all values being explicitly removed
+            FOR v_op_index IN 0..jsonb_array_length(v_array_operations->v_property) - 1 LOOP
+                v_operation_data := v_array_operations->v_property->v_op_index;
+                
+                IF (v_operation_data->>'operation_type') = 'remove' THEN
+                    -- For remove operations, get the position ID
+                    v_position_id := v_operation_data->>'position_id';
+                    
+                    -- Remove this position ID from tracking if it exists
+                    IF v_position_id IS NOT NULL THEN
+                        -- Find and remove position
+                        SELECT array_remove(v_ordered_positions, v_position_id) INTO v_ordered_positions;
+                        
+                        -- Remove from value map
+                        v_value_map := v_value_map - v_position_id;
+                    END IF;
+                    
+                    -- Also track the value being removed for later filtering
+                    v_removed_values := v_removed_values || jsonb_build_array(v_operation_data->'old_value');
+                END IF;
             END LOOP;
             
             -- Sort position IDs by their numeric part
@@ -1088,31 +1086,58 @@ BEGIN
                 ORDER BY numeric_part
             ) AS sorted_positions;
             
-            -- Build the final array in sorted position order
+            -- Build the result array by combining explicitly added values and filtering out removed values
             v_result_array := '[]'::jsonb;
+            
+            -- First add the positioned elements in order
             IF v_ordered_positions IS NOT NULL THEN
                 FOREACH v_position_id IN ARRAY v_ordered_positions LOOP
                     -- Only add if position has a value
                     IF v_value_map ? v_position_id THEN
                         v_result_array := v_result_array || jsonb_build_array(v_value_map->v_position_id);
-                            END IF;
-                        END LOOP;
+                    END IF;
+                END LOOP;
             END IF;
             
-            -- Merge with values from the original array that don't have position IDs
-            IF jsonb_array_length(v_array) > 0 AND jsonb_array_length(v_result_array) = 0 THEN
-                -- If we have no positioned elements but original array has values, use original
-                v_result_array := v_array;
-                                END IF;
+            -- Then add all values from the original array that weren't explicitly removed
+            IF jsonb_array_length(v_original_array) > 0 THEN
+                FOR v_i IN 0..jsonb_array_length(v_original_array) - 1 LOOP
+                    v_item := v_original_array->v_i;
+                    v_found := FALSE;
+                    
+                    -- Check if this item was removed
+                    FOR v_op_index IN 0..jsonb_array_length(v_removed_values) - 1 LOOP
+                        IF v_item IS NOT DISTINCT FROM v_removed_values->v_op_index THEN
+                            v_found := TRUE;
+                            EXIT;
+                        END IF;
+                    END LOOP;
+                    
+                    -- Also check if it's already been added via a position operation
+                    IF NOT v_found THEN
+                        FOR v_position_id IN SELECT jsonb_object_keys(v_value_map) LOOP
+                            IF v_item IS NOT DISTINCT FROM v_value_map->v_position_id THEN
+                                v_found := TRUE;
+                                EXIT;
+                            END IF;
+                        END LOOP;
+                    END IF;
+                    
+                    -- If not removed and not already added, add it to result
+                    IF NOT v_found THEN
+                        v_result_array := v_result_array || jsonb_build_array(v_item);
+                    END IF;
+                END LOOP;
+            END IF;
             
             -- Update the result with the reconstructed array
             IF array_length(v_current_array_path, 1) > 1 THEN
                 v_result := jsonb_set_deep(v_result, v_current_array_path, v_result_array);
             ELSE
                 v_result := jsonb_set(v_result, v_current_array_path, v_result_array);
-                                    END IF;
+            END IF;
         END;
-                                END LOOP;
+    END LOOP;
     
     RETURN v_result;
 END;
