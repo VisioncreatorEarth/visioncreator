@@ -57,7 +57,20 @@ This component handles:
 			target_composite_id?: string;
 			[key: string]: unknown;
 		};
-		is_archived: boolean;
+		is_archived?: boolean;
+	}
+
+	interface ComposeData {
+		compose_id: string;
+		title: string;
+		description: string;
+		compose_json: ComposeJson;
+		author: {
+			name: string;
+		};
+		related_composites: RelatedComposite[];
+		schema_data?: any;
+		is_archived?: boolean;
 	}
 
 	interface PatchRequest {
@@ -190,7 +203,8 @@ This component handles:
 						displayTitle: `${composite.title} (${relationshipType})`,
 						authorName: composite.author?.name || 'Unknown',
 						createdAt: composite.metadata?.created_at || '',
-						is_archived: composite.is_archived
+						// Fix is_archived being undefined by defaulting to false
+						is_archived: composite.is_archived === true ? true : false
 					};
 				})
 				.sort((a, b) => {

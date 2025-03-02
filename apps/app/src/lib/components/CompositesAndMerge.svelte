@@ -11,21 +11,6 @@ This component handles:
 	import Icon from '@iconify/svelte';
 	import Avatar from './Avatar.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { toasts } from '$lib/stores/ToastStore';
-	import { createDraggableFlatList } from '$lib/utils/draggableFlatList';
-	import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
-	import {
-		faBoxArchive,
-		faChevronDown,
-		faChevronUp,
-		faMessage,
-		faPlus,
-		faTrain
-	} from '@fortawesome/free-solid-svg-icons';
-	import MergeNode from './MergeNode.svelte';
-	import ToastSummary from './ToastSummary.svelte';
-	import { getErrorMessage } from '$lib/utils/getErrorMessage';
-	import { isObject } from '$lib/utils/typeChecks';
 
 	// Component props
 	export let compose_data: any; // The main composite data
@@ -79,12 +64,12 @@ This component handles:
 	});
 
 	// Split composites into active and archived lists
-	$: activeComposites = formattedComposites.filter((c) => !c.is_archived);
-	$: archivedComposites = formattedComposites.filter((c) => c.is_archived);
+	$: activeComposites = formattedComposites.filter((c) => c.is_archived !== true);
+	$: archivedComposites = formattedComposites.filter((c) => c.is_archived === true);
 
 	// Check if main composite is archived
 	$: mainComposite = compose_data?.id
-		? { id: compose_data.id, is_archived: compose_data.is_archived }
+		? { id: compose_data.id, is_archived: compose_data.is_archived === true }
 		: null;
 	$: isMainCompositeArchived = mainComposite?.is_archived === true;
 

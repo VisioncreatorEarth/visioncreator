@@ -23,6 +23,7 @@ interface RelatedComposite {
         target_composite_id?: string;
         [key: string]: unknown;
     };
+    is_archived?: boolean;
 }
 
 interface ComposeData {
@@ -36,6 +37,7 @@ interface ComposeData {
     related_composites: RelatedComposite[];
     schema_id?: string;
     schema_data?: any;
+    is_archived?: boolean;
 }
 
 interface CompositeData {
@@ -44,6 +46,7 @@ interface CompositeData {
     description: string;
     compose_id: string;
     author: string;
+    is_archived?: boolean;
 }
 
 interface ProposalWithComposite {
@@ -91,6 +94,7 @@ export default createOperation.query({
                         title,
                         description,
                         compose_id,
+                        is_archived,
                         author:profiles(name)
                     )
                 `)
@@ -245,7 +249,8 @@ export default createOperation.query({
                             : proposal.compose.author || { name: 'Unknown' },
                         related_composites: [],
                         schema_id: schemaId,
-                        schema_data: schemaData
+                        schema_data: schemaData,
+                        is_archived: proposal.compose.is_archived || false
                     },
                     root_composite_id: rootCompositeId
                 };
@@ -258,6 +263,7 @@ export default createOperation.query({
                     title,
                     description,
                     compose_id,
+                    is_archived,
                     author:profiles(name)
                 `)
                 .in('id', Array.from(relatedCompositeIds)) as {
@@ -266,6 +272,7 @@ export default createOperation.query({
                         title: string,
                         description: string,
                         compose_id: string,
+                        is_archived: boolean,
                         author: { name: string }
                     }> | null;
                     error: any
@@ -339,7 +346,8 @@ export default createOperation.query({
                     author: typeof composite.author === 'string'
                         ? { name: composite.author }
                         : composite.author || { name: 'Unknown' },
-                    metadata: metadata
+                    metadata: metadata,
+                    is_archived: composite.is_archived || false
                 });
             }
 
@@ -359,7 +367,8 @@ export default createOperation.query({
                         : proposal.compose.author || { name: 'Unknown' },
                     related_composites: relatedComposites,
                     schema_id: schemaId,
-                    schema_data: schemaData
+                    schema_data: schemaData,
+                    is_archived: proposal.compose.is_archived || false
                 },
                 root_composite_id: rootCompositeId
             };
