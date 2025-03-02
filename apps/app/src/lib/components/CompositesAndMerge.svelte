@@ -3,8 +3,8 @@
 CompositesAndMerge.svelte - A component for displaying and managing composites with drag and drop merging.
 This component handles:
 1. Display of the main composite and related composites (variations, forks, etc.)
-2. Archiving functionality
-3. Drag and drop merging between composites
+2. Drag and drop merging between composites
+3. Display of archived composites in a collapsible section
 -->
 <script lang="ts">
 	import { createMutation } from '$lib/wundergraph';
@@ -18,19 +18,13 @@ This component handles:
 	export let selectedCompositeId: string | null = null; // Currently selected composite ID
 	export let rootCompositeId: string | null = null; // ID of the root composite
 
-	// State variables
+	// State variables for archive display
 	let showArchivedComposites = true; // Toggle for showing archived composites
-	let isArchiving = false; // Flag for archiving operation in progress
 
 	// Drag and drop state for composite merging
 	let draggedCompositeId: string | null = null;
 	let dragOverCompositeId: string | null = null;
 	let isDragging = false;
-
-	// Create the archive toggle mutation
-	const toggleArchiveMutation = createMutation({
-		operationName: 'toggleCompositeArchive'
-	});
 
 	// Create the threeWayMergeMutation so it can be used with store syntax
 	const threeWayMergeMutation = createMutation({
@@ -54,15 +48,6 @@ This component handles:
 		conflicts_detected?: number;
 		isDragAndDrop?: boolean;
 		op_conflicts?: any[];
-	}
-
-	// Define the archive toggle result type
-	interface ArchiveToggleResult {
-		success: boolean;
-		message?: string;
-		error?: string;
-		details?: string;
-		changed?: boolean;
 	}
 
 	// Split composites into active and archived lists
@@ -216,33 +201,6 @@ This component handles:
 			toastError(errorMessage);
 		}
 	}
-
-	// Function to toggle archive status of a composite
-	async function toggleArchiveStatus(event: Event, compositeId: string, currentStatus: boolean) {
-		event.stopPropagation(); // Prevent selecting the composite when clicking the archive button
-
-		isArchiving = true;
-
-		try {
-			// Use the dedicated archive toggle mutation
-			const result = (await $toggleArchiveMutation.mutateAsync({
-				compositeId: compositeId,
-				archive: !currentStatus
-			})) as ArchiveToggleResult;
-
-			if (result && result.success) {
-				dispatch('refetch');
-				toastSuccess(currentStatus ? 'Composite unarchived' : 'Composite archived');
-			} else {
-				toastError('Failed to update archive status');
-			}
-		} catch (error) {
-			console.error('Error archiving/unarchiving composite:', error);
-			toastError('Error updating archive status');
-		} finally {
-			isArchiving = false;
-		}
-	}
 </script>
 
 <aside class="flex flex-col border-r w-80 border-surface-700">
@@ -292,17 +250,6 @@ This component handles:
 										>
 											Latest
 										</span>
-										<button
-											class="p-1 transition-opacity rounded-full opacity-0 group-hover:opacity-100 hover:bg-surface-700"
-											on:click={(e) => toggleArchiveStatus(e, compose_data.compose_id, false)}
-											disabled={isArchiving}
-											title="Archive"
-										>
-											<Icon
-												icon="heroicons:archive-box"
-												class="w-4 h-4 text-surface-400 hover:text-surface-200"
-											/>
-										</button>
 									</div>
 								</div>
 								<div class="text-xs font-medium text-surface-300">
@@ -313,7 +260,7 @@ This component handles:
 					</button>
 				{/if}
 
-				<!-- Flat list of all non-archived variations -->
+				<!-- Active composites -->
 				{#each activeComposites as composite}
 					<button
 						class="group w-full p-3 rounded-lg transition-colors text-left
@@ -356,19 +303,6 @@ This component handles:
 												composite.relationship_type ||
 												'variation'}
 										</span>
-
-										<!-- Archive button -->
-										<button
-											class="p-1 transition-opacity rounded-full opacity-0 group-hover:opacity-100 hover:bg-surface-700"
-											on:click={(e) => toggleArchiveStatus(e, composite.id, false)}
-											disabled={isArchiving}
-											title="Archive"
-										>
-											<Icon
-												icon="heroicons:archive-box"
-												class="w-4 h-4 text-surface-400 hover:text-surface-200"
-											/>
-										</button>
 									</div>
 								</div>
 								<div class="text-xs font-medium text-surface-300">
@@ -379,7 +313,7 @@ This component handles:
 					</button>
 				{/each}
 
-				<!-- Archived section toggle button -->
+				<!-- Archived section toggle button - Only show if there are archived items -->
 				{#if archivedComposites.length > 0 || isMainCompositeArchived}
 					<button
 						class="flex items-center justify-between w-full px-3 py-2 mt-2 transition-colors rounded-lg text-surface-400 hover:text-surface-200 hover:bg-surface-800"
@@ -396,134 +330,97 @@ This component handles:
 							class="w-4 h-4"
 						/>
 					</button>
-				{/if}
 
-				<!-- Archived composites section -->
-				{#if showArchivedComposites}
-					<div class="pl-2 mt-1 space-y-1 border-l-2 border-surface-700">
-						<!-- Main composite if archived -->
-						{#if isMainCompositeArchived}
-							<button
-								class="w-full p-3 rounded-lg transition-colors text-left group
-									{!selectedCompositeId
-									? 'bg-surface-700/60 border-l-4 border-primary-500/60'
-									: 'bg-surface-900/60 hover:bg-surface-700/60'}
-									{dragOverCompositeId === compose_data.compose_id ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}"
-								on:click={() => handleCompositeSelect(null)}
-								on:dragover={(e) => handleDragOver(e, compose_data.compose_id)}
-								on:dragleave={handleDragLeave}
-								on:drop={(e) => handleDrop(e, compose_data.compose_id)}
-							>
-								<div class="flex items-start gap-3">
-									<Avatar
-										me={{
-											data: { seed: compose_data.author.name },
-											design: {
-												highlight: !selectedCompositeId
-											},
-											size: '2xs'
-										}}
-									/>
+					<!-- Archived items in a collapsible section -->
+					{#if showArchivedComposites}
+						<div class="pl-2 mt-1 space-y-1 border-l-2 border-surface-700">
+							<!-- Main composite if archived -->
+							{#if isMainCompositeArchived}
+								<button
+									class="w-full p-3 rounded-lg transition-colors text-left group bg-surface-900/60 hover:bg-surface-800/60
+										{!selectedCompositeId ? 'border-l-4 border-primary-500/60' : ''}
+										{dragOverCompositeId === compose_data.compose_id ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}"
+									on:click={() => handleCompositeSelect(null)}
+									on:dragover={(e) => handleDragOver(e, compose_data.compose_id)}
+									on:dragleave={handleDragLeave}
+									on:drop={(e) => handleDrop(e, compose_data.compose_id)}
+								>
+									<div class="flex items-start gap-3">
+										<Avatar
+											me={{
+												data: { seed: compose_data.author.name },
+												design: {
+													highlight: !selectedCompositeId
+												},
+												size: '2xs'
+											}}
+										/>
 
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center justify-between">
-											<div class="font-medium text-surface-300 truncate max-w-[150px]">
-												{compose_data.title}
-												<span class="text-xs text-surface-400">(archived)</span>
-											</div>
-											<div class="flex flex-col items-end">
+										<div class="flex-1 min-w-0">
+											<div class="flex items-center justify-between">
+												<div class="font-medium text-surface-300 truncate max-w-[150px]">
+													{compose_data.title}
+													<span class="text-xs text-surface-400">(archived)</span>
+												</div>
 												<span
-													class="px-2 py-0.5 text-xs rounded-full bg-primary-500/10 text-primary-400 mb-1"
+													class="px-2 py-0.5 text-xs rounded-full bg-primary-500/10 text-primary-400"
 												>
 													Latest
 												</span>
-
-												<!-- Unarchive button -->
-												<button
-													class="p-1 transition-opacity rounded-full opacity-0 group-hover:opacity-100 hover:bg-surface-700"
-													on:click={(e) => toggleArchiveStatus(e, compose_data.compose_id, true)}
-													disabled={isArchiving}
-													title="Unarchive"
-												>
-													<Icon
-														icon="heroicons:archive-box-arrow-down"
-														class="w-4 h-4 text-surface-400 hover:text-surface-200"
-													/>
-												</button>
 											</div>
-										</div>
-										<div class="text-xs font-medium text-surface-400">
-											by {compose_data.author.name}
+											<div class="text-xs font-medium text-surface-400">
+												by {compose_data.author.name}
+											</div>
 										</div>
 									</div>
-								</div>
-							</button>
-						{/if}
+								</button>
+							{/if}
 
-						<!-- Archived variations -->
-						{#each archivedComposites as composite}
-							<button
-								class="group w-full p-3 rounded-lg transition-colors text-left bg-opacity-60
-									{selectedCompositeId === composite.id
-									? 'bg-surface-700/60 border-l-4 border-primary-500/60'
-									: 'bg-surface-900/60 hover:bg-surface-700/60'}
-									{dragOverCompositeId === composite.id ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}"
-								on:click={() => handleCompositeSelect(composite.id)}
-								draggable={true}
-								on:dragstart={(e) => handleDragStart(e, composite.id)}
-								on:dragend={handleDragEnd}
-								on:dragover={(e) => handleDragOver(e, composite.id)}
-								on:dragleave={handleDragLeave}
-								on:drop={(e) => handleDrop(e, composite.id)}
-							>
-								<div class="relative flex items-start gap-3">
-									<Avatar
-										me={{
-											data: { seed: composite.author?.name || 'Unknown' },
-											design: {
-												highlight: selectedCompositeId === composite.id
-											},
-											size: '2xs'
-										}}
-									/>
+							<!-- Archived composites -->
+							{#each archivedComposites as composite}
+								<button
+									class="group w-full p-3 rounded-lg transition-colors text-left bg-surface-900/60 hover:bg-surface-800/60
+										{selectedCompositeId === composite.id ? 'border-l-4 border-primary-500/60' : ''}
+										{dragOverCompositeId === composite.id ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}"
+									on:click={() => handleCompositeSelect(composite.id)}
+									draggable={true}
+									on:dragstart={(e) => handleDragStart(e, composite.id)}
+									on:dragend={handleDragEnd}
+									on:dragover={(e) => handleDragOver(e, composite.id)}
+									on:dragleave={handleDragLeave}
+									on:drop={(e) => handleDrop(e, composite.id)}
+								>
+									<div class="relative flex items-start gap-3">
+										<Avatar
+											me={{
+												data: { seed: composite.author?.name || 'Unknown' },
+												design: {
+													highlight: selectedCompositeId === composite.id
+												},
+												size: '2xs'
+											}}
+										/>
 
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center justify-between">
-											<div class="font-medium text-surface-300 truncate max-w-[150px]">
-												{composite.title} <span class="text-xs text-surface-400">(archived)</span>
-											</div>
-
-											<div class="flex flex-col items-end">
-												<span
-													class="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400 mb-1"
-												>
+										<div class="flex-1 min-w-0">
+											<div class="flex items-center justify-between">
+												<div class="font-medium text-surface-300 truncate max-w-[150px]">
+													{composite.title} <span class="text-xs text-surface-400">(archived)</span>
+												</div>
+												<span class="px-2 py-0.5 text-xs rounded-full bg-blue-500/10 text-blue-400">
 													{composite.metadata?.variation_type ||
 														composite.relationship_type ||
 														'variation'}
 												</span>
-
-												<!-- Unarchive button -->
-												<button
-													class="p-1 transition-opacity rounded-full opacity-0 group-hover:opacity-100 hover:bg-surface-700"
-													on:click={(e) => toggleArchiveStatus(e, composite.id, true)}
-													disabled={isArchiving}
-													title="Unarchive"
-												>
-													<Icon
-														icon="heroicons:archive-box-arrow-down"
-														class="w-4 h-4 text-surface-400 hover:text-surface-200"
-													/>
-												</button>
+											</div>
+											<div class="text-xs font-medium text-surface-400">
+												by {composite.author?.name || 'Unknown'}
 											</div>
 										</div>
-										<div class="text-xs font-medium text-surface-300">
-											by {composite.author?.name || 'Unknown'}
-										</div>
 									</div>
-								</div>
-							</button>
-						{/each}
-					</div>
+								</button>
+							{/each}
+						</div>
+					{/if}
 				{/if}
 			</div>
 		{/if}

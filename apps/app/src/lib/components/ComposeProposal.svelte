@@ -40,6 +40,26 @@ This component handles:
 		schema?: string;
 	}
 
+	interface RelatedComposite {
+		id: string;
+		title: string;
+		description: string;
+		compose_json: ComposeJson;
+		compose_id: string;
+		relationship_type: string;
+		author: {
+			name: string;
+		};
+		metadata: {
+			created_at: string;
+			variation_type?: string;
+			description?: string;
+			target_composite_id?: string;
+			[key: string]: unknown;
+		};
+		is_archived: boolean;
+	}
+
 	interface ComposeData {
 		id: string;
 		title: string;
@@ -55,25 +75,6 @@ This component handles:
 		related_composites: RelatedComposite[];
 		patch_requests: PatchRequest[];
 		schema_data?: any;
-	}
-
-	interface RelatedComposite {
-		id: string;
-		title: string;
-		description: string;
-		compose_json: ComposeJson;
-		compose_id: string;
-		author: {
-			name: string;
-		};
-		relationship_type: string;
-		is_archived: boolean;
-		metadata: {
-			created_at?: string;
-			variation_type?: string;
-			description?: string;
-			[key: string]: unknown;
-		};
 	}
 
 	interface PatchRequest {
