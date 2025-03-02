@@ -11,17 +11,22 @@ interface MergeResponse {
     snapshotId?: string;
     ancestorId?: string;
     conflicts_detected?: number;
-    conflicts_resolved?: number;
+    operations_count?: number;
+    op_conflicts?: any[];
 }
 
 /**
  * Operation to perform a three-way merge between two composites.
  * This uses a common ancestor approach for better conflict resolution.
+ * 
+ * When used with drag and drop, the source composite is dragged onto the target composite.
+ * The merge creates a patch request in the target composite that needs to be approved.
  */
 export default createOperation.mutation({
     input: z.object({
         sourceCompositeId: z.string().uuid(),
-        targetCompositeId: z.string().uuid()
+        targetCompositeId: z.string().uuid(),
+        isDragAndDrop: z.boolean().optional().default(false)
     }),
     requireAuthentication: true,
     rbac: {
@@ -33,6 +38,12 @@ export default createOperation.mutation({
         }
 
         try {
+            console.log(`[threeWayMerge] Starting merge from ${input.sourceCompositeId} to ${input.targetCompositeId}`);
+
+            if (input.isDragAndDrop) {
+                console.log(`[threeWayMerge] Using drag and drop merge mode`);
+            }
+
             // Call the database function to perform the three-way merge
             const { data, error } = await context.supabase.rpc('three_way_merge_composites', {
                 p_user_id: user.customClaims.id,
@@ -55,11 +66,15 @@ export default createOperation.mutation({
             // Log success metrics
             console.log(`[threeWayMerge] Successfully merged composites. Metrics: ${JSON.stringify({
                 conflicts_detected: typedData.conflicts_detected || 0,
-                conflicts_resolved: typedData.conflicts_resolved || 0,
-                using_ancestor: typedData.ancestorId ? true : false
+                operations_count: typedData.operations_count || 0,
+                using_ancestor: typedData.ancestorId ? true : false,
+                is_drag_drop: input.isDragAndDrop
             })}`);
 
-            return typedData;
+            return {
+                ...typedData,
+                isDragAndDrop: input.isDragAndDrop
+            };
         } catch (error) {
             console.error('[threeWayMerge] Unexpected error:', error);
             return {

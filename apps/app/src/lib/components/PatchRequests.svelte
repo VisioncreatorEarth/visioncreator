@@ -182,15 +182,50 @@ Props:
 				icon: 'heroicons:git-branch',
 				text: 'Branch'
 			};
-		} else if (
-			request.operation_type === 'merge' ||
-			request.metadata?.merge_strategy === 'three_way'
-		) {
-			return {
-				color: 'text-blue-400 bg-blue-400/10',
-				icon: 'heroicons:arrow-path',
-				text: request.metadata?.merge_strategy === 'three_way' ? '3W Merge' : 'Simple Merge'
-			};
+		} else if (request.operation_type === 'merge') {
+			// Check for three-way merge
+			if (request.metadata?.merge_strategy === 'three_way') {
+				// Show conflicts if present
+				const conflictsCount = request.metadata?.conflicts_detected || 0;
+				const operationsCount = request.metadata?.operations_count || 0;
+				const isDragAndDrop = request.isDragAndDrop === true;
+
+				// Special styling for drag and drop merges
+				if (isDragAndDrop) {
+					return {
+						color:
+							conflictsCount > 0
+								? 'text-yellow-400 bg-yellow-400/10'
+								: 'text-purple-400 bg-purple-400/10',
+						icon:
+							conflictsCount > 0
+								? 'heroicons:exclamation-triangle'
+								: 'heroicons:cursor-arrow-ripple',
+						text:
+							conflictsCount > 0
+								? `Drag Merge (${conflictsCount} conflicts)`
+								: `Drag Merge (${operationsCount} ops)`
+					};
+				}
+
+				return {
+					color:
+						conflictsCount > 0
+							? 'text-yellow-400 bg-yellow-400/10'
+							: 'text-blue-400 bg-blue-400/10',
+					icon: conflictsCount > 0 ? 'heroicons:exclamation-triangle' : 'heroicons:arrow-path',
+					text:
+						conflictsCount > 0
+							? `3W Merge (${conflictsCount} conflicts)`
+							: `3W Merge (${operationsCount} ops)`
+				};
+			} else {
+				return {
+					color: 'text-blue-400 bg-blue-400/10',
+					icon: 'heroicons:arrow-path',
+					text: 'Simple Merge'
+				};
+			}
 		} else {
 			return {
 				color: 'text-tertiary-400 bg-tertiary-400/10',
@@ -265,7 +300,7 @@ Props:
 						: ''} relative transition-colors border-b cursor-pointer border-surface-700 hover:bg-surface-700 {selectedRequestId ===
 					request.id
 						? 'bg-surface-700 border-l-4 border-primary-500'
-						: ''}"
+						: ''} group"
 					on:click={() => handleRequestSelect(request)}
 				>
 					<div class="flex flex-col">
@@ -286,6 +321,22 @@ Props:
 											<Icon icon="heroicons:code-bracket-square" class="w-3.5 h-3.5" />
 											{request.metadata?.merge_strategy === 'three_way' ? '3W Merge' : 'Merge'}
 										</span>
+
+										<!-- Show conflict badge if present -->
+										{#if request.metadata && request.metadata.conflicts_detected > 0}
+											<span
+												class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-500/10 text-yellow-400"
+												title="Click to view conflict details"
+											>
+												<Icon icon="heroicons:exclamation-triangle" class="w-3.5 h-3.5" />
+												{request.metadata.conflicts_detected}
+												{request.metadata.conflicts_detected === 1 ? 'Conflict' : 'Conflicts'}
+												<span
+													class="hidden group-hover:inline text-2xs font-normal text-yellow-300 ml-1"
+													>(click to view)</span
+												>
+											</span>
+										{/if}
 									{:else}
 										<span
 											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-tertiary-500/10 text-tertiary-400"

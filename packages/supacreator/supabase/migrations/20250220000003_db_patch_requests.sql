@@ -331,6 +331,12 @@ DECLARE
     v_old_content_record record;
     v_new_content_record record;
 BEGIN
+    -- Skip auto-approval for merge operations
+    IF NEW.operation_type = 'merge' THEN
+        RAISE NOTICE 'Not auto-approving patch request % - it is a merge operation which requires review', NEW.id;
+        RETURN NULL;
+    END IF;
+
     -- Get the author of the composite
     SELECT author INTO v_composite_author
     FROM public.composites

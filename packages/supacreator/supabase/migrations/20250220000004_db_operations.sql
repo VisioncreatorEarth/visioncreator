@@ -305,8 +305,8 @@ BEGIN
     v_lamport_timestamp := update_lamport_timestamp(v_lamport_timestamp, NULL);
 
     -- Check if the current item exists
-    SELECT * INTO v_current_item 
-    FROM public.db 
+    SELECT * INTO v_current_item
+    FROM public.db
     WHERE id = p_id;
     
     IF v_current_item IS NULL THEN
@@ -328,14 +328,14 @@ BEGIN
     -- Validate content against schema
     -- First check if the validate_content_against_schema function exists
     IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'validate_content_against_schema') THEN
-        v_validation_result := public.validate_content_against_schema(p_json, v_schema_id);
-        
-        IF NOT (v_validation_result->>'valid')::boolean THEN
-            RETURN jsonb_build_object(
-                'success', false,
-                'error', 'Validation failed',
-                'details', v_validation_result
-            );
+    v_validation_result := public.validate_content_against_schema(p_json, v_schema_id);
+    
+    IF NOT (v_validation_result->>'valid')::boolean THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Validation failed',
+            'details', v_validation_result
+        );
         END IF;
     END IF;
     
@@ -525,12 +525,12 @@ BEGIN
         
         -- Check if key exists in new JSON
         IF (p_new_json ? v_key) THEN
-            v_new_value := p_new_json->v_key;
-            
+        v_new_value := p_new_json->v_key;
+        
             -- Check if value has changed
             IF v_old_value IS DISTINCT FROM v_new_value THEN
                 -- Special handling for arrays with CRDT approach
-                IF jsonb_typeof(v_old_value) = 'array' AND jsonb_typeof(v_new_value) = 'array' THEN
+            IF jsonb_typeof(v_old_value) = 'array' AND jsonb_typeof(v_new_value) = 'array' THEN
                     -- Step 1: Initialize array position tracking
                     v_array_positions := '{}'::jsonb;
                     
@@ -564,30 +564,30 @@ BEGIN
                             IF NOT v_found THEN
                                 v_lamport_timestamp := public.update_lamport_timestamp(v_lamport_timestamp, NULL);
                                 
-                                INSERT INTO public.db_operations (
-                                    patch_request_id,
-                                    operation_type,
-                                    path,
-                                    old_value,
-                                    new_value,
-                                    author,
-                                    composite_id,
-                                    content_id,
+                                    INSERT INTO public.db_operations (
+                                        patch_request_id,
+                                        operation_type,
+                                        path,
+                                        old_value,
+                                        new_value,
+                                        author,
+                                        composite_id,
+                                        content_id,
                                     metadata,
                                     position_id,
                                     lamport_timestamp,
                                     site_id,
                                     vector_clock
-                                ) VALUES (
-                                    p_patch_request_id,
+                                    ) VALUES (
+                                        p_patch_request_id,
                                     'remove',
                                     ARRAY[v_key],
                                     v_item,
                                     NULL,
-                                    p_author,
-                                    p_composite_id,
-                                    p_content_id,
-                                    jsonb_build_object(
+                                        p_author,
+                                        p_composite_id,
+                                        p_content_id,
+                                        jsonb_build_object(
                                         'is_array_operation', true,
                                         'array_index', i,
                                         'property', v_key
@@ -596,8 +596,8 @@ BEGIN
                                     v_lamport_timestamp,
                                     v_site_id,
                                     public.update_vector_clock(NULL, p_author)
-                                );
-                            END IF;
+                                    );
+                                END IF;
                         END;
                     END LOOP;
                     
@@ -614,9 +614,9 @@ BEGIN
                                     v_found := true;
                                     v_found_at := i;
                                     EXIT;
-                                END IF;
-                            END LOOP;
-                            
+                            END IF;
+                        END LOOP;
+                        
                             -- If item is new, add an operation with position
                             IF NOT v_found THEN
                                 -- Find position - get neighbor positions
@@ -630,41 +630,41 @@ BEGIN
                                     v_next_position_id := NULL;
                                 ELSE
                                     v_next_position_id := (v_array_positions->(j+1)::text)#>>'{}';
-                                END IF;
+                        END IF;
                                 
                                 -- Generate position ID between neighbors
                                 v_position_id := public.generate_position_id(v_prev_position_id, v_next_position_id, v_site_id);
                                 
                                 -- Increment timestamp for each operation
                                 v_lamport_timestamp := public.update_lamport_timestamp(v_lamport_timestamp, NULL);
-                                
-                                INSERT INTO public.db_operations (
-                                    patch_request_id,
-                                    operation_type,
-                                    path,
-                                    old_value,
-                                    new_value,
-                                    author,
-                                    composite_id,
-                                    content_id,
+                            
+                            INSERT INTO public.db_operations (
+                                patch_request_id,
+                                operation_type,
+                                path,
+                                old_value,
+                                new_value,
+                                author,
+                                composite_id,
+                                content_id,
                                     metadata,
                                     position_id,
                                     lamport_timestamp,
                                     site_id,
                                     vector_clock
-                                ) VALUES (
-                                    p_patch_request_id,
-                                    'add',
+                            ) VALUES (
+                                p_patch_request_id,
+                                'add',
                                     ARRAY[v_key],
-                                    NULL,
+                                NULL,
                                     v_item,
-                                    p_author,
-                                    p_composite_id,
-                                    p_content_id,
-                                    jsonb_build_object(
+                                p_author,
+                                p_composite_id,
+                                p_content_id,
+                                jsonb_build_object(
                                         'is_array_operation', true,
                                         'array_index', j,
-                                        'property', v_key,
+                                    'property', v_key,
                                         'prev_position', v_prev_position_id,
                                         'next_position', v_next_position_id
                                     ),
@@ -688,10 +688,10 @@ BEGIN
                         PERFORM public.generate_nested_operations_from_diff(
                             v_old_value,
                             v_new_value,
-                            p_patch_request_id,
-                            p_author,
-                            p_composite_id,
-                            p_content_id,
+                                p_patch_request_id,
+                                p_author,
+                                p_composite_id,
+                                p_content_id,
                             v_nested_path,
                             v_lamport_timestamp,
                             v_site_id
@@ -701,34 +701,34 @@ BEGIN
                     -- For primitive types, just do a simple replace
                     v_lamport_timestamp := public.update_lamport_timestamp(v_lamport_timestamp, NULL);
                     
-                    INSERT INTO public.db_operations (
-                        patch_request_id,
-                        operation_type,
-                        path,
-                        old_value,
-                        new_value,
-                        author,
-                        composite_id,
-                        content_id,
+                INSERT INTO public.db_operations (
+                    patch_request_id,
+                    operation_type,
+                    path,
+                    old_value,
+                    new_value,
+                    author,
+                    composite_id,
+                    content_id,
                         metadata,
                         lamport_timestamp,
                         site_id,
                         vector_clock
-                    ) VALUES (
-                        p_patch_request_id,
-                        'replace',
-                        ARRAY[v_key],
-                        v_old_value,
-                        v_new_value,
-                        p_author,
-                        p_composite_id,
-                        p_content_id,
+                ) VALUES (
+                    p_patch_request_id,
+                    'replace',
+                    ARRAY[v_key],
+                    v_old_value,
+                    v_new_value,
+                    p_author,
+                    p_composite_id,
+                    p_content_id,
                         jsonb_build_object('property', v_key),
                         v_lamport_timestamp,
                         v_site_id,
                         public.update_vector_clock(NULL, p_author)
-                    );
-                END IF;
+                );
+            END IF;
             END IF;
         ELSE
             -- Key was removed
@@ -770,34 +770,34 @@ BEGIN
         IF NOT v_key = ANY(v_old_keys) THEN
             v_new_value := p_new_json->v_key;
             v_lamport_timestamp := public.update_lamport_timestamp(v_lamport_timestamp, NULL);
-            
-            INSERT INTO public.db_operations (
-                patch_request_id,
-                operation_type,
-                path,
-                old_value,
-                new_value,
-                author,
-                composite_id,
-                content_id,
+                        
+                        INSERT INTO public.db_operations (
+                            patch_request_id,
+                            operation_type,
+                            path,
+                            old_value,
+                            new_value,
+                            author,
+                            composite_id,
+                            content_id,
                 metadata,
                 lamport_timestamp,
                 site_id,
                 vector_clock
-            ) VALUES (
-                p_patch_request_id,
-                'add',
-                ARRAY[v_key],
-                NULL,
-                v_new_value,
-                p_author,
-                p_composite_id,
-                p_content_id,
+                ) VALUES (
+                    p_patch_request_id,
+                    'add',
+                    ARRAY[v_key],
+                    NULL,
+                    v_new_value,
+                    p_author,
+                    p_composite_id,
+                    p_content_id,
                 jsonb_build_object('property', v_key),
                 v_lamport_timestamp,
                 v_site_id,
                 public.update_vector_clock(NULL, p_author)
-            );
+                );
         END IF;
     END LOOP;
 END;
@@ -971,7 +971,7 @@ BEGIN
                             v_operation.new_value,
                             TRUE  -- Create if doesn't exist
                         );
-                    END IF;
+                            END IF;
                     
                 WHEN 'remove' THEN
                     -- For nested paths, need careful handling
@@ -997,11 +997,11 @@ BEGIN
                             ARRAY[v_operation.path[1]], 
                             v_operation.new_value
                         );
-                    END IF;
+                            END IF;
             END CASE;
-        END IF;
-    END LOOP;
-    
+                        END IF;
+                            END LOOP;
+                            
     -- Second pass: process array operations path by path
     FOR v_property IN SELECT jsonb_object_keys(v_array_operations) LOOP
         -- Parse path string back to array
@@ -1011,7 +1011,7 @@ BEGIN
         v_array := jsonb_get_deep(v_result, v_current_array_path);
         IF v_array IS NULL OR jsonb_typeof(v_array) != 'array' THEN
             v_array := '[]'::jsonb;
-        END IF;
+                            END IF;
         
         -- Process array operations in position order
         DECLARE
@@ -1050,11 +1050,11 @@ BEGIN
                                 v_item := v_array->v_i;
                                 IF v_item IS DISTINCT FROM v_old_value THEN
                                     v_new_array := v_new_array || jsonb_build_array(v_item);
-                                END IF;
+                            END IF;
                             END LOOP;
                             v_array := v_new_array;
                         END;
-                    END IF;
+                        END IF;
                 ELSIF (v_operation_data->>'operation_type') = 'add' THEN
                     -- For add operations with position ID
                     v_position_id := v_operation_data->>'position_id';
@@ -1070,8 +1070,8 @@ BEGIN
                     ELSE
                         -- Fallback: simply append to array if no position ID
                         v_array := v_array || jsonb_build_array(v_operation_data->'new_value');
-                    END IF;
-                END IF;
+                            END IF;
+                        END IF;
             END LOOP;
             
             -- Sort position IDs by their numeric part
@@ -1095,24 +1095,24 @@ BEGIN
                     -- Only add if position has a value
                     IF v_value_map ? v_position_id THEN
                         v_result_array := v_result_array || jsonb_build_array(v_value_map->v_position_id);
-                    END IF;
-                END LOOP;
+                            END IF;
+                        END LOOP;
             END IF;
             
             -- Merge with values from the original array that don't have position IDs
             IF jsonb_array_length(v_array) > 0 AND jsonb_array_length(v_result_array) = 0 THEN
                 -- If we have no positioned elements but original array has values, use original
                 v_result_array := v_array;
-            END IF;
+                                END IF;
             
             -- Update the result with the reconstructed array
             IF array_length(v_current_array_path, 1) > 1 THEN
                 v_result := jsonb_set_deep(v_result, v_current_array_path, v_result_array);
             ELSE
                 v_result := jsonb_set(v_result, v_current_array_path, v_result_array);
-            END IF;
+                                    END IF;
         END;
-    END LOOP;
+                                END LOOP;
     
     RETURN v_result;
 END;
@@ -1125,12 +1125,12 @@ CREATE OR REPLACE FUNCTION public.jsonb_set_deep(
     p_value jsonb,
     p_create_missing boolean DEFAULT false
 ) RETURNS jsonb AS $$
-DECLARE
+                        DECLARE
     v_result jsonb;
     v_current jsonb;
     v_sub_path text[];
     v_i integer;
-BEGIN
+                        BEGIN
     -- Handle empty or null input
     IF p_json IS NULL THEN
         IF p_create_missing THEN
@@ -1147,7 +1147,7 @@ BEGIN
         ELSE
             -- No path, return original
             RETURN p_json;
-        END IF;
+                                    END IF;
     END IF;
     
     -- Recursive case: handle nested path
@@ -1159,7 +1159,7 @@ BEGIN
     -- Create container if missing and allowed
     IF v_current IS NULL AND p_create_missing THEN
         v_current := '{}'::jsonb;
-    END IF;
+                            END IF;
     
     -- If we can't proceed, return original
     IF v_current IS NULL OR jsonb_typeof(v_current) != 'object' THEN

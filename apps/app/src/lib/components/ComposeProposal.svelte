@@ -229,6 +229,11 @@ This component handles:
 		showToast(message, 'error');
 	}
 
+	// Function to display information toast
+	function toastInfo(message: string) {
+		showToast(message, 'info');
+	}
+
 	// Subscribe to query updates
 	$: compose_data = $composeQuery.data?.compose_data;
 
@@ -757,7 +762,7 @@ This component handles:
 		dragOverCompositeId = null;
 	}
 
-	// Create the threeWayMerge mutation at component level so it can be used with store syntax
+	// Create the threeWayMergeMutation at component level so it can be used with store syntax
 	const threeWayMergeMutation = createMutation({
 		operationName: 'threeWayMerge'
 	});
@@ -790,12 +795,13 @@ This component handles:
 			// Execute the mutation using the store reference with $ prefix
 			const result = await $threeWayMergeMutation.mutateAsync({
 				sourceCompositeId,
-				targetCompositeId
+				targetCompositeId,
+				isDragAndDrop: true // Explicitly mark this as a drag and drop operation
 			});
 
 			if (result?.success) {
 				// Show success toast
-				toastSuccess('Merge completed successfully');
+				toastSuccess('Merge request created successfully');
 
 				// If a patch request was created, handle it
 				if (result.patchRequestId) {
@@ -803,6 +809,11 @@ This component handles:
 
 					// Refetch data to show the updated state
 					$composeQuery.refetch();
+
+					// Show more detailed message if conflicts were detected
+					if (result.conflicts_detected && result.conflicts_detected > 0) {
+						toastInfo(`Merge created with ${result.conflicts_detected} conflicts to resolve`);
+					}
 				}
 			} else {
 				// Show error toast
@@ -866,7 +877,7 @@ This component handles:
 							{!selectedCompositeId
 							? 'bg-surface-700 border-l-4 border-primary-500'
 							: 'bg-surface-900 hover:bg-surface-700'}
-							{dragOverCompositeId === compose_data.compose_id ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}"
+							{dragOverCompositeId === compose_data.compose_id ? 'ring-2 ring-blue-500 bg-blue-500/20' : ''}"
 						on:click={() => handleCompositeSelect(null)}
 						on:dragover={(e) => handleDragOver(e, compose_data.compose_id)}
 						on:dragleave={handleDragLeave}
@@ -905,7 +916,7 @@ This component handles:
 								{selectedCompositeId === composite.id
 								? 'bg-surface-700 border-l-4 border-primary-500'
 								: 'bg-surface-900 hover:bg-surface-700'}
-								{dragOverCompositeId === composite.id ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''}"
+								{dragOverCompositeId === composite.id ? 'ring-2 ring-blue-500 bg-blue-500/20' : ''}"
 							on:click={() => handleCompositeSelect(composite.id)}
 							draggable={true}
 							on:dragstart={(e) => handleDragStart(e, composite.id)}
@@ -1120,6 +1131,22 @@ This component handles:
 					</div>
 				{:else if $activeComposeTab === 'diff' && selectedEditRequest}
 					<div class="flex flex-col h-full overflow-hidden">
+						<!-- Conflict notification -->
+						{#if selectedEditRequest?.metadata?.op_conflicts && selectedEditRequest.metadata.op_conflicts.length > 0}
+							<div
+								class="sticky top-0 z-20 px-4 py-2 flex items-center bg-yellow-900/80 border-b border-yellow-500/50 backdrop-blur-sm"
+							>
+								<Icon icon="heroicons:exclamation-triangle" class="w-4 h-4 text-yellow-400 mr-2" />
+								<span class="text-xs text-yellow-300">
+									This merge has {selectedEditRequest.metadata.op_conflicts.length} conflict{selectedEditRequest
+										.metadata.op_conflicts.length === 1
+										? ''
+										: 's'}.
+									<span class="font-medium">Scroll down to view conflict details.</span>
+								</span>
+							</div>
+						{/if}
+
 						<!-- Operations List Header -->
 						{#if !selectedEditRequest}
 							<div
@@ -1261,6 +1288,103 @@ This component handles:
 											</div>
 										</div>
 									{/each}
+
+									<!-- Display Conflicts inline with operations -->
+									{#if selectedEditRequest?.metadata?.op_conflicts && selectedEditRequest.metadata.op_conflicts.length > 0}
+										<div class="px-4 py-2 bg-yellow-900/20 border-y border-yellow-500/30">
+											<div class="flex items-center">
+												<Icon
+													icon="heroicons:exclamation-triangle"
+													class="w-4 h-4 text-yellow-400 mr-2"
+												/>
+												<h3 class="text-xs font-medium text-yellow-300">
+													Merge Conflicts ({selectedEditRequest.metadata.op_conflicts.length})
+												</h3>
+											</div>
+										</div>
+
+										{#each selectedEditRequest.metadata.op_conflicts as conflict, i}
+											<div
+												class="px-4 py-3 transition-colors hover:bg-surface-800/70 bg-yellow-900/5"
+											>
+												<div class="grid grid-cols-12 gap-4">
+													<!-- Metadata column (left side) -->
+													<div
+														class="flex flex-col col-span-3 gap-2 pr-2 border-r border-yellow-500/30"
+													>
+														<!-- Conflict badge -->
+														<span
+															class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full backdrop-blur-sm text-yellow-400 bg-yellow-400/10"
+														>
+															<Icon icon="heroicons:exclamation-triangle" class="w-3 h-3" />
+															conflict
+														</span>
+
+														<!-- Path -->
+														<div class="text-xs break-words text-yellow-300">
+															<span class="text-2xs text-yellow-400">Path:</span>
+															<div class="font-mono max-h-24 overflow-y-auto">
+																{#if Array.isArray(conflict.path)}
+																	{#each conflict.path as segment, index}
+																		<div class="flex items-center">
+																			{#if index > 0}
+																				<span class="inline-block" style="width: {index * 12}px" />
+																				<span class="text-yellow-400 mr-1">└─</span>
+																			{/if}
+																			<span class="whitespace-normal break-all">{segment}</span>
+																		</div>
+																	{/each}
+																{:else}
+																	<div class="whitespace-normal break-all">{conflict.path}</div>
+																{/if}
+															</div>
+														</div>
+
+														<!-- Resolution -->
+														<div class="flex items-center mt-1">
+															<Icon
+																icon="heroicons:check-circle"
+																class="w-3.5 h-3.5 mr-1 text-yellow-300"
+															/>
+															<span class="text-2xs text-yellow-300">
+																Resolution: {conflict.resolution || 'target'} value used
+															</span>
+														</div>
+													</div>
+
+													<!-- Main content column (right side) -->
+													<div class="col-span-9">
+														<div class="grid grid-cols-2 gap-4">
+															<div>
+																<div class="text-2xs text-yellow-300 uppercase mb-1">
+																	Source Value:
+																</div>
+																<div
+																	class="p-2 rounded bg-surface-800/70 font-mono text-xs text-red-200 whitespace-pre-wrap overflow-auto max-h-40 border-l-2 border-red-500/50 pl-2"
+																>
+																	- {typeof conflict.source_value === 'object'
+																		? JSON.stringify(conflict.source_value, null, 2)
+																		: conflict.source_value}
+																</div>
+															</div>
+															<div>
+																<div class="text-2xs text-yellow-300 uppercase mb-1">
+																	Target Value:
+																</div>
+																<div
+																	class="p-2 rounded bg-surface-800/70 font-mono text-xs text-green-200 whitespace-pre-wrap overflow-auto max-h-40 border-l-2 border-green-500/50 pl-2"
+																>
+																	+ {typeof conflict.target_value === 'object'
+																		? JSON.stringify(conflict.target_value, null, 2)
+																		: conflict.target_value}
+																</div>
+															</div>
+														</div>
+													</div>
+												</div>
+											</div>
+										{/each}
+									{/if}
 								</div>
 							</div>
 						{:else}
@@ -1531,6 +1655,14 @@ This component handles:
 	button[draggable='true']:active {
 		cursor: grabbing;
 		transform: rotate(1deg) scale(0.99);
+	}
+
+	/* Add drag indicator */
+	.drag-over {
+		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), 0 0 15px rgba(59, 130, 246, 0.3) !important;
+		background-color: rgba(59, 130, 246, 0.1) !important;
+		transform: scale(1.02);
+		transition: all 0.2s ease;
 	}
 
 	/* Better drag over indicator */
