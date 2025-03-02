@@ -668,10 +668,14 @@ BEGIN
             'ancestor_id', v_ancestor_id,
             'conflicts_detected', v_conflicts_detected,
             'operations_count', array_length(v_all_operations, 1),
-            'op_conflicts', v_op_conflicts
+            'op_conflicts', v_op_conflicts,
+            'is_drag_and_drop', true
         )
     )
     RETURNING id INTO v_patch_request_id;
+    
+    RAISE NOTICE 'Created merge patch request % with source_id % and target_id %', 
+        v_patch_request_id, p_source_composite_id, p_target_composite_id;
     
     -- 6. Generate operations for the merge
     -- This will create operations based on the original operations from each branch
@@ -742,6 +746,7 @@ DECLARE
     v_operations_array uuid[];
     v_old_content jsonb;
     v_new_content jsonb;
+    v_archive_result jsonb;
 BEGIN
     -- Get the patch request
     SELECT * INTO v_patch_request 
@@ -828,14 +833,22 @@ BEGIN
         -- Get the source composite ID from the metadata
         v_source_composite_id := (v_patch_request.metadata->>'source_id')::uuid;
         
+        RAISE NOTICE 'Checking for source composite to archive: metadata=%', v_patch_request.metadata;
+        
         -- Auto-archive the source composite after the merge is approved
         -- This ensures the source composite is marked as archived after successfully merging
         IF v_source_composite_id IS NOT NULL THEN
-            PERFORM public.toggle_composite_archive_status(
-                COALESCE(p_user_id, v_patch_request.author), -- Use the provided user ID or fall back to patch request author
-                v_source_composite_id, -- The source composite to archive (the one being merged from)
-                TRUE -- Set to archived
-            );
+            RAISE NOTICE 'Auto-archiving source composite % after merge approval', v_source_composite_id;
+            
+            -- Archive the source composite
+            UPDATE public.composites 
+            SET is_archived = TRUE,
+                updated_at = now()
+            WHERE id = v_source_composite_id;
+            
+            RAISE NOTICE 'Source composite % has been archived', v_source_composite_id;
+        ELSE
+            RAISE NOTICE 'No source_id found in metadata, unable to auto-archive source composite';
         END IF;
     END IF;
 

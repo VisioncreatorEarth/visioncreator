@@ -19,7 +19,7 @@ This component handles:
 	export let rootCompositeId: string | null = null; // ID of the root composite
 
 	// Component state
-	let showArchivedComposites = true; // Start open so it's more visible during testing
+	let showArchivedComposites = false; // Closed by default
 	let draggedCompositeId: string | null = null;
 	let dragOverCompositeId: string | null = null;
 	let isDragging = false;
@@ -59,7 +59,9 @@ This component handles:
 		console.log(`Found ${initialArchivedCount} archived items on mount`);
 
 		if (initialArchivedCount > 0) {
-			showArchivedComposites = true; // Auto-show archived section if items exist
+			// Auto-show archived section only if there are many items (more than 3)
+			// Otherwise keep it closed by default
+			showArchivedComposites = initialArchivedCount > 3;
 		}
 	});
 

@@ -7,9 +7,7 @@ alwaysApply: false
 
 ## When a user requests to save or version their code:
 
-ATTENTION: Never execute git workflows yourself, without the use asking you!
-
-1. **Stage all modified files**:
+1. **Always Stage ALL modified files**:
    - Use `git add .` to stage all changes in the repository
    - Confirm successful staging with a brief message
 
