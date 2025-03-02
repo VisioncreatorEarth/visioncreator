@@ -10,7 +10,22 @@ This component handles:
 	import { createMutation } from '$lib/wundergraph';
 	import Icon from '@iconify/svelte';
 	import Avatar from './Avatar.svelte';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
+	import { toasts } from '$lib/stores/ToastStore';
+	import { createDraggableFlatList } from '$lib/utils/draggableFlatList';
+	import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';
+	import {
+		faBoxArchive,
+		faChevronDown,
+		faChevronUp,
+		faMessage,
+		faPlus,
+		faTrain
+	} from '@fortawesome/free-solid-svg-icons';
+	import MergeNode from './MergeNode.svelte';
+	import ToastSummary from './ToastSummary.svelte';
+	import { getErrorMessage } from '$lib/utils/getErrorMessage';
+	import { isObject } from '$lib/utils/typeChecks';
 
 	// Component props
 	export let compose_data: any; // The main composite data
@@ -18,10 +33,8 @@ This component handles:
 	export let selectedCompositeId: string | null = null; // Currently selected composite ID
 	export let rootCompositeId: string | null = null; // ID of the root composite
 
-	// State variables for archive display
-	let showArchivedComposites = true; // Toggle for showing archived composites
-
-	// Drag and drop state for composite merging
+	// Component state
+	let showArchivedComposites = true; // Start open so it's more visible during testing
 	let draggedCompositeId: string | null = null;
 	let dragOverCompositeId: string | null = null;
 	let isDragging = false;
@@ -50,12 +63,46 @@ This component handles:
 		op_conflicts?: any[];
 	}
 
+	// Initialize component
+	onMount(() => {
+		console.log('CompositesAndMerge component mounted');
+		console.log('Initial compose_data:', compose_data);
+		console.log('Initial formattedComposites:', formattedComposites);
+
+		// Force check for archived items on mount
+		let initialArchivedCount = formattedComposites.filter((c) => c.is_archived).length;
+		console.log(`Found ${initialArchivedCount} archived items on mount`);
+
+		if (initialArchivedCount > 0) {
+			showArchivedComposites = true; // Auto-show archived section if items exist
+		}
+	});
+
 	// Split composites into active and archived lists
 	$: activeComposites = formattedComposites.filter((c) => !c.is_archived);
 	$: archivedComposites = formattedComposites.filter((c) => c.is_archived);
 
 	// Check if main composite is archived
-	$: isMainCompositeArchived = compose_data?.is_archived === true;
+	$: mainComposite = compose_data?.id
+		? { id: compose_data.id, is_archived: compose_data.is_archived }
+		: null;
+	$: isMainCompositeArchived = mainComposite?.is_archived === true;
+
+	// Add debug logs to track archive data
+	$: {
+		console.log('CompositesAndMerge - formattedComposites:', formattedComposites);
+		console.log('CompositesAndMerge - activeComposites:', activeComposites);
+		console.log('CompositesAndMerge - archivedComposites:', archivedComposites);
+		console.log('CompositesAndMerge - isMainCompositeArchived:', isMainCompositeArchived);
+
+		if (archivedComposites.length > 0) {
+			console.log('!!! FOUND ARCHIVED ITEMS !!!', archivedComposites);
+		}
+
+		if (isMainCompositeArchived) {
+			console.log('!!! MAIN COMPOSITE IS ARCHIVED !!!', mainComposite);
+		}
+	}
 
 	// Handle composite selection
 	function handleCompositeSelect(compositeId: string | null) {

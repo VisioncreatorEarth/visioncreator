@@ -60,23 +60,6 @@ This component handles:
 		is_archived: boolean;
 	}
 
-	interface ComposeData {
-		id: string;
-		title: string;
-		description: string | null;
-		compose_id: string;
-		compose_json: ComposeJson;
-		schema_id: string | null;
-		is_archived: boolean;
-		author: {
-			id: string;
-			name: string;
-		};
-		related_composites: RelatedComposite[];
-		patch_requests: PatchRequest[];
-		schema_data?: any;
-	}
-
 	interface PatchRequest {
 		id: string;
 		composite_id: string;
@@ -198,6 +181,9 @@ This component handles:
 					const relationshipType =
 						composite.metadata?.variation_type || composite.relationship_type || 'variation';
 
+					// Log full composite data to debug
+					console.log('Original composite:', composite);
+
 					// Create a formatted display item for each composite
 					return {
 						...composite,
@@ -214,6 +200,9 @@ This component handles:
 					return dateB - dateA;
 				})
 		: [];
+
+	// Log the result to see what is being passed to CompositesAndMerge
+	$: console.log('Final formattedComposites:', formattedComposites);
 
 	// Split composites into active and archived lists
 	$: activeComposites = formattedComposites.filter((c) => !c.is_archived);
