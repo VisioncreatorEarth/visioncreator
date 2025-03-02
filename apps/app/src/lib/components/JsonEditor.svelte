@@ -127,25 +127,6 @@
 			{jsonEditError}
 		</div>
 	{/if}
-
-	<!-- Action Buttons -->
-	{#if hasChanges && !readOnly}
-		<div class="flex justify-end gap-2 mt-4">
-			<button
-				class="px-4 py-2 text-sm rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
-				on:click={handleCancel}
-			>
-				Cancel
-			</button>
-			<button
-				class="px-4 py-2 text-sm text-white rounded-lg bg-success-500 hover:bg-success-600"
-				on:click={handleSave}
-				disabled={!!jsonEditError}
-			>
-				Save Changes
-			</button>
-		</div>
-	{/if}
 </div>
 
 <style>

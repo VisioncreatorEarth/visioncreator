@@ -1049,16 +1049,16 @@ This component handles:
 							{#if hasChanges}
 								<div class="flex items-center gap-2">
 									<button
-										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
-										on:click={saveChanges}
-									>
-										Save
-									</button>
-									<button
-										class="px-4 py-2 text-sm font-medium text-red-400 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+										class="px-4 py-2 text-sm rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
 										on:click={cancelEditing}
 									>
 										Cancel
+									</button>
+									<button
+										class="px-4 py-2 text-sm text-white rounded-lg bg-success-500 hover:bg-success-600"
+										on:click={saveChanges}
+									>
+										Save Changes
 									</button>
 								</div>
 							{/if}
@@ -1272,24 +1272,24 @@ This component handles:
 					</div>
 				{:else}
 					<div class="flex flex-col h-full p-6">
-						{#if hasChanges}
-							<div class="flex items-center justify-end mb-4">
+						<div class="flex items-center justify-end mb-4">
+							{#if hasChanges}
 								<div class="flex items-center gap-2">
 									<button
-										class="px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-primary-500 hover:bg-primary-600"
-										on:click={saveChanges}
-									>
-										Save
-									</button>
-									<button
-										class="px-4 py-2 text-sm font-medium text-red-400 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+										class="px-4 py-2 text-sm rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
 										on:click={cancelEditing}
 									>
 										Cancel
 									</button>
+									<button
+										class="px-4 py-2 text-sm text-white rounded-lg bg-success-500 hover:bg-success-600"
+										on:click={saveChanges}
+									>
+										Save Changes
+									</button>
 								</div>
-							</div>
-						{/if}
+							{/if}
+						</div>
 
 						<div class="flex flex-col gap-4">
 							{#if validationErrors && validationErrors.length > 0}
