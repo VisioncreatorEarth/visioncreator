@@ -1,0 +1,55 @@
+---
+description: Everything related to git and verison control
+globs: 
+alwaysApply: false
+---
+# Git Operations Handler Instructions
+
+## When a user requests to save or version their code:
+
+1. **Stage all modified files**:
+   - Use `git add .` to stage all changes in the repository
+   - Confirm successful staging with a brief message
+
+2. **Analyze changes to determine appropriate commit type**:
+   - Automatically analyze the staged changes to determine the appropriate conventional commit type:
+     - Use `git diff --staged` to examine what files have been modified
+     - Based on the content of changes, determine the appropriate conventional commit type:
+       - `feat`: If new functionality, methods, endpoints, or user-facing features were added
+       - `fix`: If errors, bugs, or unexpected behaviors were corrected
+       - `refactor`: If code was restructured without changing functionality
+       - `style`: If changes were purely formatting, whitespace, etc.
+       - `test`: If test files were added or modified
+       - `docs`: If documentation or comments were changed
+       - `build`: If build system, dependencies, or configurations were modified
+       - `perf`: If performance optimizations were made
+       - `chore`: If miscellaneous changes like .gitignore updates were made
+   - Infer the scope based on which components or modules were changed
+   - Create a concise but descriptive commit message based on the actual changes
+
+3. **Commit changes using determined Conventional Commits format**:
+   - Format: `<type>(<optional scope>): <description>`
+   - Ensure description:
+     - Uses imperative present tense ("add" not "added")
+     - Doesn't capitalize first letter
+     - No period at the end
+     - Is concise but descriptive
+   - For breaking changes, add `!` before the colon
+
+4. **Push to remote repository**:
+   - Execute `git push` to send changes to the remote repository
+   - Confirm successful push with appropriate feedback
+
+## Example workflow:
+
+When user says: "Save my current version" or "Commit my changes":
+
+1. Stage: `git add .`
+2. Analyze changes:
+   - Check which files were modified
+   - If API code was changed with new endpoint added, determine this is a `feat` in the `api` scope
+3. Format commit using conventional style: `git commit -m "feat(api): add user profile endpoint"`
+4. Push: `git push`
+5. Confirm: "Your changes have been saved to the remote repository. The commit 'feat(api): add user profile endpoint' has been pushed."
+
+> **Important**: Never ask the user what type of change it was - determine this yourself by analyzing the actual code changes. Provide clear feedback about what type of change was detected and committed.
