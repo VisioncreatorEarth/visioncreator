@@ -440,57 +440,55 @@ BEGIN
         ancestor jsonb
     ) RETURNS jsonb AS $merge_arrays$
     DECLARE
-        merged jsonb := target;
+        merged jsonb;
         key text;
         source_value jsonb;
         target_value jsonb;
         ancestor_value jsonb;
         result_value jsonb;
     BEGIN
-        -- First handle the case where one or both inputs are arrays
+        -- First handle the case where one input is null
+        IF source IS NULL THEN
+            RETURN target;
+        ELSIF target IS NULL THEN
+            RETURN source;
+        END IF;
+
+        -- Handle the case where one or both inputs are arrays
         IF jsonb_typeof(source) = 'array' AND jsonb_typeof(target) = 'array' THEN
-            -- Universal array merge logic - no special cases
+            -- Enhanced universal array merge logic
             DECLARE
                 merged_array jsonb := '[]'::jsonb;
+                source_array jsonb := source;
+                target_array jsonb := target;
+                ancestor_array jsonb := ancestor;
                 item jsonb;
                 found boolean;
                 i integer;
                 j integer;
+                
+                -- Track items to be removed
+                removed_items jsonb := '[]'::jsonb;
             BEGIN
-                -- Start with all items from source
-                merged_array := source;
-                
-                -- Add items from target that aren't in source
-                FOR i IN 0..jsonb_array_length(target) - 1 LOOP
-                    item := target->i;
-                    found := false;
-                    
-                    -- Check if item exists in source
-                    FOR j IN 0..jsonb_array_length(source) - 1 LOOP
-                        IF source->j = item THEN
-                            found := true;
-                            EXIT;
-                        END IF;
-                    END LOOP;
-                    
-                    -- Add if not found
-                    IF NOT found THEN
-                        merged_array := merged_array || item;
-                    END IF;
-                END LOOP;
-                
-                -- Conservative approach: only remove items that were explicitly deleted in BOTH source and target
-                -- This is now applied universally to all arrays
-                IF jsonb_typeof(ancestor) = 'array' THEN
-                    FOR i IN 0..jsonb_array_length(ancestor) - 1 LOOP
-                        item := ancestor->i;
+                -- Initialize ancestor_array if it's null or not an array
+                IF ancestor_array IS NULL OR jsonb_typeof(ancestor_array) != 'array' THEN
+                    ancestor_array := '[]'::jsonb;
+                END IF;
+
+                -- First, identify items that were removed in both branches
+                IF jsonb_array_length(ancestor_array) > 0 THEN
+                    FOR i IN 0..jsonb_array_length(ancestor_array) - 1 LOOP
+                        item := ancestor_array->i;
                         
-                        -- Check if item was explicitly removed in both branches
+                        -- Check if item exists in source
                         found := false;
-                        
-                        -- Check if in source
-                        FOR j IN 0..jsonb_array_length(source) - 1 LOOP
-                            IF source->j = item THEN
+                        FOR j IN 0..jsonb_array_length(source_array) - 1 LOOP
+                            -- For simple values (strings, numbers, etc.), use direct comparison
+                            -- For objects and arrays, use type check and equality
+                            IF (jsonb_typeof(item) IN ('string', 'number', 'boolean') AND source_array->j = item) OR
+                               (jsonb_typeof(item) IN ('object', 'array') AND 
+                                jsonb_typeof(source_array->j) = jsonb_typeof(item) AND 
+                                source_array->j = item) THEN
                                 found := true;
                                 EXIT;
                             END IF;
@@ -498,42 +496,107 @@ BEGIN
                         
                         -- If not in source, check if in target
                         IF NOT found THEN
-                            FOR j IN 0..jsonb_array_length(target) - 1 LOOP
-                                IF target->j = item THEN
+                            FOR j IN 0..jsonb_array_length(target_array) - 1 LOOP
+                                -- For simple values (strings, numbers, etc.), use direct comparison
+                                -- For objects and arrays, use type check and equality
+                                IF (jsonb_typeof(item) IN ('string', 'number', 'boolean') AND target_array->j = item) OR
+                                   (jsonb_typeof(item) IN ('object', 'array') AND 
+                                    jsonb_typeof(target_array->j) = jsonb_typeof(item) AND 
+                                    target_array->j = item) THEN
                                     found := true;
                                     EXIT;
                                 END IF;
                             END LOOP;
-                        END IF;
-                        
-                        -- If item exists in neither source nor target, remove from result
-                        -- (it was intentionally deleted in both branches)
-                        IF NOT found THEN
-                            DECLARE
-                                new_array jsonb := '[]'::jsonb;
-                            BEGIN
-                                FOR j IN 0..jsonb_array_length(merged_array) - 1 LOOP
-                                    IF merged_array->j != item THEN
-                                        new_array := new_array || jsonb_build_array(merged_array->j);
-                                    END IF;
-                                END LOOP;
-                                merged_array := new_array;
-                            END;
+                            
+                            -- If item exists in neither source nor target, add to removed items
+                            -- (it was deleted in both branches)
+                            IF NOT found THEN
+                                removed_items := removed_items || jsonb_build_array(item);
+                            END IF;
                         END IF;
                     END LOOP;
+                END IF;
+
+                -- Now merge the arrays, starting with all items from source
+                merged_array := source_array;
+                
+                -- Add items from target that aren't in source
+                FOR i IN 0..jsonb_array_length(target_array) - 1 LOOP
+                    item := target_array->i;
+                    found := false;
+                    
+                    -- Check if item exists in source
+                    FOR j IN 0..jsonb_array_length(source_array) - 1 LOOP
+                        -- For simple values (strings, numbers, etc.), use direct comparison
+                        -- For objects and arrays, use type check and equality
+                        IF (jsonb_typeof(item) IN ('string', 'number', 'boolean') AND source_array->j = item) OR
+                           (jsonb_typeof(item) IN ('object', 'array') AND 
+                            jsonb_typeof(source_array->j) = jsonb_typeof(item) AND 
+                            source_array->j = item) THEN
+                            found := true;
+                            EXIT;
+                        END IF;
+                    END LOOP;
+                    
+                    -- Add if not found
+                    IF NOT found THEN
+                        merged_array := merged_array || jsonb_build_array(item);
+                    END IF;
+                END LOOP;
+                
+                -- Remove items that were intentionally deleted in both branches
+                IF jsonb_array_length(removed_items) > 0 THEN
+                    DECLARE
+                        final_array jsonb := '[]'::jsonb;
+                        should_keep boolean;
+                    BEGIN
+                        FOR i IN 0..jsonb_array_length(merged_array) - 1 LOOP
+                            item := merged_array->i;
+                            should_keep := true;
+                            
+                            -- Check if this item is in the removed_items list
+                            FOR j IN 0..jsonb_array_length(removed_items) - 1 LOOP
+                                -- For simple values (strings, numbers, etc.), use direct comparison
+                                -- For objects and arrays, use type check and equality
+                                IF (jsonb_typeof(item) IN ('string', 'number', 'boolean') AND removed_items->j = item) OR
+                                   (jsonb_typeof(item) IN ('object', 'array') AND 
+                                    jsonb_typeof(removed_items->j) = jsonb_typeof(item) AND 
+                                    removed_items->j = item) THEN
+                                    should_keep := false;
+                                    EXIT;
+                                END IF;
+                            END LOOP;
+                            
+                            -- Keep the item if it's not in the removed list
+                            IF should_keep THEN
+                                final_array := final_array || jsonb_build_array(item);
+                            END IF;
+                        END LOOP;
+                        
+                        merged_array := final_array;
+                    END;
                 END IF;
                 
                 RETURN merged_array;
             END;
         ELSIF jsonb_typeof(source) = 'object' AND jsonb_typeof(target) = 'object' THEN
-            -- For objects, iterate through keys and merge recursively
+            -- For objects, start with target as the base
+            merged := target;
+            
+            -- Iterate through all keys in source and recursively merge
             FOR key IN SELECT jsonb_object_keys(source)
             LOOP
                 source_value := source->key;
                 target_value := target->key;
-                ancestor_value := ancestor->key;
                 
-                -- Skip null values
+                -- Get ancestor value if it exists
+                IF ancestor IS NOT NULL AND jsonb_typeof(ancestor) = 'object' THEN
+                    ancestor_value := ancestor->key;
+                ELSE
+                    ancestor_value := NULL;
+                END IF;
+                
+                -- Skip null values in source
                 IF source_value IS NULL THEN
                     CONTINUE;
                 END IF;
@@ -550,8 +613,13 @@ BEGIN
             
             RETURN merged;
         ELSE
-            -- For non-arrays and non-objects, use the target value (already set in merged)
-            RETURN merged;
+            -- For conflicting value types or primitive values, prefer target if changed from ancestor
+            -- otherwise use source value
+            IF ancestor IS NOT NULL AND target = ancestor THEN
+                RETURN source;
+            ELSE
+                RETURN target;
+            END IF;
         END IF;
     END;
     $merge_arrays$ LANGUAGE plpgsql;
@@ -586,10 +654,14 @@ BEGIN
         v_new_snapshot_id
     );
     
-    -- Explicitly generate operations to track what changed AFTER content is created
-    -- The generate_operations_from_diff function returns void, so directly call it without trying to capture a return value
+    -- CRITICAL FIX: We need to generate operations based on the ACTUAL changes from ancestor to merged
+    -- rather than from target to merged, which loses information about which changes came from which branch
+    
+    -- Explicitly generate operations to track what changed
+    -- For a proper 3-way merge, we generate operations based on what actually changed since the ancestor
+    -- This ensures we track what was truly added or removed during the merge
     PERFORM public.generate_operations_from_diff(
-        v_target_content,
+        v_ancestor_content,
         v_merged_content,
         v_patch_request_id,
         p_user_id,
