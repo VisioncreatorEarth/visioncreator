@@ -68,6 +68,9 @@ interface RawOperation {
     created_at: string;
     metadata: Record<string, any>;
     patch_request_id: string;
+    position_id?: string;
+    lamport_timestamp?: number;
+    site_id?: string;
 }
 
 interface Profile {
@@ -179,7 +182,10 @@ export default createOperation.query({
                     old_value,
                     new_value,
                     created_at,
-                    metadata
+                    metadata,
+                    position_id,
+                    lamport_timestamp,
+                    site_id
                 `)
                 .in('patch_request_id', patchRequests.map(req => req.id))
                 .order('created_at', { ascending: true });
@@ -201,7 +207,10 @@ export default createOperation.query({
                         new_value: op.new_value,
                         created_at: op.created_at,
                         metadata: op.metadata,
-                        patch_request_id: op.patch_request_id
+                        patch_request_id: op.patch_request_id,
+                        position_id: op.position_id,
+                        lamport_timestamp: op.lamport_timestamp,
+                        site_id: op.site_id
                     });
                 });
             }

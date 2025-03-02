@@ -125,7 +125,8 @@ export default createOperation.mutation({
                 p_id: input.id,
                 p_json: jsonToValidate,
                 p_user_id: user.customClaims.id,
-                p_create_variation: input.createVariation
+                p_create_variation: input.createVariation,
+                p_variation_type: 'alternative' // Always specify variation_type to resolve function overloading
             };
 
             // Add composite ID if provided
@@ -140,6 +141,8 @@ export default createOperation.mutation({
                 if (variationMetadata.description) params.p_variation_description = variationMetadata.description;
                 if (variationMetadata.type) params.p_variation_type = variationMetadata.type;
             }
+
+            console.log('[editDB] Using CRDT for all operations');
 
             // Call the simplified database function that handles all the logic
             const { data, error } = await context.supabase.rpc('edit_content_with_validation', params);

@@ -4,8 +4,11 @@ CREATE TABLE composites (
     title TEXT NOT NULL,
     description TEXT,
     compose_id UUID NOT NULL,  -- Main content version
+    schema_id UUID,            -- Reference to the schema used by this composite
     author UUID NOT NULL,      -- Reference to profiles.id
     is_archived BOOLEAN NOT NULL DEFAULT FALSE, -- Flag to mark a composite as archived
+    is_public BOOLEAN NOT NULL DEFAULT TRUE,    -- Flag to control visibility
+    metadata JSONB DEFAULT '{}'::jsonb,         -- Metadata for storing additional information
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     FOREIGN KEY (author) REFERENCES profiles(id)
@@ -410,9 +413,24 @@ INSERT INTO db (id, json, author, schema, snapshot_id) VALUES
             "type": "string"
           },
           "description": "Tags associated with this content"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "value": { "type": "number" }
+            }
+          },
+          "description": "Example items with name and value"
+        },
+        "nested": {
+          "type": "object",
+          "description": "Nested object structure for complex metadata"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": true
     }
   },
   "required": ["content", "title", "metadata"],
@@ -427,13 +445,35 @@ gen_random_uuid()  -- Generate a random UUID for snapshot_id
 INSERT INTO db (id, json, author, schema, snapshot_id) VALUES 
 ('22222222-2222-2222-2222-222222222222', 
 '{
-  "content": "# Business Model Proposal for a Community-Owned Organization\n\n## The FORGE: Where Visioncreators Thrive\n\nThe FORGE is a community-owned ecosystem where Visioncreators craft AI solutions for SMBs, earn substantial income working on their terms, and build co-owned infrastructure that increases in value over time.\n\n## Key Stakeholders\n\n- **SMBs**: Businesses needing AI solutions\n- **Visioncreators**: Community members with AI expertise\n- **FORGE Platform**: Community-owned infrastructure\n\n## Value Proposition\n\n- Visioncreators earn €125/hour while maintaining flexibility\n- SMBs get affordable AI expertise without hiring full-time experts\n- Platform reinvests 25% of revenue into shared infrastructure\n\nThis creates a self-sustaining ecosystem that benefits all stakeholders while building a valuable community asset.",
-  "title": "The FORGE: Where Visioncreators Thrive",
+  "content": "# Business Model Proposal\n\nThe FORGE is a community-owned ecosystem where Visioncreators craft AI solutions.\n\nKey stakeholders include SMBs, Visioncreators, and the FORGE Platform.",
+  "title": "The FORGE: Where Visioncreator Thrive",
   "description": "A business model proposal for a community-owned organization where Visioncreators craft AI solutions for SMBs",
   "metadata": {
     "benefits": "Launch your own AI business in a supportive ecosystem with built-in infrastructure and client base.",
     "pain": "Independent creators struggle to find steady work and lack the infrastructure to scale their businesses.",
-    "tags": ["product", "business-model"]
+    "tags": ["product", "business-model", "community"],
+    "examples": [
+      {"name": "Example 1", "value": 100},
+      {"name": "Example 2", "value": 200},
+      {"name": "Example 3", "value": 300}
+    ],
+    "nested": {
+      "level1": {
+        "name": "Level 1",
+        "level2": {
+          "name": "Level 2",
+          "level3": {
+            "name": "Level 3",
+            "level4": {
+              "name": "Level 4",
+              "value": 4,
+              "isActive": true,
+              "items": ["item1", "item2", "item3"]
+            }
+          }
+        }
+      }
+    }
   }
 }'::jsonb,
 '00000000-0000-0000-0000-000000000001',
@@ -450,7 +490,7 @@ INSERT INTO composites (
     author
 ) VALUES (
     '33333333-3333-3333-3333-333333333333',
-    'The FORGE: Where Visioncreators Thrive',
+    'The FORGE',
     'A business model proposal for a community-owned organization where Visioncreators craft AI solutions for SMBs',
     '22222222-2222-2222-2222-222222222222',
     '00000000-0000-0000-0000-000000000001'  -- System user as author
@@ -500,4 +540,172 @@ CREATE POLICY "service_role_policy" ON composites
 CREATE POLICY "service_role_policy" ON composite_relationships
     FOR ALL TO service_role
     USING (true)
-    WITH CHECK (true); 
+    WITH CHECK (true);
+
+-- Function to create a new composite with CRDT-enabled operations
+CREATE OR REPLACE FUNCTION public.create_composite_with_crdt(
+    p_title text,
+    p_description text,
+    p_content jsonb,
+    p_author uuid,
+    p_schema_id uuid DEFAULT NULL,
+    p_parent_composite_id uuid DEFAULT NULL,
+    p_relationship_type text DEFAULT 'branch'
+) RETURNS jsonb AS $$
+DECLARE
+    v_composite_id uuid := gen_random_uuid();
+    v_content_id uuid := gen_random_uuid();
+    v_snapshot_id uuid := gen_random_uuid();
+    v_parent_content_id uuid;
+    v_patch_request_id uuid;
+    v_site_id uuid := p_author;
+    v_lamport_timestamp bigint;
+    v_result jsonb;
+BEGIN
+    -- Get the latest Lamport timestamp for this site
+    SELECT MAX(lamport_timestamp) INTO v_lamport_timestamp
+    FROM public.db_operations
+    WHERE site_id = v_site_id;
+    
+    v_lamport_timestamp := COALESCE(v_lamport_timestamp, 0);
+    v_lamport_timestamp := update_lamport_timestamp(v_lamport_timestamp, NULL);
+
+    -- Create the content entry
+    INSERT INTO public.db (
+        id,
+        json,
+        author,
+        schema,
+        created_at,
+        last_modified_at,
+        snapshot_id
+    ) VALUES (
+        v_content_id,
+        p_content,
+        p_author,
+        p_schema_id,
+        now(),
+        now(),
+        v_snapshot_id
+    );
+    
+    -- Create the composite
+    INSERT INTO public.composites (
+        id,
+        title,
+        description,
+        compose_id,
+        schema_id,
+        author,
+        created_at,
+        updated_at,
+        is_public,
+        metadata
+    ) VALUES (
+        v_composite_id,
+        p_title,
+        p_description,
+        v_content_id,
+        p_schema_id,
+        p_author,
+        now(),
+        now(),
+        true,
+        jsonb_build_object(
+            'crdt_enabled', true,
+            'site_id', v_site_id,
+            'initial_lamport_timestamp', v_lamport_timestamp
+        )
+    );
+    
+    -- Create a relationship if parent composite is provided
+    IF p_parent_composite_id IS NOT NULL THEN
+        -- Get the parent content ID for creating operations
+        SELECT compose_id INTO v_parent_content_id
+        FROM public.composites
+        WHERE id = p_parent_composite_id;
+        
+        -- Create a relationship
+        INSERT INTO public.composite_relationships (
+            source_composite_id,
+            target_composite_id,
+            relationship_type,
+            created_at,
+            updated_at,
+            metadata
+        ) VALUES (
+            p_parent_composite_id,
+            v_composite_id,
+            p_relationship_type,
+            now(),
+            now(),
+            jsonb_build_object(
+                'created_by', p_author,
+                'crdt_enabled', true
+            )
+        );
+        
+        -- Create a patch request to record the operations
+        INSERT INTO public.patch_requests (
+            title,
+            description,
+            author,
+            old_version_id,
+            new_version_id,
+            composite_id,
+            operation_type,
+            status,
+            metadata
+        ) VALUES (
+            'Initial branch from ' || p_parent_composite_id,
+            'Created branch with CRDT operations',
+            p_author,
+            v_parent_content_id,
+            v_content_id,
+            v_composite_id,
+            'create_branch',
+            'approved',
+            jsonb_build_object(
+                'parent_composite', p_parent_composite_id,
+                'relationship_type', p_relationship_type,
+                'crdt_enabled', true
+            )
+        )
+        RETURNING id INTO v_patch_request_id;
+        
+        -- If parent has content, generate CRDT operations for the differences
+        IF v_parent_content_id IS NOT NULL THEN
+            -- Only generate operations if the content differs
+            IF p_content IS DISTINCT FROM (SELECT json FROM public.db WHERE id = v_parent_content_id) THEN
+                PERFORM public.generate_operations_from_diff(
+                    (SELECT json FROM public.db WHERE id = v_parent_content_id),
+                    p_content,
+                    v_patch_request_id,
+                    p_author,
+                    v_composite_id,
+                    v_content_id
+                );
+            END IF;
+        END IF;
+    END IF;
+    
+    -- Prepare result
+    v_result := jsonb_build_object(
+        'success', true,
+        'message', 'Composite created successfully with CRDT support',
+        'composite_id', v_composite_id,
+        'content_id', v_content_id,
+        'snapshot_id', v_snapshot_id
+    );
+    
+    IF p_parent_composite_id IS NOT NULL THEN
+        v_result := v_result || jsonb_build_object(
+            'parent_composite_id', p_parent_composite_id,
+            'relationship_type', p_relationship_type,
+            'patch_request_id', v_patch_request_id
+        );
+    END IF;
+    
+    RETURN v_result;
+END;
+$$ LANGUAGE plpgsql; 

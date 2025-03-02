@@ -95,7 +95,7 @@ BEGIN
     -- Return either the found ancestor or null
     RETURN v_ancestor_id;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION public.find_nearest_common_ancestor IS 'Finds the nearest common ancestor between two composites by examining their variation relationships';
 
@@ -103,164 +103,192 @@ COMMENT ON FUNCTION public.find_nearest_common_ancestor IS 'Finds the nearest co
 -- Part 3: Three-Way Merge Function
 -- ===============================================
 
--- Simple three-way merge function with automatic conflict resolution
+-- Create function to merge composites using three-way merge and CRDT principles
 CREATE OR REPLACE FUNCTION public.three_way_merge_composites(
     p_user_id uuid,
     p_source_composite_id uuid,
     p_target_composite_id uuid
 ) RETURNS jsonb AS $$
 DECLARE
-    v_ancestor_id uuid;
     v_source_composite record;
     v_target_composite record;
-    v_ancestor_composite record;
+    v_ancestor_id uuid;
+    v_ancestor_content jsonb;
     v_source_content jsonb;
     v_target_content jsonb;
-    v_ancestor_content jsonb;
     v_merged_content jsonb;
+    v_operations_source uuid[];
+    v_operations_target uuid[];
+    v_all_ops uuid[];
+    v_conflicts record;
+    v_result_composite record;
     v_new_content_id uuid := gen_random_uuid();
-    v_new_snapshot_id uuid := gen_random_uuid();
     v_patch_request_id uuid;
-    v_conflicts_detected int := 0;
-    v_conflicts_resolved int := 0;
-    v_vector_clock jsonb;
-    key text;
+    v_new_snapshot_id uuid := gen_random_uuid();
+    v_conflict_count integer := 0;
+    v_operation_count integer := 0;
+    v_source_array_ops jsonb := '{}'::jsonb;
+    v_target_array_ops jsonb := '{}'::jsonb;
+    v_lamport_timestamp bigint;
+    v_site_id uuid := p_user_id;
+    v_operation_id uuid;
+    v_result jsonb;
+    v_source_ancestors uuid[] := ARRAY[]::uuid[];
+    v_target_ancestors uuid[] := ARRAY[]::uuid[];
+    v_common_ancestors uuid[] := ARRAY[]::uuid[];
+    v_most_recent_common_ancestor uuid;
+    v_ancestor_depth integer;
+    v_min_depth integer := 999999;
 BEGIN
-    -- 1. Find common ancestor
-    v_ancestor_id := public.find_nearest_common_ancestor(p_source_composite_id, p_target_composite_id);
+    -- Get source composite
+    SELECT * INTO v_source_composite
+    FROM public.composites
+    WHERE id = p_source_composite_id;
     
-    -- If no common ancestor, fall back to simple merge (source wins)
-    IF v_ancestor_id IS NULL THEN
-        RETURN public.simple_merge_composites(p_user_id, p_source_composite_id, p_target_composite_id);
-    END IF;
-    
-    -- 2. Get all three composites
-    SELECT * INTO v_source_composite FROM public.composites WHERE id = p_source_composite_id;
-    SELECT * INTO v_target_composite FROM public.composites WHERE id = p_target_composite_id;
-    SELECT * INTO v_ancestor_composite FROM public.composites WHERE id = v_ancestor_id;
-    
-    IF v_source_composite IS NULL OR v_target_composite IS NULL OR v_ancestor_composite IS NULL THEN
+    IF v_source_composite IS NULL THEN
         RETURN jsonb_build_object(
             'success', false,
-            'error', 'Composite not found',
-            'details', 'One or more of the required composites does not exist'
+            'error', 'Source composite not found',
+            'details', format('Composite with id %s not found', p_source_composite_id)
         );
     END IF;
     
-    -- 3. Get content from all three
-    SELECT json INTO v_source_content FROM public.db WHERE id = v_source_composite.compose_id;
+    -- Get target composite
+    SELECT * INTO v_target_composite
+    FROM public.composites
+    WHERE id = p_target_composite_id;
     
-    SELECT json INTO v_target_content FROM public.db WHERE id = v_target_composite.compose_id;
-    
-    SELECT json INTO v_ancestor_content FROM public.db WHERE id = v_ancestor_composite.compose_id;
-    
-    IF v_source_content IS NULL OR v_target_content IS NULL OR v_ancestor_content IS NULL THEN
+    IF v_target_composite IS NULL THEN
         RETURN jsonb_build_object(
             'success', false,
-            'error', 'Content not found',
-            'details', 'One or more of the required content versions does not exist'
+            'error', 'Target composite not found',
+            'details', format('Composite with id %s not found', p_target_composite_id)
         );
     END IF;
     
-    -- 4. Perform three-way merge
-    v_merged_content := jsonb_build_object();
+    -- Get all ancestors for source composite using recursive CTE with depth tracking
+    WITH RECURSIVE source_ancestry AS (
+        -- Start with the direct ancestor of source
+        SELECT target_composite_id, source_composite_id, 1 AS depth
+        FROM public.composite_relationships
+        WHERE target_composite_id = p_source_composite_id AND relationship_type = 'branch'
+        
+        UNION ALL
+        
+        -- Add ancestors of each ancestor
+        SELECT cr.target_composite_id, cr.source_composite_id, sa.depth + 1
+        FROM public.composite_relationships cr
+        JOIN source_ancestry sa ON cr.target_composite_id = sa.source_composite_id
+        WHERE cr.relationship_type = 'branch'
+    )
+    SELECT array_agg(source_composite_id) INTO v_source_ancestors
+    FROM source_ancestry;
     
-    -- For each key in any of the three documents
-    FOR key IN 
-        SELECT DISTINCT k 
-        FROM (
-            SELECT jsonb_object_keys(v_source_content) AS k
-            UNION 
-            SELECT jsonb_object_keys(v_target_content) AS k
-            UNION
-            SELECT jsonb_object_keys(v_ancestor_content) AS k
-        ) keys
-    LOOP
-        -- Check if the key exists in all three versions
-        DECLARE
-            v_in_source boolean := v_source_content ? key;
-            v_in_target boolean := v_target_content ? key;
-            v_in_ancestor boolean := v_ancestor_content ? key;
-            v_source_value jsonb := v_source_content -> key;
-            v_target_value jsonb := v_target_content -> key;
-            v_ancestor_value jsonb := v_ancestor_content -> key;
-        BEGIN
-            -- Case 1: No change from ancestor in one branch but changed in the other
-            IF v_in_source AND v_in_target AND v_in_ancestor AND 
-               v_source_value = v_ancestor_value AND v_target_value != v_ancestor_value THEN
-                -- Target changed, source didn't - use target's changes
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_target_value);
+    -- Get all ancestors for target composite using recursive CTE with depth tracking
+    WITH RECURSIVE target_ancestry AS (
+        -- Start with the direct ancestor of target
+        SELECT target_composite_id, source_composite_id, 1 AS depth
+        FROM public.composite_relationships
+        WHERE target_composite_id = p_target_composite_id AND relationship_type = 'branch'
+        
+        UNION ALL
+        
+        -- Add ancestors of each ancestor
+        SELECT cr.target_composite_id, cr.source_composite_id, ta.depth + 1
+        FROM public.composite_relationships cr
+        JOIN target_ancestry ta ON cr.target_composite_id = ta.source_composite_id
+        WHERE cr.relationship_type = 'branch'
+    )
+    SELECT array_agg(source_composite_id) INTO v_target_ancestors
+    FROM target_ancestry;
+    
+    -- Handle null arrays
+    v_source_ancestors := COALESCE(v_source_ancestors, ARRAY[]::uuid[]);
+    v_target_ancestors := COALESCE(v_target_ancestors, ARRAY[]::uuid[]);
+    
+    -- Find common ancestors
+    SELECT array(
+        SELECT unnest(v_source_ancestors)
+        INTERSECT
+        SELECT unnest(v_target_ancestors)
+    ) INTO v_common_ancestors;
+    
+    -- Find the most recent common ancestor (lowest depth)
+    IF array_length(v_common_ancestors, 1) > 0 THEN
+        -- For each common ancestor, find the minimum depth in both trees
+        FOREACH v_ancestor_id IN ARRAY v_common_ancestors
+        LOOP
+            -- Find depth in source ancestry
+            WITH RECURSIVE source_depth AS (
+                SELECT target_composite_id, source_composite_id, 1 AS depth
+                FROM public.composite_relationships
+                WHERE target_composite_id = p_source_composite_id AND relationship_type = 'branch'
                 
-            ELSIF v_in_source AND v_in_target AND v_in_ancestor AND 
-                  v_target_value = v_ancestor_value AND v_source_value != v_ancestor_value THEN
-                -- Source changed, target didn't - use source's changes
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
+                UNION ALL
                 
-            -- Case 2: Key modified in both branches - conflict!
-            ELSIF v_in_source AND v_in_target AND v_in_ancestor AND 
-                  v_source_value != v_ancestor_value AND v_target_value != v_ancestor_value AND
-                  v_source_value != v_target_value THEN
-                -- Conflict detected! For now, prefer source value
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
-                v_conflicts_detected := v_conflicts_detected + 1;
-                v_conflicts_resolved := v_conflicts_resolved + 1;
-                
-            -- Case 3: Key added in one branch only
-            ELSIF v_in_source AND NOT v_in_ancestor AND NOT v_in_target THEN
-                -- Added only in source - include it
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
-                
-            ELSIF v_in_target AND NOT v_in_ancestor AND NOT v_in_source THEN
-                -- Added only in target - include it
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_target_value);
-                
-            -- Case 4: Key deleted in one branch only
-            ELSIF NOT v_in_source AND v_in_ancestor AND v_in_target AND v_target_value = v_ancestor_value THEN
-                -- Deleted in source, unchanged in target - delete it
-                -- (do nothing as we start with empty object)
-                
-            ELSIF NOT v_in_target AND v_in_ancestor AND v_in_source AND v_source_value = v_ancestor_value THEN
-                -- Deleted in target, unchanged in source - delete it
-                -- (do nothing as we start with empty object)
-                
-            -- Case 5: Key deleted in one branch but modified in other - conflict!
-            ELSIF NOT v_in_source AND v_in_target AND v_in_ancestor AND v_target_value != v_ancestor_value THEN
-                -- Deleted in source but modified in target - keep target's modification
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_target_value);
-                v_conflicts_detected := v_conflicts_detected + 1;
-                v_conflicts_resolved := v_conflicts_resolved + 1;
-                
-            ELSIF NOT v_in_target AND v_in_source AND v_in_ancestor AND v_source_value != v_ancestor_value THEN
-                -- Deleted in target but modified in source - keep source's modification
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
-                v_conflicts_detected := v_conflicts_detected + 1;
-                v_conflicts_resolved := v_conflicts_resolved + 1;
-                
-            -- Case 6: Same change in both branches
-            ELSIF v_in_source AND v_in_target AND v_source_value = v_target_value THEN
-                -- Both made the same change - keep it
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
-                
-            -- Case 7: Added in both branches with different values - conflict!
-            ELSIF v_in_source AND v_in_target AND NOT v_in_ancestor AND v_source_value != v_target_value THEN
-                -- Added in both but with different values - prefer source
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
-                v_conflicts_detected := v_conflicts_detected + 1;
-                v_conflicts_resolved := v_conflicts_resolved + 1;
-                
-            -- Fallbacks
-            ELSIF v_in_source THEN
-                -- If all else fails but key is in source, use source value
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_source_value);
-                
-            ELSIF v_in_target THEN
-                -- If all else fails but key is in target, use target value
-                v_merged_content := jsonb_set(v_merged_content, ARRAY[key], v_target_value);
+                SELECT cr.target_composite_id, cr.source_composite_id, sd.depth + 1
+                FROM public.composite_relationships cr
+                JOIN source_depth sd ON cr.target_composite_id = sd.source_composite_id
+                WHERE cr.relationship_type = 'branch'
+            )
+            SELECT MIN(depth) INTO v_ancestor_depth
+            FROM source_depth
+            WHERE source_composite_id = v_ancestor_id;
+            
+            -- If this is the most recent common ancestor so far, update
+            IF v_ancestor_depth < v_min_depth THEN
+                v_min_depth := v_ancestor_depth;
+                v_most_recent_common_ancestor := v_ancestor_id;
             END IF;
-        END;
-    END LOOP;
+        END LOOP;
+        
+        -- Set the ancestor ID to the most recent common ancestor
+        v_ancestor_id := v_most_recent_common_ancestor;
+    ELSE
+        -- Check direct relationship between source and target
+        IF p_source_composite_id = ANY(v_target_ancestors) THEN
+            v_ancestor_id := p_source_composite_id;  -- Source is an ancestor of target
+        ELSIF p_target_composite_id = ANY(v_source_ancestors) THEN
+            v_ancestor_id := p_target_composite_id;  -- Target is an ancestor of source
+        ELSE
+            -- If no common ancestor, use an empty object as base
+            v_ancestor_id := NULL;
+        END IF;
+    END IF;
     
-    -- 5. Create a patch request for the three-way merge
+    -- Get the content
+    SELECT json INTO v_source_content
+    FROM public.db
+    WHERE id = v_source_composite.compose_id;
+    
+    SELECT json INTO v_target_content
+    FROM public.db
+    WHERE id = v_target_composite.compose_id;
+    
+    -- Get or infer ancestor content
+    IF v_ancestor_id IS NOT NULL THEN
+        -- Get the ancestor's content
+        IF v_ancestor_id = p_source_composite_id THEN
+            v_ancestor_content := v_source_content;
+        ELSIF v_ancestor_id = p_target_composite_id THEN
+            v_ancestor_content := v_target_content;
+        ELSE
+            -- Get the compose_id for the ancestor
+            SELECT compose_id INTO v_ancestor_id
+            FROM public.composites
+            WHERE id = v_ancestor_id;
+            
+            -- Get the ancestor content
+            SELECT json INTO v_ancestor_content
+            FROM public.db
+            WHERE id = v_ancestor_id;
+        END IF;
+    ELSE
+        -- If no common ancestor, use an empty object as base
+        v_ancestor_content := '{}'::jsonb;
+    END IF;
+    
+    -- Create a patch request for the merge
     INSERT INTO public.patch_requests (
         title,
         description,
@@ -268,46 +296,293 @@ BEGIN
         old_version_id,
         new_version_id,
         composite_id,
-        status,
         operation_type,
-        metadata
+        metadata,
+        status
     ) VALUES (
-        'Three-way merge from ' || v_source_composite.title || ' to ' || v_target_composite.title,
-        'Content merged using common ancestor ' || v_ancestor_id || 
-        CASE WHEN v_conflicts_detected > 0 
-             THEN ' with ' || v_conflicts_detected || ' conflicts auto-resolved' 
-             ELSE ' with no conflicts'
-        END,
+        'Merge from ' || v_source_composite.title,
+        'Automatic merge from ' || v_source_composite.title || ' to ' || v_target_composite.title,
         p_user_id,
         v_target_composite.compose_id,
         v_new_content_id,
         p_target_composite_id,
-        'pending',
         'merge',
         jsonb_build_object(
-            'ancestor_id', v_ancestor_id,
             'merge_strategy', 'three_way',
-            'source_id', p_source_composite_id,
-            'conflicts_detected', v_conflicts_detected,
-            'conflicts_resolved', v_conflicts_resolved
-        )
+            'source_composite', p_source_composite_id,
+            'target_composite', p_target_composite_id,
+            'ancestor_composite', v_ancestor_id,
+            'source_ancestors', v_source_ancestors,
+            'target_ancestors', v_target_ancestors,
+            'common_ancestors', v_common_ancestors,
+            'most_recent_common_ancestor_depth', v_min_depth,
+            'timestamp', now()
+        ),
+        'pending'
     )
     RETURNING id INTO v_patch_request_id;
     
-    -- 6. Update vector clock
-    v_vector_clock := public.update_vector_clock('{}'::jsonb, p_user_id);
+    -- Get the latest Lamport timestamp for this site
+    SELECT MAX(lamport_timestamp) INTO v_lamport_timestamp
+    FROM public.db_operations
+    WHERE site_id = v_site_id;
     
-    -- 7. Create operations records by generating diff
-    PERFORM public.generate_operations_from_diff(
-        v_target_content,
-        v_merged_content,
-        v_patch_request_id,
-        p_user_id,
-        p_target_composite_id,
-        v_new_content_id
-    );
+    v_lamport_timestamp := COALESCE(v_lamport_timestamp, 0);
+    v_lamport_timestamp := update_lamport_timestamp(v_lamport_timestamp, NULL);
     
-    -- 8. Create new content version
+    -- Get operations from source to ancestor
+    IF v_ancestor_id IS NOT NULL AND v_ancestor_id != p_source_composite_id THEN
+        WITH RECURSIVE operation_chain AS (
+            -- Start with operations directly applied to ancestor
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            WHERE pr.old_version_id = v_ancestor_id
+            
+            UNION ALL
+            
+            -- Also include operations directly on the source composite
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            WHERE pr.composite_id = p_source_composite_id
+            
+            UNION ALL
+            
+            -- Add operations from each step in the chain
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            JOIN operation_chain oc ON pr.old_version_id = (
+                SELECT new_version_id 
+                FROM public.patch_requests 
+                WHERE id = oc.patch_request_id
+            )
+            -- Stop when we reach the source
+            WHERE pr.new_version_id <> v_source_composite.compose_id
+        )
+        SELECT array_agg(id) INTO v_operations_source
+        FROM operation_chain;
+    ELSE
+        -- If source is ancestor or no ancestor, no operations needed
+        v_operations_source := ARRAY[]::uuid[];
+    END IF;
+    
+    -- Get operations from target to ancestor
+    IF v_ancestor_id IS NOT NULL AND v_ancestor_id != p_target_composite_id THEN
+        WITH RECURSIVE operation_chain AS (
+            -- Start with operations directly applied to ancestor
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            WHERE pr.old_version_id = v_ancestor_id
+            
+            UNION ALL
+            
+            -- Also include operations directly on the source composite
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            WHERE pr.composite_id = p_source_composite_id
+            
+            UNION ALL
+            
+            -- Also include operations directly on the target composite
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            WHERE pr.composite_id = p_target_composite_id
+            
+            UNION ALL
+            
+            -- Add operations from each step in the chain
+            SELECT o.id, o.patch_request_id
+            FROM public.db_operations o
+            JOIN public.patch_requests pr ON o.patch_request_id = pr.id
+            JOIN operation_chain oc ON pr.old_version_id = (
+                SELECT new_version_id 
+                FROM public.patch_requests 
+                WHERE id = oc.patch_request_id
+            )
+            -- Stop when we reach the target
+            WHERE pr.new_version_id <> v_target_composite.compose_id
+        )
+        SELECT array_agg(id) INTO v_operations_target
+        FROM operation_chain;
+    ELSE
+        -- If target is ancestor or no ancestor, no operations needed
+        v_operations_target := ARRAY[]::uuid[];
+    END IF;
+    
+    -- Handle null arrays
+    v_operations_source := COALESCE(v_operations_source, ARRAY[]::uuid[]);
+    v_operations_target := COALESCE(v_operations_target, ARRAY[]::uuid[]);
+    
+    -- Combine all operations and apply them in lamport timestamp order
+    v_all_ops := v_operations_source || v_operations_target;
+    
+    -- Apply operations to the ancestor content
+    v_merged_content := v_ancestor_content;
+    
+    -- Create a recursive function to merge arrays found in the JSON content
+    CREATE OR REPLACE FUNCTION merge_arrays_recursively(
+        source jsonb,
+        target jsonb,
+        ancestor jsonb
+    ) RETURNS jsonb AS $merge_arrays$
+    DECLARE
+        merged jsonb := target;
+        key text;
+        source_value jsonb;
+        target_value jsonb;
+        ancestor_value jsonb;
+        result_value jsonb;
+    BEGIN
+        -- First handle the case where one or both inputs are arrays
+        IF jsonb_typeof(source) = 'array' AND jsonb_typeof(target) = 'array' THEN
+            -- Array merge logic
+            DECLARE
+                merged_array jsonb := '[]'::jsonb;
+                item jsonb;
+                source_item jsonb;
+                found boolean;
+                i integer;
+                j integer;
+            BEGIN
+                -- Start with all items from source (clone the source array)
+                merged_array := source;
+                
+                -- Add items from target that aren't in source
+                FOR i IN 0..jsonb_array_length(target) - 1 LOOP
+                    item := target->i;
+                    found := false;
+                    
+                    -- Check if item exists in source
+                    FOR j IN 0..jsonb_array_length(source) - 1 LOOP
+                        IF source->j = item THEN
+                            found := true;
+                            EXIT;
+                        END IF;
+                    END LOOP;
+                    
+                    -- Add if not found
+                    IF NOT found THEN
+                        merged_array := merged_array || item;
+                    END IF;
+                END LOOP;
+                
+                -- If we have an ancestor, remove items that were explicitly deleted from either branch
+                IF jsonb_typeof(ancestor) = 'array' THEN
+                    FOR i IN 0..jsonb_array_length(ancestor) - 1 LOOP
+                        item := ancestor->i;
+                        
+                        -- Check if this item was removed from source
+                        found := false;
+                        FOR j IN 0..jsonb_array_length(source) - 1 LOOP
+                            IF source->j = item THEN
+                                found := true;
+                                EXIT;
+                            END IF;
+                        END LOOP;
+                        
+                        IF NOT found THEN
+                            -- Item was explicitly removed in source, so remove it from result
+                            DECLARE
+                                new_array jsonb := '[]'::jsonb;
+                            BEGIN
+                                FOR j IN 0..jsonb_array_length(merged_array) - 1 LOOP
+                                    IF merged_array->j != item THEN
+                                        new_array := new_array || jsonb_build_array(merged_array->j);
+                                    END IF;
+                                END LOOP;
+                                merged_array := new_array;
+                            END;
+                        END IF;
+                        
+                        -- Check if this item was removed from target
+                        found := false;
+                        FOR j IN 0..jsonb_array_length(target) - 1 LOOP
+                            IF target->j = item THEN
+                                found := true;
+                                EXIT;
+                            END IF;
+                        END LOOP;
+                        
+                        IF NOT found THEN
+                            -- Item was explicitly removed in target, so remove it from result
+                            DECLARE
+                                new_array jsonb := '[]'::jsonb;
+                            BEGIN
+                                FOR j IN 0..jsonb_array_length(merged_array) - 1 LOOP
+                                    IF merged_array->j != item THEN
+                                        new_array := new_array || jsonb_build_array(merged_array->j);
+                                    END IF;
+                                END LOOP;
+                                merged_array := new_array;
+                            END;
+                        END IF;
+                    END LOOP;
+                END IF;
+                
+                RETURN merged_array;
+            END;
+        ELSIF jsonb_typeof(source) = 'object' AND jsonb_typeof(target) = 'object' THEN
+            -- For objects, iterate through keys and merge recursively
+            FOR key IN SELECT jsonb_object_keys(source)
+            LOOP
+                source_value := source->key;
+                target_value := target->key;
+                ancestor_value := ancestor->key;
+                
+                -- Skip null values
+                IF source_value IS NULL THEN
+                    CONTINUE;
+                END IF;
+                
+                -- If target doesn't have this key, just use source value
+                IF target_value IS NULL THEN
+                    merged := jsonb_set(merged, ARRAY[key], source_value);
+                ELSE
+                    -- Both have the key, recursively merge the values
+                    result_value := merge_arrays_recursively(source_value, target_value, ancestor_value);
+                    merged := jsonb_set(merged, ARRAY[key], result_value);
+                END IF;
+            END LOOP;
+            
+            RETURN merged;
+        ELSE
+            -- For non-arrays and non-objects, use the target value (already set in merged)
+            RETURN merged;
+        END IF;
+    END;
+    $merge_arrays$ LANGUAGE plpgsql;
+    
+    -- Apply our generic array merging algorithm to merge all arrays recursively
+    v_merged_content := merge_arrays_recursively(v_source_content, v_target_content, v_ancestor_content);
+    
+    -- Apply operations if available
+    IF array_length(v_all_ops, 1) > 0 THEN
+        -- Use the CRDT-based apply_operations function for all operations
+        -- The array merging logic will be preserved as we've already merged arrays
+        v_merged_content := public.apply_operations(v_merged_content, v_all_ops);
+    END IF;
+    
+    -- Check if there are any conflicts that need manual resolution
+    -- In CRDT, conflicts are resolved automatically by the apply_operations function,
+    -- but we might still want to track semantic conflicts
+    FOR v_conflicts IN 
+        SELECT * FROM public.detect_operation_conflicts(v_operations_source, v_operations_target)
+    LOOP
+        -- Just count conflicts for reporting
+        v_conflict_count := v_conflict_count + 1;
+        
+        -- We could record conflicts here if needed
+    END LOOP;
+    
+    -- Count operations
+    v_operation_count := array_length(v_all_ops, 1);
+    
+    -- Create a new content entry with the merged result
     INSERT INTO public.db (
         id,
         json,
@@ -320,62 +595,44 @@ BEGIN
         v_new_content_id,
         v_merged_content,
         p_user_id,
-        v_target_composite.compose_id,  -- Keep the same schema
+        v_target_composite.schema_id,
         now(),
         now(),
         v_new_snapshot_id
     );
     
-    -- 9. Add relationship to track the merge
-    INSERT INTO public.composite_relationships (
-        source_composite_id,
-        target_composite_id,
-        relationship_type,
-        metadata
-    ) VALUES (
-        p_target_composite_id,
-        p_source_composite_id,
-        'merged_from',
-        jsonb_build_object(
-            'merged_at', now(),
-            'merged_by', p_user_id,
-            'patch_request_id', v_patch_request_id,
-            'strategy', 'three_way',
-            'ancestor_id', v_ancestor_id,
-            'conflicts_detected', v_conflicts_detected,
-            'conflicts_resolved', v_conflicts_resolved
-        )
-    )
-    -- Handle the case when this relationship already exists (re-merging)
-    ON CONFLICT (source_composite_id, target_composite_id, relationship_type) 
-    DO UPDATE SET 
-        metadata = jsonb_build_object(
-            'merged_at', now(),
-            'merged_by', p_user_id,
-            'patch_request_id', v_patch_request_id,
-            'strategy', 'three_way',
-            'ancestor_id', v_ancestor_id,
-            'conflicts_detected', v_conflicts_detected,
-            'conflicts_resolved', v_conflicts_resolved,
-            'previous_merges', 
-            COALESCE(
-                composite_relationships.metadata->'previous_merges', 
-                '[]'::jsonb
-            ) || jsonb_build_array(composite_relationships.metadata)
-        );
+    -- Auto-approve the patch request since CRDT operations don't need conflict resolution
+    UPDATE public.patch_requests
+    SET status = 'approved',
+        updated_at = now()
+    WHERE id = v_patch_request_id;
     
-    RETURN jsonb_build_object(
+    -- Update the target composite to use the new content
+    UPDATE public.composites
+    SET compose_id = v_new_content_id,
+        updated_at = now()
+    WHERE id = p_target_composite_id
+    RETURNING * INTO v_result_composite;
+    
+    -- Clean up temporary function
+    DROP FUNCTION IF EXISTS merge_arrays_recursively(jsonb, jsonb, jsonb);
+    
+    -- Prepare result
+    v_result := jsonb_build_object(
         'success', true,
-        'message', 'Created three-way merge patch request',
-        'patchRequestId', v_patch_request_id,
+        'message', 'Merge completed successfully using improved ancestor detection',
         'newContentId', v_new_content_id,
-        'snapshotId', v_new_snapshot_id,
-        'ancestorId', v_ancestor_id,
-        'conflicts_detected', v_conflicts_detected,
-        'conflicts_resolved', v_conflicts_resolved
+        'targetComposite', row_to_json(v_result_composite),
+        'patchRequestId', v_patch_request_id,
+        'operationCount', v_operation_count,
+        'conflictCount', v_conflict_count,
+        'semanticConflicts', v_conflict_count > 0,
+        'ancestorId', v_ancestor_id
     );
+    
+    RETURN v_result;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION public.three_way_merge_composites IS 'Performs a three-way merge between two composites using their common ancestor for conflict resolution';
 
@@ -458,7 +715,7 @@ BEGIN
         'merge',
         jsonb_build_object(
             'merge_strategy', 'simple',
-            'source_id', p_source_composite_id
+            'source_composite_id', p_source_composite_id
         )
     )
     RETURNING id INTO v_patch_request_id;
@@ -535,7 +792,7 @@ BEGIN
         'snapshotId', v_new_snapshot_id
     );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION public.simple_merge_composites IS 'Performs a simple merge between two composites without using a common ancestor';
 
@@ -673,6 +930,6 @@ BEGIN
         cr.last_updated DESC
     LIMIT 20;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 COMMENT ON FUNCTION public.find_merge_candidates IS 'Finds potential composite candidates for merging with the specified composite based on relationships and authorship'; 

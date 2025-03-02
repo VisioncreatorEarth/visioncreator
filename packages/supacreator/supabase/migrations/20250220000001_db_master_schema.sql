@@ -634,3 +634,85 @@ INSERT INTO "public"."db" (id, json, author, schema) VALUES
 '00000000-0000-0000-0000-000000000001'   -- Self-reference for meta schema
 );
 
+-- Add CRDT state table
+CREATE TABLE IF NOT EXISTS public.crdt_state (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    site_id uuid NOT NULL,
+    last_lamport_timestamp bigint NOT NULL DEFAULT 0,
+    user_id uuid REFERENCES auth.users(id),
+    device_id text,
+    last_sync_timestamp timestamp with time zone DEFAULT now(),
+    metadata jsonb DEFAULT '{}'::jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- Index on site_id for fast lookups
+CREATE INDEX IF NOT EXISTS crdt_state_site_id_idx ON public.crdt_state(site_id);
+
+-- Index on user_id for filtering by user
+CREATE INDEX IF NOT EXISTS crdt_state_user_id_idx ON public.crdt_state(user_id);
+
+-- Enable Row Level Security
+ALTER TABLE public.crdt_state ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies
+CREATE POLICY "Users can view their own CRDT state" ON public.crdt_state
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own CRDT state" ON public.crdt_state
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own CRDT state" ON public.crdt_state
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Service role can do anything" ON public.crdt_state
+    AS PERMISSIVE FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Function to get or create a site ID for a user
+CREATE OR REPLACE FUNCTION public.get_or_create_site_id(
+    p_user_id uuid,
+    p_device_id text DEFAULT NULL
+) RETURNS uuid AS $$
+DECLARE
+    v_site_id uuid;
+BEGIN
+    -- Try to get existing site ID
+    SELECT site_id INTO v_site_id
+    FROM public.crdt_state
+    WHERE user_id = p_user_id AND (p_device_id IS NULL OR device_id = p_device_id)
+    ORDER BY last_sync_timestamp DESC
+    LIMIT 1;
+    
+    -- If not found, create a new one
+    IF v_site_id IS NULL THEN
+        v_site_id := gen_random_uuid();
+        
+        INSERT INTO public.crdt_state (
+            site_id,
+            user_id,
+            device_id,
+            last_lamport_timestamp,
+            metadata
+        ) VALUES (
+            v_site_id,
+            p_user_id,
+            p_device_id,
+            0,
+            jsonb_build_object(
+                'created_at', now(),
+                'device_id', p_device_id
+            )
+        );
+    ELSE
+        -- Update last sync timestamp
+        UPDATE public.crdt_state
+        SET last_sync_timestamp = now(),
+            updated_at = now()
+        WHERE site_id = v_site_id;
+    END IF;
+    
+    RETURN v_site_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+

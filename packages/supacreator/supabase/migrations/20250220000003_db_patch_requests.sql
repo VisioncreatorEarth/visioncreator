@@ -449,4 +449,101 @@ GRANT ALL PRIVILEGES ON TABLE "public"."patch_requests" TO service_role;
 -- RLS Policies for patch_requests
 CREATE POLICY "service_role_all" ON "public"."patch_requests"
 AS PERMISSIVE FOR ALL TO service_role
-USING (true) WITH CHECK (true); 
+USING (true) WITH CHECK (true);
+
+-- Function to apply a patch request
+CREATE OR REPLACE FUNCTION public.apply_patch_request(
+    p_patch_request_id uuid
+) RETURNS jsonb AS $$
+DECLARE
+    v_patch record;
+    v_old_content jsonb;
+    v_new_content jsonb;
+    v_operations uuid[];
+    v_snapshot_id uuid := gen_random_uuid();
+    v_result jsonb;
+BEGIN
+    -- Get the patch request
+    SELECT * INTO v_patch
+    FROM public.patch_requests
+    WHERE id = p_patch_request_id;
+    
+    IF v_patch IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Patch request not found',
+            'details', format('Patch request with id %s not found', p_patch_request_id)
+        );
+    END IF;
+    
+    -- Check if the patch request is already approved
+    IF v_patch.status = 'approved' THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Patch already approved',
+            'details', 'This patch request has already been approved'
+        );
+    END IF;
+    
+    -- Get the old content
+    SELECT json INTO v_old_content
+    FROM public.db
+    WHERE id = v_patch.old_version_id;
+    
+    IF v_old_content IS NULL THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Old content not found',
+            'details', format('Content with id %s not found', v_patch.old_version_id)
+        );
+    END IF;
+    
+    -- Get operations for this patch request
+    SELECT array_agg(id) INTO v_operations
+    FROM public.db_operations
+    WHERE patch_request_id = p_patch_request_id;
+    
+    -- Apply operations in CRDT order (based on lamport timestamp)
+    v_new_content := public.apply_operations(v_old_content, v_operations);
+    
+    -- Insert the new content
+    INSERT INTO public.db (
+        id,
+        json,
+        author,
+        schema,
+        created_at,
+        last_modified_at,
+        snapshot_id
+    )
+    SELECT
+        v_patch.new_version_id,
+        v_new_content,
+        v_patch.author,
+        (SELECT schema FROM public.db WHERE id = v_patch.old_version_id),
+        now(),
+        now(),
+        v_snapshot_id;
+    
+    -- Update the composite to use the new content
+    UPDATE public.composites
+    SET compose_id = v_patch.new_version_id,
+        updated_at = now()
+    WHERE id = v_patch.composite_id;
+    
+    -- Mark the patch request as approved
+    UPDATE public.patch_requests
+    SET status = 'approved',
+        updated_at = now()
+    WHERE id = p_patch_request_id;
+    
+    -- Return success
+    RETURN jsonb_build_object(
+        'success', true,
+        'message', 'Patch request applied successfully using CRDT ordering',
+        'newContentId', v_patch.new_version_id,
+        'snapshotId', v_snapshot_id,
+        'patchRequestId', p_patch_request_id
+    );
+END;
+$$ LANGUAGE plpgsql; 

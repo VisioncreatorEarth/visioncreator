@@ -6,8 +6,8 @@ This component handles:
 2. Approving or rejecting patch requests (only for authors of the composite)
 3. Showing the changes between versions
 4. Managing the patch request lifecycle
-5. Displaying granular operations for each patch request
-6. Showing merge information for three-way merges
+5. Displaying granular operations for each patch request with CRDT support
+6. Showing merge information for CRDT-based merges
 
 Props:
 - compositeId: string - The ID of the composite to show patch requests for
@@ -176,23 +176,20 @@ Props:
 
 	// Helper function to get operation type badge for merge operations
 	function getOperationTypeBadge(request: any): { color: string; icon: string; text: string } {
-		if (request.metadata?.merge_strategy === 'three_way') {
-			return {
-				color: 'text-purple-400 bg-purple-400/10',
-				icon: 'heroicons:code-bracket-square',
-				text: '3W Merge'
-			};
-		} else if (request.operation_type === 'merge') {
-			return {
-				color: 'text-blue-400 bg-blue-400/10',
-				icon: 'heroicons:arrow-path',
-				text: 'Simple Merge'
-			};
-		} else if (request.operation_type === 'branch') {
+		if (request.operation_type === 'branch') {
 			return {
 				color: 'text-green-400 bg-green-400/10',
 				icon: 'heroicons:git-branch',
 				text: 'Branch'
+			};
+		} else if (
+			request.operation_type === 'merge' ||
+			request.metadata?.merge_strategy === 'three_way'
+		) {
+			return {
+				color: 'text-blue-400 bg-blue-400/10',
+				icon: 'heroicons:arrow-path',
+				text: request.metadata?.merge_strategy === 'three_way' ? '3W Merge' : 'Simple Merge'
 			};
 		} else {
 			return {
@@ -238,6 +235,11 @@ Props:
 		// Get the composite author from the request
 		const compositeAuthor = request.composite_author;
 		return userId === compositeAuthor;
+	}
+
+	// Helper function to determine if a request uses CRDT
+	function isCRDTEnabled(request: any): boolean {
+		return request.metadata?.crdt_enabled === true;
 	}
 </script>
 
