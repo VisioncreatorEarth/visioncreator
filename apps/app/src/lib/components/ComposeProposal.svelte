@@ -16,10 +16,7 @@ This component handles:
 	import Icon from '@iconify/svelte';
 	import JsonEditor from './JsonEditor.svelte';
 	import PatchRequests from './PatchRequests.svelte';
-	import JsonDiffViewer from './JsonDiffViewer.svelte';
-	import MergeDialog from './MergeDialog.svelte';
-	import Avatar from './Avatar.svelte';
-	import { onMount } from 'svelte';
+	import CompositesAndMerge from './CompositesAndMerge.svelte';
 
 	// Props
 	export let proposalId: string;
@@ -44,15 +41,19 @@ This component handles:
 	}
 
 	interface ComposeData {
+		id: string;
 		title: string;
-		description: string;
-		compose_json: ComposeJson;
+		description: string | null;
 		compose_id: string;
+		compose_json: ComposeJson;
+		schema_id: string | null;
+		is_archived: boolean;
 		author: {
+			id: string;
 			name: string;
 		};
 		related_composites: RelatedComposite[];
-		schema_id?: string;
+		patch_requests: PatchRequest[];
 		schema_data?: any;
 	}
 
@@ -66,11 +67,26 @@ This component handles:
 			name: string;
 		};
 		relationship_type: string;
+		is_archived: boolean;
 		metadata: {
 			created_at?: string;
 			variation_type?: string;
 			description?: string;
 			[key: string]: unknown;
+		};
+	}
+
+	interface PatchRequest {
+		id: string;
+		composite_id: string;
+		operation_type: string;
+		status: string;
+		metadata: any;
+		operations: any[];
+		created_at: string;
+		author: {
+			id: string;
+			name: string;
 		};
 	}
 
@@ -102,8 +118,8 @@ This component handles:
 		keyword: string;
 		params: any;
 	}> | null = null;
-	let isSubmitting = false;
 	let contentBeforeEdit = ''; // Store original content for comparison
+	let isSubmitting = false; // Track submission state
 
 	// Toast notification functionality
 	let toastMessage = '';
@@ -111,13 +127,11 @@ This component handles:
 	let toastVisible = false;
 	let toastTimeout: number | null = null;
 
-	// State management for merge dialog
-	let showMergeDialog = false;
+	// State for showing/hiding archived composites section
+	let showArchivedComposites = true;
 
-	// Drag and drop state for composite merging
-	let draggedCompositeId: string | null = null;
-	let dragOverCompositeId: string | null = null;
-	let isDragging = false;
+	// State to track if a composite is being archived
+	let isArchiving = false;
 
 	// Helper functions for operations display
 	// Helper function to get operation type icon
@@ -188,7 +202,8 @@ This component handles:
 						...composite,
 						displayTitle: `${composite.title} (${relationshipType})`,
 						authorName: composite.author?.name || 'Unknown',
-						createdAt: composite.metadata?.created_at || ''
+						createdAt: composite.metadata?.created_at || '',
+						is_archived: composite.is_archived
 					};
 				})
 				.sort((a, b) => {
@@ -199,11 +214,15 @@ This component handles:
 				})
 		: [];
 
+	// Split composites into active and archived lists
+	$: activeComposites = formattedComposites.filter((c) => !c.is_archived);
+	$: archivedComposites = formattedComposites.filter((c) => c.is_archived);
+
+	// Check if main composite is archived
+	$: isMainCompositeArchived = compose_data?.is_archived === true;
+
 	// Get current user name from the query
 	$: currentUser = $userQuery.data;
-
-	// State for showing/hiding archived composites section
-	let showArchivedComposites = false;
 
 	function showToast(
 		message: string,
@@ -227,11 +246,6 @@ This component handles:
 
 	function toastError(message: string) {
 		showToast(message, 'error');
-	}
-
-	// Function to display information toast
-	function toastInfo(message: string) {
-		showToast(message, 'info');
 	}
 
 	// Subscribe to query updates
@@ -346,30 +360,6 @@ This component handles:
 		}
 	}
 
-	// Handle edit mode toggle
-	function toggleEditMode() {
-		if (!editMode) {
-			// Set initial content based on whether we're editing the main composite or a variation
-			if ($activeComposeTab === 'json') {
-				// For JSON tab, initialize with the full JSON structure
-				const currentJson = selectedCompositeId
-					? selectedComposite?.compose_json
-					: compose_data?.compose_json;
-
-				// Convert the full JSON structure to a formatted JSON string for editing
-				editContent = JSON.stringify(currentJson, null, 2);
-			} else {
-				// For content tab, initialize with the content field
-				editContent = selectedCompositeId
-					? selectedComposite?.compose_json?.content || ''
-					: content;
-			}
-			contentBeforeEdit = editContent; // Store original content
-		}
-		editMode = !editMode;
-		hasChanges = false; // Reset changes flag
-	}
-
 	// Check if content has been modified
 	function checkForChanges(newContent: string) {
 		hasChanges = newContent !== contentBeforeEdit;
@@ -392,13 +382,6 @@ This component handles:
 			// Apply basic styling
 			contentEditableRef.style.whiteSpace = 'pre-wrap';
 			contentEditableRef.style.fontFamily = 'monospace';
-		}
-	}
-
-	// Handle focus on markdown editor
-	function handleContentFocus() {
-		if (!hasChanges && contentEditableRef) {
-			setupMarkdownEditor();
 		}
 	}
 
@@ -439,21 +422,13 @@ This component handles:
 			// Get the current composite ID
 			const currentSelectedCompositeId = selectedCompositeId || compose_data?.compose_id;
 
-			console.log('Current tab:', $activeComposeTab);
-			console.log('Edit mode:', editMode);
-			console.log('Current content structure:', currentJson);
-			console.log('Current composite ID:', selectedCompositeId);
-			console.log('Current compose ID (content):', currentComposeId);
-
 			if ($activeComposeTab === 'json') {
 				if (hasChanges) {
 					// In edit mode, parse the full JSON from textarea
 					try {
 						// Parse the JSON from the editor - keep everything as is
 						jsonToSave = JSON.parse(editContent);
-						console.log('Full JSON parsed from editor:', jsonToSave);
 					} catch (error) {
-						console.error('Invalid JSON format:', error);
 						toastError('Invalid JSON format. Please check your syntax.');
 						isSubmitting = false;
 						return;
@@ -467,9 +442,7 @@ This component handles:
 				) {
 					// From JsonEditor component - use the full JSON object as is
 					jsonToSave = event.detail.json;
-					console.log('Full JSON from editor component:', jsonToSave);
 				} else {
-					console.error('Unexpected save event in JSON mode');
 					toastError('Unexpected save event');
 					isSubmitting = false;
 					return;
@@ -482,28 +455,17 @@ This component handles:
 				};
 
 				if (!editContent) {
-					console.error('Missing content for save');
 					toastError('Content cannot be empty');
 					isSubmitting = false;
 					return;
 				}
-
-				console.log('Content tab - JSON to save (preserving structure):', jsonToSave);
 			}
 
 			if (!currentComposeId) {
-				console.error('Missing compose ID for save:', {
-					selectedCompositeId,
-					selectedCompose: selectedComposite?.compose_id,
-					mainCompose: compose_data?.compose_id
-				});
 				toastError('Missing compose ID');
 				isSubmitting = false;
 				return;
 			}
-
-			console.log('Saving with composite ID:', selectedCompositeId || rootCompositeId);
-			console.log('JSON to save (raw):', jsonToSave);
 
 			// Get the composite ID - for selected composites use selectedCompositeId,
 			// for root composite use rootCompositeId from our query
@@ -534,7 +496,6 @@ This component handles:
 
 			// Cast the result to the expected type
 			const typedResult = result as EditResult;
-			console.log('Save result:', typedResult);
 
 			if (typedResult && typedResult.success) {
 				await $composeQuery.refetch();
@@ -576,10 +537,8 @@ This component handles:
 				} else {
 					toastError('An unknown error occurred while saving');
 				}
-				console.error('Failed to save changes:', typedResult);
 			}
 		} catch (error) {
-			console.error('Exception during save:', error);
 			toastError('An error occurred while saving');
 		} finally {
 			isSubmitting = false;
@@ -620,7 +579,6 @@ This component handles:
 			}
 
 			if (!sourceComposite) {
-				console.error('Source composite not found:', sourceId);
 				return;
 			}
 
@@ -666,165 +624,6 @@ This component handles:
 			console.error('Error creating variation:', error);
 		}
 	}
-
-	// Handle closing the merge dialog
-	function handleCloseMergeDialog() {
-		showMergeDialog = false;
-	}
-
-	// Handle merge completion
-	function handleMergeComplete(event: CustomEvent<{ patchRequestId: string }>) {
-		const patchRequestId = event.detail.patchRequestId;
-		console.log('[ComposeProposal] Merge completed, patch request created:', patchRequestId);
-
-		// Close the dialog
-		showMergeDialog = false;
-
-		// Refetch data to show the updated state
-		$composeQuery.refetch();
-	}
-
-	// Handle drag start for composite merging
-	function handleDragStart(event: DragEvent, compositeId: string) {
-		if (!event.dataTransfer) return;
-
-		isDragging = true;
-		draggedCompositeId = compositeId;
-
-		// Set data for the drag operation
-		event.dataTransfer.setData('text/plain', compositeId);
-		event.dataTransfer.effectAllowed = 'move';
-
-		// Add a dragging class to the element for styling
-		const element = event.currentTarget as HTMLElement;
-		if (element) {
-			element.classList.add('opacity-50');
-
-			// Create a better drag image by cloning the element
-			// This will not work in all browsers, but adds a nicer effect where supported
-			try {
-				const clone = element.cloneNode(true) as HTMLElement;
-				clone.style.transform = 'rotate(2deg)';
-				clone.style.width = `${element.offsetWidth}px`;
-				clone.style.height = 'auto';
-				clone.style.opacity = '0.8';
-				clone.style.position = 'absolute';
-				clone.style.top = '-1000px';
-				clone.style.backgroundColor = 'rgba(30, 64, 175, 0.2)';
-				clone.style.border = '2px solid rgba(59, 130, 246, 0.5)';
-				clone.style.borderRadius = '8px';
-				clone.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-				document.body.appendChild(clone);
-
-				// Set the drag image and offset
-				event.dataTransfer.setDragImage(clone, 20, 20);
-
-				// Clean up after a short delay
-				setTimeout(() => {
-					document.body.removeChild(clone);
-				}, 100);
-			} catch (err) {
-				// Fallback to default drag image if custom one fails
-				console.warn('Failed to create custom drag image:', err);
-			}
-		}
-	}
-
-	// Handle drag end
-	function handleDragEnd(event: DragEvent) {
-		isDragging = false;
-		draggedCompositeId = null;
-		dragOverCompositeId = null;
-
-		// Remove the dragging class
-		const element = event.currentTarget as HTMLElement;
-		if (element) element.classList.remove('opacity-50');
-	}
-
-	// Handle drag over
-	function handleDragOver(event: DragEvent, compositeId: string) {
-		// Prevent default to allow drop
-		event.preventDefault();
-
-		// Skip if we're dragging over the same item
-		if (draggedCompositeId === compositeId) return;
-
-		dragOverCompositeId = compositeId;
-
-		// Set the drop effect
-		if (event.dataTransfer) {
-			event.dataTransfer.dropEffect = 'move';
-		}
-	}
-
-	// Handle drag leave
-	function handleDragLeave() {
-		dragOverCompositeId = null;
-	}
-
-	// Create the threeWayMergeMutation at component level so it can be used with store syntax
-	const threeWayMergeMutation = createMutation({
-		operationName: 'threeWayMerge'
-	});
-
-	// Handle drop for merging composites
-	async function handleDrop(event: DragEvent, targetCompositeId: string) {
-		event.preventDefault();
-
-		// Reset drag states
-		isDragging = false;
-		dragOverCompositeId = null;
-
-		// Get the dragged composite ID
-		const sourceCompositeId = draggedCompositeId;
-		draggedCompositeId = null;
-
-		// Skip if either ID is missing or if they're the same
-		if (!sourceCompositeId || !targetCompositeId || sourceCompositeId === targetCompositeId) {
-			return;
-		}
-
-		try {
-			console.log(
-				'[ComposeProposal] Merging source:',
-				sourceCompositeId,
-				'into target:',
-				targetCompositeId
-			);
-
-			// Execute the mutation using the store reference with $ prefix
-			const result = await $threeWayMergeMutation.mutateAsync({
-				sourceCompositeId,
-				targetCompositeId,
-				isDragAndDrop: true // Explicitly mark this as a drag and drop operation
-			});
-
-			if (result?.success) {
-				// Show success toast
-				toastSuccess('Merge request created successfully');
-
-				// If a patch request was created, handle it
-				if (result.patchRequestId) {
-					console.log('[ComposeProposal] Patch request created:', result.patchRequestId);
-
-					// Refetch data to show the updated state
-					$composeQuery.refetch();
-
-					// Show more detailed message if conflicts were detected
-					if (result.conflicts_detected && result.conflicts_detected > 0) {
-						toastInfo(`Merge created with ${result.conflicts_detected} conflicts to resolve`);
-					}
-				}
-			} else {
-				// Show error toast
-				toastError(result?.error || 'An unknown error occurred during merge');
-			}
-		} catch (err: any) {
-			const errorMessage = err?.message || 'An unexpected error occurred';
-			toastError(errorMessage);
-			console.error('[ComposeProposal] Error:', err);
-		}
-	}
 </script>
 
 <div class="flex h-full bg-surface-800">
@@ -859,109 +658,19 @@ This component handles:
 		</div>
 	{/if}
 
-	<!-- Left Aside: Variations List -->
-	<aside class="flex flex-col border-r w-80 border-surface-700">
-		<div class="p-4 border-b border-surface-700">
-			<h3 class="text-lg font-semibold text-surface-100">Composites</h3>
-			<p class="mt-1 text-xs text-surface-300">
-				<Icon icon="heroicons:information-circle" class="inline w-3 h-3 mr-1" />
-				Drag a variation and drop it onto another to merge
-			</p>
-		</div>
-		<div class="flex-1 overflow-y-auto">
-			{#if compose_data}
-				<div class="p-2 space-y-1">
-					<!-- Current Composite -->
-					<button
-						class="w-full p-3 rounded-lg transition-colors text-left
-							{!selectedCompositeId
-							? 'bg-surface-700 border-l-4 border-primary-500'
-							: 'bg-surface-900 hover:bg-surface-700'}
-							{dragOverCompositeId === compose_data.compose_id ? 'ring-2 ring-blue-500 bg-blue-500/20' : ''}"
-						on:click={() => handleCompositeSelect(null)}
-						on:dragover={(e) => handleDragOver(e, compose_data.compose_id)}
-						on:dragleave={handleDragLeave}
-						on:drop={(e) => handleDrop(e, compose_data.compose_id)}
-					>
-						<div class="flex items-start gap-3">
-							<!-- Author Avatar -->
-							<Avatar
-								me={{
-									data: { seed: compose_data.author.name },
-									design: { highlight: !selectedCompositeId },
-									size: '2xs'
-								}}
-							/>
-
-							<div class="flex-1 min-w-0">
-								<div class="flex items-center justify-between">
-									<div class="font-medium text-surface-100 truncate max-w-[150px]">
-										{compose_data.title}
-									</div>
-									<span class="px-2 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300">
-										Latest
-									</span>
-								</div>
-								<div class="text-xs font-medium text-surface-300">
-									by {compose_data.author.name}
-								</div>
-							</div>
-						</div>
-					</button>
-
-					<!-- Flat list of all non-archived variations -->
-					{#each formattedComposites as composite}
-						<button
-							class="group w-full p-3 rounded-lg transition-colors text-left
-								{selectedCompositeId === composite.id
-								? 'bg-surface-700 border-l-4 border-primary-500'
-								: 'bg-surface-900 hover:bg-surface-700'}
-								{dragOverCompositeId === composite.id ? 'ring-2 ring-blue-500 bg-blue-500/20' : ''}"
-							on:click={() => handleCompositeSelect(composite.id)}
-							draggable={true}
-							on:dragstart={(e) => handleDragStart(e, composite.id)}
-							on:dragend={handleDragEnd}
-							on:dragover={(e) => handleDragOver(e, composite.id)}
-							on:dragleave={handleDragLeave}
-							on:drop={(e) => handleDrop(e, composite.id)}
-						>
-							<div class="relative flex items-start gap-3">
-								<!-- Author Avatar -->
-								<Avatar
-									me={{
-										data: { seed: composite.author?.name || 'Unknown' },
-										design: { highlight: selectedCompositeId === composite.id },
-										size: '2xs'
-									}}
-								/>
-
-								<div class="flex-1 min-w-0">
-									<div class="flex items-center justify-between">
-										<div class="font-medium text-surface-100 truncate max-w-[150px]">
-											{composite.title}
-										</div>
-
-										<!-- Single unified tag with blue color -->
-										<span class="px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-300">
-											{composite.metadata?.variation_type ||
-												composite.relationship_type ||
-												'variation'}
-										</span>
-									</div>
-									<div class="text-xs font-medium text-surface-300">
-										by {composite.author?.name || 'Unknown'}
-									</div>
-								</div>
-							</div>
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
-	</aside>
+	<!-- Left Aside: Composite List Component -->
+	<CompositesAndMerge
+		{compose_data}
+		{formattedComposites}
+		{selectedCompositeId}
+		{rootCompositeId}
+		on:select={({ detail }) => handleCompositeSelect(detail.compositeId)}
+		on:refetch={() => $composeQuery.refetch()}
+		on:toast={({ detail }) => showToast(detail.message, detail.type)}
+	/>
 
 	<!-- Main Content Area -->
-	<div class="flex-1">
+	<main class="flex flex-col flex-1 overflow-auto">
 		<!-- Tab Navigation -->
 		<nav class="flex items-center justify-between border-b border-surface-700">
 			{#if selectedEditRequest}
@@ -1031,14 +740,6 @@ This component handles:
 						<Icon icon="heroicons:code-bracket-square" class="w-4 h-4" />
 						<span>New Variation</span>
 					</button>
-					{#if isDragging}
-						<div
-							class="p-1.5 text-sm font-medium text-green-400 flex items-center gap-1 animate-pulse"
-						>
-							<Icon icon="heroicons:arrow-path" class="w-4 h-4" />
-							<span>Drop to merge</span>
-						</div>
-					{/if}
 				</div>
 			{/if}
 		</nav>
@@ -1134,9 +835,9 @@ This component handles:
 						<!-- Conflict notification -->
 						{#if selectedEditRequest?.metadata?.op_conflicts && selectedEditRequest.metadata.op_conflicts.length > 0}
 							<div
-								class="sticky top-0 z-20 px-4 py-2 flex items-center bg-yellow-900/80 border-b border-yellow-500/50 backdrop-blur-sm"
+								class="sticky top-0 z-20 flex items-center px-4 py-2 border-b bg-yellow-900/80 border-yellow-500/50 backdrop-blur-sm"
 							>
-								<Icon icon="heroicons:exclamation-triangle" class="w-4 h-4 text-yellow-400 mr-2" />
+								<Icon icon="heroicons:exclamation-triangle" class="w-4 h-4 mr-2 text-yellow-400" />
 								<span class="text-xs text-yellow-300">
 									This merge has {selectedEditRequest.metadata.op_conflicts.length} conflict{selectedEditRequest
 										.metadata.op_conflicts.length === 1
@@ -1201,14 +902,14 @@ This component handles:
 													<!-- Path -->
 													<div class="text-xs break-words text-tertiary-300">
 														<span class="text-2xs text-surface-400">Path:</span>
-														<div class="font-mono max-h-24 overflow-y-auto">
+														<div class="overflow-y-auto font-mono max-h-24">
 															{#each operation.path as segment, index}
 																<div class="flex items-center">
 																	{#if index > 0}
 																		<span class="inline-block" style="width: {index * 12}px" />
-																		<span class="text-surface-400 mr-1">└─</span>
+																		<span class="mr-1 text-surface-400">└─</span>
 																	{/if}
-																	<span class="whitespace-normal break-all">{segment}</span>
+																	<span class="break-all whitespace-normal">{segment}</span>
 																</div>
 															{/each}
 														</div>
@@ -1295,7 +996,7 @@ This component handles:
 											<div class="flex items-center">
 												<Icon
 													icon="heroicons:exclamation-triangle"
-													class="w-4 h-4 text-yellow-400 mr-2"
+													class="w-4 h-4 mr-2 text-yellow-400"
 												/>
 												<h3 class="text-xs font-medium text-yellow-300">
 													Merge Conflicts ({selectedEditRequest.metadata.op_conflicts.length})
@@ -1321,21 +1022,21 @@ This component handles:
 														</span>
 
 														<!-- Path -->
-														<div class="text-xs break-words text-yellow-300">
-															<span class="text-2xs text-yellow-400">Path:</span>
-															<div class="font-mono max-h-24 overflow-y-auto">
+														<div class="text-xs text-yellow-300 break-words">
+															<span class="text-yellow-400 text-2xs">Path:</span>
+															<div class="overflow-y-auto font-mono max-h-24">
 																{#if Array.isArray(conflict.path)}
 																	{#each conflict.path as segment, index}
 																		<div class="flex items-center">
 																			{#if index > 0}
 																				<span class="inline-block" style="width: {index * 12}px" />
-																				<span class="text-yellow-400 mr-1">└─</span>
+																				<span class="mr-1 text-yellow-400">└─</span>
 																			{/if}
-																			<span class="whitespace-normal break-all">{segment}</span>
+																			<span class="break-all whitespace-normal">{segment}</span>
 																		</div>
 																	{/each}
 																{:else}
-																	<div class="whitespace-normal break-all">{conflict.path}</div>
+																	<div class="break-all whitespace-normal">{conflict.path}</div>
 																{/if}
 															</div>
 														</div>
@@ -1346,7 +1047,7 @@ This component handles:
 																icon="heroicons:check-circle"
 																class="w-3.5 h-3.5 mr-1 text-yellow-300"
 															/>
-															<span class="text-2xs text-yellow-300">
+															<span class="text-yellow-300 text-2xs">
 																Resolution: {conflict.resolution || 'target'} value used
 															</span>
 														</div>
@@ -1356,11 +1057,11 @@ This component handles:
 													<div class="col-span-9">
 														<div class="grid grid-cols-2 gap-4">
 															<div>
-																<div class="text-2xs text-yellow-300 uppercase mb-1">
+																<div class="mb-1 text-yellow-300 uppercase text-2xs">
 																	Source Value:
 																</div>
 																<div
-																	class="p-2 rounded bg-surface-800/70 font-mono text-xs text-red-200 whitespace-pre-wrap overflow-auto max-h-40 border-l-2 border-red-500/50 pl-2"
+																	class="p-2 pl-2 overflow-auto font-mono text-xs text-red-200 whitespace-pre-wrap border-l-2 rounded bg-surface-800/70 max-h-40 border-red-500/50"
 																>
 																	- {typeof conflict.source_value === 'object'
 																		? JSON.stringify(conflict.source_value, null, 2)
@@ -1368,11 +1069,11 @@ This component handles:
 																</div>
 															</div>
 															<div>
-																<div class="text-2xs text-yellow-300 uppercase mb-1">
+																<div class="mb-1 text-yellow-300 uppercase text-2xs">
 																	Target Value:
 																</div>
 																<div
-																	class="p-2 rounded bg-surface-800/70 font-mono text-xs text-green-200 whitespace-pre-wrap overflow-auto max-h-40 border-l-2 border-green-500/50 pl-2"
+																	class="p-2 pl-2 overflow-auto font-mono text-xs text-green-200 whitespace-pre-wrap border-l-2 rounded bg-surface-800/70 max-h-40 border-green-500/50"
 																>
 																	+ {typeof conflict.target_value === 'object'
 																		? JSON.stringify(conflict.target_value, null, 2)
@@ -1477,7 +1178,7 @@ This component handles:
 				</div>
 			{/if}
 		</div>
-	</div>
+	</main>
 
 	<!-- Right Aside: Edit Requests -->
 	<aside class="flex flex-col border-l w-80 border-surface-700">
@@ -1492,7 +1193,6 @@ This component handles:
 						selectedRequestId={selectedEditRequestId}
 						on:select={handleEditRequestSelect}
 						on:refetch={() => {
-							console.log('[ComposeProposal] Refetching compose data after patch request update');
 							$composeQuery.refetch();
 						}}
 					/>
@@ -1503,7 +1203,6 @@ This component handles:
 						selectedRequestId={selectedEditRequestId}
 						on:select={handleEditRequestSelect}
 						on:refetch={() => {
-							console.log('[ComposeProposal] Refetching compose data after patch request update');
 							$composeQuery.refetch();
 						}}
 					/>
@@ -1512,18 +1211,6 @@ This component handles:
 		</div>
 	</aside>
 </div>
-
-<!-- Drag overlay that appears when dragging -->
-{#if isDragging}
-	<div class="fixed inset-0 z-40 pointer-events-none">
-		<div class="absolute inset-x-0 top-0 p-2 text-center text-white shadow-lg bg-blue-500/80">
-			<p class="flex items-center justify-center gap-2 text-sm font-medium">
-				<Icon icon="heroicons:arrow-path" class="w-4 h-4" />
-				Drop on a composite to merge changes
-			</p>
-		</div>
-	</div>
-{/if}
 
 <!-- Variation Creation Modal -->
 {#if isCreatingVariation}
@@ -1597,16 +1284,6 @@ This component handles:
 			</div>
 		</div>
 	</div>
-{/if}
-
-<!-- Merge Dialog -->
-{#if false && showMergeDialog && compose_data}
-	<MergeDialog
-		targetCompositeId={selectedCompositeId || (compose_data?.compose_id ?? '')}
-		open={showMergeDialog}
-		on:close={handleCloseMergeDialog}
-		on:mergeComplete={handleMergeComplete}
-	/>
 {/if}
 
 <style>
