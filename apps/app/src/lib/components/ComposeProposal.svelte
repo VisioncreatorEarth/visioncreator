@@ -1174,8 +1174,16 @@ This component handles:
 													<!-- Path -->
 													<div class="text-xs break-words text-tertiary-300">
 														<span class="text-2xs text-surface-400">Path:</span>
-														<div class="font-mono truncate">
-															{operation.path.join('.')}
+														<div class="font-mono max-h-24 overflow-y-auto">
+															{#each operation.path as segment, index}
+																<div class="flex items-center">
+																	{#if index > 0}
+																		<span class="inline-block" style="width: {index * 12}px" />
+																		<span class="text-surface-400 mr-1">└─</span>
+																	{/if}
+																	<span class="whitespace-normal break-all">{segment}</span>
+																</div>
+															{/each}
 														</div>
 													</div>
 

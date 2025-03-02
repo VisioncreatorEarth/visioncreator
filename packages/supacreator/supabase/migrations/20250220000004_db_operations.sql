@@ -486,12 +486,11 @@ DECLARE
     v_new_keys text[];
     v_old_value jsonb;
     v_new_value jsonb;
-    v_operation_id uuid;
-    v_site_id uuid;
     v_array_positions jsonb := '{}'::jsonb;
     v_position_id text;
     v_prev_position_id text;
     v_next_position_id text;
+    v_site_id uuid;
 BEGIN
     -- Use author as site ID for this set of operations
     v_site_id := p_author;
@@ -1692,6 +1691,10 @@ DECLARE
     v_prev_position_id text;
     v_next_position_id text;
     v_nested_path text[];
+    v_old_item_id text;
+    v_new_item_id text;
+    v_found_match boolean;
+    v_matched_index integer;
 BEGIN
     -- Extract keys from both JSONs
     SELECT array_agg(key) INTO v_old_keys 
@@ -1725,15 +1728,71 @@ BEGIN
                             v_item jsonb := v_old_value->i;
                             v_found boolean := false;
                             v_found_at integer;
+                            v_matching_item jsonb;
                         BEGIN
                             -- Check if item exists in new array
-                            FOR j IN 0..(jsonb_array_length(v_new_value) - 1) LOOP
-                                IF v_item = v_new_value->j THEN
-                                    v_found := true;
-                                    v_found_at := j;
-                                    EXIT;
+                            -- For objects, we try to match by id first if available
+                            v_found_match := false;
+                            v_matched_index := -1;
+                            
+                            -- Special handling for objects - try to match by id first
+                            IF jsonb_typeof(v_item) = 'object' AND v_item ? 'id' THEN
+                                v_old_item_id := v_item->>'id';
+                                
+                                -- Look for objects with the same id in the new array
+                                FOR j IN 0..(jsonb_array_length(v_new_value) - 1) LOOP
+                                    IF jsonb_typeof(v_new_value->j) = 'object' AND 
+                                       v_new_value->j ? 'id' AND 
+                                       v_new_value->j->>'id' = v_old_item_id THEN
+                                        v_found := true;
+                                        v_found_at := j;
+                                        v_matching_item := v_new_value->j;
+                                        EXIT;
+                                    END IF;
+                                END LOOP;
+                                
+                                -- If we found a match by ID, check if it has changed
+                                IF v_found AND v_item IS DISTINCT FROM v_matching_item THEN
+                                    -- Generate nested operations for the matched objects
+                                    -- This allows for property-level updates instead of replacing the whole object
+                                    v_position_id := (i::text || '.0_' || p_site_id::text);
+                                    
+                                    -- Store position mapping
+                                    v_array_positions := jsonb_set(
+                                        v_array_positions,
+                                        ARRAY[i::text],
+                                        to_jsonb(v_position_id)
+                                    );
+                                    
+                                    -- Generate a path for the nested object
+                                    v_nested_path := p_parent_path || v_key || (i::text);
+                                    
+                                    -- Recursively generate operations for the changed object's properties
+                                    v_lamport_timestamp := public.generate_nested_operations_from_diff(
+                                        v_item,
+                                        v_matching_item,
+                                        p_patch_request_id,
+                                        p_author,
+                                        p_composite_id,
+                                        p_content_id,
+                                        v_nested_path,
+                                        v_lamport_timestamp,
+                                        p_site_id
+                                    );
+                                    
+                                    -- Skip the standard comparison since we've handled this object
+                                    CONTINUE;
                                 END IF;
-                            END LOOP;
+                            ELSE
+                                -- For non-objects or objects without id, fall back to direct equality check
+                                FOR j IN 0..(jsonb_array_length(v_new_value) - 1) LOOP
+                                    IF v_item = v_new_value->j THEN
+                                        v_found := true;
+                                        v_found_at := j;
+                                        EXIT;
+                                    END IF;
+                                END LOOP;
+                            END IF;
                             
                             -- Assign position ID to this item
                             v_position_id := (i::text || '.0_' || p_site_id::text);
@@ -1795,13 +1854,30 @@ BEGIN
                             v_found_at integer;
                         BEGIN
                             -- Check if item exists in old array
-                            FOR i IN 0..(jsonb_array_length(v_old_value) - 1) LOOP
-                                IF v_item = v_old_value->i THEN
-                                    v_found := true;
-                                    v_found_at := i;
-                                    EXIT;
-                                END IF;
-                            END LOOP;
+                            -- For objects, we try to match by id first if available
+                            IF jsonb_typeof(v_item) = 'object' AND v_item ? 'id' THEN
+                                v_new_item_id := v_item->>'id';
+                                
+                                -- Look for objects with the same id in the old array
+                                FOR i IN 0..(jsonb_array_length(v_old_value) - 1) LOOP
+                                    IF jsonb_typeof(v_old_value->i) = 'object' AND 
+                                       v_old_value->i ? 'id' AND 
+                                       v_old_value->i->>'id' = v_new_item_id THEN
+                                        v_found := true;
+                                        v_found_at := i;
+                                        EXIT;
+                                    END IF;
+                                END LOOP;
+                            ELSE
+                                -- For non-objects or objects without id, fall back to direct equality check
+                                FOR i IN 0..(jsonb_array_length(v_old_value) - 1) LOOP
+                                    IF v_item = v_old_value->i THEN
+                                        v_found := true;
+                                        v_found_at := i;
+                                        EXIT;
+                                    END IF;
+                                END LOOP;
+                            END IF;
                             
                             -- If item is new, add an operation with position
                             IF NOT v_found THEN

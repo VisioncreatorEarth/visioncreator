@@ -119,9 +119,9 @@ DECLARE
     v_merged_content jsonb;
     v_operations_source uuid[];
     v_operations_target uuid[];
-    v_all_ops uuid[];
+    v_all_ops uuid[] := ARRAY[]::uuid[];
+    v_generated_ops uuid[] := ARRAY[]::uuid[];
     v_conflicts record;
-    v_result_composite record;
     v_new_content_id uuid := gen_random_uuid();
     v_patch_request_id uuid;
     v_new_snapshot_id uuid := gen_random_uuid();
@@ -139,6 +139,7 @@ DECLARE
     v_most_recent_common_ancestor uuid;
     v_ancestor_depth integer;
     v_min_depth integer := 999999;
+    v_operation_result jsonb := '{}'::jsonb;
 BEGIN
     -- Get source composite
     SELECT * INTO v_source_composite
@@ -288,7 +289,7 @@ BEGIN
         v_ancestor_content := '{}'::jsonb;
     END IF;
     
-    -- Create a patch request for the merge
+    -- Create a patch request for the merge - set status to 'pending' to allow manual review
     INSERT INTO public.patch_requests (
         title,
         description,
@@ -301,7 +302,7 @@ BEGIN
         status
     ) VALUES (
         'Merge from ' || v_source_composite.title,
-        'Automatic merge from ' || v_source_composite.title || ' to ' || v_target_composite.title,
+        'Three-way merge from ' || v_source_composite.title || ' to ' || v_target_composite.title,
         p_user_id,
         v_target_composite.compose_id,
         v_new_content_id,
@@ -318,7 +319,7 @@ BEGIN
             'most_recent_common_ancestor_depth', v_min_depth,
             'timestamp', now()
         ),
-        'pending'
+        'pending'  -- Set to pending so it can be manually reviewed
     )
     RETURNING id INTO v_patch_request_id;
     
@@ -338,6 +339,7 @@ BEGIN
             FROM public.db_operations o
             JOIN public.patch_requests pr ON o.patch_request_id = pr.id
             WHERE pr.old_version_id = v_ancestor_id
+            AND pr.status = 'approved'
             
             UNION ALL
             
@@ -346,6 +348,7 @@ BEGIN
             FROM public.db_operations o
             JOIN public.patch_requests pr ON o.patch_request_id = pr.id
             WHERE pr.composite_id = p_source_composite_id
+            AND pr.status = 'approved'
             
             UNION ALL
             
@@ -360,6 +363,7 @@ BEGIN
             )
             -- Stop when we reach the source
             WHERE pr.new_version_id <> v_source_composite.compose_id
+            AND pr.status = 'approved'
         )
         SELECT array_agg(id) INTO v_operations_source
         FROM operation_chain;
@@ -376,6 +380,7 @@ BEGIN
             FROM public.db_operations o
             JOIN public.patch_requests pr ON o.patch_request_id = pr.id
             WHERE pr.old_version_id = v_ancestor_id
+            AND pr.status = 'approved'
             
             UNION ALL
             
@@ -384,6 +389,7 @@ BEGIN
             FROM public.db_operations o
             JOIN public.patch_requests pr ON o.patch_request_id = pr.id
             WHERE pr.composite_id = p_source_composite_id
+            AND pr.status = 'approved'
             
             UNION ALL
             
@@ -392,6 +398,7 @@ BEGIN
             FROM public.db_operations o
             JOIN public.patch_requests pr ON o.patch_request_id = pr.id
             WHERE pr.composite_id = p_target_composite_id
+            AND pr.status = 'approved'
             
             UNION ALL
             
@@ -406,6 +413,7 @@ BEGIN
             )
             -- Stop when we reach the target
             WHERE pr.new_version_id <> v_target_composite.compose_id
+            AND pr.status = 'approved'
         )
         SELECT array_agg(id) INTO v_operations_target
         FROM operation_chain;
@@ -419,12 +427,13 @@ BEGIN
     v_operations_target := COALESCE(v_operations_target, ARRAY[]::uuid[]);
     
     -- Combine all operations and apply them in lamport timestamp order
-    v_all_ops := v_operations_source || v_operations_target;
+    v_all_ops := COALESCE(v_operations_source, ARRAY[]::uuid[]) || COALESCE(v_operations_target, ARRAY[]::uuid[]);
     
     -- Apply operations to the ancestor content
     v_merged_content := v_ancestor_content;
     
     -- Create a recursive function to merge arrays found in the JSON content
+    -- This is now fully generic without special handling for specific array types
     CREATE OR REPLACE FUNCTION merge_arrays_recursively(
         source jsonb,
         target jsonb,
@@ -440,16 +449,15 @@ BEGIN
     BEGIN
         -- First handle the case where one or both inputs are arrays
         IF jsonb_typeof(source) = 'array' AND jsonb_typeof(target) = 'array' THEN
-            -- Array merge logic
+            -- Universal array merge logic - no special cases
             DECLARE
                 merged_array jsonb := '[]'::jsonb;
                 item jsonb;
-                source_item jsonb;
                 found boolean;
                 i integer;
                 j integer;
             BEGIN
-                -- Start with all items from source (clone the source array)
+                -- Start with all items from source
                 merged_array := source;
                 
                 -- Add items from target that aren't in source
@@ -471,13 +479,16 @@ BEGIN
                     END IF;
                 END LOOP;
                 
-                -- If we have an ancestor, remove items that were explicitly deleted from either branch
+                -- Conservative approach: only remove items that were explicitly deleted in BOTH source and target
+                -- This is now applied universally to all arrays
                 IF jsonb_typeof(ancestor) = 'array' THEN
                     FOR i IN 0..jsonb_array_length(ancestor) - 1 LOOP
                         item := ancestor->i;
                         
-                        -- Check if this item was removed from source
+                        -- Check if item was explicitly removed in both branches
                         found := false;
+                        
+                        -- Check if in source
                         FOR j IN 0..jsonb_array_length(source) - 1 LOOP
                             IF source->j = item THEN
                                 found := true;
@@ -485,31 +496,19 @@ BEGIN
                             END IF;
                         END LOOP;
                         
+                        -- If not in source, check if in target
                         IF NOT found THEN
-                            -- Item was explicitly removed in source, so remove it from result
-                            DECLARE
-                                new_array jsonb := '[]'::jsonb;
-                            BEGIN
-                                FOR j IN 0..jsonb_array_length(merged_array) - 1 LOOP
-                                    IF merged_array->j != item THEN
-                                        new_array := new_array || jsonb_build_array(merged_array->j);
-                                    END IF;
-                                END LOOP;
-                                merged_array := new_array;
-                            END;
+                            FOR j IN 0..jsonb_array_length(target) - 1 LOOP
+                                IF target->j = item THEN
+                                    found := true;
+                                    EXIT;
+                                END IF;
+                            END LOOP;
                         END IF;
                         
-                        -- Check if this item was removed from target
-                        found := false;
-                        FOR j IN 0..jsonb_array_length(target) - 1 LOOP
-                            IF target->j = item THEN
-                                found := true;
-                                EXIT;
-                            END IF;
-                        END LOOP;
-                        
+                        -- If item exists in neither source nor target, remove from result
+                        -- (it was intentionally deleted in both branches)
                         IF NOT found THEN
-                            -- Item was explicitly removed in target, so remove it from result
                             DECLARE
                                 new_array jsonb := '[]'::jsonb;
                             BEGIN
@@ -561,28 +560,14 @@ BEGIN
     v_merged_content := merge_arrays_recursively(v_source_content, v_target_content, v_ancestor_content);
     
     -- Apply operations if available
-    IF array_length(v_all_ops, 1) > 0 THEN
+    IF v_all_ops IS NOT NULL AND array_length(v_all_ops, 1) > 0 THEN
         -- Use the CRDT-based apply_operations function for all operations
         -- The array merging logic will be preserved as we've already merged arrays
         v_merged_content := public.apply_operations(v_merged_content, v_all_ops);
     END IF;
     
-    -- Check if there are any conflicts that need manual resolution
-    -- In CRDT, conflicts are resolved automatically by the apply_operations function,
-    -- but we might still want to track semantic conflicts
-    FOR v_conflicts IN 
-        SELECT * FROM public.detect_operation_conflicts(v_operations_source, v_operations_target)
-    LOOP
-        -- Just count conflicts for reporting
-        v_conflict_count := v_conflict_count + 1;
-        
-        -- We could record conflicts here if needed
-    END LOOP;
-    
-    -- Count operations
-    v_operation_count := array_length(v_all_ops, 1);
-    
-    -- Create a new content entry with the merged result
+    -- Create a new content entry with the merged result BEFORE generating operations
+    -- This fixes the foreign key constraint violation
     INSERT INTO public.db (
         id,
         json,
@@ -601,33 +586,74 @@ BEGIN
         v_new_snapshot_id
     );
     
-    -- Auto-approve the patch request since CRDT operations don't need conflict resolution
-    UPDATE public.patch_requests
-    SET status = 'approved',
-        updated_at = now()
-    WHERE id = v_patch_request_id;
+    -- Explicitly generate operations to track what changed AFTER content is created
+    -- The generate_operations_from_diff function returns void, so directly call it without trying to capture a return value
+    PERFORM public.generate_operations_from_diff(
+        v_target_content,
+        v_merged_content,
+        v_patch_request_id,
+        p_user_id,
+        p_target_composite_id,
+        v_new_content_id
+    );
     
-    -- Update the target composite to use the new content
-    UPDATE public.composites
-    SET compose_id = v_new_content_id,
-        updated_at = now()
-    WHERE id = p_target_composite_id
-    RETURNING * INTO v_result_composite;
+    -- Since generate_operations_from_diff doesn't return operation IDs, we need to query them separately
+    SELECT array_agg(id) INTO v_generated_ops
+    FROM public.db_operations
+    WHERE patch_request_id = v_patch_request_id;
+    
+    -- Use empty array if no operations were found
+    v_generated_ops := COALESCE(v_generated_ops, ARRAY[]::uuid[]);
+    
+    -- Check if there are any conflicts that need manual resolution
+    -- In CRDT, conflicts are resolved automatically by the apply_operations function,
+    -- but we might still want to track semantic conflicts
+    FOR v_conflicts IN 
+        SELECT * FROM public.detect_operation_conflicts(
+            COALESCE(v_operations_source, ARRAY[]::uuid[]),
+            COALESCE(v_operations_target, ARRAY[]::uuid[])
+        )
+    LOOP
+        -- Just count conflicts for reporting
+        v_conflict_count := v_conflict_count + 1;
+        
+        -- We could record conflicts here if needed
+    END LOOP;
+    
+    -- Count operations - ensure we handle null values
+    v_all_ops := COALESCE(v_all_ops, ARRAY[]::uuid[]);
+    v_generated_ops := COALESCE(v_generated_ops, ARRAY[]::uuid[]);
+    v_operation_count := COALESCE(array_length(v_all_ops || v_generated_ops, 1), 0);
     
     -- Clean up temporary function
     DROP FUNCTION IF EXISTS merge_arrays_recursively(jsonb, jsonb, jsonb);
     
-    -- Prepare result
+    -- Update metadata for the patch request to include operation information
+    UPDATE public.patch_requests
+    SET metadata = jsonb_set(
+        COALESCE(metadata, '{}'::jsonb), 
+        '{operations}', 
+        jsonb_build_object(
+            'all_ops', COALESCE(v_all_ops, ARRAY[]::uuid[]),
+            'generated_ops', COALESCE(v_generated_ops, ARRAY[]::uuid[]),
+            'operation_count', COALESCE(v_operation_count, 0)
+        )
+    )
+    WHERE id = v_patch_request_id;
+    
+    -- Prepare result with proper null handling
     v_result := jsonb_build_object(
         'success', true,
-        'message', 'Merge completed successfully using improved ancestor detection',
+        'message', 'Merge created with operations - please review and approve',
         'newContentId', v_new_content_id,
-        'targetComposite', row_to_json(v_result_composite),
         'patchRequestId', v_patch_request_id,
-        'operationCount', v_operation_count,
-        'conflictCount', v_conflict_count,
-        'semanticConflicts', v_conflict_count > 0,
-        'ancestorId', v_ancestor_id
+        'operationCount', COALESCE(v_operation_count, 0),
+        'conflictCount', COALESCE(v_conflict_count, 0),
+        'semanticConflicts', COALESCE(v_conflict_count, 0) > 0,
+        'ancestorId', v_ancestor_id,
+        'status', 'pending', -- Indicate that merge requires manual approval
+        'generatedOperations', COALESCE(v_generated_ops, ARRAY[]::uuid[]),
+        'existingOperations', COALESCE(v_all_ops, ARRAY[]::uuid[])
     );
     
     RETURN v_result;

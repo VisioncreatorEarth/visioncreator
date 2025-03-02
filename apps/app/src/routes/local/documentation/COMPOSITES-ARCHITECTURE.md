@@ -28,6 +28,9 @@ The system uses a versioned database structure with three main components:
   - Supports conflict resolution
   - Enables collaborative editing
   - Maintains operation history
+  - Implements CRDT principles for concurrent edits
+  - Uses Lamport timestamps for causal ordering
+  - Maintains vector clocks for tracking causality
 
 ### Snapshot ID System
 
@@ -99,6 +102,8 @@ Composites are the fundamental building blocks that represent content units. Eac
 - Points to a specific content version (compose_id)
 - Can have relationships with other composites
 - Supports variations and forks
+- Maintains authorship information
+- Preserves relationship metadata including merge history
 
 ### 3. Patch Requests
 
@@ -108,6 +113,8 @@ Similar to Pull Requests in Git, Patch Requests manage proposed changes:
 - Include detailed operations history
 - Enable collaborative review processes
 - Auto-approve when users edit their own content
+- Require manual review for merges and external contributions
+- Store comprehensive metadata about operations
 
 ## Fullstack Architecture Flow
 
@@ -152,6 +159,7 @@ graph TD
    - Apply business logic
    - Manage transaction boundaries
    - Handle variations and cloning
+   - Implement CRDT principles
 
 2. **Database Interaction**
    - Executes operations atomically
@@ -160,7 +168,7 @@ graph TD
    - Manages version control
    - Creates variations when needed
 
-### 3. Operation Flow (Yjs-Inspired)
+### 3. Operation Flow (CRDT-Based)
 
 ```mermaid
 graph TD
@@ -183,6 +191,8 @@ interface AddOperation {
     metadata: {
         timestamp: number;
         author: string;
+        lamport_timestamp: number;
+        site_id: string;
         context?: any;
     };
 }
@@ -197,6 +207,8 @@ interface RemoveOperation {
     metadata: {
         timestamp: number;
         author: string;
+        lamport_timestamp: number;
+        site_id: string;
         context?: any;
     };
 }
@@ -212,6 +224,8 @@ interface ReplaceOperation {
     metadata: {
         timestamp: number;
         author: string;
+        lamport_timestamp: number;
+        site_id: string;
         context?: any;
     };
 }
@@ -219,13 +233,14 @@ interface ReplaceOperation {
 
 ### 4. Conflict Resolution
 
-The system uses a Yjs-inspired approach to handle conflicts:
+The system uses a CRDT-inspired approach to handle conflicts:
 
 1. **Operation-Based Resolution**
    - Each operation is atomic and self-contained
    - Operations carry enough context for resolution
    - Conflicts are resolved at operation level
-   - Maintains causal history
+   - Maintains causal history using Lamport timestamps
+   - Tracks vector clocks for site-specific history
 
 2. **Conflict Types**
    ```sql
@@ -237,9 +252,10 @@ The system uses a Yjs-inspired approach to handle conflicts:
    ```
 
 3. **Resolution Strategies**
-   - Last-write-wins for simple conflicts
+   - Last-write-wins for simple conflicts (using Lamport timestamps)
    - Structural merge for compatible changes
    - Three-way merge for complex conflicts
+   - Generic array merging for all array types
    - Manual resolution for unresolvable conflicts
 
 ### 5. Advanced Merging System
@@ -256,6 +272,9 @@ graph TD
     C --> D
     A --> D
     D --> E[Merged Result]
+    E --> F[Patch Request]
+    F --> G[Manual Review]
+    G --> H[Approval/Rejection]
 ```
 
 1. **Common Ancestor Detection**
@@ -263,6 +282,7 @@ graph TD
    - Examines variation relationships and direct connections
    - Supports multi-level ancestry relationships
    - Falls back to simple merge when no common ancestor is found
+   - Uses a recursive approach to find the nearest common ancestor
 
 2. **Key-Level Differential Analysis**
    - Analyzes differences at the JSON key level
@@ -276,27 +296,48 @@ graph TD
      - Same change in both branches (keep it)
      - Added in both branches with different values (conflict)
 
-3. **Automatic Conflict Resolution**
+3. **Generic Array Merging**
+   - Uses a universal algorithm for all array types
+   - Preserves items from both source and target
+   - Implements a conservative removal policy
+   - Only removes items deleted in BOTH branches
+   - Recurses through nested objects and arrays
+   - Maintains data integrity during merges
+
+4. **Conflict Detection and Resolution**
    - Identifies and automatically resolves conflicts
    - Prefers source values for conflicted keys (source-wins strategy)
    - Tracks conflict statistics for transparency
    - Creates detailed metadata for review
+   - Explicitly generates operations to track all changes
 
-4. **Example Conflict Resolution**
+5. **Manual Review Process**
+   - Creates a pending patch request for review
+   - Requires explicit approval for all merges
+   - Provides comprehensive operation details
+   - Shows conflicts and resolution details
+   - Preserves all metadata for auditing
+
+6. **Example Conflict Resolution**
    ```json
    // Ancestor
-   { "title": "Original", "count": 5 }
+   { "title": "Original", "count": 5, "tags": ["product", "community"] }
    
    // Source
-   { "title": "Updated", "count": 5 }
+   { "title": "Updated", "count": 5, "tags": ["product", "premium"] }
    
    // Target
-   { "title": "Modified", "count": 10 }
+   { "title": "Modified", "count": 10, "tags": ["community", "featured"] }
    
-   // Merged (with conflicts)
-   { "title": "Updated", "count": 10 }
+   // Merged (with conflicts and array preservation)
+   { 
+     "title": "Updated", 
+     "count": 10,
+     "tags": ["product", "premium", "community", "featured"]
+   }
    // "title" was a conflict, resolved with source's value
    // "count" was changed only in target, so target's value is used
+   // "tags" preserved items from both branches using generic array merging
    ```
 
 #### B. Simple Merge Strategy (Fallback)
@@ -307,16 +348,19 @@ When no common ancestor is found, the system falls back to a simple merge strate
    - Starts with the target composite's content as a base
    - Overlays all source properties on top of it
    - Effectively implements a "source-wins" strategy for all keys
+   - Still preserves array items using generic array handling
 
 2. **Key-by-Key Processing**
    - Iterates through all keys in the source document
    - Adds or replaces each key in the target document
    - Creates a unified document that prioritizes source changes
+   - Uses the same array merging logic as three-way merge
 
 3. **Metadata Tracking**
    - Records that a simple merge strategy was used
    - Documents the absence of a common ancestor
    - Provides transparency in the patch request
+   - Generates operations for all changes
 
 #### C. Merge Candidate Discovery
 
@@ -355,10 +399,11 @@ graph TD
 ```
 
 1. **State Management**
-   - Maintains operation log
+   - Maintains operation log with Lamport timestamps
    - Tracks snapshot IDs
    - Handles state convergence
    - Ensures eventual consistency
+   - Uses vector clocks for causality tracking
 
 2. **Synchronization Process**
    ```typescript
@@ -366,8 +411,11 @@ graph TD
        snapshot_id: string;
        operations: Operation[];
        timestamp: number;
+       lamport_timestamp: number;
+       vector_clock: Record<string, number>;
        metadata: {
            author: string;
+           site_id: string;
            context: any;
        };
    }
@@ -378,13 +426,29 @@ graph TD
 ### 1. Database Functions
 
 ```sql
--- Apply operations to a JSON object
+-- Apply operations to a JSON object with CRDT principles
 CREATE OR REPLACE FUNCTION apply_operations(
     p_base_json jsonb,
     p_operations uuid[]
 ) RETURNS jsonb AS $$
     -- Implementation handles operation application
-    -- and state transformation
+    -- and state transformation using Lamport timestamps
+    -- for proper ordering
+$$;
+
+-- Generate operations from content diff
+CREATE OR REPLACE FUNCTION generate_operations_from_diff(
+    p_old_json jsonb,
+    p_new_json jsonb,
+    p_patch_request_id uuid,
+    p_author uuid,
+    p_composite_id uuid,
+    p_content_id uuid
+) RETURNS jsonb AS $$
+    -- Compares old and new JSON
+    -- Creates appropriate operations with path tracking
+    -- Assigns Lamport timestamps and site IDs
+    -- Returns operation IDs for tracking
 $$;
 
 -- Detect conflicts between operations
@@ -397,7 +461,8 @@ CREATE OR REPLACE FUNCTION detect_operation_conflicts(
     conflict_type text
 ) AS $$
     -- Implementation handles conflict detection
-    -- and classification
+    -- and classification using path overlaps
+    -- and operation timestamps
 $$;
 
 -- Process edit with validation
@@ -426,7 +491,7 @@ CREATE OR REPLACE FUNCTION find_nearest_common_ancestor(
     -- Returns NULL if no common ancestor found
 $$;
 
--- Three-way merge composites using common ancestor
+-- Three-way merge composites using common ancestor with CRDT awareness
 CREATE OR REPLACE FUNCTION three_way_merge_composites(
     p_user_id uuid,
     p_source_composite_id uuid,
@@ -434,9 +499,13 @@ CREATE OR REPLACE FUNCTION three_way_merge_composites(
 ) RETURNS jsonb AS $$
     -- Finds common ancestor
     -- Gets content from all three versions
+    -- Uses generic array merging for all arrays
     -- Performs key-by-key three-way merge
     -- Handles conflict resolution
-    -- Creates patch request with result
+    -- Creates content before generating operations
+    -- Creates pending patch request with result
+    -- Requires manual review and approval
+    -- Tracks all operations for transparency
 $$;
 
 -- Simple merge when no common ancestor found
@@ -448,6 +517,7 @@ CREATE OR REPLACE FUNCTION simple_merge_composites(
     -- Gets content from source and target
     -- Performs simple "source wins" merge
     -- Creates patch request with result
+    -- Requires manual review
 $$;
 
 -- Find merge candidates for a composite
@@ -489,12 +559,14 @@ The WunderGraph API layer provides:
    - Operation validation and sanitization
    - Author-based permissions
    - Rate limiting and quotas
+   - SECURITY DEFINER functions for privileged operations
 
 2. **Performance Optimizations**
    - Database functions reduce round trips
-   - Efficient indexing
+   - Efficient indexing on operations table
    - Transaction boundaries
    - Lazy loading
+   - Optimized CRDT algorithms
 
 ## Best Practices
 
@@ -519,8 +591,9 @@ The WunderGraph API layer provides:
 4. **Merging Best Practices**
    - Identify suitable merge candidates
    - Prefer composites with close relationships
-   - Review auto-resolved conflicts
-   - Understand the merge strategy being used
+   - Always review merges manually
+   - Verify that array data is correctly preserved
+   - Check the generated operations list for completeness
 
 ## User Flows
 
@@ -591,10 +664,12 @@ graph TD
     C --> D[System attempts to find common ancestor]
     D -->|Ancestor found| E[Three-way merge]
     D -->|No ancestor| F[Simple merge]
-    E --> G[Create patch request]
+    E --> G[Create pending patch request]
     F --> G
     G --> H[User reviews merged result]
     H --> I[User approves or rejects]
+    I -->|Approve| J[Changes Applied]
+    I -->|Reject| K[Changes Discarded]
 ```
 
 **Implementation Details:**
@@ -602,9 +677,10 @@ graph TD
 - `MergeDialog.svelte` provides UI for candidate selection
 - `three_way_merge_composites` performs intelligent merging with ancestor
 - `simple_merge_composites` used as fallback when no ancestor exists
-- Automatic conflict resolution with source preference
-- Detailed metadata about conflict detection and resolution
-- Creates a reviewable patch request for the merge
+- Generates comprehensive operation tracking for all changes
+- Creates pending patch request requiring manual review
+- Implements generic array merging that preserves items from both branches
+- Ensures proper foreign key constraints by creating content before operations
 
 ## Technical Components
 
@@ -615,6 +691,10 @@ Tracks granular changes with:
 - Path tracking for precise changes
 - Metadata storage
 - Conflict detection
+- Lamport timestamp ordering
+- Site ID tracking
+- Vector clock handling
+- Position ID for list operations
 
 ### 2. Composite Management (`db_composite.sql`)
 
@@ -623,6 +703,8 @@ Handles:
 - Content version management
 - Author tracking
 - Relationship metadata
+- Variation management
+- CRDT-enabled composites
 
 ### 3. Patch Request System (`db_patch_requests.sql`)
 
@@ -631,15 +713,21 @@ Manages:
 - Approval workflows
 - Version transitions
 - Operation aggregation
+- Metadata storage
+- Manual review process
 
 ### 4. Merging System (`db_merging.sql`)
 
 Implements:
 - Common ancestor detection
+- Generic array merging
 - Three-way merge algorithm
 - Simple merge fallback
 - Merge candidate discovery
 - Conflict resolution
+- Operation tracking
+- Foreign key constraint management
+- Proper error handling
 
 ### 5. Query and Mutation APIs
 
@@ -654,12 +742,14 @@ Implements:
 - Provides detailed change information
 - Supports approval workflows
 - Shows merge-related metadata
+- Displays operation details
 
 #### MergeDialog
 - Displays potential merge candidates
 - Filters by relationship relevance
 - Initiates merge operations
 - Shows merge results and conflicts
+- Renders comprehensive operation list
 
 #### Operations
 - `findMergeCandidates`: Discovers related composites
@@ -674,10 +764,15 @@ The system includes robust error handling for:
 - Missing permissions
 - Version conflicts
 - Merge failures
+- Foreign key constraints
+- JSON syntax errors
+- Null references
 
 ## Security Considerations
 
 - Row Level Security (RLS) enabled on all tables
 - Author-based permissions
 - Service role restrictions
-- Authenticated operation requirements 
+- Authenticated operation requirements
+- SECURITY DEFINER functions for privileged operations
+- Input validation and sanitization 
