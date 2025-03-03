@@ -30,7 +30,7 @@
     
     <!-- Tagline -->
     <p class="text-xl text-cyan-100/80 mt-6 max-w-lg mx-auto">
-      A new paradigm for creative ownership
+      A new way of work
     </p>
   </div>
 </div>

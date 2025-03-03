@@ -8,15 +8,19 @@
   import HelloEarth from '$lib/slides/HelloEarth.svelte';
   import HumanQuestion from '$lib/slides/HumanQuestion.svelte';
   import AutonomyAnswer from '$lib/slides/AutonomyAnswer.svelte';
+  import DailyProblem from '$lib/slides/DailyProblem.svelte';
+  import WorkChoices from '$lib/slides/WorkChoices.svelte';
+  import BetterSolution from '$lib/slides/BetterSolution.svelte';
   import FalseBinary from '$lib/slides/FalseBinary.svelte';
   import FreedomDimensions from '$lib/slides/FreedomDimensions.svelte';
   import DAOIntro from '$lib/slides/DAOIntro.svelte';
   import DAOExplained from '$lib/slides/DAOExplained.svelte';
+  import DAOExamples from '$lib/slides/DAOExamples.svelte';
   import TokenSystem from '$lib/slides/TokenSystem.svelte';
   import VisionCreatorPool from '$lib/slides/VisionCreatorPool.svelte';
+  import MoneyFlows from '$lib/slides/MoneyFlows.svelte';
   import ProposalSystem from '$lib/slides/ProposalSystem.svelte';
   import AutonomousLife from '$lib/slides/AutonomousLife.svelte';
-  import Interdependence from '$lib/slides/Interdependence.svelte';
   import PathToFreedom from '$lib/slides/PathToFreedom.svelte';
   import ReclaimWork from '$lib/slides/ReclaimWork.svelte';
   
@@ -29,10 +33,6 @@
   // Define all slides in the presentation
   const slides: Slide[] = [
     {
-      component: HelloEarth,
-      title: 'Freedom to Create, Right to Own'
-    },
-    {
       component: HumanQuestion,
       title: 'The Human Question'
     },
@@ -41,8 +41,20 @@
       title: 'Autonomy'
     },
     {
-      component: FalseBinary,
-      title: 'Beyond the False Binary'
+      component: DailyProblem,
+      title: 'What\'s Wrong With Our Work?'
+    },
+    {
+      component: WorkChoices,
+      title: 'A Forced Choice'
+    },
+    {
+      component: HelloEarth,
+      title: 'Freedom to Create, Right to Own'
+    },
+    {
+      component: BetterSolution,
+      title: 'We Have a Better Solution'
     },
     {
       component: FreedomDimensions,
@@ -57,6 +69,10 @@
       title: 'What is a DAO?'
     },
     {
+      component: DAOExamples,
+      title: 'DAOs in Action'
+    },
+    {
       component: TokenSystem,
       title: 'VCR Token System'
     },
@@ -65,24 +81,24 @@
       title: 'The 75% Community Pool'
     },
     {
+      component: MoneyFlows,
+      title: 'How The Money Flows'
+    },
+    {
       component: ProposalSystem,
       title: 'Your Voice, Your Vote'
     },
     {
       component: AutonomousLife,
-      title: 'Living the Autonomous Life'
-    },
-    {
-      component: Interdependence,
-      title: 'From Dependence to Interdependence'
+      title: 'What Your Journey Could Look Like'
     },
     {
       component: PathToFreedom,
-      title: 'Your Path to Freedom'
+      title: '5-Step Journey to Freedom'
     },
     {
       component: ReclaimWork,
-      title: 'Reclaim Your Work, Reclaim Your Life'
+      title: 'Your Work, Your Life'
     }
   ];
   
