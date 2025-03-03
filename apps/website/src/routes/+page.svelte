@@ -18,7 +18,7 @@
   });
 </script>
 
-<!-- Entry Animation Overlay -->
+<!-- Entry Animation Overlay - Fixed positioning to prevent scrolling issues -->
 <div class="fixed inset-0 z-[100] pointer-events-none {mounted ? 'opacity-0 scale-110' : 'opacity-100 scale-100'} transition-all duration-1500 transform-gpu">
   <div class="absolute inset-0 bg-slate-900 flex items-center justify-center">
     <div class="text-center space-y-8 transform-gpu">
@@ -39,20 +39,6 @@
     </div>
   </div>
 </div>
-
-<!-- Navigation -->
-<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-cyan-900/10">
-  <div class="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
-    <div class="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-cyan-400 text-transparent bg-clip-text">
-      VisionCreator
-    </div>
-    <div>
-      <button class="px-8 py-3 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black font-bold hover:scale-105 transition-all duration-300">
-        Join Now
-      </button>
-    </div>
-  </div>
-</nav>
 
 <!-- Hero Section -->
 <section class="min-h-screen flex flex-col justify-center items-center p-8 pt-32 relative">
