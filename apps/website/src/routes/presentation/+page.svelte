@@ -7,11 +7,12 @@
   // Import all slides
   import HelloEarth from '$lib/slides/HelloEarth.svelte';
   import HumanQuestion from '$lib/slides/HumanQuestion.svelte';
+  import PersonalStrivings from '$lib/slides/PersonalStrivings.svelte';
   import AutonomyAnswer from '$lib/slides/AutonomyAnswer.svelte';
-  import DailyProblem from '$lib/slides/DailyProblem.svelte';
   import WorkChoices from '$lib/slides/WorkChoices.svelte';
+  import EmployeeChoice from '$lib/slides/EmployeeChoice.svelte';
+  import FounderChoice from '$lib/slides/FounderChoice.svelte';
   import BetterSolution from '$lib/slides/BetterSolution.svelte';
-  import FalseBinary from '$lib/slides/FalseBinary.svelte';
   import FreedomDimensions from '$lib/slides/FreedomDimensions.svelte';
   import DAOIntro from '$lib/slides/DAOIntro.svelte';
   import DAOExplained from '$lib/slides/DAOExplained.svelte';
@@ -37,24 +38,32 @@
       title: 'The Human Question'
     },
     {
+      component: PersonalStrivings,
+      title: 'What Is It For You?'
+    },
+    {
       component: AutonomyAnswer,
       title: 'Autonomy'
     },
     {
-      component: DailyProblem,
-      title: 'What\'s Wrong With Our Work?'
-    },
-    {
       component: WorkChoices,
-      title: 'A Forced Choice'
+      title: 'What Choice Do We Have Today?'
     },
     {
-      component: HelloEarth,
-      title: 'Freedom to Create, Right to Own'
+      component: EmployeeChoice,
+      title: 'Employee Path'
+    },
+    {
+      component: FounderChoice,
+      title: 'Founder Path'
     },
     {
       component: BetterSolution,
       title: 'We Have a Better Solution'
+    },
+    {
+      component: HelloEarth,
+      title: 'A Better Solution'
     },
     {
       component: FreedomDimensions,
