@@ -28,24 +28,27 @@ DROP TABLE IF EXISTS public.patch_requests CASCADE;
 
 -- Create patch-requests table
 CREATE TABLE IF NOT EXISTS "public"."patch_requests" (
-    "id" uuid not null default gen_random_uuid(),
-    "title" text not null,
-    "description" text,
-    "status" text not null default 'pending',
-    "author" uuid not null,
-    "created_at" timestamptz not null default now(),
-    "updated_at" timestamptz not null default now(),
-    "old_version_id" uuid not null,
-    "new_version_id" uuid not null,
-    "composite_id" uuid not null,
-    "operation_type" text,
+    "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+    "title" text NOT NULL,
+    "description" text NOT NULL,
+    "status" text NOT NULL DEFAULT 'pending',
+    "author" uuid NOT NULL,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "old_version_id" uuid NOT NULL,
+    "new_version_id" uuid,
+    "composite_id" uuid NOT NULL,
+    "operation_type" text DEFAULT 'edit',
     "parent_patch_id" uuid,
-    constraint "patch_requests_pkey" primary key ("id"),
-    constraint "patch_requests_author_fkey" foreign key ("author") references public.profiles(id),
-    constraint "patch_requests_composite_id_fkey" foreign key ("composite_id") references public.composites(id),
-    constraint "patch_requests_parent_patch_fkey" foreign key ("parent_patch_id") references public.patch_requests(id),
-    constraint "patch_requests_status_check" check (status in ('pending', 'approved', 'rejected')),
-    constraint "patch_requests_operation_type_check" check (operation_type in ('edit', 'merge', 'branch', 'rebase', null))
+    "metadata" jsonb DEFAULT '{}'::jsonb,
+    PRIMARY KEY ("id"),
+    CONSTRAINT "patch_requests_author_fkey" FOREIGN KEY ("author") REFERENCES "public"."profiles"("id") ON DELETE CASCADE,
+    CONSTRAINT "patch_requests_composite_id_fkey" FOREIGN KEY ("composite_id") REFERENCES "public"."composites"("id") ON DELETE CASCADE,
+    CONSTRAINT "patch_requests_old_version_id_fkey" FOREIGN KEY ("old_version_id") REFERENCES "public"."db"("id") ON DELETE CASCADE,
+    CONSTRAINT "patch_requests_new_version_id_fkey" FOREIGN KEY ("new_version_id") REFERENCES "public"."db"("id") ON DELETE CASCADE,
+    CONSTRAINT "patch_requests_parent_patch_id_fkey" FOREIGN KEY ("parent_patch_id") REFERENCES "public"."patch_requests"("id") ON DELETE SET NULL,
+    CONSTRAINT "patch_requests_status_check" CHECK (status IN ('pending', 'approved', 'rejected')),
+    CONSTRAINT "patch_requests_operation_type_check" CHECK (operation_type IN ('edit', 'merge', 'branch', 'rebase', NULL))
 );
 
 -- Create a trigger to validate old_version_id exists in db

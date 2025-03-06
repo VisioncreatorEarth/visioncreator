@@ -62,20 +62,28 @@ interface RawDBVersion {
 interface RawOperation {
     id: string;
     operation_type: string;
-    path: string[];
-    old_value: any;
-    new_value: any;
+    path: string;
+    from_path?: string;
+    value?: any;
+    old_value?: any;
     created_at: string;
-    metadata: Record<string, any>;
     patch_request_id: string;
-    position_id?: string;
-    lamport_timestamp?: number;
-    site_id?: string;
 }
 
 interface Profile {
     id: string;
     name: string;
+}
+
+// Add a new operation interface for JSON Patch operations
+interface JSONPatchOperation {
+    id: string;
+    operation_type: string;
+    path: string;
+    from_path?: string;
+    value?: any;
+    old_value?: any;
+    created_at: string;
 }
 
 export default createOperation.query({
@@ -172,20 +180,17 @@ export default createOperation.query({
             const operationsMap = new Map<string, RawOperation[]>();
 
             // Fetch operations for all patch requests at once
-            const { data: rawOperations, error: operationsError } = await context.supabase
-                .from('db_operations')
+            const { data: rawJsonPatchOperations, error: operationsError } = await context.supabase
+                .from('json_patch_operations')
                 .select(`
                     id,
                     patch_request_id,
                     operation_type,
                     path,
+                    from_path,
+                    value,
                     old_value,
-                    new_value,
-                    created_at,
-                    metadata,
-                    position_id,
-                    lamport_timestamp,
-                    site_id
+                    created_at
                 `)
                 .in('patch_request_id', patchRequests.map(req => req.id))
                 .order('created_at', { ascending: true });
@@ -194,7 +199,7 @@ export default createOperation.query({
                 console.error('[queryPatchRequests] Error fetching operations:', operationsError);
             } else {
                 // Group operations by patch request ID
-                const operations = (rawOperations || []) as RawOperation[];
+                const operations = (rawJsonPatchOperations || []) as RawOperation[];
                 operations.forEach((op) => {
                     if (!operationsMap.has(op.patch_request_id)) {
                         operationsMap.set(op.patch_request_id, []);
@@ -203,14 +208,11 @@ export default createOperation.query({
                         id: op.id,
                         operation_type: op.operation_type,
                         path: op.path,
+                        from_path: op.from_path,
+                        value: op.value,
                         old_value: op.old_value,
-                        new_value: op.new_value,
                         created_at: op.created_at,
-                        metadata: op.metadata,
-                        patch_request_id: op.patch_request_id,
-                        position_id: op.position_id,
-                        lamport_timestamp: op.lamport_timestamp,
-                        site_id: op.site_id
+                        patch_request_id: op.patch_request_id
                     });
                 });
             }
@@ -227,15 +229,28 @@ export default createOperation.query({
                     id: request.id,
                     title: request.title || '',
                     description: request.description || '',
+                    status: request.status,
                     created_at: request.created_at,
                     updated_at: request.updated_at,
                     operation_type: request.operation_type,
                     metadata: request.metadata,
+                    old_version_id: request.old_version_id,
+                    new_version_id: request.new_version_id,
+                    composite_id: request.composite_id,
+                    composite_author: compositeAuthor,
                     author: {
                         id: author?.id || '',
                         name: author?.name || 'Unknown'
                     },
-                    composite_author: compositeAuthor,
+                    operations: operations.map(op => ({
+                        id: op.id,
+                        operation_type: op.operation_type,
+                        path: op.path,
+                        from_path: op.from_path,
+                        value: op.value,
+                        old_value: op.old_value,
+                        created_at: op.created_at
+                    })),
                     changes: {
                         content: newVersion?.json?.content,
                         schema: newVersion?.json?.schema,
@@ -249,10 +264,7 @@ export default createOperation.query({
                         instance: oldVersion?.json,
                         snapshot_id: oldVersion?.snapshot_id,
                         created_at: oldVersion?.created_at
-                    },
-                    status: request.status || 'pending',
-                    composite_id: request.composite_id,
-                    operations: operations
+                    }
                 };
             });
 

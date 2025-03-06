@@ -17,6 +17,8 @@ This component handles:
 	import JsonEditor from './JsonEditor.svelte';
 	import PatchRequests from './PatchRequests.svelte';
 	import CompositesAndMerge from './CompositesAndMerge.svelte';
+	// Import fast-json-patch for generating RFC 6902 compliant operations
+	import * as jsonpatch from 'fast-json-patch';
 
 	// Props
 	export let proposalId: string;
@@ -117,6 +119,9 @@ This component handles:
 	}> | null = null;
 	let contentBeforeEdit = ''; // Store original content for comparison
 	let isSubmitting = false; // Track submission state
+
+	// Original JSON objects for generating patches
+	let originalJson: Record<string, any> = {}; // Store the original JSON object for diff generation
 
 	// Toast notification functionality
 	let toastMessage = '';
@@ -306,12 +311,20 @@ This component handles:
 		if (tab === 'content') {
 			editContent = selectedCompositeId ? selectedComposite?.compose_json?.content || '' : content;
 			contentBeforeEdit = editContent;
+
+			// Store original JSON for later comparison
+			originalJson = selectedCompositeId
+				? { ...selectedComposite?.compose_json }
+				: { ...compose_data?.compose_json };
 		} else if (tab === 'json') {
 			const currentJson = selectedCompositeId
 				? selectedComposite?.compose_json
 				: compose_data?.compose_json;
 			editContent = JSON.stringify(currentJson, null, 2);
 			contentBeforeEdit = editContent;
+
+			// Store original JSON for later comparison
+			originalJson = { ...currentJson };
 		}
 	}
 
@@ -323,7 +336,8 @@ This component handles:
 					id: compose_data?.compose_id,
 					compose_id: compose_data?.compose_id,
 					relationship_type: 'main',
-					metadata: { variation_type: 'main' }
+					metadata: { variation_type: 'main' },
+					compose_json: compose_data?.compose_json || {}
 			  };
 
 		selectedCompositeId = compositeId;
@@ -331,6 +345,11 @@ This component handles:
 		selectedEditRequestId = undefined; // Reset edit request selection
 		selectedEditRequest = null; // Reset selected edit request
 		$activeComposeTab = 'content'; // Reset to content tab
+
+		// Reset original JSON and content when switching composites
+		if (targetComposite) {
+			originalJson = targetComposite.compose_json ? { ...targetComposite.compose_json } : {};
+		}
 	}
 
 	// Handle edit request selection
@@ -417,6 +436,7 @@ This component handles:
 
 		try {
 			let jsonToSave: Record<string, any>;
+			let patchOperations: any[] = [];
 
 			// Get current content structure for reference
 			const currentJson = selectedCompositeId
@@ -432,6 +452,10 @@ This component handles:
 					try {
 						// Parse the JSON from the editor - keep everything as is
 						jsonToSave = JSON.parse(editContent);
+
+						// Generate patch operations by comparing with the original JSON
+						patchOperations = jsonpatch.compare(originalJson, jsonToSave);
+						console.log('Generated patch operations:', patchOperations);
 					} catch (error) {
 						toastError('Invalid JSON format. Please check your syntax.');
 						isSubmitting = false;
@@ -446,6 +470,10 @@ This component handles:
 				) {
 					// From JsonEditor component - use the full JSON object as is
 					jsonToSave = event.detail.json;
+
+					// Generate patch operations by comparing with the original JSON
+					patchOperations = jsonpatch.compare(originalJson, jsonToSave);
+					console.log('Generated patch operations:', patchOperations);
 				} else {
 					toastError('Unexpected save event');
 					isSubmitting = false;
@@ -463,6 +491,10 @@ This component handles:
 					isSubmitting = false;
 					return;
 				}
+
+				// Generate patch operations by comparing with the original JSON
+				patchOperations = jsonpatch.compare(originalJson, jsonToSave);
+				console.log('Generated patch operations:', patchOperations);
 			}
 
 			if (!currentComposeId) {
@@ -475,13 +507,23 @@ This component handles:
 			// for root composite use rootCompositeId from our query
 			const compositeIdToUse = selectedCompositeId || rootCompositeId;
 
-			// Pass both the content ID (currentComposeId) and the composite ID - making sure compositeId is a string
-			const result = await $editDBMutation.mutateAsync({
+			// Define parameters with correct type that includes operations
+			const mutationParams: {
+				id: string;
+				compositeId?: string;
+				json?: any;
+				operations?: any[];
+				createVariation: boolean;
+			} = {
 				id: currentComposeId,
 				compositeId: compositeIdToUse || undefined,
-				json: jsonToSave,
+				operations: patchOperations, // Send operations instead of full JSON
+				json: undefined, // Set to undefined to follow new operations-based flow
 				createVariation: false
-			});
+			};
+
+			// Use the new operations-based approach
+			const result = await $editDBMutation.mutateAsync(mutationParams);
 
 			// Define a type for the expected result
 			interface EditResult {
@@ -505,6 +547,10 @@ This component handles:
 				await $composeQuery.refetch();
 				hasChanges = false;
 				contentBeforeEdit = editContent;
+
+				// Update original JSON to match the current state
+				originalJson = JSON.parse(JSON.stringify(jsonToSave));
+
 				toastSuccess('Content saved successfully');
 			} else {
 				// Enhanced error handling for validation failures
@@ -852,35 +898,9 @@ This component handles:
 							</div>
 						{/if}
 
-						<!-- Operations List Header -->
-						{#if !selectedEditRequest}
-							<div
-								class="flex items-center justify-between px-6 py-3 border-b border-surface-700 bg-surface-800"
-							>
-								<h3 class="text-lg font-medium text-surface-100">
-									Operations
-									<span
-										class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary-500/20 text-primary-300"
-									>
-										{(selectedEditRequest.operations && selectedEditRequest.operations.length) || 0}
-									</span>
-								</h3>
-							</div>
-						{/if}
-
 						<!-- Operations Content -->
 						{#if selectedEditRequest.operations && selectedEditRequest.operations.length > 0}
 							<div class="h-[calc(100vh-7rem)] overflow-y-auto">
-								<!-- Column Headers -->
-								<div
-									class="sticky top-0 z-10 px-4 py-2 font-medium border-b bg-surface-800 border-surface-700"
-								>
-									<div class="grid grid-cols-12 gap-4">
-										<span class="col-span-3 text-xs text-surface-300">Metadata</span>
-										<span class="col-span-9 text-xs text-surface-300">Changes</span>
-									</div>
-								</div>
-
 								<!-- Operations List -->
 								<div class="divide-y divide-surface-700/50">
 									{#each selectedEditRequest.operations as operation}
@@ -890,32 +910,34 @@ This component handles:
 												<div
 													class="flex flex-col col-span-3 gap-2 pr-2 border-r border-surface-700/50"
 												>
-													<!-- Operation type -->
-													<span
-														class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full backdrop-blur-sm {getOperationColor(
-															operation.operation_type
-														)}"
-													>
-														<Icon
-															icon={getOperationIcon(operation.operation_type)}
-															class="w-3 h-3"
-														/>
-														{operation.operation_type}
-													</span>
+													<!-- Operation type with badge similar to PatchRequests -->
+													<div class="flex items-center gap-2">
+														<span
+															class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full backdrop-blur-sm {getOperationColor(
+																operation.operation_type
+															)}"
+														>
+															<Icon
+																icon={getOperationIcon(operation.operation_type)}
+																class="w-3.5 h-3.5"
+															/>
+															{operation.operation_type}
+														</span>
+													</div>
 
-													<!-- Path -->
+													<!-- Path with cleaner display -->
 													<div class="text-xs break-words text-tertiary-300">
 														<span class="text-2xs text-surface-400">Path:</span>
-														<div class="overflow-y-auto font-mono max-h-24">
-															{#each operation.path as segment, index}
-																<div class="flex items-center">
-																	{#if index > 0}
-																		<span class="inline-block" style="width: {index * 12}px" />
-																		<span class="mr-1 text-surface-400">└─</span>
-																	{/if}
-																	<span class="break-all whitespace-normal">{segment}</span>
-																</div>
-															{/each}
+														<div
+															class="overflow-y-auto font-mono max-h-24 bg-surface-800/70 p-1.5 rounded"
+														>
+															<code class="break-all whitespace-normal">
+																{typeof operation.path === 'string'
+																	? operation.path
+																	: Array.isArray(operation.path)
+																	? operation.path.join('/')
+																	: JSON.stringify(operation.path)}
+															</code>
 														</div>
 													</div>
 
@@ -956,36 +978,145 @@ This component handles:
 												<!-- Main content column (right side) -->
 												<div class="col-span-9">
 													{#if operation.operation_type === 'add'}
-														<div
-															class="pl-2 font-mono text-xs text-green-200 break-words whitespace-pre-wrap border-l-2 border-green-500/50"
-														>
-															+ {typeof operation.new_value === 'object'
-																? JSON.stringify(operation.new_value, null, 2)
-																: operation.new_value}
+														<div class="flex flex-col">
+															<div class="mb-1 text-xs font-medium text-green-300">
+																Added value:
+															</div>
+															<div
+																class="p-2 pl-2 font-mono text-xs text-green-200 break-words whitespace-pre-wrap border-l-2 rounded-r border-green-500/50 bg-green-900/10"
+															>
+																{#if operation.value !== undefined}
+																	{typeof operation.value === 'object'
+																		? JSON.stringify(operation.value, null, 2)
+																		: operation.value === null
+																		? '<null>'
+																		: operation.value}
+																{:else}
+																	{typeof operation.new_value === 'object'
+																		? JSON.stringify(operation.new_value, null, 2)
+																		: operation.new_value === undefined ||
+																		  operation.new_value === null
+																		? '<null>'
+																		: operation.new_value}
+																{/if}
+															</div>
 														</div>
 													{:else if operation.operation_type === 'remove'}
-														<div
-															class="pl-2 font-mono text-xs text-red-200 break-words whitespace-pre-wrap border-l-2 border-red-500/50"
-														>
-															- {typeof operation.old_value === 'object'
-																? JSON.stringify(operation.old_value, null, 2)
-																: operation.old_value}
+														<div class="flex flex-col">
+															<div class="mb-1 text-xs font-medium text-red-300">
+																Removed value:
+															</div>
+															<div
+																class="p-2 pl-2 font-mono text-xs text-red-200 break-words whitespace-pre-wrap border-l-2 rounded-r border-red-500/50 bg-red-900/10"
+															>
+																{typeof operation.old_value === 'object'
+																	? JSON.stringify(operation.old_value, null, 2)
+																	: operation.old_value === undefined ||
+																	  operation.old_value === null
+																	? '<null>'
+																	: operation.old_value}
+															</div>
+														</div>
+													{:else if operation.operation_type === 'replace'}
+														{#if typeof operation === 'object'}<div class="hidden">
+																{console.log('Replace operation:', operation)}
+															</div>{/if}
+														<div class="flex flex-col">
+															<div class="mb-1 text-xs font-medium text-blue-300">
+																Replace value:
+															</div>
+															<div
+																class="p-2 pl-2 font-mono text-xs break-words whitespace-pre-wrap border-l-2 rounded-r border-blue-500/50 bg-blue-900/10"
+															>
+																<div class="flex items-center gap-2">
+																	<span class="text-red-200">
+																		{typeof operation.old_value === 'object'
+																			? JSON.stringify(operation.old_value, null, 2)
+																			: operation.old_value === undefined ||
+																			  operation.old_value === null
+																			? '<null>'
+																			: operation.old_value}
+																	</span>
+																	<span class="text-surface-400">→</span>
+																	<span class="text-green-200">
+																		{#if operation.value !== undefined}
+																			{typeof operation.value === 'object'
+																				? JSON.stringify(operation.value, null, 2)
+																				: operation.value === null
+																				? '<null>'
+																				: operation.value}
+																		{:else}
+																			{typeof operation.new_value === 'object'
+																				? JSON.stringify(operation.new_value, null, 2)
+																				: operation.new_value === undefined ||
+																				  operation.new_value === null
+																				? '<null>'
+																				: operation.new_value}
+																		{/if}
+																	</span>
+																</div>
+															</div>
 														</div>
 													{:else}
 														<div class="font-mono text-xs break-words whitespace-pre-wrap">
-															{#if operation.old_value !== null && operation.old_value !== undefined}
-																<div class="pl-2 mb-2 text-red-200 border-l-2 border-red-500/50">
-																	- {typeof operation.old_value === 'object'
-																		? JSON.stringify(operation.old_value, null, 2)
-																		: operation.old_value}
+															{#if operation.old_value !== null && operation.old_value !== undefined && operation.new_value !== null && operation.new_value !== undefined}
+																<div class="mb-1 text-xs font-medium text-blue-300">
+																	Replace value:
 																</div>
-															{/if}
-															{#if operation.new_value !== null && operation.new_value !== undefined}
-																<div class="pl-2 text-green-200 border-l-2 border-green-500/50">
-																	+ {typeof operation.new_value === 'object'
-																		? JSON.stringify(operation.new_value, null, 2)
-																		: operation.new_value}
+																<div
+																	class="p-2 pl-2 break-words whitespace-pre-wrap border-l-2 rounded-r border-blue-500/50 bg-blue-900/10"
+																>
+																	<div class="flex items-center gap-2">
+																		<span class="text-red-200">
+																			{typeof operation.old_value === 'object'
+																				? JSON.stringify(operation.old_value, null, 2)
+																				: operation.old_value}
+																		</span>
+																		<span class="text-surface-400">→</span>
+																		<span class="text-green-200">
+																			{typeof operation.new_value === 'object'
+																				? JSON.stringify(operation.new_value, null, 2)
+																				: operation.new_value}
+																		</span>
+																	</div>
 																</div>
+															{:else}
+																{#if operation.old_value !== null && operation.old_value !== undefined}
+																	<div class="mb-3">
+																		<div class="mb-1 text-xs font-medium text-red-300">
+																			Previous value:
+																		</div>
+																		<div
+																			class="p-2 pl-2 text-red-200 border-l-2 rounded-r border-red-500/50 bg-red-900/10"
+																		>
+																			{typeof operation.old_value === 'object'
+																				? JSON.stringify(operation.old_value, null, 2)
+																				: operation.old_value}
+																		</div>
+																	</div>
+																{/if}
+																{#if operation.new_value !== null && operation.new_value !== undefined}
+																	<div>
+																		<div class="mb-1 text-xs font-medium text-green-300">
+																			New value:
+																		</div>
+																		<div
+																			class="p-2 pl-2 text-green-200 border-l-2 rounded-r border-green-500/50 bg-green-900/10"
+																		>
+																			{#if operation.new_value !== undefined && operation.new_value !== null}
+																				{typeof operation.new_value === 'object'
+																					? JSON.stringify(operation.new_value, null, 2)
+																					: operation.new_value}
+																			{:else if operation.value !== undefined && operation.value !== null}
+																				{typeof operation.value === 'object'
+																					? JSON.stringify(operation.value, null, 2)
+																					: operation.value}
+																			{:else}
+																				<span class="italic text-green-400/60">&lt;null&gt;</span>
+																			{/if}
+																		</div>
+																	</div>
+																{/if}
 															{/if}
 														</div>
 													{/if}
@@ -997,14 +1128,18 @@ This component handles:
 									<!-- Display Conflicts inline with operations -->
 									{#if selectedEditRequest?.metadata?.op_conflicts && selectedEditRequest.metadata.op_conflicts.length > 0}
 										<div class="px-4 py-2 bg-yellow-900/20 border-y border-yellow-500/30">
-											<div class="flex items-center">
+											<div class="flex items-center gap-2">
 												<Icon
 													icon="heroicons:exclamation-triangle"
-													class="w-4 h-4 mr-2 text-yellow-400"
+													class="w-4 h-4 text-yellow-400"
 												/>
-												<h3 class="text-xs font-medium text-yellow-300">
-													Merge Conflicts ({selectedEditRequest.metadata.op_conflicts.length})
-												</h3>
+												<span class="text-xs font-medium text-yellow-300"> Merge Conflicts </span>
+												<span class="ml-1 text-xs text-yellow-300 opacity-80">•</span>
+												<span
+													class="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-300"
+												>
+													{selectedEditRequest.metadata.op_conflicts.length}
+												</span>
 											</div>
 										</div>
 
@@ -1018,42 +1153,42 @@ This component handles:
 														class="flex flex-col col-span-3 gap-2 pr-2 border-r border-yellow-500/30"
 													>
 														<!-- Conflict badge -->
-														<span
-															class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full backdrop-blur-sm text-yellow-400 bg-yellow-400/10"
-														>
-															<Icon icon="heroicons:exclamation-triangle" class="w-3 h-3" />
-															conflict
-														</span>
+														<div class="flex items-center gap-2">
+															<span
+																class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full backdrop-blur-sm text-yellow-400 bg-yellow-400/10"
+															>
+																<Icon icon="heroicons:exclamation-triangle" class="w-3.5 h-3.5" />
+																conflict
+															</span>
+														</div>
 
-														<!-- Path -->
+														<!-- Path in conflict -->
 														<div class="text-xs text-yellow-300 break-words">
 															<span class="text-yellow-400 text-2xs">Path:</span>
-															<div class="overflow-y-auto font-mono max-h-24">
-																{#if Array.isArray(conflict.path)}
-																	{#each conflict.path as segment, index}
-																		<div class="flex items-center">
-																			{#if index > 0}
-																				<span class="inline-block" style="width: {index * 12}px" />
-																				<span class="mr-1 text-yellow-400">└─</span>
-																			{/if}
-																			<span class="break-all whitespace-normal">{segment}</span>
-																		</div>
-																	{/each}
-																{:else}
-																	<div class="break-all whitespace-normal">{conflict.path}</div>
-																{/if}
+															<div
+																class="overflow-y-auto font-mono max-h-24 bg-yellow-900/20 p-1.5 rounded"
+															>
+																<code class="break-all whitespace-normal">
+																	{typeof conflict.path === 'string'
+																		? conflict.path
+																		: Array.isArray(conflict.path)
+																		? conflict.path.join('/')
+																		: JSON.stringify(conflict.path)}
+																</code>
 															</div>
 														</div>
 
-														<!-- Resolution -->
-														<div class="flex items-center mt-1">
-															<Icon
-																icon="heroicons:check-circle"
-																class="w-3.5 h-3.5 mr-1 text-yellow-300"
-															/>
-															<span class="text-yellow-300 text-2xs">
-																Resolution: {conflict.resolution || 'target'} value used
-															</span>
+														<!-- Resolution with improved styling -->
+														<div class="bg-yellow-900/20 p-1.5 rounded mt-1">
+															<div class="flex items-center">
+																<Icon
+																	icon="heroicons:check-circle"
+																	class="w-3.5 h-3.5 mr-1 text-yellow-300"
+																/>
+																<span class="text-yellow-300 text-2xs">
+																	Resolution: {conflict.resolution || 'target'} value used
+																</span>
+															</div>
 														</div>
 													</div>
 
@@ -1061,25 +1196,25 @@ This component handles:
 													<div class="col-span-9">
 														<div class="grid grid-cols-2 gap-4">
 															<div>
-																<div class="mb-1 text-yellow-300 uppercase text-2xs">
+																<div class="mb-1 text-xs font-medium text-yellow-300">
 																	Source Value:
 																</div>
 																<div
-																	class="p-2 pl-2 overflow-auto font-mono text-xs text-red-200 whitespace-pre-wrap border-l-2 rounded bg-surface-800/70 max-h-40 border-red-500/50"
+																	class="p-2 pl-2 overflow-auto font-mono text-xs text-red-200 whitespace-pre-wrap border-l-2 rounded bg-red-900/10 border-red-500/50"
 																>
-																	- {typeof conflict.source_value === 'object'
+																	{typeof conflict.source_value === 'object'
 																		? JSON.stringify(conflict.source_value, null, 2)
 																		: conflict.source_value}
 																</div>
 															</div>
 															<div>
-																<div class="mb-1 text-yellow-300 uppercase text-2xs">
+																<div class="mb-1 text-xs font-medium text-yellow-300">
 																	Target Value:
 																</div>
 																<div
-																	class="p-2 pl-2 overflow-auto font-mono text-xs text-green-200 whitespace-pre-wrap border-l-2 rounded bg-surface-800/70 max-h-40 border-green-500/50"
+																	class="p-2 pl-2 overflow-auto font-mono text-xs text-green-200 whitespace-pre-wrap border-l-2 rounded bg-green-900/10 border-green-500/50"
 																>
-																	+ {typeof conflict.target_value === 'object'
+																	{typeof conflict.target_value === 'object'
 																		? JSON.stringify(conflict.target_value, null, 2)
 																		: conflict.target_value}
 																</div>

@@ -6,7 +6,7 @@ This component handles:
 2. Approving or rejecting patch requests (only for authors of the composite)
 3. Showing the changes between versions
 4. Managing the patch request lifecycle
-5. Displaying granular operations for each patch request with CRDT support
+5. Displaying granular operations for each patch request with JSON Patch support (RFC 6902)
 6. Showing merge information for CRDT-based merges
 
 Props:
@@ -138,7 +138,7 @@ Props:
 		}
 	}
 
-	// Helper function to get operation type icon
+	// Helper function to get operation type icon for JSON Patch operations (RFC 6902)
 	function getOperationIcon(type: string): string {
 		switch (type.toLowerCase()) {
 			case 'add':
@@ -151,6 +151,8 @@ Props:
 				return 'heroicons:arrows-right-left';
 			case 'copy':
 				return 'heroicons:document-duplicate';
+			case 'test':
+				return 'heroicons:check-circle';
 			default:
 				return 'heroicons:question-mark-circle';
 		}
@@ -169,70 +171,28 @@ Props:
 				return 'text-purple-400 bg-purple-400/10';
 			case 'copy':
 				return 'text-yellow-400 bg-yellow-400/10';
+			case 'test':
+				return 'text-teal-400 bg-teal-400/10';
 			default:
 				return 'text-gray-400 bg-gray-400/10';
 		}
 	}
 
-	// Helper function to get operation type badge for merge operations
-	function getOperationTypeBadge(request: any): { color: string; icon: string; text: string } {
-		if (request.operation_type === 'branch') {
-			return {
-				color: 'text-green-400 bg-green-400/10',
-				icon: 'heroicons:git-branch',
-				text: 'Branch'
-			};
-		} else if (request.operation_type === 'merge') {
-			// Check for three-way merge
-			if (request.metadata?.merge_strategy === 'three_way') {
-				// Show conflicts if present
-				const conflictsCount = request.metadata?.conflicts_detected || 0;
-				const operationsCount = request.metadata?.operations_count || 0;
-				const isDragAndDrop = request.isDragAndDrop === true;
+	// Helper function to format JSON Patch path for display
+	function formatPath(path: string): string {
+		if (!path) return '';
+		// Return the last segment of the path for display
+		let segments = path.split('/').filter((s) => s !== '');
+		if (segments.length === 0) return '/';
+		if (segments.length === 1) return segments[0];
 
-				// Special styling for drag and drop merges
-				if (isDragAndDrop) {
-					return {
-						color:
-							conflictsCount > 0
-								? 'text-yellow-400 bg-yellow-400/10'
-								: 'text-purple-400 bg-purple-400/10',
-						icon:
-							conflictsCount > 0
-								? 'heroicons:exclamation-triangle'
-								: 'heroicons:cursor-arrow-ripple',
-						text:
-							conflictsCount > 0
-								? `Drag Merge (${conflictsCount} conflicts)`
-								: `Drag Merge (${operationsCount} ops)`
-					};
-				}
-
-				return {
-					color:
-						conflictsCount > 0
-							? 'text-yellow-400 bg-yellow-400/10'
-							: 'text-blue-400 bg-blue-400/10',
-					icon: conflictsCount > 0 ? 'heroicons:exclamation-triangle' : 'heroicons:arrow-path',
-					text:
-						conflictsCount > 0
-							? `3W Merge (${conflictsCount} conflicts)`
-							: `3W Merge (${operationsCount} ops)`
-				};
-			} else {
-				return {
-					color: 'text-blue-400 bg-blue-400/10',
-					icon: 'heroicons:arrow-path',
-					text: 'Simple Merge'
-				};
-			}
-		} else {
-			return {
-				color: 'text-tertiary-400 bg-tertiary-400/10',
-				icon: 'heroicons:pencil-square',
-				text: 'Edit'
-			};
+		// For arrays, show the property and index
+		const lastSegment = segments[segments.length - 1];
+		const parentSegment = segments[segments.length - 2];
+		if (!isNaN(Number(lastSegment))) {
+			return `${parentSegment}[${lastSegment}]`;
 		}
+		return lastSegment;
 	}
 
 	// Format date for display
@@ -254,7 +214,7 @@ Props:
 		return `${diffInYears}y ago`;
 	}
 
-	// Format value for display
+	// Helper function to format value for display
 	function formatValue(value: any): string {
 		if (value === null || value === undefined) return 'null';
 		if (typeof value === 'object') return JSON.stringify(value).substring(0, 30) + '...';
@@ -306,7 +266,7 @@ Props:
 					<div class="flex flex-col">
 						<div class="flex items-start justify-between">
 							<div class="flex-1">
-								<div class="mb-1 flex items-center gap-2">
+								<div class="flex items-center gap-2 mb-1">
 									{#if request.operation_type === 'branch' || request.metadata?.branch_name}
 										<span
 											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/10 text-green-400"
@@ -332,7 +292,7 @@ Props:
 												{request.metadata.conflicts_detected}
 												{request.metadata.conflicts_detected === 1 ? 'Conflict' : 'Conflicts'}
 												<span
-													class="hidden group-hover:inline text-2xs font-normal text-yellow-300 ml-1"
+													class="hidden ml-1 font-normal text-yellow-300 group-hover:inline text-2xs"
 													>(click to view)</span
 												>
 											</span>
@@ -343,31 +303,10 @@ Props:
 										>
 											<Icon icon="heroicons:pencil-square" class="w-3.5 h-3.5" />
 											Edit
-										</span>
-									{/if}
-
-									{#if request.operations && request.operations.length > 0}
-										{#each ['add', 'remove', 'replace', 'move', 'copy'] as opType}
-											{@const opCount = request.operations.filter(
-												(op) => op.operation_type === opType
-											).length}
-											{#if opCount > 0}
-												<span
-													class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full {getOperationColor(
-														opType
-													)}"
-												>
-													<Icon icon={getOperationIcon(opType)} class="w-3.5 h-3.5" />
-													{opCount}
-												</span>
+											{#if request.operations && request.operations.length > 0}
+												<span class="ml-1 text-xs opacity-80">•</span>
+												<span>{request.operations.length}</span>
 											{/if}
-										{/each}
-									{:else}
-										<span
-											class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-surface-600/60 text-surface-300"
-										>
-											<Icon icon="heroicons:document-text" class="w-3.5 h-3.5" />
-											0
 										</span>
 									{/if}
 								</div>
@@ -401,27 +340,29 @@ Props:
 
 						<div class="flex justify-between mt-1">
 							<div class="text-xs text-surface-300">
-								{request.author.name || 'Unknown'}
+								{request.author?.name || 'Unknown'}
 							</div>
-							<div class="text-xs text-surface-400">{formatDate(request.created_at)}</div>
+							<div class="text-xs text-surface-400">
+								{formatDate(request.created_at || new Date().toISOString())}
+							</div>
 						</div>
 					</div>
 
 					<!-- Approve/reject buttons if pending and user is author -->
 					{#if request.status === 'pending' && isAuthor(request)}
 						<div
-							class="absolute left-0 right-0 bottom-0 flex w-full"
+							class="absolute bottom-0 left-0 right-0 flex w-full"
 							style="margin-left: -1px; margin-right: -1px; width: calc(100% + 2px);"
 						>
 							<button
-								class="flex-1 flex items-center justify-center h-10 text-xs font-medium bg-green-500/5 text-green-400 hover:bg-green-500/15 border-r border-surface-700"
+								class="flex items-center justify-center flex-1 h-10 text-xs font-medium text-green-400 border-r bg-green-500/5 hover:bg-green-500/15 border-surface-700"
 								on:click|stopPropagation={() => handleApprove(request.id)}
 							>
 								<Icon icon="heroicons:check-circle" class="w-4 h-4 mr-1" />
 								Approve
 							</button>
 							<button
-								class="flex-1 flex items-center justify-center h-10 text-xs font-medium bg-red-500/5 text-red-400 hover:bg-red-500/15"
+								class="flex items-center justify-center flex-1 h-10 text-xs font-medium text-red-400 bg-red-500/5 hover:bg-red-500/15"
 								on:click|stopPropagation={() => handleReject(request.id)}
 							>
 								<Icon icon="heroicons:x-circle" class="w-4 h-4 mr-1" />
