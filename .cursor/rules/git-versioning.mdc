@@ -1,5 +1,5 @@
 ---
-description: Everything related to git and verison control
+description: 
 globs: 
 alwaysApply: false
 ---
@@ -7,7 +7,7 @@ alwaysApply: false
 
 ## When a user requests to save or version their code:
 
-1. **Always Stage ALL modified files**:
+1. **Stage all modified files**:
    - Use `git add .` to stage all changes in the repository
    - Confirm successful staging with a brief message
 
@@ -53,5 +53,3 @@ When user says: "Save my current version" or "Commit my changes":
 5. Confirm: "Your changes have been saved to the remote repository. The commit 'feat(api): add user profile endpoint' has been pushed."
 
 > **Important**: Never ask the user what type of change it was - determine this yourself by analyzing the actual code changes. Provide clear feedback about what type of change was detected and committed.
-
-> ** ATTENTION**: Never execute git workflows yourself, without the use asking you!
