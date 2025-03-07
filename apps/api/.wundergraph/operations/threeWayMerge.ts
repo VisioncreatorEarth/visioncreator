@@ -21,6 +21,9 @@ interface MergeResponse {
  * 
  * When used with drag and drop, the source composite is dragged onto the target composite.
  * The merge creates a patch request in the target composite that needs to be approved.
+ * 
+ * The updated implementation uses JSON Patch operations (RFC 6902) for more accurate
+ * conflict detection and resolution.
  */
 export default createOperation.mutation({
     input: z.object({
@@ -39,6 +42,7 @@ export default createOperation.mutation({
 
         try {
             console.log(`[threeWayMerge] Starting merge from ${input.sourceCompositeId} to ${input.targetCompositeId}`);
+            console.log(`[threeWayMerge] Using RFC 6902 JSON Patch operations for merge`);
 
             if (input.isDragAndDrop) {
                 console.log(`[threeWayMerge] Using drag and drop merge mode`);
@@ -64,7 +68,7 @@ export default createOperation.mutation({
             const typedData = data as MergeResponse;
 
             // Log success metrics
-            console.log(`[threeWayMerge] Successfully merged composites. Metrics: ${JSON.stringify({
+            console.log(`[threeWayMerge] Successfully merged composites using JSON Patch operations. Metrics: ${JSON.stringify({
                 conflicts_detected: typedData.conflicts_detected || 0,
                 operations_count: typedData.operations_count || 0,
                 using_ancestor: typedData.ancestorId ? true : false,
@@ -80,7 +84,8 @@ export default createOperation.mutation({
             return {
                 success: false,
                 error: "Unexpected error",
-                details: error instanceof Error ? error.message : String(error)
+                details: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
             };
         }
     }
