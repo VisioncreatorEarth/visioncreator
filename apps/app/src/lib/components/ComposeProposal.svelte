@@ -23,11 +23,8 @@ This component handles:
 	// Props
 	export let proposalId: string;
 
-	// DOM references
-	let contentEditableRef: HTMLElement;
-
-	// Create a store for the compose tab - default to Content
-	const activeComposeTab = writable<'content' | 'json' | 'diff' | 'schema'>('content');
+	// Create a store for the compose tab - default to JSON
+	const activeComposeTab = writable<'json' | 'diff' | 'schema'>('json');
 
 	// Get current user data
 	const userQuery = createQuery({
@@ -38,7 +35,7 @@ This component handles:
 	// Add TypeScript interfaces to match backend
 	interface ComposeJson {
 		[key: string]: unknown;
-		content?: string;
+		content?: any; // Updated to accept any since content is now a TipTap object
 		schema?: string;
 	}
 
@@ -134,6 +131,115 @@ This component handles:
 
 	// State to track if a composite is being archived
 	let isArchiving = false;
+
+	// Helper function to convert TipTap JSON content to HTML
+	function tiptapToHtml(tiptapContent: any): string {
+		if (!tiptapContent) return '';
+
+		// Check if we have a valid TipTap structure
+		if (typeof tiptapContent !== 'object' || !tiptapContent.type || !tiptapContent.content) {
+			// If it's just a string (old format), return it as is
+			if (typeof tiptapContent === 'string') {
+				return marked(tiptapContent);
+			}
+			return '<p>Invalid content format</p>';
+		}
+
+		try {
+			// Basic conversion of TipTap JSON to HTML
+			let html = '';
+
+			// Process each content node
+			tiptapContent.content.forEach((node: any) => {
+				switch (node.type) {
+					case 'heading':
+						const level = node.attrs?.level || 1;
+						html += `<h${level}>${processNodeContent(node)}</h${level}>`;
+						break;
+					case 'paragraph':
+						html += `<p>${processNodeContent(node)}</p>`;
+						break;
+					case 'bulletList':
+						html += `<ul>${processNodeContent(node)}</ul>`;
+						break;
+					case 'orderedList':
+						html += `<ol>${processNodeContent(node)}</ol>`;
+						break;
+					case 'listItem':
+						html += `<li>${processNodeContent(node)}</li>`;
+						break;
+					case 'blockquote':
+						html += `<blockquote>${processNodeContent(node)}</blockquote>`;
+						break;
+					case 'codeBlock':
+						html += `<pre><code>${processNodeContent(node)}</code></pre>`;
+						break;
+					case 'horizontalRule':
+						html += '<hr>';
+						break;
+					case 'image':
+						const src = node.attrs?.src || '';
+						const alt = node.attrs?.alt || '';
+						html += `<img src="${src}" alt="${alt}">`;
+						break;
+					default:
+						// For unknown node types, just include the content
+						html += processNodeContent(node);
+				}
+			});
+
+			return html;
+		} catch (error) {
+			console.error('Error converting TipTap to HTML:', error);
+			return '<p>Error rendering content</p>';
+		}
+	}
+
+	// Helper function to process node content (recursive)
+	function processNodeContent(node: any): string {
+		if (!node) return '';
+
+		// If it's a text node, apply marks and return text
+		if (node.type === 'text') {
+			let text = node.text || '';
+
+			// Apply marks if any
+			if (node.marks && node.marks.length > 0) {
+				node.marks.forEach((mark: any) => {
+					switch (mark.type) {
+						case 'bold':
+							text = `<strong>${text}</strong>`;
+							break;
+						case 'italic':
+							text = `<em>${text}</em>`;
+							break;
+						case 'underline':
+							text = `<u>${text}</u>`;
+							break;
+						case 'strike':
+							text = `<s>${text}</s>`;
+							break;
+						case 'code':
+							text = `<code>${text}</code>`;
+							break;
+						case 'link':
+							const href = mark.attrs?.href || '#';
+							text = `<a href="${href}">${text}</a>`;
+							break;
+					}
+				});
+			}
+
+			return text;
+		}
+
+		// If the node has content, process each item
+		if (node.content && Array.isArray(node.content)) {
+			return node.content.map((childNode: any) => processNodeContent(childNode)).join('');
+		}
+
+		return '';
+	}
 
 	// Helper functions for operations display
 	// Helper function to get operation type icon
@@ -279,16 +385,12 @@ This component handles:
 			};
 		}
 	}
+
+	// Use the content as-is (can be string or object)
 	$: content = compose_data?.compose_json?.content || '';
 	$: selectedComposite = compose_data?.related_composites?.find(
 		(c) => c.id === selectedCompositeId
 	);
-
-	// Format markdown content
-	$: formattedContent = content ? marked(content) : '';
-	$: formattedSelectedContent = selectedComposite?.compose_json?.content
-		? marked(selectedComposite.compose_json.content)
-		: '';
 
 	// Get the current composite's content ID for editing
 	$: currentComposeId = selectedCompositeId
@@ -296,35 +398,29 @@ This component handles:
 		: compose_data?.compose_id; // Use compose_id for main composite
 
 	// Handle tab changes
-	function handleTabChange(tab: 'content' | 'json' | 'diff' | 'schema') {
+	function handleTabChange(tab: 'json' | 'diff' | 'schema') {
 		// If we have unsaved changes, confirm the user wants to switch tabs
 		if (hasChanges) {
-			if (!confirm('You have unsaved changes. Are you sure you want to switch tabs?')) {
+			if (!confirm('You have unsaved changes. Discard changes?')) {
 				return;
 			}
+			// Reset changes flag
 			hasChanges = false;
 		}
 
+		// Update the active tab
 		$activeComposeTab = tab;
 
-		// If we're switching to content or JSON tab, prepare for possible editing
-		if (tab === 'content') {
-			editContent = selectedCompositeId ? selectedComposite?.compose_json?.content || '' : content;
-			contentBeforeEdit = editContent;
+		// If we're switching to the JSON tab, prepare for possible editing
+		if (tab === 'json') {
+			const currentContent = selectedCompositeId
+				? selectedComposite?.compose_json?.content
+				: content;
 
-			// Store original JSON for later comparison
+			// Store original JSON for comparison when needed
 			originalJson = selectedCompositeId
 				? { ...selectedComposite?.compose_json }
 				: { ...compose_data?.compose_json };
-		} else if (tab === 'json') {
-			const currentJson = selectedCompositeId
-				? selectedComposite?.compose_json
-				: compose_data?.compose_json;
-			editContent = JSON.stringify(currentJson, null, 2);
-			contentBeforeEdit = editContent;
-
-			// Store original JSON for later comparison
-			originalJson = { ...currentJson };
 		}
 	}
 
@@ -344,7 +440,7 @@ This component handles:
 		editMode = false; // Reset edit mode when switching composites
 		selectedEditRequestId = undefined; // Reset edit request selection
 		selectedEditRequest = null; // Reset selected edit request
-		$activeComposeTab = 'content'; // Reset to content tab
+		$activeComposeTab = 'json'; // Reset to json tab instead of content
 
 		// Reset original JSON and content when switching composites
 		if (targetComposite) {
@@ -388,44 +484,12 @@ This component handles:
 		hasChanges = newContent !== contentBeforeEdit;
 	}
 
-	// Set up editor for markdown with proper styling
-	function setupMarkdownEditor() {
-		if (contentEditableRef) {
-			const currentContent = selectedCompositeId
-				? selectedComposite?.compose_json?.content || ''
-				: content;
-
-			// Store the initial content for comparison
-			contentBeforeEdit = currentContent;
-			editContent = currentContent;
-
-			// Set initial content
-			contentEditableRef.innerText = currentContent;
-
-			// Apply basic styling
-			contentEditableRef.style.whiteSpace = 'pre-wrap';
-			contentEditableRef.style.fontFamily = 'monospace';
-		}
-	}
-
-	// Handle content changes in the markdown editor
-	function handleContentInput(e: Event) {
-		if (contentEditableRef) {
-			// Get the plain text content
-			editContent = contentEditableRef.innerText;
-			checkForChanges(editContent);
-		}
-	}
-
 	// Cancel editing and revert changes
 	function cancelEditing() {
 		editContent = contentBeforeEdit;
 		hasChanges = false;
 
-		// Reset editors
-		if (contentEditableRef && $activeComposeTab === 'content') {
-			contentEditableRef.innerText = contentBeforeEdit;
-		}
+		// Reset editors - removed content tab condition
 	}
 
 	// Handle content save
@@ -446,55 +510,37 @@ This component handles:
 			// Get the current composite ID
 			const currentSelectedCompositeId = selectedCompositeId || compose_data?.compose_id;
 
-			if ($activeComposeTab === 'json') {
-				if (hasChanges) {
-					// In edit mode, parse the full JSON from textarea
-					try {
-						// Parse the JSON from the editor - keep everything as is
-						jsonToSave = JSON.parse(editContent);
-
-						// Generate patch operations by comparing with the original JSON
-						patchOperations = jsonpatch.compare(originalJson, jsonToSave);
-						console.log('Generated patch operations:', patchOperations);
-					} catch (error) {
-						toastError('Invalid JSON format. Please check your syntax.');
-						isSubmitting = false;
-						return;
-					}
-				} else if (
-					event &&
-					event instanceof CustomEvent &&
-					'detail' in event &&
-					event.detail &&
-					'json' in event.detail
-				) {
-					// From JsonEditor component - use the full JSON object as is
-					jsonToSave = event.detail.json;
+			if (hasChanges) {
+				// In edit mode, parse the full JSON from textarea
+				try {
+					// Parse the JSON from the editor - keep everything as is
+					jsonToSave = JSON.parse(editContent);
 
 					// Generate patch operations by comparing with the original JSON
 					patchOperations = jsonpatch.compare(originalJson, jsonToSave);
 					console.log('Generated patch operations:', patchOperations);
-				} else {
-					toastError('Unexpected save event');
+				} catch (error) {
+					toastError('Invalid JSON format. Please check your syntax.');
 					isSubmitting = false;
 					return;
 				}
-			} else {
-				// For content tab, update just the content field while preserving other fields
-				jsonToSave = {
-					...currentJson,
-					content: editContent
-				};
-
-				if (!editContent) {
-					toastError('Content cannot be empty');
-					isSubmitting = false;
-					return;
-				}
+			} else if (
+				event &&
+				event instanceof CustomEvent &&
+				'detail' in event &&
+				event.detail &&
+				'json' in event.detail
+			) {
+				// From JsonEditor component - use the full JSON object as is
+				jsonToSave = event.detail.json;
 
 				// Generate patch operations by comparing with the original JSON
 				patchOperations = jsonpatch.compare(originalJson, jsonToSave);
 				console.log('Generated patch operations:', patchOperations);
+			} else {
+				toastError('Unexpected save event');
+				isSubmitting = false;
+				return;
 			}
 
 			if (!currentComposeId) {
@@ -771,7 +817,7 @@ This component handles:
 					on:click={() => {
 						selectedEditRequest = null;
 						selectedEditRequestId = undefined;
-						$activeComposeTab = 'content';
+						$activeComposeTab = 'json';
 					}}
 				>
 					<Icon icon="heroicons:x-mark" class="w-4 h-4" />
@@ -780,14 +826,6 @@ This component handles:
 			{:else}
 				<!-- Normal tab navigation when no patch request is selected -->
 				<div class="flex">
-					<button
-						class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'content'
-							? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
-							: 'text-surface-300 hover:text-surface-200 hover:bg-surface-700/50'}"
-						on:click={() => handleTabChange('content')}
-					>
-						Content
-					</button>
 					<button
 						class="px-6 py-3 text-sm font-medium transition-colors {$activeComposeTab === 'json'
 							? 'bg-surface-700 text-surface-100 border-b-2 border-primary-500'
@@ -1278,78 +1316,10 @@ This component handles:
 						{/if}
 					</div>
 				{:else}
-					<div class="flex flex-col h-full p-6">
-						<div class="flex items-center justify-end mb-4">
-							{#if hasChanges}
-								<div class="flex items-center gap-2">
-									<button
-										class="px-4 py-2 text-sm rounded-lg bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600"
-										on:click={cancelEditing}
-									>
-										Cancel
-									</button>
-									<button
-										class="px-4 py-2 text-sm text-white rounded-lg bg-success-500 hover:bg-success-600"
-										on:click={saveChanges}
-									>
-										Save Changes
-									</button>
-								</div>
-							{/if}
-						</div>
-
-						<div class="flex flex-col gap-4">
-							{#if validationErrors && validationErrors.length > 0}
-								<div class="p-4 mb-4 border rounded-md border-red-500/30 bg-red-900/20">
-									<h3 class="mb-2 font-medium text-red-400">Validation Errors</h3>
-									<ul class="space-y-1 text-sm list-disc list-inside">
-										{#each validationErrors as error}
-											<li class="text-red-300">
-												<span class="font-mono bg-red-900/30 px-1 py-0.5 rounded"
-													>{error.path || 'root'}</span
-												>:
-												{error.message}
-											</li>
-										{/each}
-									</ul>
-								</div>
-							{/if}
-
-							<!-- Content editor with direct inline editing -->
-							<div class="w-full h-[calc(100vh-12rem)] overflow-y-auto">
-								{#if hasChanges}
-									<!-- Show markdown editor with styled appearance -->
-									<div
-										bind:this={contentEditableRef}
-										contenteditable={true}
-										class="w-full h-full p-4 font-mono whitespace-pre-wrap border rounded-lg bg-surface-850 border-surface-700 focus:outline-none focus:border-primary-500 text-surface-100"
-										on:input={handleContentInput}
-									/>
-								{:else}
-									<!-- Show formatted content with click-to-edit capability -->
-									<div
-										class="p-4 prose transition-colors rounded-lg prose-invert max-w-none cursor-text hover:bg-surface-700/20"
-										on:click={() => {
-											hasChanges = true;
-											setTimeout(() => {
-												setupMarkdownEditor();
-												if (contentEditableRef) {
-													contentEditableRef.focus();
-												}
-											}, 0);
-										}}
-									>
-										{@html selectedComposite ? formattedSelectedContent : formattedContent}
-									</div>
-								{/if}
-							</div>
-						</div>
+					<div class="flex items-center justify-center h-full">
+						<div class="text-surface-300">No data available</div>
 					</div>
 				{/if}
-			{:else}
-				<div class="flex items-center justify-center h-full">
-					<div class="text-surface-300">No data available</div>
-				</div>
 			{/if}
 		</div>
 	</main>
