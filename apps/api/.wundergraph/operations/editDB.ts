@@ -113,23 +113,22 @@ export default createOperation.mutation({
             // Log which flow we're using
             console.log(`[editDB] Using ${isUsingOperations ? 'operations-based' : 'JSON-based'} flow`);
 
-            // Log detailed information about the operations if present
-            if (isUsingOperations && input.operations) {
-                console.log(`[editDB] Operations count: ${input.operations.length}`);
-                console.log(`[editDB] Operations:`, JSON.stringify(input.operations, null, 2));
+            // Check if we're creating a variation
+            if (input.createVariation) {
+                console.log(`[editDB] Creating variation with createVariation = ${input.createVariation}`);
             }
 
             // Extract variation metadata if it exists (only for JSON-based flow)
             let jsonToValidate: any = undefined;
             let variationMetadata: { title?: string; description?: string; type?: string } = {};
 
-            if (!isUsingOperations && input.json) {
+            if (input.json) {
                 jsonToValidate = { ...input.json };
 
                 if (input.createVariation && jsonToValidate.__variation_metadata) {
                     variationMetadata = jsonToValidate.__variation_metadata;
-                    // Remove the metadata from the JSON to be validated
-                    delete jsonToValidate.__variation_metadata;
+                    // Keep the metadata for variation creation
+                    console.log('[editDB] Extracted variation metadata:', variationMetadata);
                 }
             }
 
@@ -137,35 +136,57 @@ export default createOperation.mutation({
             let currentContent: any = undefined;
 
             if (isUsingOperations) {
-                // Get the current content to apply operations to
-                const { data: contentData, error: contentFetchError } = await context.supabase.rpc('get_content', {
-                    p_id: input.id
-                });
+                try {
+                    // Get the current content to apply operations to
+                    const { data: contentData, error: contentFetchError } = await context.supabase.rpc('get_content', {
+                        p_id: input.id
+                    });
 
-                if (contentFetchError) {
-                    console.error('[editDB] Error retrieving current content:', contentFetchError);
-                    logErrorDetails(contentFetchError, 'Current content fetch');
-                    return {
-                        success: false,
-                        error: 'Failed to retrieve current content',
-                        details: contentFetchError.message,
-                        fullError: contentFetchError
-                    };
+                    if (contentFetchError) {
+                        console.error('[editDB] Error retrieving current content:', contentFetchError);
+                        logErrorDetails(contentFetchError, 'Current content fetch');
+
+                        // Instead of failing, let's try to proceed without current content for variations
+                        if (!input.createVariation) {
+                            return {
+                                success: false,
+                                error: 'Failed to retrieve current content',
+                                details: contentFetchError.message,
+                                fullError: contentFetchError
+                            };
+                        } else {
+                            console.log('[editDB] Proceeding with variation creation despite content fetch error');
+                        }
+                    } else {
+                        // Cast contentData to our ContentResponse interface
+                        const typedContentData = contentData as ContentResponse;
+
+                        if (!typedContentData || !typedContentData.content) {
+                            console.error('[editDB] No content data returned');
+
+                            // For variations, we'll proceed anyway
+                            if (!input.createVariation) {
+                                return {
+                                    success: false,
+                                    error: 'Content not found',
+                                };
+                            }
+                        } else {
+                            currentContent = typedContentData.content;
+                            console.log('[editDB] Current content retrieved successfully');
+                        }
+                    }
+                } catch (error) {
+                    console.error('[editDB] Error getting content:', error);
+                    // Proceed with the request for variations
+                    if (!input.createVariation) {
+                        return {
+                            success: false,
+                            error: 'Error getting content',
+                            details: error instanceof Error ? error.message : String(error)
+                        };
+                    }
                 }
-
-                // Cast contentData to our ContentResponse interface
-                const typedContentData = contentData as ContentResponse;
-
-                if (!typedContentData || !typedContentData.content) {
-                    console.error('[editDB] No content data returned');
-                    return {
-                        success: false,
-                        error: 'Content not found',
-                    };
-                }
-
-                currentContent = typedContentData.content;
-                console.log('[editDB] Current content retrieved successfully');
             }
 
             // First, get the schema for this content to perform client-side validation
@@ -222,105 +243,88 @@ export default createOperation.mutation({
                 console.warn('[editDB] No schema found for validation, proceeding without client-side validation');
             }
 
-            // Choose which database function to call based on flow
-            if (isUsingOperations) {
-                // Operations-based flow - use the new process_json_patch_operations function
-                console.log('[editDB] Using operations-based flow with server-side validation');
+            // Whether operations-based or JSON-based, we'll always use process_json_patch
+            // For JSON approach, we'll just set operations to empty array
+            console.log('[editDB] Using process_json_patch for all flows, including JSON and variations');
 
-                // Prepare parameters for the database function
-                const operationsParams: any = {
-                    p_content_id: input.id,
-                    p_operations: input.operations,
-                    p_user_id: user.customClaims.id,
-                    p_create_variation: input.createVariation || false
-                };
+            // Prepare parameters for the database function
+            const patchParams: any = {
+                p_content_id: input.id,
+                p_operations: isUsingOperations ? input.operations : [], // Use empty array for JSON-based approach
+                p_user_id: user.customClaims.id,
+                p_create_variation: input.createVariation || false
+            };
 
-                // Add composite ID if provided
-                if (input.compositeId) {
-                    operationsParams.p_composite_id = input.compositeId;
-                    console.log('[editDB] Including composite ID:', input.compositeId);
-                }
-
-                console.log('[editDB] Calling process_json_patch_operations with params:', JSON.stringify(operationsParams, null, 2));
-
-                // Call the new database function for operations-based processing
-                const { data: operationsResult, error: operationsError } = await context.supabase.rpc(
-                    'process_json_patch_operations',
-                    operationsParams
-                );
-
-                if (operationsError) {
-                    console.error('[editDB] Error calling process_json_patch_operations:', operationsError);
-                    logErrorDetails(operationsError, 'Process JSON patch operations');
-
-                    return {
-                        success: false,
-                        error: operationsError.message,
-                        details: operationsError.details || operationsError.message,
-                        fullError: operationsError
-                    };
-                }
-
-                console.log('[editDB] Operations result:', JSON.stringify(operationsResult, null, 2));
-                return operationsResult;
-
-            } else {
-                // JSON-based flow - use the existing edit_content_with_validation function
-                console.log('[editDB] Using JSON-based flow with client-side validation');
-
-                if (!input.json) {
-                    return {
-                        success: false,
-                        error: 'Missing JSON data for update'
-                    };
-                }
-
-                // Prepare parameters for the database function
-                const params: any = {
-                    p_id: input.id,
-                    p_json: jsonToValidate,
-                    p_user_id: user.customClaims.id,
-                    p_create_variation: input.createVariation,
-                    p_variation_type: 'alternative' // Always specify variation_type to resolve function overloading
-                };
-
-                // Add composite ID if provided
-                if (input.compositeId) {
-                    params.p_composite_id = input.compositeId;
-                    console.log('[editDB] Using provided composite ID:', input.compositeId);
-                }
-
-                // Add variation metadata if available
-                if (input.createVariation && Object.keys(variationMetadata).length > 0) {
-                    if (variationMetadata.title) params.p_variation_title = variationMetadata.title;
-                    if (variationMetadata.description) params.p_variation_description = variationMetadata.description;
-                    if (variationMetadata.type) params.p_variation_type = variationMetadata.type;
-                }
-
-                // Call the simplified database function that handles all the logic
-                const { data, error } = await context.supabase.rpc('edit_content_with_validation', params);
-
-                if (error) {
-                    console.error('[editDB] Error calling edit_content_with_validation:', error);
-                    logErrorDetails(error, 'Edit content with validation');
-
-                    // Enhanced error reporting
-                    let errorDetails = error.details || error.message;
-                    let formattedError = {
-                        success: false,
-                        error: error.message,
-                        details: errorDetails,
-                        fullError: error
-                    };
-
-                    // Log more details for debugging
-                    console.debug('[editDB] Full validation error:', JSON.stringify(formattedError, null, 2));
-
-                    return formattedError;
-                }
-
-                return data;
+            // Add composite ID if provided
+            if (input.compositeId) {
+                patchParams.p_composite_id = input.compositeId;
+                console.log('[editDB] Including composite ID:', input.compositeId);
             }
+
+            // For variations, make sure __variation_metadata is properly handled
+            if (input.createVariation) {
+                if (input.json && input.json.__variation_metadata) {
+                    // If we have JSON with metadata directly, use that
+                    console.log('[editDB] Using variation metadata from JSON:', input.json.__variation_metadata);
+
+                    // For operations-based variation, check if we need to add metadata operation
+                    if (isUsingOperations) {
+                        let hasMetadataOp = false;
+
+                        // Check if operations already contain a metadata operation
+                        for (const op of input.operations!) {
+                            if (op.path === '/__variation_metadata' || op.path.startsWith('/__variation_metadata/')) {
+                                hasMetadataOp = true;
+                                break;
+                            }
+                        }
+
+                        // If no metadata operation, ensure the JSON is passed correctly
+                        if (!hasMetadataOp) {
+                            console.log('[editDB] Operations might be missing metadata, process_json_patch will handle variation from JSON');
+                        }
+                    }
+                } else if (isUsingOperations) {
+                    // For operations-based variation, check if we have the necessary operation
+                    let hasMetadataOp = false;
+
+                    for (const op of input.operations!) {
+                        if (op.path === '/__variation_metadata' || op.path.startsWith('/__variation_metadata/')) {
+                            hasMetadataOp = true;
+                            console.log('[editDB] Found variation metadata in operations');
+                            break;
+                        }
+                    }
+
+                    if (!hasMetadataOp) {
+                        console.log('[editDB] Warning: Creating variation but no metadata operation found');
+                    }
+                }
+            }
+
+            console.log('[editDB] Calling process_json_patch with params:', JSON.stringify(patchParams, null, 2));
+
+            // Call process_json_patch for all flows
+            const { data: patchResult, error: patchError } = await context.supabase.rpc(
+                'process_json_patch',
+                patchParams
+            );
+
+            if (patchError) {
+                console.error('[editDB] Error calling process_json_patch:', patchError);
+                logErrorDetails(patchError, 'Process JSON patch');
+
+                return {
+                    success: false,
+                    error: patchError.message,
+                    details: patchError.details || patchError.message,
+                    fullError: patchError
+                };
+            }
+
+            console.log('[editDB] Result:', JSON.stringify(patchResult, null, 2));
+            return patchResult;
+
         } catch (error) {
             console.error('[editDB] Unexpected error:', error);
             return {

@@ -629,8 +629,12 @@ This component handles:
 			}
 
 			if (!sourceComposite) {
+				toastError('Source composite not found');
 				return;
 			}
+
+			// Set up loading state
+			isSubmitting = true;
 
 			// Create a modified JSON that includes metadata for the title and description
 			const modifiedJson = {
@@ -638,14 +642,33 @@ This component handles:
 				__variation_metadata: {
 					title: newVariationTitle,
 					description: newVariationDescription,
-					type: newVariationType
+					type: newVariationType || 'alternative'
 				}
 			};
 
-			// Use the editDB API with createVariation flag instead of createCompositeVariation
+			console.log('Creating variation with JSON:', modifiedJson);
+
+			// Generate operations if possible, to be more compatible with our new approach
+			const operations = [
+				// Add a single operation that adds the variation metadata
+				{
+					op: 'add' as const,
+					path: '/__variation_metadata',
+					value: {
+						title: newVariationTitle,
+						description: newVariationDescription,
+						type: newVariationType || 'alternative'
+					}
+				}
+			];
+
+			console.log('Generated operations for variation:', operations);
+
+			// Use the editDB API with createVariation flag and operations
 			const result = await $editDBMutation.mutateAsync({
 				id: sourceComposite.compose_id as string,
-				json: modifiedJson,
+				json: modifiedJson, // Keep json for backwards compatibility
+				operations: operations, // Add operations for new flow
 				createVariation: true
 			});
 
@@ -654,6 +677,7 @@ This component handles:
 				success?: boolean;
 				compositeId?: string;
 				error?: string;
+				details?: string;
 			}
 
 			// Cast the result to the expected type
@@ -662,16 +686,27 @@ This component handles:
 			if (typedResult && typedResult.success) {
 				await $composeQuery.refetch();
 				isCreatingVariation = false;
+				toastSuccess('Variation created successfully');
 
 				// Select the newly created variation
 				if (typedResult.compositeId) {
 					handleCompositeSelect(typedResult.compositeId);
 				}
 			} else {
-				console.error('Failed to create variation:', typedResult && typedResult.error);
+				console.error('Failed to create variation:', typedResult?.error || 'Unknown error');
+				toastError(
+					`Failed to create variation: ${
+						typedResult?.error || typedResult?.details || 'Unknown error'
+					}`
+				);
 			}
 		} catch (error) {
 			console.error('Error creating variation:', error);
+			toastError(
+				`Error creating variation: ${error instanceof Error ? error.message : 'Unknown error'}`
+			);
+		} finally {
+			isSubmitting = false;
 		}
 	}
 </script>
