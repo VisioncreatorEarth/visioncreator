@@ -3,20 +3,17 @@
   import { fade, fly, scale } from 'svelte/transition';
   import { elasticOut } from 'svelte/easing';
   
-  // Define roadmap milestones with quarters and key deliverables
+  // Define the parallel tracks model
   interface Milestone {
     title: string;
     description: string;
   }
   
-  interface Phase {
+  interface Track {
     id: string;
     title: string;
-    status: 'completed' | 'in-progress' | 'planned' | 'future';
+    color: string;
     milestones: Milestone[];
-    members?: number; // For Fibonacci sequence
-    communityPool?: number; // Accumulated pool funds
-    projects?: number; // Number of projects possible
   }
   
   interface StatusInfo {
@@ -25,151 +22,165 @@
     text: string;
   }
   
-  // Calculate Fibonacci milestones and funding projections
-  const CONTRIBUTION_PER_YEAR = 356; // In euros
-  const TOKEN_PRICE = 365; // In euros 
-  const POOL_PERCENTAGE = 0.75; // 75% goes to community pool
-  const PROJECT_FUNDING_PERCENTAGE = 0.60; // 60% of pool for project funding
-  const CONTRIBUTION_REWARDS_PERCENTAGE = 0.40; // 40% of pool for contribution rewards
-  const AVG_PROJECT_INITIAL_FUNDING = 5000; // Average initial funding per project
+  // Constants for financial projections
+  const INVESTMENT = 365; // One-time investment in euros
+  const PLATFORM_PERCENTAGE = 0.50; // 50% to platform development
+  const POOL_PERCENTAGE = 0.50; // 50% to community pool
+  const OWNERSHIP_DISTRIBUTED = 0.30; // 30% ownership to first 10,000 members
+  const TARGET_MEMBERS = 10000; // Community exit milestone
   
-  // Fibonacci sequence: 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, ...
-  // Starting from 21 members as first milestone
-  const fibonacciMilestones = [21, 34, 55, 89, 144];
-  
-  // Calculate community pool size at each milestone
-  function calculatePoolSize(members: number, years: number = 1): number {
-    return members * CONTRIBUTION_PER_YEAR * POOL_PERCENTAGE * years;
+  // Calculate token distribution and pool size
+  function calculatePoolSize(members: number): number {
+    return members * INVESTMENT * POOL_PERCENTAGE;
   }
   
-  // Calculate number of possible projects for a given pool size
-  function calculatePossibleProjects(poolSize: number): number {
-    const fundingAvailable = poolSize * PROJECT_FUNDING_PERCENTAGE;
-    return Math.floor(fundingAvailable / AVG_PROJECT_INITIAL_FUNDING);
+  function calculatePlatformFunding(members: number): number {
+    return members * INVESTMENT * PLATFORM_PERCENTAGE;
   }
   
-  // Define roadmap data with 2025 onwards focus and calculated metrics
-  const roadmapData: Phase[] = [
+  function calculateTotalFunding(members: number): number {
+    return members * INVESTMENT;
+  }
+  
+  // Define membership milestones
+  const membershipMilestones = [100, 1000, 5000, 10000];
+  
+  // Define the parallel tracks data
+  const tracks: Track[] = [
     {
-      id: 'q1-2025',
-      title: 'Q1 2025',
-      status: 'in-progress',
-      members: fibonacciMilestones[0], // 21 members
-      communityPool: calculatePoolSize(fibonacciMilestones[0]),
-      projects: calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[0])),
+      id: 'platform-track',
+      title: 'Platform Development',
+      color: 'blue',
       milestones: [
-        { title: 'Vision Refinement', description: 'Fine-tuning our collective mission and values' },
-        { title: 'First 21 Members', description: 'Onboarding founding members and pioneers' },
-        { title: 'Initial Pool Formation', description: `€${Math.round(calculatePoolSize(fibonacciMilestones[0]))} community pool established` }
+        { 
+          title: 'Platform Foundation', 
+          description: 'Building the core AI marketplace infrastructure, establishing technical architecture, and implementing basic functionality'
+        },
+        { 
+          title: 'Creator Tools', 
+          description: 'Developing AI-powered tools for digital asset creation, implementing creator profiles and contribution tracking'
+        },
+        { 
+          title: 'Marketplace Expansion', 
+          description: 'Adding advanced features, scaling infrastructure, and implementing recommendation systems as the community grows'
+        },
+        { 
+          title: 'Full-Scale Platform', 
+          description: 'Completing all platform features, ensuring scalability to support thousands of creators and their digital assets'
+        }
       ]
     },
     {
-      id: 'q2-2025',
-      title: 'Q2 2025',
-      status: 'planned',
-      members: fibonacciMilestones[1], // 34 members
-      communityPool: calculatePoolSize(fibonacciMilestones[1]),
-      projects: calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[1])),
+      id: 'community-track',
+      title: 'Community Ownership',
+      color: 'rose',
       milestones: [
-        { title: 'Governance Structure', description: 'Implementing decision-making framework' },
-        { title: 'Growth to 34 Members', description: 'Expanding our founding community' },
-        { title: 'First Project Funding', description: `First ${calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[1]))} community-selected projects funded` }
-      ]
-    },
-    {
-      id: 'q3-2025',
-      title: 'Q3 2025',
-      status: 'planned',
-      members: fibonacciMilestones[2], // 55 members
-      communityPool: calculatePoolSize(fibonacciMilestones[2]),
-      projects: calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[2])),
-      milestones: [
-        { title: 'Token System Launch', description: 'Implementing our ownership and governance token' },
-        { title: 'Growth to 55 Members', description: 'Continued community expansion' },
-        { title: 'Project Acceleration', description: `Supporting ${calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[2]))} community projects` }
-      ]
-    },
-    {
-      id: 'q4-2025',
-      title: 'Q4 2025',
-      status: 'planned',
-      members: fibonacciMilestones[3], // 89 members
-      communityPool: calculatePoolSize(fibonacciMilestones[3]),
-      projects: calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[3])),
-      milestones: [
-        { title: 'Contribution Framework', description: 'Standardizing how value is measured and rewarded' },
-        { title: 'Growth to 89 Members', description: 'Approaching our first major membership milestone' },
-        { title: 'Project Portfolio Expansion', description: `${calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[3]))} diverse projects in the ecosystem` }
-      ]
-    },
-    {
-      id: 'h1-2026',
-      title: 'H1 2026',
-      status: 'future',
-      members: fibonacciMilestones[4], // 144 members
-      communityPool: calculatePoolSize(fibonacciMilestones[4], 1.5), // 1.5 years of accumulation
-      projects: calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[4], 1.5)),
-      milestones: [
-        { title: 'First Major Milestone: 144 Members', description: 'Completing our initial growth phase' },
-        { title: 'Revenue Sharing Implementation', description: 'First profit distributions from successful projects' },
-        { title: 'Sustainable Ecosystem', description: `${calculatePossibleProjects(calculatePoolSize(fibonacciMilestones[4], 1.5))} projects generating value and reinvesting` }
-      ]
-    },
-    {
-      id: 'h2-2026',
-      title: 'H2 2026',
-      status: 'future',
-      members: 233, // Next Fibonacci number
-      communityPool: calculatePoolSize(233, 2), // 2 years of accumulation
-      projects: calculatePossibleProjects(calculatePoolSize(233, 2)),
-      milestones: [
-        { title: 'Growth to 233 Members', description: 'Expanding beyond our core community' },
-        { title: 'Self-Sustaining Projects', description: 'First projects becoming fully independent' },
-        { title: 'Community Space Acquisition', description: 'Physical location for collaboration and innovation' }
-      ]
-    },
-    {
-      id: '2027',
-      title: '2027',
-      status: 'future',
-      members: 377, // Next Fibonacci number
-      communityPool: calculatePoolSize(377, 2.5), // 2.5 years of accumulation
-      projects: calculatePossibleProjects(calculatePoolSize(377, 2.5)),
-      milestones: [
-        { title: 'Growth to 377 Members', description: 'Community scaling and diversification' },
-        { title: 'Regional Expansion', description: 'Establishing hubs in multiple locations' },
-        { title: 'Educational Program Launch', description: 'Training new members in autonomous work principles' }
-      ]
-    },
-    {
-      id: '2028+',
-      title: '2028 & Beyond',
-      status: 'future',
-      members: 610, // Next Fibonacci number
-      communityPool: calculatePoolSize(610, 3), // 3 years of accumulation
-      projects: calculatePossibleProjects(calculatePoolSize(610, 3)),
-      milestones: [
-        { title: 'Vision 2030 Planning', description: 'Setting bold goals for the next decade' },
-        { title: 'Social Impact Measurement', description: 'Quantifying our contribution to societal change' },
-        { title: 'New Work Paradigm Showcase', description: 'Demonstrating our alternative to traditional employment' }
+        { 
+          title: 'Initial Token Distribution', 
+          description: 'Distributing VCR tokens to early members, setting up governance mechanisms, and establishing the community pool'
+        },
+        { 
+          title: 'Governance Framework', 
+          description: 'Implementing proposal and voting systems, creating working groups, and establishing contribution metrics'
+        },
+        { 
+          title: 'Economic Infrastructure', 
+          description: 'Building advanced token utility features, automating revenue sharing, and creating funding mechanisms for community projects'
+        },
+        { 
+          title: 'Community Exit', 
+          description: 'Executing the transition to full DAO governance, giving complete control to the token holders and finalizing the ownership distribution'
+        }
       ]
     }
   ];
   
+  // Milestone projections for financial metrics (without token value)
+  const milestoneProjections = membershipMilestones.map(members => {
+    return {
+      members,
+      poolSize: calculatePoolSize(members),
+      platformFunding: calculatePlatformFunding(members),
+      totalFunding: calculateTotalFunding(members)
+      // tokenValue is no longer included
+    };
+  });
+  
+  // Core value props for different stakeholders
+  const valueProps = [
+    {
+      title: 'For Creators',
+      color: 'amber',
+      items: [
+        'Immediate access to AI tools for building digital assets',
+        'Earn VCR tokens through platform contributions',
+        'Build ownership in a growing ecosystem'
+      ]
+    },
+    {
+      title: 'For Investors',
+      color: 'emerald',
+      items: [
+        'Unique dual-investment model: financial + contribution',
+        'Clear exit strategy at 10,000 member milestone',
+        '30% ownership distributed through VCR tokens'
+      ]
+    },
+    {
+      title: 'For Partners',
+      color: 'cyan',
+      items: [
+        'Join an ecosystem with built-in distribution channel',
+        'Leverage community resources for development',
+        'Align with next-generation ownership model'
+      ]
+    }
+  ];
+  
+  // Key metrics for the model
+  const keyMetrics = [
+    { metric: 'One-time Investment', value: '€365', description: 'Single payment for membership' },
+    { metric: 'Investment Split', value: '50/50', description: 'Platform development / Community pool' },
+    { metric: 'Ownership Distribution', value: '30%', description: 'To first 10,000 members' },
+    { metric: 'Community Treasury', value: '€1.8M+', description: 'At 10,000 members milestone' },
+    { metric: 'Community Governance', value: '100%', description: 'After DAO transformation' }
+  ];
+  
   // Viewport intersection detection for animations
-  let sections: HTMLElement[] = [];
-  let fundingSection: HTMLElement;
+  let trackSections: HTMLElement[] = [];
+  let investmentSection: HTMLElement;
+  let valuePropSection: HTMLElement;
+  let metricsSection: HTMLElement;
+  let convergenceSection: HTMLElement;
   let intersectionObserver: IntersectionObserver;
   let visibleSections = new Set<string>();
-  let showFundingModel = false;
+  let showInvestmentModel = false;
+  let showValueProps = false;
+  let showMetrics = false;
+  let showConvergence = false;
   
   onMount(() => {
     // Set up intersection observer for animation triggers
     intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting && entry.target instanceof HTMLElement) {
-          if (entry.target === fundingSection) {
-            showFundingModel = true;
+          if (entry.target === investmentSection) {
+            showInvestmentModel = true;
+            return;
+          }
+          
+          if (entry.target === valuePropSection) {
+            showValueProps = true;
+            return;
+          }
+          
+          if (entry.target === metricsSection) {
+            showMetrics = true;
+            return;
+          }
+          
+          if (entry.target === convergenceSection) {
+            showConvergence = true;
             return;
           }
           
@@ -182,16 +193,28 @@
       });
     }, { threshold: 0.2 });
     
-    // Observe all milestone sections
-    sections.forEach(section => {
+    // Observe all track sections
+    trackSections.forEach(section => {
       if (section) {
         intersectionObserver.observe(section);
       }
     });
     
-    // Observe funding model section
-    if (fundingSection) {
-      intersectionObserver.observe(fundingSection);
+    // Observe other sections
+    if (investmentSection) {
+      intersectionObserver.observe(investmentSection);
+    }
+    
+    if (valuePropSection) {
+      intersectionObserver.observe(valuePropSection);
+    }
+    
+    if (metricsSection) {
+      intersectionObserver.observe(metricsSection);
+    }
+    
+    if (convergenceSection) {
+      intersectionObserver.observe(convergenceSection);
     }
     
     return () => {
@@ -201,22 +224,6 @@
     };
   });
   
-  // Helper to determine status color and icon
-  function getStatusInfo(status: string): StatusInfo {
-    switch (status) {
-      case 'completed':
-        return { color: 'emerald', icon: 'check-circle', text: 'Completed' };
-      case 'in-progress':
-        return { color: 'blue', icon: 'clock', text: 'In Progress' };
-      case 'planned':
-        return { color: 'amber', icon: 'calendar', text: 'Planned' };
-      case 'future':
-        return { color: 'purple', icon: 'star', text: 'Future Vision' };
-      default:
-        return { color: 'gray', icon: 'circle', text: 'Undefined' };
-    }
-  }
-  
   // Format numbers for better readability
   function formatNumber(num: number): string {
     return new Intl.NumberFormat('en-US').format(Math.round(num));
@@ -224,161 +231,96 @@
 </script>
 
 <svelte:head>
-  <title>VisionCreator Roadmap</title>
-  <meta name="description" content="VisionCreator development roadmap and milestone timeline from 2025 onwards">
+  <title>VisionCreator Model</title>
+  <meta name="description" content="VisionCreator - Community-Powered Startup with Parallel Tracks of Development and Ownership">
 </svelte:head>
 
 <!-- Hero section -->
 <section class="py-16 md:py-24 bg-gradient-to-b from-rose-900/20 to-transparent">
   <div class="container mx-auto px-4 md:px-8">
     <div class="max-w-3xl mx-auto text-center" in:fade={{ duration: 800, delay: 200 }}>
-      <h1 class="text-4xl md:text-5xl font-bold mb-6 text-white">Our <span class="text-rose-400">Vision Path</span></h1>
+      <h1 class="text-4xl md:text-5xl font-bold mb-6 text-white">The <span class="text-rose-400">Community-Powered</span> Startup</h1>
       <p class="text-xl text-gray-300 mb-8">
-        From 2025 onwards, we're building a revolutionary system for work and financial autonomy. 
-        Join us as €1/day contributes to our collective future.
+        Building and ownership on parallel tracks, converging at our 10,000 member milestone.
       </p>
       
-      <div class="flex flex-wrap gap-6 justify-center">
-        {#each ['completed', 'in-progress', 'planned', 'future'] as status}
-          {@const info = getStatusInfo(status)}
-          <div class="flex items-center gap-2">
-            <div class={`w-3 h-3 rounded-full bg-${info.color}-500`}></div>
-            <span class="text-gray-300 text-sm">{info.text}</span>
-          </div>
-        {/each}
+      <div class="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 mt-8 shadow-lg">
+        <p class="text-lg text-slate-300 italic leading-relaxed">
+          "VisionCreator combines startup building with community ownership from day one. This isn't sequential phases—it's parallel tracks of building and ownership that converge at our community milestone."
+        </p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Funding Model Explanation -->
-<section class="py-16 bg-gradient-to-b from-gray-900 to-gray-900/30" bind:this={fundingSection}>
+<!-- Investment Model Explanation -->
+<section class="py-16 bg-gradient-to-b from-gray-900 to-gray-900/30" bind:this={investmentSection}>
   <div class="container mx-auto px-4 md:px-8">
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold text-center mb-10 text-rose-400" in:fade={{ duration: 800 }}>
-        How Our Funding Works
+        One Investment, Two Paths
       </h2>
       
-      {#if showFundingModel}
-        <div class="grid gap-8 md:grid-cols-2 mb-16">
-          <!-- Contribution Model -->
-          <div 
-            class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-lg"
-            in:fly={{ x: -50, duration: 800 }}
+      {#if showInvestmentModel}
+        <div class="relative mb-20">
+          <!-- Central investment circle -->
+          <div class="relative z-10 mx-auto w-56 h-56 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center border-4 border-rose-500/30 shadow-lg shadow-rose-900/20"
+            in:scale={{ delay: 200, duration: 800, start: 0.5, opacity: 0 }}
           >
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center">
-              <div class="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center mr-3 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
-                </svg>
-              </div>
-              Member Contributions
-            </h3>
-            
-            <div class="space-y-4 text-gray-300">
-              <div class="flex items-center justify-between">
-                <span>Daily:</span>
-                <span class="font-mono bg-rose-900/30 px-2 py-1 rounded">€1 / day</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span>Monthly:</span>
-                <span class="font-mono bg-rose-900/30 px-2 py-1 rounded">€30 / month</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span>Yearly:</span>
-                <span class="font-mono bg-rose-900/30 px-2 py-1 rounded">€356 / year</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span>5-Year Total:</span>
-                <span class="font-mono bg-rose-900/30 px-2 py-1 rounded">€1,825 / member</span>
-              </div>
-              
-              <div class="pt-4 text-sm">
-                <p>Each member contributes just €1 per day, making participation accessible to most people. This small individual contribution becomes powerful when pooled together.</p>
-              </div>
-            </div>
+            <div class="text-5xl font-bold text-rose-400">€365</div>
+            <div class="text-gray-300 text-center mt-2">One-time<br>Investment</div>
           </div>
           
-          <!-- Pool Allocation -->
-          <div 
-            class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-lg"
-            in:fly={{ x: 50, duration: 800 }}
+          <!-- Split arrows and destination boxes -->
+          <div class="absolute top-[calc(50%-2rem)] left-0 right-0 flex justify-between items-center"
+            in:fade={{ delay: 800, duration: 800 }}
           >
-            <h3 class="text-xl font-bold text-white mb-4 flex items-center">
-              <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
+            <!-- Platform Development Arrow (Left) -->
+            <div class="flex flex-col items-center space-y-4 w-1/3">
+              <div class="text-blue-400 font-bold">50%</div>
+              <div class="h-32 w-48 border-t-4 border-r-4 border-blue-500/40 rounded-tr-3xl"></div>
+              <div class="bg-blue-900/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-4 shadow-lg">
+                <h3 class="text-xl font-semibold text-blue-400 mb-2">Platform Development</h3>
+                <p class="text-sm text-gray-300">Building the AI marketplace infrastructure and creator tools</p>
               </div>
-              Community Pool Allocation
-            </h3>
+            </div>
             
-            <div class="space-y-6 text-gray-300">
-              <div class="flex flex-col gap-2">
-                <div class="w-full bg-gray-700 h-6 rounded-full overflow-hidden relative">
-                  <div class="absolute inset-0 h-full w-3/4 bg-gradient-to-r from-blue-600 to-rose-500"></div>
-                  <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold">75% to Community Pool</div>
-                </div>
-                <div class="w-full bg-gray-700 h-6 rounded-full overflow-hidden relative">
-                  <div class="absolute inset-0 h-full w-1/4 bg-gradient-to-r from-emerald-600 to-emerald-400"></div>
-                  <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold">25% to Member</div>
-                </div>
-              </div>
-              
-              <div class="space-y-2">
-                <h4 class="font-semibold text-white">Pool Distribution:</h4>
-                <div class="flex flex-col gap-2">
-                  <div class="w-full bg-gray-700 h-6 rounded-full overflow-hidden relative">
-                    <div class="absolute inset-0 h-full w-3/5 bg-gradient-to-r from-amber-500 to-red-500"></div>
-                    <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold">60% Project Funding</div>
-                  </div>
-                  <div class="w-full bg-gray-700 h-6 rounded-full overflow-hidden relative">
-                    <div class="absolute inset-0 h-full w-2/5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                    <div class="absolute inset-0 flex items-center justify-center text-xs font-semibold">40% Contribution Rewards</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="pt-2 text-sm">
-                <p>75% of all contributions and token purchases go to the community pool, creating a powerful collective resource. This pool is then allocated to fund new projects (60%) and reward valuable contributions (40%).</p>
+            <!-- Community Pool Arrow (Right) -->
+            <div class="flex flex-col items-center space-y-4 w-1/3">
+              <div class="text-rose-400 font-bold">50%</div>
+              <div class="h-32 w-48 border-t-4 border-l-4 border-rose-500/40 rounded-tl-3xl"></div>
+              <div class="bg-rose-900/20 backdrop-blur-sm border border-rose-500/30 rounded-xl p-4 shadow-lg">
+                <h3 class="text-xl font-semibold text-rose-400 mb-2">Community Pool</h3>
+                <p class="text-sm text-gray-300">Funding community projects and distributing ownership</p>
               </div>
             </div>
           </div>
         </div>
         
-        <!-- Growth Visualization -->
+        <!-- Investment Projections Table -->
         <div 
-          class="bg-gray-800/30 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-xl mb-12"
-          in:fly={{ y: 50, duration: 800, delay: 200 }}
+          class="bg-gray-800/30 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-xl mt-16"
+          in:fly={{ y: 50, duration: 800, delay: 400 }}
         >
-          <h3 class="text-2xl font-bold text-white mb-6 text-center">Fibonacci Growth Projections</h3>
+          <h3 class="text-2xl font-bold text-white mb-6 text-center">Milestone Projections</h3>
           
           <div class="overflow-x-auto">
             <table class="w-full text-sm text-left text-gray-300">
               <thead class="text-xs uppercase bg-gray-800 text-gray-400">
                 <tr>
-                  <th class="px-4 py-3 rounded-tl-lg">Period</th>
-                  <th class="px-4 py-3">Members</th>
+                  <th class="px-4 py-3 rounded-tl-lg">Members</th>
+                  <th class="px-4 py-3">Platform Funding</th>
                   <th class="px-4 py-3">Community Pool</th>
-                  <th class="px-4 py-3">Project Funding</th>
-                  <th class="px-4 py-3">Possible Projects</th>
-                  <th class="px-4 py-3 rounded-tr-lg">Contribution Rewards</th>
+                  <th class="px-4 py-3 rounded-tr-lg">Total Funding</th>
                 </tr>
               </thead>
               <tbody>
-                {#each roadmapData as phase, i}
-                  {@const poolSize = phase.communityPool || 0}
-                  {@const projectFunding = poolSize * PROJECT_FUNDING_PERCENTAGE}
-                  {@const contributionRewards = poolSize * CONTRIBUTION_REWARDS_PERCENTAGE}
-                  
+                {#each milestoneProjections as projection, i}
                   <tr class={i % 2 === 0 ? 'bg-gray-800/30' : 'bg-gray-900/30'}>
-                    <td class="px-4 py-4 font-medium text-white">{phase.title}</td>
-                    <td class="px-4 py-4 font-mono">{phase.members || 0}</td>
-                    <td class="px-4 py-4 font-mono">€{formatNumber(poolSize)}</td>
-                    <td class="px-4 py-4 font-mono">€{formatNumber(projectFunding)}</td>
-                    <td class="px-4 py-4 font-mono">{phase.projects || 0}</td>
-                    <td class="px-4 py-4 font-mono">€{formatNumber(contributionRewards)}</td>
+                    <td class="px-4 py-4 font-medium text-white">{formatNumber(projection.members)}</td>
+                    <td class="px-4 py-4 font-mono">€{formatNumber(projection.platformFunding)}</td>
+                    <td class="px-4 py-4 font-mono">€{formatNumber(projection.poolSize)}</td>
+                    <td class="px-4 py-4 font-mono">€{formatNumber(projection.totalFunding)}</td>
                   </tr>
                 {/each}
               </tbody>
@@ -386,8 +328,7 @@
           </div>
           
           <div class="mt-6 text-sm text-gray-400 text-center">
-            <p>Based on €356 annual contribution per member with 75% allocated to community pool.</p>
-            <p>Projects receive an average of €5,000 initial funding, with 60% of pool directed to project funding.</p>
+            <p>Early members receive a proportionally larger share of the 30% ownership allocation distributed to the first 10,000 members.</p>
           </div>
         </div>
       {/if}
@@ -395,111 +336,245 @@
   </div>
 </section>
 
-<!-- Development Timeline heading -->
-<section class="py-8">
+<!-- Parallel Tracks Visualization -->
+<section class="py-16 bg-gradient-to-b from-gray-900/80 to-gray-900/30">
   <div class="container mx-auto px-4 md:px-8">
-    <div class="max-w-3xl mx-auto text-center mb-12" in:fade={{ duration: 800 }}>
-      <h2 class="text-3xl font-bold text-white">Development Timeline</h2>
-      <p class="text-gray-300 mt-4">
-        From 2025 onwards, we'll be building the VisionCreator ecosystem. 
-        Follow our path from the first 21 members to a community of hundreds.
-      </p>
-    </div>
-  </div>
-</section>
-
-<!-- Timeline section -->
-<section class="py-12 pb-24">
-  <div class="container mx-auto px-4 md:px-8">
-    <!-- Interactive timeline -->
-    <div class="relative">
-      <!-- Center line -->
-      <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gray-700"></div>
+    <div class="max-w-5xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-16 text-white" in:fade={{ duration: 800 }}>
+        Parallel Tracks, One Vision
+      </h2>
       
-      <!-- Timeline items -->
       <div class="relative">
-        {#each roadmapData as phase, index}
-          {@const info = getStatusInfo(phase.status)}
-          {@const isEven = index % 2 === 0}
-          
-          <div 
-            class="mb-24 relative"
-            data-id={phase.id}
-            bind:this={sections[index]}
-          >
-            <!-- Timeline circle indicator -->
-            <div 
-              class={`absolute left-1/2 transform -translate-x-1/2 -translate-y-4 w-8 h-8 rounded-full border-4 border-gray-800 z-10 bg-${info.color}-500`}
-            ></div>
+        <!-- Track lines -->
+        <div class="absolute inset-x-0 top-10 flex justify-center">
+          <div class="w-1/3 relative">
+            <div class="absolute top-0 bottom-0 left-1/2 w-2 bg-blue-500/20 rounded-full"></div>
+          </div>
+          <div class="w-1/3 relative">
+            <div class="absolute top-0 bottom-0 left-1/2 w-2 bg-rose-500/20 rounded-full"></div>
+          </div>
+        </div>
+        
+        <!-- Member milestone indicators -->
+        <div class="relative">
+          <div class="py-8 mb-12">
+            <!-- Track headers -->
+            <div class="grid grid-cols-2 mb-12 relative z-10">
+              <div class="text-center">
+                <h3 class="text-2xl font-bold text-blue-400 mb-2">Platform Development</h3>
+                <div class="w-16 h-16 mx-auto rounded-full bg-blue-900/30 border-4 border-blue-500/30 flex items-center justify-center text-blue-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                </div>
+              </div>
+              <div class="text-center">
+                <h3 class="text-2xl font-bold text-rose-400 mb-2">Community Ownership</h3>
+                <div class="w-16 h-16 mx-auto rounded-full bg-rose-900/30 border-4 border-rose-500/30 flex items-center justify-center text-rose-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
             
-            <!-- Timeline card -->
-            {#if visibleSections.has(phase.id)}
+            <!-- Milestone connections -->
+            {#each membershipMilestones as members, index}
+              {@const lastMilestone = index === membershipMilestones.length - 1}
+              
               <div 
-                class={`flex flex-col md:flex-row gap-4 md:items-center ${isEven ? 'md:flex-row-reverse' : ''}`}
-                in:fly={{ x: isEven ? 50 : -50, duration: 800, delay: 200 }}
+                class="relative mb-32"
+                data-id={`milestone-${members}`}
+                bind:this={trackSections[index]}
               >
-                <!-- Phase title and metrics -->
-                <div class={`md:w-1/5 text-center ${isEven ? 'md:text-left' : 'md:text-right'}`}>
-                  <div class={`text-2xl font-bold text-${info.color}-400`}>{phase.title}</div>
-                  <div class={`inline-flex items-center gap-1.5 mt-2 bg-${info.color}-900/30 text-${info.color}-300 px-3 py-1 rounded-full text-sm`}>
-                    {#if info.icon === 'check-circle'}
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                      </svg>
-                    {:else if info.icon === 'clock'}
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
-                      </svg>
-                    {:else if info.icon === 'calendar'}
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
-                      </svg>
-                    {:else}
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    {/if}
-                    <span>{info.text}</span>
+                <!-- Member milestone circle -->
+                <div class="absolute left-1/2 transform -translate-x-1/2 top-16 flex flex-col items-center z-20">
+                  <div 
+                    class={`w-24 h-24 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 flex flex-col items-center justify-center border-4 ${lastMilestone ? 'border-purple-500/50' : 'border-amber-500/30'} shadow-lg shadow-amber-900/10`}
+                    in:scale={{ delay: 200 + (index * 200), duration: 800, start: 0.5, opacity: 0 }}
+                  >
+                    <div class={`text-2xl font-bold ${lastMilestone ? 'text-purple-400' : 'text-amber-400'}`}>{formatNumber(members)}</div>
+                    <div class="text-gray-300 text-xs mt-1">Members</div>
                   </div>
                   
-                  {#if phase.members}
-                    <div class="mt-4 space-y-2">
-                      <div class="text-gray-400 text-sm">
-                        <span class="font-medium text-white">{phase.members}</span> members
-                      </div>
-                      <div class="text-gray-400 text-sm">
-                        <span class="font-medium text-emerald-400">€{formatNumber(phase.communityPool || 0)}</span> pool
-                      </div>
-                      <div class="text-gray-400 text-sm">
-                        <span class="font-medium text-amber-400">{phase.projects}</span> projects
-                      </div>
+                  {#if lastMilestone}
+                    <div 
+                      class="mt-4 bg-purple-900/30 backdrop-blur-sm border border-purple-500/30 rounded-full px-4 py-1"
+                      in:fade={{ delay: 600 + (index * 200), duration: 800 }}
+                    >
+                      <span class="text-sm font-medium text-purple-300">Community Exit Milestone</span>
                     </div>
                   {/if}
                 </div>
                 
-                <!-- Milestones card -->
-                <div class={`md:w-4/5 ${isEven ? 'md:pr-24' : 'md:pl-24'}`}>
-                  <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-lg">
-                    <ul class="space-y-4">
-                      {#each phase.milestones as milestone, i}
-                        <li class="flex gap-4 items-start" in:fly={{ y: 10, duration: 400, delay: 200 + (i * 100) }}>
-                          <div class={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-${info.color}-900/40 text-${info.color}-400`}>
-                            {i + 1}
-                          </div>
-                          <div>
-                            <h3 class="text-lg font-medium text-white">{milestone.title}</h3>
-                            <p class="text-gray-300 mt-1">{milestone.description}</p>
-                          </div>
-                        </li>
-                      {/each}
-                    </ul>
+                <!-- Milestone cards for each track -->
+                {#if visibleSections.has(`milestone-${members}`)}
+                  <div class="grid grid-cols-2 gap-8 mt-48">
+                    <!-- Platform track milestone -->
+                    <div 
+                      class="bg-gray-800/50 backdrop-blur-sm border border-blue-500/20 rounded-xl p-6 shadow-lg transform transition-all duration-500 hover:scale-105 hover:border-blue-500/50"
+                      in:fly={{ x: -50, duration: 800, delay: 400 + (index * 200) }}
+                    >
+                      <h4 class="text-xl font-semibold text-blue-300 mb-3">{tracks[0].milestones[index].title}</h4>
+                      <p class="text-gray-300 text-sm leading-relaxed">{tracks[0].milestones[index].description}</p>
+                    </div>
+                    
+                    <!-- Community track milestone -->
+                    <div 
+                      class="bg-gray-800/50 backdrop-blur-sm border border-rose-500/20 rounded-xl p-6 shadow-lg transform transition-all duration-500 hover:scale-105 hover:border-rose-500/50"
+                      in:fly={{ x: 50, duration: 800, delay: 400 + (index * 200) }}
+                    >
+                      <h4 class="text-xl font-semibold text-rose-300 mb-3">{tracks[1].milestones[index].title}</h4>
+                      <p class="text-gray-300 text-sm leading-relaxed">{tracks[1].milestones[index].description}</p>
+                    </div>
                   </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Convergence Model -->
+<section class="py-16 bg-gradient-to-b from-gray-900/50 to-gray-900" bind:this={convergenceSection}>
+  <div class="container mx-auto px-4 md:px-8">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-12 text-white" in:fade={{ duration: 800 }}>
+        The Convergence
+      </h2>
+      
+      {#if showConvergence}
+        <div 
+          class="relative py-16"
+          in:fade={{ duration: 1200 }}
+        >
+          <!-- Convergence diagram -->
+          <div class="flex justify-center items-end mb-12">
+            <!-- Left track -->
+            <div class="w-1/3 flex flex-col items-center">
+              <div class="w-48 h-48 rounded-lg bg-gradient-to-br from-blue-900/50 to-blue-800/20 border border-blue-500/30 flex flex-col items-center justify-center p-4 mb-8"
+                in:fly={{ x: -30, y: 30, duration: 800, delay: 200 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+                <div class="text-lg font-semibold text-blue-300 text-center">Platform Track</div>
+              </div>
+              <div class="h-24 w-32 border-b-4 border-r-4 border-blue-500/40 rounded-br-3xl"></div>
+            </div>
+            
+            <!-- Right track -->
+            <div class="w-1/3 flex flex-col items-center">
+              <div class="w-48 h-48 rounded-lg bg-gradient-to-br from-rose-900/50 to-rose-800/20 border border-rose-500/30 flex flex-col items-center justify-center p-4 mb-8"
+                in:fly={{ x: 30, y: 30, duration: 800, delay: 200 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-rose-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <div class="text-lg font-semibold text-rose-300 text-center">Ownership Track</div>
+              </div>
+              <div class="h-24 w-32 border-b-4 border-l-4 border-rose-500/40 rounded-bl-3xl"></div>
+            </div>
+          </div>
+          
+          <!-- Converged DAO -->
+          <div class="max-w-2xl mx-auto"
+            in:scale={{ delay: 400, duration: 1200, start: 0.5, opacity: 0 }}
+          >
+            <div class="bg-gradient-to-br from-purple-900/40 to-indigo-900/20 backdrop-blur-sm border border-purple-500/30 rounded-xl p-8 shadow-lg text-center">
+              <div class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-purple-800 to-indigo-900 flex items-center justify-center mb-6 border-4 border-purple-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+              </div>
+              <h3 class="text-2xl font-bold text-purple-300 mb-4">Community-Owned DAO</h3>
+              <p class="text-gray-300 mb-6">At 10,000 members, VisionCreator transforms into a fully community-governed DAO where token holders completely control the platform's future.</p>
+              
+              <div class="grid grid-cols-3 gap-4 mt-8">
+                <div class="bg-gray-800/50 rounded-lg p-4">
+                  <div class="text-xl font-bold text-purple-300">100%</div>
+                  <div class="text-sm text-gray-400">Community Governance</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-lg p-4">
+                  <div class="text-xl font-bold text-purple-300">30%</div>
+                  <div class="text-sm text-gray-400">Ownership Distributed</div>
+                </div>
+                <div class="bg-gray-800/50 rounded-lg p-4">
+                  <div class="text-xl font-bold text-purple-300">€3.65M</div>
+                  <div class="text-sm text-gray-400">Total Investment</div>
                 </div>
               </div>
-            {/if}
+            </div>
           </div>
-        {/each}
-      </div>
+        </div>
+      {/if}
+    </div>
+  </div>
+</section>
+
+<!-- Value Proposition Section -->
+<section class="py-16 bg-gradient-to-b from-gray-900 to-gray-800" bind:this={valuePropSection}>
+  <div class="container mx-auto px-4 md:px-8">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-10 text-white" in:fade={{ duration: 800 }}>
+        The Value Proposition
+      </h2>
+      
+      {#if showValueProps}
+        <div class="grid gap-6 md:grid-cols-3 mb-12">
+          {#each valueProps as prop, i}
+            <div 
+              class={`bg-gray-800/50 backdrop-blur-sm border border-${prop.color}-500/20 rounded-xl p-6 shadow-lg h-full transform transition-all duration-500 hover:scale-105 hover:border-${prop.color}-500/40`}
+              in:fly={{ y: 20, x: (i - 1) * 20, duration: 800, delay: 200 + (i * 150) }}
+            >
+              <h3 class={`text-xl font-bold text-${prop.color}-400 mb-4`}>{prop.title}</h3>
+              <ul class="space-y-3">
+                {#each prop.items as item}
+                  <li class="flex items-start">
+                    <span class={`text-${prop.color}-400 mr-2 mt-1`}>→</span>
+                    <span class="text-gray-300 text-sm">{item}</span>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  </div>
+</section>
+
+<!-- Key Metrics Section -->
+<section class="py-16 bg-gradient-to-b from-gray-800 to-gray-900" bind:this={metricsSection}>
+  <div class="container mx-auto px-4 md:px-8">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="text-3xl font-bold text-center mb-10 text-rose-400" in:fade={{ duration: 800 }}>
+        The Numbers That Matter
+      </h2>
+      
+      {#if showMetrics}
+        <div class="grid gap-4 md:grid-cols-5 mb-12">
+          {#each keyMetrics as metric, i}
+            <div 
+              class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-5 shadow-lg text-center"
+              in:scale={{ delay: 200 + (i * 100), duration: 600, start: 0.8, opacity: 0 }}
+            >
+              <div class="text-2xl md:text-3xl font-bold text-rose-400 mb-2">{metric.value}</div>
+              <h3 class="text-sm font-medium text-white mb-1">{metric.metric}</h3>
+              <p class="text-xs text-gray-400">{metric.description}</p>
+            </div>
+          {/each}
+        </div>
+        
+        <div class="text-center mt-8" in:fade={{ delay: 1000, duration: 800 }}>
+          <p class="text-lg text-gray-300 italic">
+            "VisionCreator isn't just a startup—it's a new economic model where everyone building is also investing, while still accommodating passive investors who want to be part of our journey without active contribution."
+          </p>
+        </div>
+      {/if}
     </div>
   </div>
 </section>
@@ -508,21 +583,21 @@
 <section class="py-16 bg-gradient-to-b from-gray-900 to-black">
   <div class="container mx-auto px-4 md:px-8">
     <div class="max-w-3xl mx-auto text-center">
-      <h2 class="text-3xl font-bold text-white mb-6">Be a Founding Pioneer</h2>
+      <h2 class="text-3xl font-bold text-white mb-6">Join the Community</h2>
       <p class="text-xl text-gray-300 mb-8">
-        Our vision for 2025 and beyond requires dedicated early adopters who believe in a better way to work and create value. With just €1 per day, you'll be among the first 100 members shaping this revolutionary ecosystem from the ground up.
+        Be among the first 10,000 members who will own and govern VisionCreator. For just €365, you'll secure your place in building the future of work, ownership, and community-powered innovation.
       </p>
       
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
         <a href="#" class="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-600 rounded-md text-white font-bold hover:from-rose-400 hover:to-pink-500 transition-all shadow-lg">
-          Reserve Your Membership
+          Become a Member
         </a>
         <a href="/presentation" class="px-8 py-4 bg-gray-800 hover:bg-gray-700 rounded-md text-white font-medium transition-all">
           Watch Our Presentation
         </a>
       </div>
       
-      <p class="text-gray-400 mt-6">Limited to the first 100 members. Early pioneers receive founder benefits.</p>
+      <p class="text-gray-400 mt-6">Early members receive more valuable token allocations than later ones.</p>
     </div>
   </div>
 </section> 
