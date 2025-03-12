@@ -2,103 +2,106 @@
   import { onMount } from 'svelte';
   import SlideThumbnail from '$lib/components/SlideThumbnail.svelte';
   
-  // Import all slides
-  import HelloEarth from '$lib/slides/HelloEarth.svelte';
-  import HumanQuestion from '$lib/slides/HumanQuestion.svelte';
-  import AutonomyAnswer from '$lib/slides/AutonomyAnswer.svelte';
-  import DailyProblem from '$lib/slides/DailyProblem.svelte';
-  import WorkChoices from '$lib/slides/WorkChoices.svelte';
-  import BetterSolution from '$lib/slides/BetterSolution.svelte';
-  import FalseBinary from '$lib/slides/FalseBinary.svelte';
-  import FreedomDimensions from '$lib/slides/FreedomDimensions.svelte';
-  import DAOIntro from '$lib/slides/DAOIntro.svelte';
-  import DAOExplained from '$lib/slides/DAOExplained.svelte';
-  import DAOExamples from '$lib/slides/DAOExamples.svelte';
-  import TokenSystem from '$lib/slides/TokenSystem.svelte'; 
-  import VisionCreatorPool from '$lib/slides/VisionCreatorPool.svelte';
-  import MoneyFlows from '$lib/slides/MoneyFlows.svelte';
-  import ProposalSystem from '$lib/slides/ProposalSystem.svelte';
-  import AutonomousLife from '$lib/slides/AutonomousLife.svelte';
-  import PathToFreedom from '$lib/slides/PathToFreedom.svelte';
-  import ReclaimWork from '$lib/slides/ReclaimWork.svelte';
+  // Import new slides for Presentation 2.0
+  import OutdatedWork from '$lib/slides/OutdatedWork.svelte';
+  import RootCauses from '$lib/slides/RootCauses.svelte';
+  import WhyThisMatters from '$lib/slides/WhyThisMatters.svelte';
+  import CoreHumanNeeds from '$lib/slides/CoreHumanNeeds.svelte';
+  import AchievingCoreNeeds from '$lib/slides/AchievingCoreNeeds.svelte';
+  import IntegratedOrganization from '$lib/slides/IntegratedOrganization.svelte';
+  import IntroducingVisioncreator from '$lib/slides/IntroducingVisioncreator.svelte';
+  import OrganizationalPrinciples from '$lib/slides/OrganizationalPrinciples.svelte';
+  import DAOConcept from '$lib/slides/DAOConcept.svelte';
+  import VisioncreatorImplementation from '$lib/slides/VisioncreatorImplementation.svelte';
+  import HominioAITool from '$lib/slides/HominioAITool.svelte';
+  import ProductDetails1 from '$lib/slides/ProductDetails1.svelte';
+  import ProductDetails2 from '$lib/slides/ProductDetails2.svelte';
+  import ProductDetails3 from '$lib/slides/ProductDetails3.svelte';
   
   // Define slide type
   type Slide = {
     component: any;
     title: string;
+    part?: number;  // Optional part indicator (1 or 2)
   };
   
   // Define all slides in the presentation
   const slides: Slide[] = [
     {
-      component: HumanQuestion,
-      title: 'The Human Question'
+      component: OutdatedWork,
+      title: 'The Outdated Nature of Work',
+      part: 1
     },
     {
-      component: AutonomyAnswer,
-      title: 'Autonomy'
+      component: RootCauses,
+      title: 'Root Causes',
+      part: 1
     },
     {
-      component: DailyProblem,
-      title: 'What\'s Wrong With Our Work?'
+      component: WhyThisMatters,
+      title: 'Why This Matters',
+      part: 1
     },
     {
-      component: WorkChoices,
-      title: 'A Forced Choice'
+      component: CoreHumanNeeds,
+      title: 'Core Human Needs',
+      part: 1
     },
     {
-      component: HelloEarth,
-      title: 'Freedom to Create, Right to Own'
+      component: AchievingCoreNeeds,
+      title: 'Achieving Core Needs',
+      part: 1
     },
     {
-      component: BetterSolution,
-      title: 'We Have a Better Solution'
+      component: IntegratedOrganization,
+      title: 'Integrated Organization',
+      part: 1
     },
     {
-      component: FreedomDimensions,
-      title: 'The Five Dimensions of Freedom'
+      component: IntroducingVisioncreator,
+      title: 'Introducing Visioncreator',
+      part: 1
     },
     {
-      component: DAOIntro,
-      title: 'Own What You Help Build'
+      component: OrganizationalPrinciples,
+      title: 'Organizational Principles',
+      part: 1
     },
     {
-      component: DAOExplained,
-      title: 'What is a DAO?'
+      component: DAOConcept,
+      title: 'The DAO Concept',
+      part: 1
     },
     {
-      component: DAOExamples,
-      title: 'DAOs in Action'
+      component: VisioncreatorImplementation,
+      title: 'Visioncreator Implementation Details',
+      part: 1
     },
     {
-      component: TokenSystem,
-      title: 'VCR Token System'
+      component: HominioAITool,
+      title: 'Hominio AI Tool Introduction',
+      part: 2
     },
     {
-      component: VisionCreatorPool,
-      title: 'The 75% Community Pool'
+      component: ProductDetails1,
+      title: 'Product Details 1',
+      part: 2
     },
     {
-      component: MoneyFlows,
-      title: 'How The Money Flows'
+      component: ProductDetails2,
+      title: 'Product Details 2',
+      part: 2
     },
     {
-      component: ProposalSystem,
-      title: 'Your Voice, Your Vote'
-    },
-    {
-      component: AutonomousLife,
-      title: 'What Your Journey Could Look Like'
-    },
-    {
-      component: PathToFreedom,
-      title: '5-Step Journey to Freedom'
-    },
-    {
-      component: ReclaimWork,
-      title: 'Your Work, Your Life'
+      component: ProductDetails3,
+      title: 'Product Details 3',
+      part: 2
     }
   ];
+  
+  // Group slides by part
+  const part1Slides = slides.filter(slide => slide.part === 1);
+  const part2Slides = slides.filter(slide => slide.part === 2);
   
   function goToPresentation(index: number) {
     window.location.href = `/presentation?slide=${index}`;
@@ -110,7 +113,7 @@
 </script>
 
 <svelte:head>
-  <title>VisionCreator | Presentation Preview</title>
+  <title>Visioncreator | Presentation 2.0 Preview</title>
 </svelte:head>
 
 <div class="min-h-screen bg-slate-900 text-white">
@@ -123,7 +126,7 @@
     <div class="flex items-center justify-between mb-10">
       <div>
         <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-          Presentation Preview
+          Presentation 2.0 Preview
         </h1>
         <p class="text-slate-400 mt-2">Click on any slide to start the presentation from that point</p>
       </div>
@@ -136,19 +139,44 @@
       </button>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {#each slides as slide, index}
-        <div 
-          class="cursor-pointer transition-all hover:scale-105"
-          on:click={() => goToPresentation(index)}
-          on:keypress={(e) => e.key === 'Enter' && goToPresentation(index)}
-          tabindex="0" 
-          role="button"
-          aria-label={`Go to slide ${index + 1}: ${slide.title}`}
-        >
-          <SlideThumbnail title={slide.title} index={index} />
-        </div>
-      {/each}
+    <!-- Part 1 -->
+    <div class="mb-10">
+      <h2 class="text-2xl font-bold text-indigo-400 mb-6">PART I - THE VISION</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {#each part1Slides as slide, i}
+          {@const slideIndex = slides.findIndex(s => s === slide)}
+          <div 
+            class="cursor-pointer transition-all hover:scale-105"
+            on:click={() => goToPresentation(slideIndex)}
+            on:keypress={(e) => e.key === 'Enter' && goToPresentation(slideIndex)}
+            tabindex="0" 
+            role="button"
+            aria-label={`Go to slide ${slideIndex + 1}: ${slide.title}`}
+          >
+            <SlideThumbnail title={slide.title} index={slideIndex} />
+          </div>
+        {/each}
+      </div>
+    </div>
+    
+    <!-- Part 2 -->
+    <div>
+      <h2 class="text-2xl font-bold text-teal-400 mb-6">PART II - OUR FIRST STARTUP/PRODUCT</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {#each part2Slides as slide, i}
+          {@const slideIndex = slides.findIndex(s => s === slide)}
+          <div 
+            class="cursor-pointer transition-all hover:scale-105"
+            on:click={() => goToPresentation(slideIndex)}
+            on:keypress={(e) => e.key === 'Enter' && goToPresentation(slideIndex)}
+            tabindex="0" 
+            role="button"
+            aria-label={`Go to slide ${slideIndex + 1}: ${slide.title}`}
+          >
+            <SlideThumbnail title={slide.title} index={slideIndex} />
+          </div>
+        {/each}
+      </div>
     </div>
   </div>
 </div>

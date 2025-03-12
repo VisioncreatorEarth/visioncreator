@@ -4,110 +4,100 @@
   import Presentation from '$lib/components/Presentation.svelte';
   import SlideControls from '$lib/components/SlideControls.svelte';
   
-  // Import all slides
-  import HelloEarth from '$lib/slides/HelloEarth.svelte';
-  import HumanQuestion from '$lib/slides/HumanQuestion.svelte';
-  import PersonalStrivings from '$lib/slides/PersonalStrivings.svelte';
-  import AutonomyAnswer from '$lib/slides/AutonomyAnswer.svelte';
-  import WorkChoices from '$lib/slides/WorkChoices.svelte';
-  import EmployeeChoice from '$lib/slides/EmployeeChoice.svelte';
-  import FounderChoice from '$lib/slides/FounderChoice.svelte';
-  import BetterSolution from '$lib/slides/BetterSolution.svelte';
-  import FreedomDimensions from '$lib/slides/FreedomDimensions.svelte';
-  import DAOIntro from '$lib/slides/DAOIntro.svelte';
-  import DAOExplained from '$lib/slides/DAOExplained.svelte';
-  import DAOExamples from '$lib/slides/DAOExamples.svelte';
-  import TokenSystem from '$lib/slides/TokenSystem.svelte';
-  import VisionCreatorPool from '$lib/slides/VisionCreatorPool.svelte';
-  import MoneyFlows from '$lib/slides/MoneyFlows.svelte';
-  import ProposalSystem from '$lib/slides/ProposalSystem.svelte';
-  import AutonomousLife from '$lib/slides/AutonomousLife.svelte';
-  import PathToFreedom from '$lib/slides/PathToFreedom.svelte';
-  import ReclaimWork from '$lib/slides/ReclaimWork.svelte';
+  // Import new slides for Presentation 2.0
+  import OutdatedWork from '$lib/slides/OutdatedWork.svelte';
+  import RootCauses from '$lib/slides/RootCauses.svelte';
+  import WhyThisMatters from '$lib/slides/WhyThisMatters.svelte';
+  import CoreHumanNeeds from '$lib/slides/CoreHumanNeeds.svelte';
+  import AchievingCoreNeeds from '$lib/slides/AchievingCoreNeeds.svelte';
+  import IntegratedOrganization from '$lib/slides/IntegratedOrganization.svelte';
+  import IntroducingVisioncreator from '$lib/slides/IntroducingVisioncreator.svelte';
+  import OrganizationalPrinciples from '$lib/slides/OrganizationalPrinciples.svelte';
+  import DAOConcept from '$lib/slides/DAOConcept.svelte';
+  import VisioncreatorImplementation from '$lib/slides/VisioncreatorImplementation.svelte';
+  import HominioAITool from '$lib/slides/HominioAITool.svelte';
+  import ProductDetails1 from '$lib/slides/ProductDetails1.svelte';
+  import ProductDetails2 from '$lib/slides/ProductDetails2.svelte';
+  import ProductDetails3 from '$lib/slides/ProductDetails3.svelte';
   
   // Define slide type
   type Slide = {
     component: any;
     title: string;
+    part?: number;  // Optional part indicator (1 or 2)
   };
   
   // Define all slides in the presentation
   const slides: Slide[] = [
     {
-      component: HumanQuestion,
-      title: 'The Human Question'
+      component: OutdatedWork,
+      title: 'The Outdated Nature of Work',
+      part: 1
     },
     {
-      component: PersonalStrivings,
-      title: 'What Is It For You?'
+      component: RootCauses,
+      title: 'Root Causes',
+      part: 1
     },
     {
-      component: AutonomyAnswer,
-      title: 'Autonomy'
+      component: WhyThisMatters,
+      title: 'Why This Matters',
+      part: 1
     },
     {
-      component: WorkChoices,
-      title: 'What Choice Do We Have Today?'
+      component: CoreHumanNeeds,
+      title: 'Core Human Needs',
+      part: 1
     },
     {
-      component: EmployeeChoice,
-      title: 'Employee Path'
+      component: AchievingCoreNeeds,
+      title: 'Achieving Core Needs',
+      part: 1
     },
     {
-      component: FounderChoice,
-      title: 'Founder Path'
+      component: IntegratedOrganization,
+      title: 'Integrated Organization',
+      part: 1
     },
     {
-      component: BetterSolution,
-      title: 'We Have a Better Solution'
+      component: IntroducingVisioncreator,
+      title: 'Introducing Visioncreator',
+      part: 1
     },
     {
-      component: HelloEarth,
-      title: 'A Better Solution'
+      component: OrganizationalPrinciples,
+      title: 'Organizational Principles',
+      part: 1
     },
     {
-      component: FreedomDimensions,
-      title: 'The Five Dimensions of Freedom'
+      component: DAOConcept,
+      title: 'The DAO Concept',
+      part: 1
     },
     {
-      component: DAOIntro,
-      title: 'Own What You Help Build'
+      component: VisioncreatorImplementation,
+      title: 'Visioncreator Implementation Details',
+      part: 1
     },
     {
-      component: DAOExplained,
-      title: 'What is a DAO?'
+      component: HominioAITool,
+      title: 'Hominio AI Tool Introduction',
+      part: 2
     },
     {
-      component: DAOExamples,
-      title: 'DAOs in Action'
+      component: ProductDetails1,
+      title: 'Product Details 1',
+      part: 2
     },
     {
-      component: TokenSystem,
-      title: 'VCR Token System'
+      component: ProductDetails2,
+      title: 'Product Details 2',
+      part: 2
     },
     {
-      component: VisionCreatorPool,
-      title: 'The 75% Community Pool'
-    },
-    {
-      component: MoneyFlows,
-      title: 'How The Money Flows'
-    },
-    {
-      component: ProposalSystem,
-      title: 'Your Voice, Your Vote'
-    },
-    {
-      component: AutonomousLife,
-      title: 'What Your Journey Could Look Like'
-    },
-    {
-      component: PathToFreedom,
-      title: '5-Step Journey to Freedom'
-    },
-    {
-      component: ReclaimWork,
-      title: 'Your Work, Your Life'
+      component: ProductDetails3,
+      title: 'Product Details 3',
+      part: 2
     }
   ];
   
@@ -166,11 +156,20 @@
 </script>
 
 <svelte:head>
-  <title>VisionCreator | Presentation</title>
+  <title>Visioncreator | Presentation 2.0</title>
 </svelte:head>
 
 <div class="h-screen w-screen overflow-hidden bg-slate-900 text-white">
   <Presentation slides={slides} currentSlide={currentSlideIndex} />
+  
+  <!-- Part indicator -->
+  <div class="absolute top-4 left-4 z-50 px-3 py-1 rounded-full bg-slate-800/50 backdrop-blur-sm text-sm font-medium">
+    {#if slides[currentSlideIndex]?.part === 1}
+      <span class="text-indigo-400">PART I: THE VISION</span>
+    {:else if slides[currentSlideIndex]?.part === 2}
+      <span class="text-teal-400">PART II: OUR FIRST STARTUP/PRODUCT</span>
+    {/if}
+  </div>
   
   <div class="absolute top-4 right-4 z-50">
     <button 
