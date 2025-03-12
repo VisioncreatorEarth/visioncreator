@@ -84,30 +84,38 @@ The presentation is structured in two main parts with a total of 14 slides:
 
 8. **Organizational Principles** (`Slide8.svelte`)
    - Details how Visioncreator is organized:
-     - Collaborative work structure
-     - Collective ownership
-     - Democratic but individualized decision-making
-     - Self-determination aligned with collective goals
+     - Collaborative work structure where anyone can contribute based on skills and interests
+     - Collective ownership through tokenized shares (real ownership, not just virtual tokens)
+     - Democratic but individualized decision-making through quadratic voting
+     - Self-determination aligned with collective goals via proposal system
+     - Transparent contribution tracking and rewards in both tokens and euros
      - GOAL: Alignment with inner strength/vision for all members
 
 9. **The DAO Concept** (`Slide9.svelte`)
    - Introduces the Decentralized Autonomous Organization (DAO) model
    - Explains key DAO components:
-     - Proposal and voting systems
-     - Collective ownership through VCR token
-     - Community-driven innovation
-     - Flexible contribution and reward system
+     - Proposal and voting systems with real examples (shows actual UI screenshot)
+     - Collective ownership through VCR token representing real GmbH shares
+     - Community-driven innovation process where members propose and vote on new ideas
+     - Flexible contribution and reward system (work-for-tokens and euros)
+     - Quadratic voting to ensure fair representation regardless of token holdings
      - GOAL: Building successful startups together
 
 10. **Visioncreator Implementation Details** (`Slide10.svelte`)
     - Specifics of the Visioncreator model:
-      - Tokenized German GmbH using tokenize-it
-      - ETH token "VCR"
-      - €365 one-time buy-in with token reward
-      - Explanation of different pools
-      - Voting system
-      - Legal framework
-      - Transformation plan to full DAO after 10,000 investors
+      - Tokenized German GmbH using tokenize-it platform
+      - ETH token "VCR" representing actual legal ownership
+      - €365 one-time buy-in with token reward and real stake in the company
+      - Financial pools structure:
+        - Initially 75% platform development pool (for developers, marketers, etc.)
+        - 25% community pool that grows as membership increases
+        - Goal to shift completely to community pool at 10,000 members
+      - Quadratic voting system to prevent wealth concentration in decision-making
+      - Legal framework starting as German GmbH
+      - Transformation plan to full DAO after 10,000 investors:
+        - "Community exit" with 70% of company transitioning to community
+        - All revenue and investments flowing to community pool
+        - Shift from German legal structure to full DAO framework
 
 ### PART II - OUR FIRST STARTUP/PRODUCT
 
@@ -142,6 +150,7 @@ The presentation employs a consistent visual language with these key elements:
    - Icons for conceptual illustrations
    - Gradient backgrounds for visual interest
    - Card-based information architecture
+   - Screenshots of actual platform UI to demonstrate real functionality
 
 ## Interaction Features
 
@@ -167,6 +176,12 @@ Planned improvements for the presentation include:
 6. Downloadable resources for viewers
 
 ## Change Log
+
+### [Version 2.1] - 2024-04-11
+- Added specific details to Organizational Principles, DAO Concept, and Implementation slides
+- Included information about quadratic voting system
+- Added details on financial pools and community exit strategy
+- Included reference to actual UI screenshot for proposal system
 
 ### [Version 2.0 Draft] - 2024-04-05
 - Restructured presentation into 14 slides with two main parts
