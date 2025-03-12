@@ -26,10 +26,50 @@
   }
 </script>
 
-<header class="border-b border-gray-800 bg-black/50 backdrop-blur-sm fixed w-full z-50">
+<style>
+  /* Logo hover animation */
+  @keyframes pulse-glow {
+    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  }
+  
+  .group:hover .logo-pulse {
+    animation: pulse-glow 2s infinite;
+  }
+  
+  /* Sparkle animation */
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1) rotate(45deg); }
+  }
+  
+  .sparkle {
+    animation: sparkle 2s ease-in-out infinite;
+  }
+</style>
+
+<header class="border-b border-gray-800/50 bg-gradient-to-r from-black to-gray-900/90 backdrop-blur-lg fixed w-full z-50 shadow-md shadow-emerald-900/10">
   <div class="container mx-auto px-4 py-3 flex items-center justify-between">
-    <a href="/" class="text-2xl font-bold text-rose-400 hover:text-rose-300 transition-all duration-200 transform hover:scale-105">
-      VisionCreator
+    <a href="/" class="relative flex items-center group">
+      <!-- Updated Logo mark -->
+      <div class="mr-1.5 w-7 h-7 relative logo-pulse">
+        <div class="absolute inset-0 bg-gradient-to-br from-yellow-400 to-emerald-500 rounded-sm rotate-45 transform group-hover:scale-110 transition-all duration-300"></div>
+        <div class="absolute inset-0.5 bg-black rounded-sm rotate-45"></div>
+        <!-- Turquoise accent element -->
+        <div class="absolute top-1 left-2.5 w-2 h-4 bg-gradient-to-b from-teal-400 to-teal-500 transform rotate-12"></div>
+        
+        <!-- Sparkle element -->
+        <div class="absolute -top-1 -right-1 w-2 h-2 sparkle">
+          <div class="absolute inset-0 bg-teal-300 rotate-45"></div>
+          <div class="absolute inset-0 bg-teal-300 rotate-90"></div>
+        </div>
+      </div>
+      
+      <!-- Logo text with new color scheme -->
+      <div class="text-2xl font-extrabold tracking-wide">
+        <span class="bg-gradient-to-r from-yellow-400 via-green-400 to-teal-400 bg-clip-text text-transparent transition-all duration-300">Vision</span><span class="text-teal-400 group-hover:text-teal-300 transition-colors duration-300">creator</span>
+      </div>
     </a>
     
     <div class="flex items-center gap-4">
@@ -37,19 +77,19 @@
       <nav class="hidden md:flex gap-6">
         <a 
           href="/" 
-          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/') ? 'text-white font-medium border-rose-500' : 'border-transparent text-gray-300 hover:text-white hover:border-rose-500/50'}"
+          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/') ? 'text-white font-medium border-teal-400' : 'border-transparent text-gray-300 hover:text-white hover:border-teal-400/50'}"
         >
           Home
         </a>
         <a 
           href="/presentation" 
-          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/presentation') ? 'text-white font-medium border-rose-500' : 'border-transparent text-gray-300 hover:text-white hover:border-rose-500/50'}"
+          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/presentation') ? 'text-white font-medium border-teal-400' : 'border-transparent text-gray-300 hover:text-white hover:border-teal-400/50'}"
         >
           Presentation
         </a>
         <a 
           href="/roadmap" 
-          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/roadmap') ? 'text-white font-medium border-rose-500' : 'border-transparent text-gray-300 hover:text-white hover:border-rose-500/50'}"
+          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/roadmap') ? 'text-white font-medium border-teal-400' : 'border-transparent text-gray-300 hover:text-white hover:border-teal-400/50'}"
         >
           Roadmap
         </a>
@@ -58,7 +98,7 @@
       <!-- Join Now Button -->
       <a 
         href="#join" 
-        class="px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-600 rounded-md text-white font-medium hover:from-rose-400 hover:to-pink-500 transition-all duration-200 hover:scale-105 shadow-md shadow-rose-700/20"
+        class="px-5 py-2 bg-gradient-to-r from-yellow-400 via-green-500 to-teal-500 rounded-full text-white font-medium hover:from-yellow-300 hover:via-green-400 hover:to-teal-400 transition-all duration-300 hover:scale-105 shadow-lg shadow-teal-700/30 border border-teal-400/20"
       >
         Join Now
       </a>
@@ -86,26 +126,26 @@
   
   <!-- Mobile Navigation -->
   {#if menuOpen}
-    <div class="md:hidden border-t border-gray-800 bg-black/95">
+    <div class="md:hidden border-t border-gray-800/50 bg-gradient-to-b from-gray-900 to-black/95 backdrop-blur-lg">
       <nav class="container mx-auto py-4 px-4 flex flex-col gap-4">
         <a 
           href="/" 
           on:click={closeMenu}
-          class="px-4 py-2 rounded-md transition-all {isActive('/') ? 'bg-rose-900/30 text-white font-medium' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
+          class="px-4 py-2 rounded-md transition-all {isActive('/') ? 'bg-gradient-to-r from-teal-900/30 to-emerald-900/30 text-white font-medium border-l-2 border-teal-400 pl-3' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
         >
           Home
         </a>
         <a 
           href="/presentation" 
           on:click={closeMenu}
-          class="px-4 py-2 rounded-md transition-all {isActive('/presentation') ? 'bg-rose-900/30 text-white font-medium' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
+          class="px-4 py-2 rounded-md transition-all {isActive('/presentation') ? 'bg-gradient-to-r from-teal-900/30 to-emerald-900/30 text-white font-medium border-l-2 border-teal-400 pl-3' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
         >
           Presentation
         </a>
         <a 
           href="/roadmap" 
           on:click={closeMenu}
-          class="px-4 py-2 rounded-md transition-all {isActive('/roadmap') ? 'bg-rose-900/30 text-white font-medium' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
+          class="px-4 py-2 rounded-md transition-all {isActive('/roadmap') ? 'bg-gradient-to-r from-teal-900/30 to-emerald-900/30 text-white font-medium border-l-2 border-teal-400 pl-3' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
         >
           Roadmap
         </a>
@@ -117,7 +157,7 @@
 <!-- Simplified overlay -->
 {#if menuOpen}
   <div 
-    class="fixed inset-0 bg-black/40 z-40 md:hidden" 
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden" 
     on:click={closeMenu}
   ></div>
 {/if} 
