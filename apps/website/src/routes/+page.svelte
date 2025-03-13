@@ -1,104 +1,136 @@
-<script>
+<script lang="ts">
   import Avatar from '$lib/Avatar.svelte';
+  import { onMount } from 'svelte';
   
   // Seeds for generating consistent avatars
   const seeds = [
     'alice', 'bob', 'charlie', 'david', 'eve', 
     'frank', 'grace', 'henry'
   ];
+  
+  let mounted = false;
+  let memberCount = 27;
+  
+  // Animated counter for member count
+  function animateCounter(element: HTMLElement | null, targetValue: number, duration: number): void {
+    const startValue = 0;
+    const startTime = Date.now();
+    
+    function updateCounter() {
+      const currentTime = Date.now();
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smoother animation
+      const easeOutQuad = progress * (2 - progress);
+      const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuad);
+      
+      if (element) {
+        element.textContent = String(currentValue);
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(updateCounter);
+      }
+    }
+    
+    updateCounter();
+  }
+  
+  onMount(() => {
+    // Trigger the entry animation sequence
+    setTimeout(() => {
+      mounted = true;
+      
+      // Animate member counter after fade-in
+      setTimeout(() => {
+        const counterElement = document.getElementById('memberCounter');
+        if (counterElement) {
+          animateCounter(counterElement, memberCount, 2000);
+        }
+      }, 1000);
+    }, 100);
+  });
 </script>
 
-<!-- Navigation -->
-<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-slate-900/80 border-b border-cyan-900/10">
-  <div class="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
-    <div class="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-cyan-400 text-transparent bg-clip-text">
-      VisionCreator
-    </div>
-    <button class="px-8 py-3 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black font-bold hover:scale-105 transition-all duration-300">
-      Join Now
-    </button>
-  </div>
-</nav>
+<!-- Main Content Wrapper with scrolling enabled -->
+<div class="bg-black min-h-screen text-white overflow-y-auto">
 
-<!-- Hero -->
-<section class="min-h-screen flex flex-col justify-center items-center p-8 pt-32">
-  <div class="space-y-16 text-center">
-    <h1 class="text-[14rem] font-bold bg-gradient-to-r from-yellow-400 via-cyan-400 to-cyan-600 text-transparent bg-clip-text leading-none tracking-tight">
-      RISE
-    </h1>
-    <div class="space-y-16">
-      <p class="text-4xl font-light text-cyan-100/90">Work Freely. Create Value. Build Ownership.</p>
+<!-- Entry Animation Overlay -->
+<div class="fixed inset-0 z-[100] pointer-events-none {mounted ? 'opacity-0 scale-110' : 'opacity-100 scale-100'} transition-all duration-1500 transform-gpu">
+  <div class="absolute inset-0 bg-black flex items-center justify-center">
+    <div class="text-center space-y-8 transform-gpu">
+      <div class="text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-cyan-400 to-cyan-600 animate-pulse relative">
+        VisionCreator
+      </div>
+      <div class="text-3xl text-cyan-100/80 animate-fade-in-delayed mt-4">
+        Create Through Voice. Own What You Build.
+      </div>
       
-      <div class="text-xl text-cyan-100/80">
-        €1 daily builds your future in community-owned startups
-      </div>
-
-      <!-- Founders Joined Section -->
-      <div class="flex flex-col items-center space-y-6 mt-24">
-        <div class="flex -space-x-4">
-          {#each seeds as seed}
-            <Avatar {seed} />
-          {/each}
-          <div class="w-12 h-12 rounded-full border-2 border-slate-800 bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 backdrop-blur-xl flex items-center justify-center text-cyan-100">
-            +13
-          </div>
-        </div>
-        <p class="text-lg text-cyan-100/80">
-          <span class="font-semibold text-yellow-400">21 Founders</span> Already Creating Their Future
-        </p>
-        <div class="w-24 h-px bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-50"></div>
-      </div>
+      <!-- Loading spinner -->
+      <div class="w-16 h-16 mx-auto mt-8 border-t-4 border-r-4 border-yellow-400 rounded-full animate-spin"></div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- Transform Section -->
-<section class="min-h-screen flex items-center">
-  <div class="max-w-7xl mx-auto px-8">
-    <div class="space-y-12">
-      <div class="flex flex-col items-center space-y-8">
-        <div class="flex items-center space-x-3 text-3xl text-cyan-100 font-light tracking-wide">
-          <span class="relative">
-            Together
-            <div class="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent"></div>
-          </span>
-          <span class="relative">
-            we invest
-            <div class="absolute -bottom-2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-yellow-400 to-transparent"></div>
-          </span>
-        </div>
-        
-        <div class="text-center space-y-6">
-          <div class="relative">
-            <h2 class="text-7xl font-bold leading-tight">
-              <span class="relative inline-block">
-                <span class="text-yellow-400">€365</span>
-                <div class="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-yellow-400 to-transparent"></div>
-              </span>
-              <span class="text-3xl ml-4 text-cyan-100">Yearly</span>
-            </h2>
-            <div class="mt-4">
-              <h2 class="text-8xl font-bold">
-                Into
-                <span class="relative inline-block ml-4">
-                  <span class="bg-gradient-to-r from-cyan-400 to-cyan-300 text-transparent bg-clip-text">Shared Success</span>
-                  <div class="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 to-transparent"></div>
-                </span>
-              </h2>
-            </div>
+<!-- Hero Section - Simplified in style of email app landing page -->
+<section class="min-h-screen flex flex-col justify-center items-center p-8 relative overflow-hidden bg-black">
+  <!-- Subtle background glow -->
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="max-w-3xl mx-auto text-center space-y-8 relative z-10">
+    <!-- Main Headline - WHO/WHY/WHAT Framework -->
+    <h1 class="text-6xl sm:text-7xl font-bold text-white leading-tight animate-title-rise">
+      The future of <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">creation</span> is here
+    </h1>
+    
+    <p class="text-xl text-gray-300 max-w-2xl mx-auto animate-slide-up">
+      Experience ownership the way you want with VisionCreator — the first community-powered platform that puts your voice and ownership first.
+    </p>
+    
+    <!-- Email/Signup Form -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in-delayed">
+      <input 
+        type="email" 
+        placeholder="you@example.com" 
+        class="px-6 py-4 bg-gray-800/50 border border-gray-700 rounded-full text-white w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-cyan-400"
+      />
+      
+      <button class="px-8 py-4 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black font-bold hover:scale-105 transition-all duration-300 shadow-lg shadow-cyan-500/20 w-full sm:w-auto">
+        Join waitlist
+      </button>
+    </div>
+    
+    <!-- Social Proof -->
+    <p class="text-2xl font-bold text-white animate-fade-in-delayed">
+      <span id="memberCounter" class="text-cyan-400">0</span> people have already joined the waitlist
+    </p>
+  </div>
+  
+  <!-- App Preview - Added product visual -->
+  <div class="w-full max-w-4xl mx-auto mt-16 px-4 animate-fade-in-delayed-2">
+    <div class="relative bg-gray-900/70 backdrop-blur-md rounded-2xl overflow-hidden border border-gray-800 shadow-2xl shadow-cyan-500/10">
+      <div class="aspect-video p-4">
+        <div class="bg-gray-800 rounded-lg p-6 h-full flex flex-col">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+            <div class="text-sm text-gray-400 ml-2">VisionCreator Interface</div>
           </div>
           
-          <div class="flex justify-center items-center space-x-4 mt-12">
-            <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
-              Community Owned
-            </div>
-            <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
-            <div class="px-4 py-2 rounded-full bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 text-yellow-400">
-              Decentralized
-            </div>
-            <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
-            <div class="px-4 py-2 rounded-full bg-cyan-400/10 backdrop-blur-sm border border-cyan-400/20 text-cyan-100">
-              Digital GmbH Shares
+          <div class="flex-1 flex items-center justify-center">
+            <div class="text-center">
+              <div class="text-cyan-400 text-4xl mb-4 font-mono">"Create a weather app"</div>
+              <div class="text-sm text-gray-400 mb-8">Creating your app through simple voice commands...</div>
+              <div class="flex items-center gap-3 justify-center">
+                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-pulse"></div>
+                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-pulse delay-100"></div>
+                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-pulse delay-200"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -107,285 +139,434 @@
   </div>
 </section>
 
-<!-- Vision Story -->
-<section class="min-h-screen py-32 relative overflow-hidden">
+<!-- Problem, Agitation, Solution Section (PAS Framework) -->
+<section class="py-24 bg-gray-950 relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
+  </div>
+
   <div class="max-w-5xl mx-auto px-8">
-    <!-- Problem Statement -->
-    <div class="group space-y-8 bg-slate-900/50 backdrop-blur-xl rounded-3xl p-12 border border-cyan-500/20 hover:border-cyan-400/40 transition-all duration-500 mb-24">
-      <div class="flex items-center space-x-6">
-        <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl">
-          💭
-        </div>
-        <h3 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-          Ever wished you invested early?
-        </h3>
-      </div>
-      <div class="space-y-4 text-xl text-cyan-100/80">
-        <p class="group-hover:translate-x-2 transition-transform duration-300">Traditional VCs need €365,000 to start</p>
-        <p class="group-hover:translate-x-4 transition-transform duration-500">Most people watch from the sidelines</p>
-        <p class="group-hover:translate-x-6 transition-transform duration-700">Until now...</p>
-      </div>
-    </div>
-
-    <!-- Solution -->
-    <div class="group bg-slate-900/50 backdrop-blur-xl rounded-3xl p-12 border border-cyan-500/20 hover:border-cyan-400/40 transition-all duration-500 mb-24">
-      <div class="text-center space-y-8">
-        <h3 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-          We're changing the game
-        </h3>
-        <div class="flex justify-center items-center space-x-8">
-          <div class="flex flex-col items-center space-y-2 group-hover:scale-110 transition-transform duration-300">
-            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-xl">
-              €1
-            </div>
-            <p class="text-cyan-100">Daily</p>
-          </div>
-          <div class="text-cyan-100 animate-pulse">→</div>
-          <div class="flex flex-col items-center space-y-2 group-hover:scale-110 transition-transform duration-500">
-            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-xl">
-              🚀
-            </div>
-            <p class="text-cyan-100">Real Ownership</p>
-          </div>
-          <div class="text-cyan-100 animate-pulse">→</div>
-          <div class="flex flex-col items-center space-y-2 group-hover:scale-110 transition-transform duration-700">
-            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-xl">
-              🌟
-            </div>
-            <p class="text-cyan-100">Future Growth</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Innovation Explained -->
-    <div class="space-y-24 mb-24">
-      <!-- Traditional vs New -->
-      <div class="group relative">
-        <div class="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-cyan-400/5 rounded-3xl transition-all duration-700 blur-xl"></div>
-        <div class="relative grid grid-cols-2 gap-8 bg-slate-900/50 backdrop-blur-xl rounded-3xl p-12 border border-cyan-500/20">
-          <div class="space-y-6 p-8 bg-slate-900/50 rounded-2xl border border-red-500/20">
-            <div class="flex items-center space-x-4">
-              <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-xl">
-                ⚠️
-              </div>
-              <h4 class="text-2xl font-bold text-red-400">Traditional Way</h4>
-            </div>
-            <ul class="space-y-4 text-cyan-100/70">
-              <li class="flex items-center space-x-2">
-                <span class="text-red-400">×</span>
-                <span>Closed boardrooms</span>
-              </li>
-              <li class="flex items-center space-x-2">
-                <span class="text-red-400">×</span>
-                <span>High entry barriers</span>
-              </li>
-              <li class="flex items-center space-x-2">
-                <span class="text-red-400">×</span>
-                <span>Limited transparency</span>
-              </li>
-            </ul>
-          </div>
-          <div class="space-y-6 p-8 bg-slate-900/50 rounded-2xl border border-cyan-500/20">
-            <div class="flex items-center space-x-4">
-              <div class="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-xl">
-                ✨
-              </div>
-              <h4 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">Our Innovation</h4>
-            </div>
-            <ul class="space-y-4 text-cyan-100/70">
-              <li class="flex items-center space-x-2">
-                <span class="text-yellow-400">✓</span>
-                <span>Community-driven decisions</span>
-              </li>
-              <li class="flex items-center space-x-2">
-                <span class="text-yellow-400">✓</span>
-                <span>Start with just €1 daily</span>
-              </li>
-              <li class="flex items-center space-x-2">
-                <span class="text-yellow-400">✓</span>
-                <span>Full transparency & ownership</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- How We Made It Possible -->
-      <div class="group relative">
-        <div class="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-yellow-400/5 rounded-3xl transition-all duration-700 blur-xl"></div>
-        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl p-12 border border-cyan-500/20">
-          <div class="text-center mb-12">
-            <h3 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-              How We Made It Possible
-            </h3>
-          </div>
-          <div class="grid grid-cols-3 gap-8">
-            <div class="group/card p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <div class="flex flex-col items-center text-center space-y-4">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl group-hover/card:scale-110 transition-transform duration-300">
-                  🏢
-                </div>
-                <h4 class="text-xl font-bold text-yellow-400">German GmbH</h4>
-                <p class="text-cyan-100/80">Legal structure that protects your investment</p>
-              </div>
-            </div>
-            <div class="group/card p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <div class="flex flex-col items-center text-center space-y-4">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl group-hover/card:scale-110 transition-transform duration-300">
-                  🤝
-                </div>
-                <h4 class="text-xl font-bold text-yellow-400">Community Power</h4>
-                <p class="text-cyan-100/80">Decentralized decision-making process</p>
-              </div>
-            </div>
-            <div class="group/card p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <div class="flex flex-col items-center text-center space-y-4">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl group-hover/card:scale-110 transition-transform duration-300">
-                  📈
-                </div>
-                <h4 class="text-xl font-bold text-yellow-400">Digital Shares</h4>
-                <p class="text-cyan-100/80">Real ownership in every venture</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- How It Works -->
-    <div class="group bg-slate-900/50 backdrop-blur-xl rounded-3xl p-12 border border-cyan-500/20 hover:border-cyan-400/40 transition-all duration-500">
-      <div class="space-y-12">
-        <h3 class="text-4xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-          How does it work?
-        </h3>
-        <div class="grid grid-cols-2 gap-8">
-          <!-- Left Column -->
-          <div class="space-y-8">
-            <div class="group/item p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <h4 class="text-xl font-bold text-yellow-400 mb-3">Propose & Vote</h4>
-              <p class="text-cyan-100/80 group-hover/item:text-cyan-100 transition-colors duration-300">Community decides which projects to fund</p>
-            </div>
-            <div class="group/item p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <h4 class="text-xl font-bold text-yellow-400 mb-3">Contribute & Earn</h4>
-              <p class="text-cyan-100/80 group-hover/item:text-cyan-100 transition-colors duration-300">Get paid in euros or ownership tokens</p>
-            </div>
-          </div>
-          <!-- Right Column -->
-          <div class="space-y-8 pt-12">
-            <div class="group/item p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <h4 class="text-xl font-bold text-yellow-400 mb-3">Legal & Transparent</h4>
-              <p class="text-cyan-100/80 group-hover/item:text-cyan-100 transition-colors duration-300">German GmbH structure ensures compliance</p>
-            </div>
-            <div class="group/item p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 hover:border-cyan-400/30 transition-all duration-300">
-              <h4 class="text-xl font-bold text-yellow-400 mb-3">Community Owned</h4>
-              <p class="text-cyan-100/80 group-hover/item:text-cyan-100 transition-colors duration-300">True ownership in every venture we launch</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Decorative Elements -->
-    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl"></div>
-  </div>
-</section>
-
-<!-- Investment Journey -->
-<section class="min-h-screen py-64">
-  <div class="max-w-7xl mx-auto px-8">
-    <div class="text-center space-y-12">
-      <h2 class="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        Our Investment Journey
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+        Key Problems & Our Solutions
       </h2>
-      <div class="h-8"></div>
-      <p class="text-3xl font-light text-cyan-100">
-        From Ideas to Ownership: <span class="text-yellow-400 font-bold">€1 Daily</span>
+      <p class="text-xl text-gray-300 mt-4 max-w-2xl mx-auto">
+        We've identified three core challenges in digital creation and developed direct solutions for each
       </p>
     </div>
 
-    <div class="h-32"></div>
+    <!-- Problem-Solution Pairs -->
+    <!-- Problem 1: Technical Creation Barrier -->
+    <div class="mb-20">
+      <div class="flex items-center justify-center gap-4 mb-8">
+        <div class="h-px bg-red-500/30 flex-1"></div>
+        <h3 class="text-2xl font-bold text-red-400 px-4">Problem 1: The Technical Creation Barrier</h3>
+        <div class="h-px bg-red-500/30 flex-1"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <!-- Problem Statement -->
+        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-red-500/20 p-8">
+          <h4 class="text-xl font-bold text-red-400 mb-4">The Problem Staked:</h4>
+          <p class="text-gray-300 mb-6 italic">
+            "The tools to build valuable digital assets exist, but they're locked behind technical barriers most people can't overcome."
+          </p>
+          
+          <p class="text-gray-300 mb-4">
+            Most people have ideas for apps that could solve problems and generate income, but turning those ideas into reality requires:
+          </p>
+          
+          <ul class="space-y-2 mb-6">
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Programming knowledge across multiple languages</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Understanding of complex development environments</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Expertise in deploying and maintaining applications</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Costly developers or years of learning</p>
+            </li>
+          </ul>
+          
+          <!-- Code snippet to make problem visceral -->
+          <div class="bg-gray-950 border border-red-500/20 rounded-lg p-4 text-xs font-mono text-gray-400 overflow-x-auto">
+            <pre>const app = express();
+app.use(cors());
+app.use(express.json());
 
-    <!-- Journey Flow -->
-    <div class="relative">
-      <!-- Center Line -->
-      <div class="absolute left-1/2 h-full w-px bg-gradient-to-b from-yellow-400/50 via-cyan-400/50 to-transparent"></div>
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-      <div class="grid grid-cols-2 gap-24">
-        <!-- Together We Vote -->
-        <div class="flex items-center justify-end space-x-8">
-          <div class="text-right">
-            <h3 class="text-2xl font-bold text-yellow-400 mb-2">Together We Vote</h3>
-            <p class="text-cyan-100 mb-4">Every milestone starts with your startup ideas</p>
-            <div class="flex justify-end space-x-2">
-              <span class="px-3 py-1 rounded-full bg-cyan-400/10 text-cyan-100 text-sm">Submit Ideas</span>
-              <span class="px-3 py-1 rounded-full bg-yellow-400/10 text-yellow-400 text-sm">Vote Together</span>
-            </div>
+const userSchema = &#123;
+  username: &#123; type: String, required: true, unique: true &#125;,
+  passwordHash: &#123; type: String, required: true &#125;,
+  // And dozens more lines of complex code...</pre>
           </div>
-          <div class="flex -space-x-3">
-            <Avatar seed="voter1" />
-            <Avatar seed="voter2" />
-            <Avatar seed="voter3" />
-            <div class="w-12 h-12 rounded-full border-2 border-slate-800 bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 backdrop-blur-xl flex items-center justify-center text-cyan-100 text-sm">
-              +18
-            </div>
-          </div>
+          <p class="text-sm text-gray-500 mt-2 text-center">Just a glimpse of what's required to build even a simple app today</p>
         </div>
-
-        <!-- Together We Invest -->
-        <div class="flex items-center space-x-8 pl-24">
-          <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-2xl p-6 backdrop-blur-xl border border-cyan-500/20">
-            <h3 class="text-xl font-bold text-yellow-400 mb-2">Together We Invest</h3>
-            <p class="text-cyan-100">Pool our €1 daily into chosen startups</p>
-          </div>
-        </div>
-
-        <!-- Together We Build -->
-        <div class="flex items-center justify-end space-x-8 mt-24">
-          <div class="text-right space-y-6">
-            <div>
-              <h3 class="text-2xl font-bold text-yellow-400 mb-2">Together We Build</h3>
-              <p class="text-cyan-100">Contribute skills & earn rewards</p>
-            </div>
-            <div class="flex justify-end gap-2 flex-wrap">
-              <span class="px-3 py-1 rounded-full bg-yellow-400/10 text-yellow-400 text-sm">Development</span>
-              <span class="px-3 py-1 rounded-full bg-cyan-400/10 text-cyan-400 text-sm">Marketing</span>
-              <span class="px-3 py-1 rounded-full bg-yellow-400/10 text-yellow-400 text-sm">Design</span>
-              <span class="px-3 py-1 rounded-full bg-cyan-400/10 text-cyan-400 text-sm">Strategy</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Together We Own -->
-        <div class="flex items-center space-x-8 pl-24 mt-24">
-          <div class="bg-gradient-to-br from-cyan-900/20 to-cyan-900/5 rounded-2xl p-8 backdrop-blur-xl border border-cyan-500/20 space-y-8">
-            <div>
-              <h3 class="text-xl font-bold text-yellow-400 mb-2">Together We Own</h3>
-              <p class="text-cyan-100">Through Digital GmbH Shares</p>
-            </div>
-            <div class="flex flex-col gap-8">
-              <div class="p-6 rounded-xl bg-cyan-400/5 border border-cyan-400/10">
-                <p class="text-sm text-cyan-100 mb-4">Community Ownership</p>
-                <div class="flex items-center justify-between space-x-8">
-                  <span class="text-yellow-400 hover:scale-105 transition-transform duration-300">Every Startup</span>
-                  <span class="text-cyan-100 animate-pulse">is</span>
-                  <span class="text-yellow-400 hover:scale-105 transition-transform duration-300">Community Owned</span>
-                </div>
+        
+        <!-- Solution -->
+        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 md:translate-y-8">
+          <h4 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-4">Our Direct Solution:</h4>
+          <p class="text-gray-300 mb-6">
+            VisionCreator's Voice-Command Creation Platform eliminates these barriers by allowing anyone to create functional mini-apps through simple voice instructions:
+          </p>
+          
+          <div class="space-y-6 mb-8">
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                1
               </div>
-              <div class="p-6 rounded-xl bg-cyan-400/5 border border-cyan-400/10">
-                <p class="text-sm text-cyan-100 mb-4">Digital GmbH Shares</p>
-                <div class="flex items-center justify-between space-x-8">
-                  <div class="flex flex-col items-center">
-                    <span class="text-yellow-400 hover:scale-105 transition-transform duration-300">Contribute</span>
-                    <span class="text-cyan-100/60 text-sm mt-1">Skills</span>
-                  </div>
-                  <span class="text-cyan-100 animate-pulse">→</span>
-                  <div class="flex flex-col items-center">
-                    <span class="text-yellow-400 hover:scale-105 transition-transform duration-300">Earn</span>
-                    <span class="text-cyan-100/60 text-sm mt-1">Shares + €</span>
-                  </div>
-                </div>
+              <p class="text-gray-300">Describe what you want your app to do</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                2
+              </div>
+              <p class="text-gray-300">Our AI interprets your instructions and builds the application</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                3
+              </div>
+              <p class="text-gray-300">No coding required - just clear communication of your vision</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                4
+              </div>
+              <p class="text-gray-300">Launch your creation on our marketplace where others can discover and use it</p>
+            </div>
+          </div>
+          
+          <!-- Voice command example -->
+          <div class="bg-gray-950 border border-cyan-500/20 rounded-lg p-6 text-center">
+            <p class="text-cyan-400 text-xl mb-2 font-mono">"Create a weather app that shows the forecast and sends alerts when it's going to rain"</p>
+            <p class="text-sm text-gray-400">With VisionCreator, this single voice command can replace hundreds of lines of code</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Problem 2: AI Wealth Concentration -->
+    <div class="mb-20">
+      <div class="flex items-center justify-center gap-4 mb-8">
+        <div class="h-px bg-red-500/30 flex-1"></div>
+        <h3 class="text-2xl font-bold text-red-400 px-4">Problem 2: The AI Wealth Concentration</h3>
+        <div class="h-px bg-red-500/30 flex-1"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <!-- Problem Statement -->
+        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-red-500/20 p-8">
+          <h4 class="text-xl font-bold text-red-400 mb-4">The Problem Staked:</h4>
+          <p class="text-gray-300 mb-6 italic">
+            "AI is creating the next wave of digital wealth, but without technical skills, you're relegated to being a consumer rather than a creator."
+          </p>
+          
+          <p class="text-gray-300 mb-4">
+            As AI rapidly transforms the economy:
+          </p>
+          
+          <ul class="space-y-2 mb-6">
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Technical specialists are capturing massive value</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">The wealth gap between creators and consumers is widening</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Most people can only consume AI tools, not leverage them for creation</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">The economic benefits of AI are concentrating among a small percentage of the population</p>
+            </li>
+          </ul>
+          
+          <!-- Wealth distribution visualization -->
+          <div class="bg-gray-950 border border-red-500/20 rounded-lg p-6">
+            <h5 class="text-sm text-gray-400 mb-4 text-center">AI Wealth Distribution</h5>
+            <div class="h-6 bg-gray-800 rounded-full overflow-hidden mb-3">
+              <div class="h-full bg-red-500 rounded-full" style="width: 10%;"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500">
+              <span>10% of people</span>
+              <span>90% of AI-generated wealth</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Solution -->
+        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 md:translate-y-8">
+          <h4 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-4">Our Direct Solution:</h4>
+          <p class="text-gray-300 mb-6">
+            VisionCreator democratizes AI-powered creation through:
+          </p>
+          
+          <div class="space-y-6 mb-8">
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                1
+              </div>
+              <p class="text-gray-300">Our AI-powered platform that turns your voice instructions into working applications</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                2
+              </div>
+              <p class="text-gray-300">A marketplace where your creations can generate income 24/7</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                3
+              </div>
+              <p class="text-gray-300">Community support to help refine and improve your ideas</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                4
+              </div>
+              <p class="text-gray-300">Educational resources that help you understand what's possible without needing to understand how it works</p>
+            </div>
+          </div>
+          
+          <p class="text-xl text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 font-bold mb-2">
+            We're putting AI in service of everyone, not just technical specialists
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Problem 3: The Ownership Disconnect -->
+    <div>
+      <div class="flex items-center justify-center gap-4 mb-8">
+        <div class="h-px bg-red-500/30 flex-1"></div>
+        <h3 class="text-2xl font-bold text-red-400 px-4">Problem 3: The Ownership Disconnect</h3>
+        <div class="h-px bg-red-500/30 flex-1"></div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <!-- Problem Statement -->
+        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-red-500/20 p-8">
+          <h4 class="text-xl font-bold text-red-400 mb-4">The Problem Staked:</h4>
+          <p class="text-gray-300 mb-6 italic">
+            "In today's digital economy, you build value for platforms but own nothing of what you create."
+          </p>
+          
+          <p class="text-gray-300 mb-4">
+            Traditional platforms:
+          </p>
+          
+          <ul class="space-y-2 mb-6">
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Extract value from user contributions</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Keep all upside for shareholders</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Offer temporary compensation, not lasting ownership</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Can change terms at any time, leaving creators vulnerable</p>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-red-400">•</span>
+              <p class="text-gray-300">Create digital sharecroppers, not digital owners</p>
+            </li>
+          </ul>
+          
+          <!-- Platform vs. Creator visualization -->
+          <div class="bg-gray-950 border border-red-500/20 rounded-lg p-6">
+            <div class="grid grid-cols-2 gap-6">
+              <div class="text-center">
+                <p class="text-sm text-gray-400 mb-2">Hours You Spend Building</p>
+                <p class="text-2xl text-red-400 font-bold">1000+</p>
+              </div>
+              <div class="text-center">
+                <p class="text-sm text-gray-400 mb-2">Ownership You Receive</p>
+                <p class="text-2xl text-red-400 font-bold">0%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Solution -->
+        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 md:translate-y-8">
+          <h4 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-4">Our Direct Solution:</h4>
+          <p class="text-gray-300 mb-6 italic">
+            "VCR tokens aren't just governance rights—they're actual ownership in a platform being built by and for its users."
+          </p>
+          
+          <p class="text-gray-300 mb-4">
+            VisionCreator's ownership model ensures:
+          </p>
+          
+          <div class="space-y-6 mb-8">
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                1
+              </div>
+              <p class="text-gray-300">Your one-time €365 investment provides permanent ownership through VCR tokens</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                2
+              </div>
+              <p class="text-gray-300">30% of platform ownership is distributed to our first 10,000 members</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                3
+              </div>
+              <p class="text-gray-300">The 50/50 split between platform development and community pool ensures balanced growth</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                4
+              </div>
+              <p class="text-gray-300">When we reach 10,000 members, we transform into a full DAO where token holders control the platform's future</p>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
+                5
+              </div>
+              <p class="text-gray-300">You own a share of everything built on the platform</p>
+            </div>
+          </div>
+          
+          <p class="text-xl text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 font-bold">
+            Perfect alignment between platform success and member success
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Integrated Solution Summary -->
+    <div class="mt-20 bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 text-center">
+      <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-6">
+        The Integrated Solution: Create, Earn, Own
+      </h3>
+      <p class="text-gray-300 mb-8 max-w-3xl mx-auto">
+        VisionCreator integrates these solutions into a single platform with a three-phase roadmap that solves the fundamental problems of digital creation and ownership.
+      </p>
+      
+      <div class="flex justify-center items-center">
+        <button class="px-10 py-5 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black text-xl font-bold hover:scale-105 transition-all duration-300">
+          Join the 10,000 Pioneers
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Three-Phase Roadmap Section (Features/Benefits Framework) -->
+<section class="py-24 bg-black relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-400/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-400/5 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+        Our Three-Phase Strategy
+      </h2>
+      <p class="text-xl text-gray-300 mt-4 max-w-2xl mx-auto">
+        Not sequential phases—but a strategic roadmap where building and ownership converge
+      </p>
+    </div>
+    
+    <!-- Phases Timeline -->
+    <div class="relative mx-auto max-w-4xl mb-20">
+      <div class="absolute top-0 left-1/2 h-full w-1 bg-gradient-to-b from-yellow-400/50 to-cyan-400/50 transform -translate-x-1/2"></div>
+      
+      <!-- Phase 1 -->
+      <div class="relative z-10 mb-16">
+        <div class="flex items-center">
+          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl text-black font-bold shadow-lg">
+            1
+          </div>
+          <div class="ml-8 bg-gray-900/50 backdrop-blur-xl rounded-xl border border-yellow-500/20 p-6 flex-1">
+            <h3 class="text-xl font-bold text-yellow-400 mb-2">Voice-Command Platform Development</h3>
+            <p class="text-gray-300">
+              We're building a revolutionary platform where anyone can create mini apps through simple voice commands. Your investment is split between platform development (50%) and our community contribution pool (50%).
+            </p>
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <div class="bg-gray-800/50 p-3 rounded-lg">
+                <p class="text-sm text-yellow-300 font-medium">Feature</p>
+                <p class="text-xs text-gray-400">Voice-to-app technology</p>
+              </div>
+              <div class="bg-gray-800/50 p-3 rounded-lg">
+                <p class="text-sm text-cyan-300 font-medium">Benefit</p>
+                <p class="text-xs text-gray-400">Create without coding skills</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Phase 2 -->
+      <div class="relative z-10 mb-16 ml-24">
+        <div class="flex items-center">
+          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl text-black font-bold shadow-lg">
+            2
+          </div>
+          <div class="ml-8 bg-gray-900/50 backdrop-blur-xl rounded-xl border border-yellow-500/20 p-6 flex-1">
+            <h3 class="text-xl font-bold text-yellow-400 mb-2">Marketplace Creation</h3>
+            <p class="text-gray-300">
+              Once our core platform is built, we expand to create a comprehensive marketplace where VisionCreators can build and distribute mini apps within our framework. This marketplace becomes the ecosystem where digital assets are created, shared, and monetized.
+            </p>
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <div class="bg-gray-800/50 p-3 rounded-lg">
+                <p class="text-sm text-yellow-300 font-medium">Feature</p>
+                <p class="text-xs text-gray-400">AI-powered marketplace</p>
+              </div>
+              <div class="bg-gray-800/50 p-3 rounded-lg">
+                <p class="text-sm text-cyan-300 font-medium">Benefit</p>
+                <p class="text-xs text-gray-400">Monetize your creations</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Phase 3 -->
+      <div class="relative z-10">
+        <div class="flex items-center">
+          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl text-black font-bold shadow-lg">
+            3
+          </div>
+          <div class="ml-8 bg-gray-900/50 backdrop-blur-xl rounded-xl border border-yellow-500/20 p-6 flex-1">
+            <h3 class="text-xl font-bold text-yellow-400 mb-2">Community Exit & DAO Transformation</h3>
+            <p class="text-gray-300">
+              Upon reaching our milestone of 10,000 members—both passive investors and active contributors holding VCR tokens—we execute our community exit and transform into a full DAO. At this point, governance transfers completely to token holders.
+            </p>
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <div class="bg-gray-800/50 p-3 rounded-lg">
+                <p class="text-sm text-yellow-300 font-medium">Feature</p>
+                <p class="text-xs text-gray-400">Complete DAO governance</p>
+              </div>
+              <div class="bg-gray-800/50 p-3 rounded-lg">
+                <p class="text-sm text-cyan-300 font-medium">Benefit</p>
+                <p class="text-xs text-gray-400">Full community control</p>
               </div>
             </div>
           </div>
@@ -395,78 +576,193 @@
   </div>
 </section>
 
-<!-- Your Rise Benefits -->
-<section class="min-h-screen py-32 px-8 relative overflow-hidden">
-  <div class="max-w-7xl mx-auto relative">
-    <!-- Title -->
-    <div class="text-center mb-32">
-      <h2 class="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        Your Rise
+<!-- Value Proposition (Using Social Proof) -->
+<section class="py-24 bg-gray-950 relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+        The Value Proposition
       </h2>
     </div>
-
-    <!-- Benefits Tree -->
-    <div class="relative">
-      <!-- Side Benefits -->
-      <div class="grid grid-cols-2 gap-24">
-        <!-- Skills & Value -->
-        <div class="group relative flex items-center">
-          <div class="absolute inset-0 bg-gradient-to-br from-yellow-400/0 to-cyan-400/0 group-hover:from-yellow-400/10 group-hover:to-cyan-400/10 rounded-3xl transition-all duration-700 blur-xl"></div>
-          <div class="w-full bg-slate-900/50 backdrop-blur-sm rounded-3xl p-8 border border-transparent group-hover:border-cyan-500/40 transition-all duration-500 relative">
-            <div class="flex flex-col items-center text-center">
-              <div class="flex -space-x-2 mb-6 transform group-hover:scale-110 transition-transform duration-500">
-                <Avatar seed="dev" />
-                <Avatar seed="designer" />
-                <Avatar seed="marketer" />
-              </div>
-              <h3 class="text-3xl font-bold text-yellow-400 mb-6">Skills & Value</h3>
-              <div class="space-y-4 text-gray-300/80">
-                <p class="group-hover:text-cyan-100 transition-colors duration-300">Use your skills to build value</p>
-                <p class="group-hover:text-cyan-100 transition-colors duration-300">Choose projects you love</p>
-                <p class="group-hover:text-cyan-100 transition-colors duration-300">Grow your professional portfolio</p>
-              </div>
-            </div>
+    
+    <!-- User Stories - Social Proof -->
+    <div class="grid gap-8 md:grid-cols-3">
+      <!-- Creators -->
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-8 transition-all duration-300 hover:border-yellow-500/40">
+        <div class="flex items-start gap-6 mb-8">
+          <Avatar seed="creator" size="56" />
+          <div>
+            <h3 class="text-xl font-bold text-yellow-400 mb-1">For Creators</h3>
+            <p class="text-sm text-gray-400">Tech enthusiasts & builders</p>
           </div>
         </div>
+        
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="text-yellow-400">•</div>
+            <p class="text-gray-300 text-sm">Create mini apps through voice commands without technical skills</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="text-yellow-400">•</div>
+            <p class="text-gray-300 text-sm">Earn VCR tokens through platform contributions</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="text-yellow-400">•</div>
+            <p class="text-gray-300 text-sm">Build ownership in a growing AI marketplace ecosystem</p>
+          </div>
+        </div>
+        
+        <div class="mt-8 bg-gray-800/50 rounded-xl p-4">
+          <p class="text-gray-300 text-sm italic">
+            "I always had app ideas but couldn't code. Now I just describe my vision through voice and it becomes reality."
+          </p>
+          <p class="text-right text-xs text-gray-400 mt-2">— Alex, Graphic Designer</p>
+        </div>
+      </div>
+      
+      <!-- Investors -->
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 transition-all duration-300 hover:border-cyan-500/40">
+        <div class="flex items-start gap-6 mb-8">
+          <Avatar seed="investor" size="56" />
+          <div>
+            <h3 class="text-xl font-bold text-cyan-400 mb-1">For Investors</h3>
+            <p class="text-sm text-gray-400">Forward-thinking individuals</p>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="text-cyan-400">•</div>
+            <p class="text-gray-300 text-sm">One-time €365 investment for lifetime participation</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="text-cyan-400">•</div>
+            <p class="text-gray-300 text-sm">Clear exit strategy at 10,000 member milestone</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="text-cyan-400">•</div>
+            <p class="text-gray-300 text-sm">30% ownership distributed through VCR tokens</p>
+          </div>
+        </div>
+        
+        <div class="mt-8 bg-gray-800/50 rounded-xl p-4">
+          <p class="text-gray-300 text-sm italic">
+            "I've invested in traditional startups before, but never had true ownership or governance rights like with VisionCreator."
+          </p>
+          <p class="text-right text-xs text-gray-400 mt-2">— Maria, Angel Investor</p>
+        </div>
+      </div>
+      
+      <!-- Partners -->
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-purple-500/20 p-8 transition-all duration-300 hover:border-purple-500/40">
+        <div class="flex items-start gap-6 mb-8">
+          <Avatar seed="partner" size="56" />
+          <div>
+            <h3 class="text-xl font-bold text-purple-400 mb-1">For Partners</h3>
+            <p class="text-sm text-gray-400">Businesses & service providers</p>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="flex items-start gap-3">
+            <div class="text-purple-400">•</div>
+            <p class="text-gray-300 text-sm">Join an ecosystem with built-in distribution channel</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="text-purple-400">•</div>
+            <p class="text-gray-300 text-sm">Leverage community resources for development</p>
+          </div>
+          <div class="flex items-start gap-3">
+            <div class="text-purple-400">•</div>
+            <p class="text-gray-300 text-sm">Align with next-generation ownership model</p>
+          </div>
+        </div>
+        
+        <div class="mt-8 bg-gray-800/50 rounded-xl p-4">
+          <p class="text-gray-300 text-sm italic">
+            "We integrated our API with VisionCreator's marketplace and saw a 3x increase in developer adoption."
+          </p>
+          <p class="text-right text-xs text-gray-400 mt-2">— Carlos, API Provider</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-        <!-- Token Growth -->
-        <div class="group relative">
-          <div class="absolute inset-0 bg-gradient-to-br from-yellow-400/0 to-cyan-400/0 group-hover:from-yellow-400/10 group-hover:to-cyan-400/10 rounded-3xl transition-all duration-700 blur-xl"></div>
-          <div class="bg-slate-900/50 backdrop-blur-sm rounded-3xl p-8 border border-transparent group-hover:border-cyan-500/40 transition-all duration-500 relative">
-            <div class="flex flex-col items-center text-center">
-              <div class="flex -space-x-2 mb-6 transform group-hover:scale-110 transition-transform duration-500">
-                <Avatar seed="early1" />
-                <Avatar seed="early2" />
-                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-white text-xs font-bold">GmbH</div>
-              </div>
-              <h3 class="text-3xl font-bold text-yellow-400 mb-6">Token Growth</h3>
-              <div class="flex flex-col gap-8">
-                <!-- Personal Growth -->
-                <div class="space-y-2">
-                  <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 mx-auto flex items-center justify-center text-black">
-                    👤
-                  </div>
-                  <h4 class="text-xl font-semibold text-cyan-100">Personal Rise</h4>
-                  <div class="space-y-2 text-gray-300/80">
-                    <p class="group-hover:text-cyan-100 transition-colors duration-300">Portfolio value grows</p>
-                    <p class="group-hover:text-cyan-100 transition-colors duration-300">Skill recognition</p>
-                    <p class="group-hover:text-cyan-100 transition-colors duration-300">Real company ownership</p>
-                  </div>
-                </div>
-                <!-- Project Growth -->
-                <div class="pt-8 border-t border-cyan-500/20 space-y-2">
-                  <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 mx-auto flex items-center justify-center text-black">
-                    🚀
-                  </div>
-                  <h4 class="text-xl font-semibold text-cyan-100">Project Success</h4>
-                  <div class="space-y-2 text-gray-300/80">
-                    <p class="group-hover:text-cyan-100 transition-colors duration-300">Co-own what you build</p>
-                    <p class="group-hover:text-cyan-100 transition-colors duration-300">Share project growth</p>
-                    <p class="group-hover:text-cyan-100 transition-colors duration-300">Secure permanent rights</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+<!-- The Numbers (Visuals to Tell the Story) -->
+<section class="py-24 bg-black relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+        The Numbers That Matter
+      </h2>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
+        <div class="text-3xl font-bold text-yellow-400 mb-2">€365</div>
+        <div class="text-sm text-gray-300">One-time Investment</div>
+      </div>
+      
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
+        <div class="text-3xl font-bold text-cyan-400 mb-2">50/50</div>
+        <div class="text-sm text-gray-300">Platform/Community Split</div>
+      </div>
+      
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
+        <div class="text-3xl font-bold text-yellow-400 mb-2">30%</div>
+        <div class="text-sm text-gray-300">Ownership Distribution</div>
+      </div>
+      
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
+        <div class="text-3xl font-bold text-cyan-400 mb-2">€3.65M</div>
+        <div class="text-sm text-gray-300">Community Treasury</div>
+      </div>
+      
+      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
+        <div class="text-3xl font-bold text-yellow-400 mb-2">100%</div>
+        <div class="text-sm text-gray-300">Community Governance</div>
+      </div>
+    </div>
+    
+    <!-- Conversion Funnel Visualization -->
+    <div class="mt-20 bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8">
+      <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-8 text-center">
+        The Journey to Full DAO
+      </h3>
+      
+      <div class="relative">
+        <!-- Progress Bar -->
+        <div class="h-3 bg-gray-800 rounded-full overflow-hidden mb-8">
+          <div class="h-full bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full" style="width: 23%;"></div>
+        </div>
+        
+        <!-- Milestones -->
+        <div class="flex justify-between text-center">
+          <div>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 mx-auto mb-2 flex items-center justify-center text-black text-xs font-bold">1</div>
+            <div class="text-sm text-gray-300">Early<br>Adopters</div>
+            <div class="text-xs text-yellow-300 mt-1">Now</div>
+          </div>
+          
+          <div>
+            <div class="w-8 h-8 rounded-full bg-gray-700 mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold">5K</div>
+            <div class="text-sm text-gray-300">Platform<br>Launch</div>
+          </div>
+          
+          <div>
+            <div class="w-8 h-8 rounded-full bg-gray-700 mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold">10K</div>
+            <div class="text-sm text-gray-300">DAO<br>Transformation</div>
           </div>
         </div>
       </div>
@@ -474,147 +770,90 @@
   </div>
 </section>
 
-<!-- Fibonacci Journey -->
-<section class="relative py-32 overflow-hidden">
-  <!-- Journey Heading -->
-  <div class="text-center mb-32">
-    <h2 class="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-      Fibonacci Growth
+<!-- CTA Section -->
+<section class="py-24 bg-gradient-to-b from-gray-950 to-black relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-1/2 -left-48 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-8 text-center space-y-12">
+    <h2 class="text-5xl font-bold">
+      <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+        Join the future for €365
+      </span>
     </h2>
-    <p class="text-2xl text-cyan-100 mt-4">Each milestone unlocks bigger ventures</p>
-  </div>
-
-  <!-- Fibonacci Spiral Journey -->
-  <div class="max-w-7xl mx-auto px-8">
-    <!-- 144 Launch -->
-    <div class="group relative flex items-center mb-48">
-      <div class="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-yellow-400 via-cyan-400 to-transparent"></div>
-      <div class="w-full max-w-3xl mx-auto">
-        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-12 hover:border-cyan-400/40 transition-all duration-500">
-          <div class="absolute -top-6 left-1/2 -translate-x-1/2">
-            <div class="flex -space-x-2">
-              <Avatar seed="launch1" />
-              <Avatar seed="launch2" />
-              <Avatar seed="launch3" />
-              <div class="w-12 h-12 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold">
-                144
-              </div>
-            </div>
-          </div>
-          <div class="text-center space-y-6">
-            <h3 class="text-4xl font-bold text-yellow-400">Platform Launch</h3>
-            <div class="flex justify-center gap-4">
-              <span class="px-4 py-2 rounded-full bg-cyan-400/10 text-cyan-100">Community Platform</span>
-              <span class="px-4 py-2 rounded-full bg-yellow-400/10 text-yellow-400">Digital Shares</span>
-            </div>
-          </div>
+    
+    <p class="text-xl text-gray-300 max-w-xl mx-auto">
+      Be among the first 10,000 members who will own and govern VisionCreator.
+    </p>
+    
+    <!-- CTV instead of CTA -->
+    <div class="flex flex-col sm:flex-row justify-center items-center space-y-6 sm:space-y-0 sm:space-x-6">
+      <button class="px-10 py-5 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black text-xl font-bold hover:scale-105 transition-all duration-300 w-full sm:w-auto">
+        Start My Ownership Journey
+      </button>
+      
+      <a href="/roadmap" class="text-cyan-400 underline hover:text-cyan-300 transition-colors">
+        See detailed roadmap
+      </a>
+    </div>
+    
+    <!-- Social Proof -->
+    <div class="flex justify-center gap-4 mt-12">
+      <div class="flex -space-x-3">
+        <Avatar seed="member1" />
+        <Avatar seed="member2" />
+        <Avatar seed="member3" />
+        <div class="w-12 h-12 rounded-full border-2 border-gray-900 bg-gradient-to-br from-gray-800 to-gray-900 backdrop-blur-xl flex items-center justify-center text-cyan-100 text-sm">
+          +{memberCount - 3}
         </div>
       </div>
-    </div>
-
-    <!-- 233 Second Venture -->
-    <div class="group relative flex items-center mb-48">
-      <div class="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-yellow-400 via-cyan-400 to-transparent"></div>
-      <div class="w-full max-w-4xl mx-auto">
-        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-12 hover:border-cyan-400/40 transition-all duration-500 scale-105">
-          <div class="absolute -top-6 left-1/2 -translate-x-1/2">
-            <div class="flex -space-x-2">
-              <Avatar seed="voter1" />
-              <Avatar seed="voter2" />
-              <Avatar seed="voter3" />
-              <div class="w-14 h-14 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold text-lg">
-                233
-              </div>
-            </div>
-          </div>
-          <div class="text-center space-y-6">
-            <h3 class="text-5xl font-bold text-yellow-400">Second Venture</h3>
-            <p class="text-xl text-cyan-100">Our community grows stronger</p>
-            <div class="flex justify-center gap-4">
-              <span class="px-6 py-3 rounded-full bg-cyan-400/10 text-cyan-100 text-lg">€85k VisionCreator Pool</span>
-              <span class="px-6 py-3 rounded-full bg-yellow-400/10 text-yellow-400 text-lg">233 Visionaries</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Community Growth -->
-    <div class="group relative flex items-center mb-48">
-      <div class="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-yellow-400 via-cyan-400 to-transparent"></div>
-      <div class="w-full max-w-5xl mx-auto">
-        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-16 hover:border-cyan-400/40 transition-all duration-500 scale-110">
-          <div class="absolute -top-8 left-1/2 -translate-x-1/2">
-            <div class="flex -space-x-2">
-              <Avatar seed="dev1" />
-              <Avatar seed="designer1" />
-              <Avatar seed="marketer1" />
-              <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold text-xl">
-                10k+
-              </div>
-            </div>
-          </div>
-          <div class="text-center space-y-8">
-            <h3 class="text-6xl font-bold text-yellow-400">Growing Impact</h3>
-            <p class="text-2xl text-cyan-100">Thousands join our vision</p>
-            <div class="flex justify-center gap-6">
-              <span class="px-8 py-4 rounded-full bg-cyan-400/10 text-cyan-100 text-xl">€3.6M VisionCreator Pool</span>
-              <span class="px-8 py-4 rounded-full bg-yellow-400/10 text-yellow-400 text-xl">10,000 Visionaries</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Million Strong -->
-    <div class="group relative flex items-center">
-      <div class="w-full max-w-6xl mx-auto">
-        <div class="relative bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-20 hover:border-cyan-400/40 transition-all duration-500 scale-115">
-          <div class="absolute -top-10 left-1/2 -translate-x-1/2">
-            <div class="flex -space-x-2">
-              <Avatar seed="eco1" />
-              <Avatar seed="eco2" />
-              <Avatar seed="eco3" />
-              <div class="w-20 h-20 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-black font-bold text-2xl">
-                1M+
-              </div>
-            </div>
-          </div>
-          <div class="text-center space-y-10">
-            <h3 class="text-7xl font-bold text-yellow-400">Million Strong</h3>
-            <p class="text-3xl text-cyan-100">A community that moves markets</p>
-            <div class="flex justify-center gap-8">
-              <span class="px-10 py-5 rounded-full bg-cyan-400/10 text-cyan-100 text-2xl">€365M VisionCreator Pool</span>
-              <span class="px-10 py-5 rounded-full bg-yellow-400/10 text-yellow-400 text-2xl">1,000,000 Visionaries</span>
-            </div>
-            <p class="text-xl text-cyan-100/80 mt-8">Together we fund ventures that change the world</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Decorative Elements -->
-    <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
-      <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"></div>
-      <div class="absolute top-3/4 -right-48 w-96 h-96 bg-cyan-400/10 rounded-full blur-3xl"></div>
     </div>
   </div>
 </section>
 
-<!-- CTA -->
-<section class="min-h-screen flex flex-col justify-center items-center">
-  <div class="max-w-4xl space-y-16 text-center">
-    <h2 class="text-7xl font-bold">
-      Start with €1
-      <br />
-      <span class="text-yellow-400">Rise with Every Project</span>
-    </h2>
-    <button class="px-12 py-6 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black text-2xl font-bold hover:scale-105 transition-transform duration-300">
-      Join Now
-    </button>
-  </div>
-</section>
+</div><!-- End of main wrapper -->
 
-<div class="bg-slate-900 min-h-screen text-white">
-  <slot />
-</div>
+<style>
+  @keyframes title-rise {
+    0% { transform: translateY(30px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes fade-in {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes slide-up {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+
+  .animate-title-rise {
+    animation: title-rise 1.2s ease-out forwards;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 1s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 1s ease-out forwards;
+  }
+
+  .animate-fade-in-delayed {
+    animation: fade-in 1s ease-out 0.5s forwards;
+    opacity: 0;
+  }
+
+  .animate-fade-in-delayed-2 {
+    animation: fade-in 1s ease-out 1s forwards;
+    opacity: 0;
+  }
+
+  .animate-slide-up-delayed {
+    animation: slide-up 1s ease-out 0.3s forwards;
+    opacity: 0;
+  }
+</style>
