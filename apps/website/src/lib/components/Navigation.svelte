@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { onMount } from 'svelte';
   
   // Function to determine if a link is active
   function isActive(path: string): boolean {
@@ -15,6 +16,27 @@
   // Mobile menu state
   let menuOpen = false;
   
+  // Logo image error handling
+  let logoError = false;
+  let logoSources = [
+    '/logo/logo.png',
+    '/images/visioncreator-logo.png',
+    '/static/logo/logo.png',
+    '/static/images/visioncreator-logo.png'
+  ];
+  let currentLogoSrc = logoSources[0];
+  let logoIndex = 0;
+  
+  function handleImageError() {
+    logoIndex++;
+    if (logoIndex < logoSources.length) {
+      currentLogoSrc = logoSources[logoIndex];
+    } else {
+      logoError = true;
+      console.error('Failed to load logo from any of the expected locations');
+    }
+  }
+  
   // Toggle mobile menu
   function toggleMenu() {
     menuOpen = !menuOpen;
@@ -28,47 +50,52 @@
 
 <style>
   /* Logo hover animation */
-  @keyframes pulse-glow {
-    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(52, 211, 153, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  .logo-container {
+    transition: transform 0.3s ease;
   }
   
-  .group:hover .logo-pulse {
-    animation: pulse-glow 2s infinite;
+  .logo-container:hover {
+    transform: scale(1.05);
   }
   
-  /* Sparkle animation */
-  @keyframes sparkle {
-    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-    50% { opacity: 1; transform: scale(1) rotate(45deg); }
-  }
-  
-  .sparkle {
-    animation: sparkle 2s ease-in-out infinite;
+  /* Custom colors based on logo */
+  :root {
+    --navy-blue: #0a192f;
+    --teal: #64ffda;
+    --gold: #f0b429;
   }
 </style>
 
-<header class="border-b border-gray-800/50 bg-gradient-to-r from-black to-gray-900/90 backdrop-blur-lg fixed w-full z-50 shadow-md shadow-emerald-900/10">
+<header class="border-b border-gray-800/50 bg-[#0a192f] fixed w-full z-50 shadow-md shadow-[#64ffda]/10">
   <div class="container mx-auto px-4 py-3 flex items-center justify-between">
     <a href="/" class="relative flex items-center group">
-      <!-- Updated Logo mark -->
-      <div class="mr-1.5 w-7 h-7 relative logo-pulse">
-        <div class="absolute inset-0 bg-gradient-to-br from-yellow-400 to-emerald-500 rounded-sm rotate-45 transform group-hover:scale-110 transition-all duration-300"></div>
-        <div class="absolute inset-0.5 bg-black rounded-sm rotate-45"></div>
-        <!-- Turquoise accent element -->
-        <div class="absolute top-1 left-2.5 w-2 h-4 bg-gradient-to-b from-teal-400 to-teal-500 transform rotate-12"></div>
-        
-        <!-- Sparkle element -->
-        <div class="absolute -top-1 -right-1 w-2 h-2 sparkle">
-          <div class="absolute inset-0 bg-teal-300 rotate-45"></div>
-          <div class="absolute inset-0 bg-teal-300 rotate-90"></div>
-        </div>
+      <!-- Logo Image -->
+      <div class="logo-container mr-3 flex items-center">
+        {#if !logoError}
+          <img 
+            src={currentLogoSrc} 
+            alt="VisionCreator Logo" 
+            class="h-9 w-9"
+            on:error={handleImageError}
+          />
+        {:else}
+          <!-- Fallback logo if image fails -->
+          <div class="h-9 w-9 relative">
+            <svg viewBox="0 0 200 200" width="36" height="36">
+              <circle cx="100" cy="100" r="95" fill="#0a192f" stroke="#64ffda" stroke-width="2" />
+              <circle cx="100" cy="100" r="85" fill="none" stroke="#f0b429" stroke-width="1" stroke-dasharray="4,4" />
+              <path d="M65,80 Q100,40 135,80 Q150,100 135,120 Q100,160 65,120 Q50,100 65,80 Z" fill="#163075" />
+              <path d="M75,85 Q100,55 125,85 M85,140 Q100,120 115,140" stroke="white" fill="none" stroke-width="2" />
+              <path d="M90,95 A5,8 0 1,0 90,110 Z M110,95 A5,8 0 1,0 110,110 Z" fill="white" />
+              <path d="M130,80 L150,80 M130,90 L150,90 M130,100 L150,100 M130,110 L145,110" stroke="#f0b429" stroke-width="2" />
+            </svg>
+          </div>
+        {/if}
       </div>
       
-      <!-- Logo text with new color scheme -->
-      <div class="text-2xl font-extrabold tracking-wide">
-        <span class="bg-gradient-to-r from-yellow-400 via-green-400 to-teal-400 bg-clip-text text-transparent transition-all duration-300">Vision</span><span class="text-teal-400 group-hover:text-teal-300 transition-colors duration-300">creator</span>
+      <!-- Logo text -->
+      <div class="text-2xl font-bold tracking-wide">
+        <span class="text-white">Vision</span><span class="text-[#64ffda]">creator</span>
       </div>
     </a>
     
@@ -77,19 +104,19 @@
       <nav class="hidden md:flex gap-6">
         <a 
           href="/" 
-          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/') ? 'text-white font-medium border-teal-400' : 'border-transparent text-gray-300 hover:text-white hover:border-teal-400/50'}"
+          class="px-3 py-1.5 rounded-md transition-all duration-200 border-b-2 {isActive('/') ? 'text-white font-medium border-[#64ffda]' : 'border-transparent text-gray-300 hover:text-white hover:border-[#64ffda]/50'}"
         >
           Home
         </a>
         <a 
           href="/presentation" 
-          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/presentation') ? 'text-white font-medium border-teal-400' : 'border-transparent text-gray-300 hover:text-white hover:border-teal-400/50'}"
+          class="px-3 py-1.5 rounded-md transition-all duration-200 border-b-2 {isActive('/presentation') ? 'text-white font-medium border-[#64ffda]' : 'border-transparent text-gray-300 hover:text-white hover:border-[#64ffda]/50'}"
         >
           Presentation
         </a>
         <a 
           href="/roadmap" 
-          class="px-3 py-1 rounded-md transition-all duration-200 border-b-2 {isActive('/roadmap') ? 'text-white font-medium border-teal-400' : 'border-transparent text-gray-300 hover:text-white hover:border-teal-400/50'}"
+          class="px-3 py-1.5 rounded-md transition-all duration-200 border-b-2 {isActive('/roadmap') ? 'text-white font-medium border-[#64ffda]' : 'border-transparent text-gray-300 hover:text-white hover:border-[#64ffda]/50'}"
         >
           Roadmap
         </a>
@@ -98,7 +125,7 @@
       <!-- Join Now Button -->
       <a 
         href="#join" 
-        class="px-5 py-2 bg-gradient-to-r from-yellow-400 via-green-500 to-teal-500 rounded-full text-white font-medium hover:from-yellow-300 hover:via-green-400 hover:to-teal-400 transition-all duration-300 hover:scale-105 shadow-lg shadow-teal-700/30 border border-teal-400/20"
+        class="px-5 py-2 bg-gradient-to-r from-[#f0b429] to-[#64ffda] rounded-full text-[#0a192f] font-medium hover:opacity-90 transition-all duration-300 hover:scale-105 shadow-lg shadow-[#64ffda]/20 border border-[#64ffda]/20"
       >
         Join Now
       </a>
@@ -126,26 +153,26 @@
   
   <!-- Mobile Navigation -->
   {#if menuOpen}
-    <div class="md:hidden border-t border-gray-800/50 bg-gradient-to-b from-gray-900 to-black/95 backdrop-blur-lg">
+    <div class="md:hidden border-t border-gray-800/50 bg-[#0a192f]">
       <nav class="container mx-auto py-4 px-4 flex flex-col gap-4">
         <a 
           href="/" 
           on:click={closeMenu}
-          class="px-4 py-2 rounded-md transition-all {isActive('/') ? 'bg-gradient-to-r from-teal-900/30 to-emerald-900/30 text-white font-medium border-l-2 border-teal-400 pl-3' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
+          class="px-4 py-2 rounded-md transition-all {isActive('/') ? 'bg-[#0a192f]/50 text-white font-medium border-l-2 border-[#64ffda] pl-3' : 'text-gray-300 hover:text-white hover:bg-[#0a192f]/30'}"
         >
           Home
         </a>
         <a 
           href="/presentation" 
           on:click={closeMenu}
-          class="px-4 py-2 rounded-md transition-all {isActive('/presentation') ? 'bg-gradient-to-r from-teal-900/30 to-emerald-900/30 text-white font-medium border-l-2 border-teal-400 pl-3' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
+          class="px-4 py-2 rounded-md transition-all {isActive('/presentation') ? 'bg-[#0a192f]/50 text-white font-medium border-l-2 border-[#64ffda] pl-3' : 'text-gray-300 hover:text-white hover:bg-[#0a192f]/30'}"
         >
           Presentation
         </a>
         <a 
           href="/roadmap" 
           on:click={closeMenu}
-          class="px-4 py-2 rounded-md transition-all {isActive('/roadmap') ? 'bg-gradient-to-r from-teal-900/30 to-emerald-900/30 text-white font-medium border-l-2 border-teal-400 pl-3' : 'text-gray-300 hover:text-white hover:bg-gray-800/50'}"
+          class="px-4 py-2 rounded-md transition-all {isActive('/roadmap') ? 'bg-[#0a192f]/50 text-white font-medium border-l-2 border-[#64ffda] pl-3' : 'text-gray-300 hover:text-white hover:bg-[#0a192f]/30'}"
         >
           Roadmap
         </a>

@@ -417,7 +417,7 @@
                     >
                       <h4 class="text-xl font-semibold text-blue-300 mb-3">{tracks[0].milestones[index].title}</h4>
                       <p class="text-gray-300 text-sm leading-relaxed">{tracks[0].milestones[index].description}</p>
-                    </div>
+                          </div>
                     
                     <!-- Community track milestone -->
                     <div 
@@ -426,7 +426,7 @@
                     >
                       <h4 class="text-xl font-semibold text-rose-300 mb-3">{tracks[1].milestones[index].title}</h4>
                       <p class="text-gray-300 text-sm leading-relaxed">{tracks[1].milestones[index].description}</p>
-                    </div>
+                          </div>
                   </div>
                 {/if}
               </div>
@@ -565,9 +565,9 @@
               <div class="text-2xl md:text-3xl font-bold text-rose-400 mb-2">{metric.value}</div>
               <h3 class="text-sm font-medium text-white mb-1">{metric.metric}</h3>
               <p class="text-xs text-gray-400">{metric.description}</p>
-            </div>
-          {/each}
-        </div>
+          </div>
+        {/each}
+      </div>
         
         <div class="text-center mt-8" in:fade={{ delay: 1000, duration: 800 }}>
           <p class="text-lg text-gray-300 italic">

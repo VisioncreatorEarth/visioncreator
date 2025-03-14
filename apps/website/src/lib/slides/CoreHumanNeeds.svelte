@@ -1,97 +1,125 @@
 <script>
   import { onMount } from 'svelte';
+  import { fade } from 'svelte/transition';
   
-  let revealed = false;
+  let visible = false;
   
   onMount(() => {
     setTimeout(() => {
-      revealed = true;
-    }, 400);
+      visible = true;
+    }, 300);
   });
+  
+  const coreNeeds = [
+    {
+      name: "Belonging",
+      icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
+      color: "#64ffda",
+      description: "Being part of a community that values your contributions and perspective"
+    },
+    {
+      name: "Autonomy",
+      icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
+      color: "#f0b429",
+      description: "Having freedom to make meaningful decisions about your work and approach"
+    },
+    {
+      name: "Agency",
+      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+      color: "#64ffda",
+      description: "Having real influence over outcomes and ability to shape your environment"
+    },
+    {
+      name: "Security",
+      icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z",
+      color: "#f0b429",
+      description: "Fair compensation and a stable foundation for your life and future"
+    },
+    {
+      name: "Purpose",
+      icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z",
+      color: "#64ffda",
+      description: "Work that connects to your values and contributes to something larger"
+    }
+  ];
 </script>
 
-<div class="slide-content flex flex-col items-center justify-center h-full p-8">
-  <div class="max-w-5xl w-full mx-auto">
-    <!-- Main heading -->
-    <div class="text-center mb-12 transform transition-all duration-700 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}">
-      <p class="text-2xl md:text-3xl text-blue-300 mb-6">For true quality of life...</p>
-      <h2 class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 mb-4">
-        What do we need?
-      </h2>
-    </div>
+<div class="slide-content flex flex-col items-center justify-center h-full p-6 md:p-12 bg-[#0a192f]">
+  <!-- Content Container -->
+  <div class="max-w-6xl w-full mx-auto">
+    <!-- Header -->
+    {#if visible}
+      <div class="mb-10" in:fade={{ duration: 400 }}>
+        <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
+          Core Human <span class="text-[#f0b429]">Needs</span>
+        </h1>
+        <div class="h-1 w-32 bg-[#64ffda]/30 mt-4 mb-4"></div>
+        <p class="text-xl md:text-2xl text-gray-300">
+          What every workplace should address
+        </p>
+      </div>
+    {/if}
     
-    <!-- Core needs -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Need 1: Belonging -->
-      <div class="transform transition-all duration-700 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}" style="transition-delay: 100ms;">
-        <div class="bg-gradient-to-b from-blue-900/30 to-black/20 rounded-xl p-6 border border-blue-600/20 h-full flex flex-col">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-900/50 border border-blue-500/30 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
+    <!-- Introduction Box -->
+    {#if visible}
+      <div class="mb-10" in:fade={{ duration: 400, delay: 150 }}>
+        <div class="bg-[#0a1a3a]/50 rounded-lg p-6 border border-gray-800">
+          <div class="flex items-center">
+            <div class="shrink-0 w-12 h-12 rounded-full bg-[#0a192f] flex items-center justify-center mr-5 border border-[#64ffda]/30">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#64ffda]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <h3 class="text-2xl font-bold text-white">The Workplace That Feels Like Home</h3>
           </div>
-          <h3 class="text-xl font-bold text-blue-300 mb-3 text-center">Belonging</h3>
-          <p class="text-slate-300 text-center flex-grow">Being part of a community with shared values where we feel seen, respected, and valued for our contributions.</p>
+          <p class="mt-4 text-gray-300 pl-[4.25rem]">
+            Imagine a workplace that supports your whole being, where fundamental human needs aren't just acknowledged, but actively nurtured. This is what a truly human-centered work environment provides.
+          </p>
         </div>
       </div>
-      
-      <!-- Need 2: Autonomy -->
-      <div class="transform transition-all duration-700 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}" style="transition-delay: 200ms;">
-        <div class="bg-gradient-to-b from-cyan-900/30 to-black/20 rounded-xl p-6 border border-cyan-600/20 h-full flex flex-col">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-900/50 border border-cyan-500/30 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-cyan-300 mb-3 text-center">Autonomy</h3>
-          <p class="text-slate-300 text-center flex-grow">Freedom to follow our own path, make our own decisions, and work according to our own rhythms and values.</p>
-        </div>
-      </div>
-      
-      <!-- Need 3: Agency -->
-      <div class="transform transition-all duration-700 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}" style="transition-delay: 300ms;">
-        <div class="bg-gradient-to-b from-sky-900/30 to-black/20 rounded-xl p-6 border border-sky-600/20 h-full flex flex-col">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-sky-900/50 border border-sky-500/30 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-sky-300 mb-3 text-center">Agency</h3>
-          <p class="text-slate-300 text-center flex-grow">Having purpose, drive, and the ability to act on our creative impulses to meaningfully influence our environment.</p>
-        </div>
-      </div>
-    </div>
+    {/if}
     
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      <!-- Need 4: Financial Security -->
-      <div class="transform transition-all duration-700 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}" style="transition-delay: 400ms;">
-        <div class="bg-gradient-to-b from-blue-900/30 to-black/20 rounded-xl p-6 border border-blue-600/20 h-full flex flex-col">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-900/50 border border-blue-500/30 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+    <!-- Core Needs Grid -->
+    {#if visible}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12" in:fade={{ duration: 400, delay: 250 }}>
+        {#each coreNeeds as need, i}
+          <div class="bg-[#0a1a3a]/50 rounded-lg p-5 border border-gray-800">
+            <div class="flex items-start">
+              <div class="shrink-0 w-10 h-10 rounded-full bg-[#0a192f] flex items-center justify-center mr-4 border" style="border-color: {need.color}30;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: {need.color};">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{need.icon}" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold" style="color: {need.color};">{need.name}</h3>
+                <p class="text-gray-300 mt-1">{need.description}</p>
+              </div>
+            </div>
           </div>
-          <h3 class="text-xl font-bold text-blue-300 mb-3 text-center">Financial Security</h3>
-          <p class="text-slate-300 text-center flex-grow">Building projects that create lasting value, providing stability without sacrificing autonomy or meaning.</p>
-        </div>
+        {/each}
       </div>
-      
-      <!-- Need 5: Expression of Inner Strength -->
-      <div class="transform transition-all duration-700 {revealed ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}" style="transition-delay: 500ms;">
-        <div class="bg-gradient-to-b from-cyan-900/30 to-black/20 rounded-xl p-6 border border-cyan-600/20 h-full flex flex-col">
-          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-cyan-900/50 border border-cyan-500/30 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <h3 class="text-xl font-bold text-cyan-300 mb-3 text-center">Inner Expression</h3>
-          <p class="text-slate-300 text-center flex-grow">Aligning our outer work with our inner values and strengths, creating congruence between who we are and what we do.</p>
-        </div>
+    {/if}
+    
+    <!-- Bottom Message -->
+    {#if visible}
+      <div class="text-center" in:fade={{ duration: 400, delay: 350 }}>
+        <p class="text-2xl md:text-3xl text-white">
+          Work becomes a <span class="text-[#64ffda]">fulfilling extension</span> of your <span class="text-[#f0b429]">true self</span>
+        </p>
       </div>
+    {/if}
+    
+    <!-- Slide Number -->
+    <div class="absolute bottom-4 right-4 text-sm text-gray-500">
+      04
     </div>
   </div>
 </div>
 
 <style>
-  /* Add any slide-specific styles here */
+  .slide-content {
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
 </style> 
