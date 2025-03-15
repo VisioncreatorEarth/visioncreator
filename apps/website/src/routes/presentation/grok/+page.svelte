@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade, fly, scale } from 'svelte/transition';
+  import { fade, fly, scale, slide } from 'svelte/transition';
+  import { quintOut } from 'svelte/easing';
   
   interface Section {
     id: string;
@@ -11,6 +12,14 @@
     listItems?: string[];
     callToAction?: string;
     accent?: boolean;
+    hasSubslides?: boolean;
+    subslides?: Subslide[];
+  }
+  
+  interface Subslide {
+    id: string;
+    title: string;
+    content: string;
   }
   
   // Updated content for each slide
@@ -63,86 +72,89 @@
     {
       id: 'deserve',
       title: 'What You Deserve',
-      subtitle: "You deserve a workplace that feels like home. It should offer:",
+      subtitle: "You deserve an organisation form that feels like home. It should offer:",
       content: [],
-      hasListItems: true,
-      listItems: [
-        "Belonging: Be part of a community that values you.",
-        "Autonomy & Agency: Pursue your purpose without restrictions.",
-        "Financial Security: Build lasting value for yourself and others.",
-        "Authentic Expression: Align your work with your true vision."
+      hasSubslides: true,
+      subslides: [
+        {
+          id: 'belonging',
+          title: 'Belonging',
+          content: 'Be part of a community that values you.'
+        },
+        {
+          id: 'autonomy',
+          title: 'Autonomy & Agency',
+          content: 'Pursue your purpose without restrictions.'
+        },
+        {
+          id: 'security',
+          title: 'Financial Security',
+          content: 'Build lasting value for yourself and others.'
+        },
+        {
+          id: 'expression',
+          title: 'Authentic Expression',
+          content: 'Align your work with your true vision.'
+        }
       ]
     },
     {
       id: 'how-works',
-      title: 'How Visioncreator Works',
-      subtitle: "Visioncreator is a collaborative ecosystem where:",
-      content: [],
-      hasListItems: true,
-      listItems: [
-        "You contribute based on your skills and passions.",
-        "Ownership is collective through tokenized shares.",
-        "Decision-making is democratic and transparent.",
-        "Innovation comes from community proposals.",
-        "Your contributions are tracked and rewarded fairly."
-      ]
+      title: 'A New Way to Work and Live',
+      subtitle: "",
+      content: [
+        "Imagine being a co-owner, not just a participant. Visioncreator is a Decentralized Autonomous Organization where power belongs to everyone. You propose ideas, vote on decisions, and shape our future together—no bosses, just collective wisdom. Your voice matters in every feature, resource, and goal we set. This isn't just a platform; it's a revolution in collaborative work and life."
+      ],
+      hasListItems: false,
+      accent: true
     },
     {
       id: 'dao',
-      title: 'The DAO Framework',
-      subtitle: "Visioncreator uses a DAO (Decentralized Autonomous Organization) framework:",
-      content: [],
-      hasListItems: true,
-      listItems: [
-        "Propose & Vote: You shape the future with democratic decisions.",
-        "Own Collectively: VCR tokens give you real legal stakes.",
-        "Innovate Together: You drive innovation through proposals.",
-        "Earn Fairly: Transparent rewards in tokens and stablecoins.",
-        "Quadratic Voting: Ensures fairness, no matter your token holdings."
-      ]
+      title: 'Got an Idea? Share It!',
+      subtitle: "",
+      content: [
+        "Have an idea or a way to make something better? Post it on our idea board! Whether it's a new feature or a small tweak, this is your chance to shape Visioncreator."
+      ],
+      hasListItems: false
     },
     {
       id: 'implementation',
-      title: 'Implementation Details',
-      subtitle: "Visioncreator is live:",
-      content: [],
-      hasListItems: true,
-      listItems: [
-        "A tokenized German GmbH on the tokenize-it platform.",
-        "VCR token represents real legal ownership.",
-        "€365 one-time buy-in gives you tokens and a stake.",
-        "Community pool rewards your contributions.",
-        "Quadratic voting keeps decisions fair.",
-        "At 10,000 investors, it becomes a fully decentralized DAO."
-      ]
+      title: 'Discuss and Vote',
+      subtitle: "",
+      content: [
+        "Your idea kicks off a conversation. We discuss it together as a collective, share feedback, and then vote. Get enough votes, and your idea turns into a draft—ready to take the next step."
+      ],
+      hasListItems: false
     },
     {
       id: 'your-role',
-      title: 'Your Role in Visioncreator',
-      subtitle: "As a Visioncreator, you can:",
-      content: [],
-      hasListItems: true,
-      listItems: [
-        "Collaborate freely based on your skills and interests.",
-        "Own real stakes in the projects you help build.",
-        "Shape the future by proposing and voting on ideas.",
-        "Earn tokens and stablecoins transparently."
+      title: 'From Draft to Reality',
+      subtitle: "",
+      content: [
+        "Now it's yours to run with. Define your draft, set a budget (say, 1500 euros), and take full responsibility to execute it. You're the leader, backed by the community."
       ],
-      callToAction: "You're not just working—you're owning and creating."
+      hasListItems: false
     },
     {
       id: 'lifestyle',
-      title: 'The Visioncreator Lifestyle',
-      subtitle: "Imagine a life where you:",
-      content: [],
-      hasListItems: true,
-      listItems: [
-        "Collaborate with a vibrant community of creators.",
-        "Build assets that generate income over time.",
-        "Enjoy autonomy and financial security.",
-        "Express your true self and vision.",
-        "Live and work aligned with your values."
-      ]
+      title: 'Success Pays Off',
+      subtitle: "",
+      content: [
+        "Once it's done, we vote again. If it's a win, you get paid—not just in euros, but also in token shares that boost your ownership in Visioncreator."
+      ],
+      hasListItems: false
+    },
+    {
+      id: 'hominio-vision',
+      title: 'Introducing Hominio',
+      subtitle: "",
+      content: [
+        "We're building our first project with this new kind of organization form.",
+        "Hominio is where we begin our journey together."
+      ],
+      callToAction: "Be among the founding members.",
+      accent: true,
+      hasListItems: false
     },
     {
       id: 'join',
@@ -164,6 +176,15 @@
   let sectionElements: HTMLElement[] = [];
   let progressPercentage = 0;
   let showWelcome = true;
+  let currentSubslideIndices: { [key: string]: number } = {};
+  
+  // Idea process states for visualization
+  const processStates: Record<string, string> = {
+    'dao': 'idea',
+    'implementation': 'vote',
+    'your-role': 'draft',
+    'lifestyle': 'reward'
+  };
   
   // Calculate progress
   function updateProgress() {
@@ -220,6 +241,27 @@
     }
   }
   
+  // Navigate subslides
+  function nextSubslide(sectionId: string) {
+    if (!currentSubslideIndices[sectionId]) {
+      currentSubslideIndices[sectionId] = 0;
+    }
+    
+    const section = sections.find(s => s.id === sectionId);
+    if (section?.hasSubslides && section.subslides) {
+      const maxIndex = section.subslides.length - 1;
+      currentSubslideIndices[sectionId] = Math.min(maxIndex, currentSubslideIndices[sectionId] + 1);
+    }
+  }
+  
+  function prevSubslide(sectionId: string) {
+    if (!currentSubslideIndices[sectionId]) {
+      currentSubslideIndices[sectionId] = 0;
+    }
+    
+    currentSubslideIndices[sectionId] = Math.max(0, currentSubslideIndices[sectionId] - 1);
+  }
+  
   // Start presentation and hide welcome screen
   function startPresentation() {
     showWelcome = false;
@@ -229,6 +271,13 @@
   }
   
   onMount(() => {
+    // Initialize current subslide indices
+    sections.forEach(section => {
+      if (section.hasSubslides) {
+        currentSubslideIndices[section.id] = 0;
+      }
+    });
+    
     // Get section elements
     sectionElements = sections.map(section => document.getElementById(section.id) as HTMLElement);
     
@@ -374,6 +423,161 @@
             <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
           {/if}
           
+          <!-- Process visualization for slides 7-10 (idea board process) -->
+          {#if ['dao', 'implementation', 'your-role', 'lifestyle'].includes(section.id)}
+            <div 
+              class="process-visual"
+              in:fade={{ duration: 600, delay: 300 }}
+            >
+              <div class="process-timeline">
+                <div class="timeline-track"></div>
+                <div 
+                  class="timeline-progress" 
+                  style="width: {['dao', 'implementation', 'your-role', 'lifestyle'].indexOf(section.id) * 33 + 33}%"
+                  in:slide={{ duration: 800, delay: 400, easing: quintOut }}
+                ></div>
+                
+                <!-- Process steps -->
+                <div class="timeline-steps">
+                  <div class="step" class:active={processStates[section.id] === 'idea' || ['implementation', 'your-role', 'lifestyle'].includes(section.id)}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                    </div>
+                    <span class="step-label">Idea</span>
+                  </div>
+                  <div class="step" class:active={processStates[section.id] === 'vote' || ['your-role', 'lifestyle'].includes(section.id)}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                    <span class="step-label">Vote</span>
+                  </div>
+                  <div class="step" class:active={processStates[section.id] === 'draft' || section.id === 'lifestyle'}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                      </svg>
+                    </div>
+                    <span class="step-label">Draft</span>
+                  </div>
+                  <div class="step" class:active={processStates[section.id] === 'reward'}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="7"></circle>
+                        <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                      </svg>
+                    </div>
+                    <span class="step-label">Reward</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Stage-specific visualization -->
+              {#if section.id === 'dao'}
+                <div class="idea-board-visual" in:fade={{ duration: 600, delay: 600 }}>
+                  <div class="idea-card">
+                    <div class="idea-header">
+                      <span class="idea-tag">Idea</span>
+                      <span class="idea-votes">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                        <span>5</span>
+                      </span>
+                    </div>
+                    <div class="idea-title">Improve the onboarding process</div>
+                    <div class="idea-author">
+                      <div class="author-avatar"></div>
+                      <span>Posted by you</span>
+                    </div>
+                  </div>
+                  <div class="add-idea-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add New Idea</span>
+                  </div>
+                </div>
+              {/if}
+              
+              {#if section.id === 'implementation'}
+                <div class="vote-visual" in:fade={{ duration: 600, delay: 600 }}>
+                  <div class="vote-progress">
+                    <div class="vote-bar">
+                      <div class="vote-fill" style="width: 75%" in:slide={{ duration: 1000, delay: 800, easing: quintOut }}></div>
+                    </div>
+                    <div class="vote-count">
+                      <span>75%</span>
+                      <span class="vote-detail">9 of 12 votes</span>
+                    </div>
+                  </div>
+                  <div class="vote-avatars">
+                    {#each Array(4) as _, i}
+                      <div 
+                        class="voter-avatar"
+                        style="--delay: {i * 200}ms"
+                        in:scale={{ duration: 400, delay: 1000 + (i * 200), start: 0.5 }}
+                      ></div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+              
+              {#if section.id === 'your-role'}
+                <div class="draft-visual" in:fade={{ duration: 600, delay: 600 }}>
+                  <div class="draft-document">
+                    <div class="draft-header">Draft Proposal</div>
+                    <div class="draft-content">
+                      <div class="draft-line" in:slide={{ duration: 400, delay: 700 }}></div>
+                      <div class="draft-line" in:slide={{ duration: 400, delay: 800 }}></div>
+                      <div class="draft-line short" in:slide={{ duration: 400, delay: 900 }}></div>
+                      <div class="draft-budget" in:fade={{ duration: 600, delay: 1200 }}>
+                        Budget: €1500
+                      </div>
+                      <div class="draft-line" in:slide={{ duration: 400, delay: 1300 }}></div>
+                      <div class="draft-line short" in:slide={{ duration: 400, delay: 1400 }}></div>
+                    </div>
+                  </div>
+                </div>
+              {/if}
+              
+              {#if section.id === 'lifestyle'}
+                <div class="reward-visual" in:fade={{ duration: 600, delay: 600 }}>
+                  <div class="reward-tokens">
+                    <div class="token euro" in:scale={{ duration: 600, delay: 700, start: 0.5 }}>€</div>
+                    <div class="token vcr" in:scale={{ duration: 600, delay: 900, start: 0.5 }}>VCR</div>
+                  </div>
+                  <div class="ownership-increase" in:fade={{ duration: 800, delay: 1200 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                      <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                    <span>Ownership Stake</span>
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+          
+          <!-- Hominio special visualization -->
+          {#if section.id === 'hominio-vision'}
+            <div class="hominio-minimal" in:fade={{ duration: 600, delay: 300 }}>
+              <div class="hominio-logo-simple" in:scale={{ duration: 800, delay: 400, start: 0.8 }}>
+                <img src="data:image/png;base64,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" alt="Visioncreator Logo" class="logo-image" />
+              </div>
+            </div>
+          {/if}
+          
           <!-- Regular content paragraphs if any -->
           {#if section.content && section.content.length > 0}
             {#each section.content as paragraph, pIndex}
@@ -384,15 +588,89 @@
             {/each}
           {/if}
           
-          <!-- List items if any -->
-          {#if section.hasListItems && section.listItems && section.listItems.length > 0}
-            <ul class="content-list">
-              {#each section.listItems as item, itemIndex}
-                <li 
-                  in:fly={{ y: 20, duration: 800, delay: 300 + (itemIndex * 100) }}
-                >{item}</li>
+          <!-- Subslides if any -->
+          {#if section.hasSubslides && section.subslides && section.subslides.length > 0}
+            <div class="subslides-container">
+              {#each section.subslides as subslide, subIndex}
+                {#if currentSubslideIndices[section.id] === subIndex}
+                  <div class="subslide" in:fade={{ duration: 400 }}>
+                    <h3 class="subslide-title">{subslide.title}</h3>
+                    <p class="subslide-content">{subslide.content}</p>
+                  </div>
+                {/if}
               {/each}
-            </ul>
+              
+              <!-- Subslide navigation -->
+              <div class="subslide-nav">
+                {#if currentSubslideIndices[section.id] > 0}
+                  <button class="subslide-nav-button prev" on:click={() => prevSubslide(section.id)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  </button>
+                {/if}
+                
+                <div class="subslide-indicators">
+                  {#each section.subslides as _, dotIndex}
+                    <span 
+                      class="subslide-dot" 
+                      class:active={currentSubslideIndices[section.id] === dotIndex}
+                    ></span>
+                  {/each}
+                </div>
+                
+                {#if currentSubslideIndices[section.id] < section.subslides.length - 1}
+                  <button class="subslide-nav-button next" on:click={() => nextSubslide(section.id)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </button>
+                {/if}
+              </div>
+            </div>
+          {/if}
+          
+          <!-- List items if any (only for non-subslide sections now) -->
+          {#if !section.hasSubslides && section.hasListItems && section.listItems && section.listItems.length > 0}
+            {#if section.id === 'how-works'}
+              <div class="radial-container">
+                <div class="center-point">
+                  <span class="center-text">Visioncreator</span>
+                </div>
+                
+                {#each section.listItems as item, itemIndex}
+                  <div 
+                    class="radial-item"
+                    style="--item-index: {itemIndex}; --total-items: {section.listItems.length};"
+                    in:fly={{ y: 20, duration: 800, delay: 300 + (itemIndex * 150) }}
+                  >
+                    <div class="ray"></div>
+                    <div class="point-content">{item}</div>
+                  </div>
+                {/each}
+              </div>
+            {:else if section.id === 'hominio'}
+              <ul class="hominio-features">
+                {#each section.listItems as item, itemIndex}
+                  <li 
+                    in:fly={{ y: 20, duration: 800, delay: 2400 + (itemIndex * 100) }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>{item}</span>
+                  </li>
+                {/each}
+              </ul>
+            {:else}
+              <ul class="content-list">
+                {#each section.listItems as item, itemIndex}
+                  <li 
+                    in:fly={{ y: 20, duration: 800, delay: 300 + (itemIndex * 100) }}
+                  >{item}</li>
+                {/each}
+              </ul>
+            {/if}
           {/if}
           
           <!-- Call to action if exists -->
@@ -855,16 +1133,678 @@
       font-size: 1.1rem;
     }
     
-    .call-to-action {
-      font-size: 1.4rem;
-    }
-    
     .welcome-title {
       font-size: 3.5rem;
     }
     
     .scroll-hint {
       bottom: 1rem;
+    }
+  }
+  
+  /* Subslide styles */
+  .subslides-container {
+    position: relative;
+    margin: 2rem 0;
+    min-height: 200px;
+  }
+  
+  .subslide {
+    text-align: center;
+    padding: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .subslide-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    background: linear-gradient(to right, #ffffff, #b3b3ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 15px rgba(179, 179, 255, 0.5);
+  }
+  
+  .subslide-content {
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+  
+  .subslide-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .subslide-nav-button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .subslide-nav-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .subslide-indicators {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .subslide-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+  }
+  
+  .subslide-dot.active {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+  }
+  
+  /* Media queries */
+  @media (max-width: 768px) {
+    .subslide-title {
+      font-size: 1.5rem;
+    }
+    
+    .subslide-content {
+      font-size: 1.1rem;
+    }
+  }
+  
+  /* Radial list visualization */
+  .radial-container {
+    position: relative;
+    min-height: 400px;
+    margin: 2rem auto;
+    max-width: 900px;
+  }
+  
+  .center-point {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+    animation: pulse 3s infinite alternate;
+  }
+  
+  .center-text {
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(to right, #ffffff, #b3b3ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 10px rgba(179, 179, 255, 0.6);
+  }
+  
+  .radial-item {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    --angle: calc(360deg / var(--total-items) * var(--item-index));
+    --distance: 230px;
+    transform: 
+      rotate(var(--angle)) 
+      translate(var(--distance)) 
+      rotate(calc(-1 * var(--angle)));
+    width: 200px;
+  }
+  
+  .ray {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: var(--distance);
+    height: 1px;
+    background: linear-gradient(to left, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+    transform: translateY(-50%) translateX(-100%);
+    opacity: 0.5;
+    animation: glow 4s infinite alternate;
+    animation-delay: calc(var(--item-index) * 0.5s);
+  }
+  
+  .point-content {
+    position: relative;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 0.5rem;
+    width: 200px;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  
+  .point-content:hover {
+    background: rgba(255, 255, 255, 0.07);
+    transform: scale(1.05);
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  }
+  
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+      transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+      box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+  }
+  
+  @keyframes glow {
+    0% {
+      opacity: 0.3;
+    }
+    100% {
+      opacity: 0.7;
+    }
+  }
+  
+  /* Media queries */
+  @media (max-width: 768px) {
+    .radial-container {
+      min-height: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .center-point {
+      position: relative;
+      transform: none;
+      top: auto;
+      left: auto;
+      margin: 1rem auto;
+    }
+    
+    .radial-item {
+      position: relative;
+      transform: none;
+      top: auto;
+      left: auto;
+      width: 100%;
+    }
+    
+    .ray {
+      display: none;
+    }
+    
+    .point-content {
+      width: 100%;
+    }
+  }
+  
+  /* Process visualization styles */
+  .process-visual {
+    margin: 1.5rem 0;
+    padding: 0.5rem;
+    width: 100%;
+  }
+  
+  .process-timeline {
+    position: relative;
+    height: 2rem;
+    margin: 2rem auto;
+    max-width: 80%;
+  }
+  
+  .timeline-track {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-50%);
+  }
+  
+  .timeline-progress {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.7), rgba(179, 179, 255, 0.7));
+    transform: translateY(-50%);
+    box-shadow: 0 0 8px rgba(179, 179, 255, 0.4);
+  }
+  
+  .timeline-steps {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.5);
+    transition: all 0.3s ease;
+  }
+  
+  .step.active {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .step-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+  }
+  
+  .step.active .step-icon {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+  }
+  
+  .step-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  /* Idea board visualization */
+  .idea-board-visual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2rem 0;
+    gap: 1rem;
+  }
+  
+  .idea-card {
+    width: 280px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .idea-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .idea-tag {
+    font-size: 0.7rem;
+    background: rgba(179, 179, 255, 0.2);
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .idea-votes {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .idea-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .idea-author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  .author-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .add-idea-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .add-idea-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+  }
+  
+  /* Vote visualization */
+  .vote-visual {
+    margin: 2rem auto;
+    width: 280px;
+  }
+  
+  .vote-progress {
+    margin-bottom: 1.5rem;
+  }
+  
+  .vote-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+  
+  .vote-fill {
+    height: 100%;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.7), rgba(179, 179, 255, 0.7));
+    border-radius: 4px;
+  }
+  
+  .vote-count {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .vote-detail {
+    font-size: 0.7rem;
+    opacity: 0.8;
+  }
+  
+  .vote-avatars {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+  
+  .voter-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    margin-left: -10px;
+    animation: pulseAvatar 3s infinite alternate;
+    animation-delay: var(--delay, 0ms);
+  }
+  
+  @keyframes pulseAvatar {
+    0% {
+      box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+    }
+    100% {
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+  }
+  
+  /* Draft visualization */
+  .draft-visual {
+    margin: 2rem auto;
+    width: 280px;
+  }
+  
+  .draft-document {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .draft-header {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .draft-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  
+  .draft-line {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    width: 100%;
+  }
+  
+  .draft-line.short {
+    width: 60%;
+  }
+  
+  .draft-budget {
+    font-size: 0.9rem;
+    color: rgba(179, 179, 255, 0.9);
+    background: rgba(179, 179, 255, 0.1);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+    text-align: center;
+  }
+  
+  /* Reward visualization */
+  .reward-visual {
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  
+  .reward-tokens {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .token {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 600;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+  }
+  
+  .token.euro {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .token.vcr {
+    background: linear-gradient(135deg, rgba(179, 179, 255, 0.2), rgba(179, 179, 255, 0.05));
+    border: 2px solid rgba(179, 179, 255, 0.3);
+    color: rgba(179, 179, 255, 0.9);
+  }
+  
+  .ownership-increase {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .ownership-increase svg {
+    color: rgba(179, 179, 255, 0.9);
+  }
+  
+  /* Media queries for process visualization */
+  @media (max-width: 768px) {
+    .process-timeline {
+      max-width: 95%;
+    }
+    
+    .step-label {
+      font-size: 0.7rem;
+    }
+    
+    .step-icon {
+      width: 24px;
+      height: 24px;
+    }
+  }
+  
+  /* Simplified Hominio styles */
+  .hominio-minimal {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 3rem 0;
+  }
+  
+  .hominio-logo-simple {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 20px rgba(179, 179, 255, 0.2);
+    overflow: hidden;
+  }
+  
+  .logo-image {
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+  }
+  
+  /* Vision steps styles */
+  .hominio-vision {
+    margin: 3rem 0;
+  }
+  
+  .vision-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .vision-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  .step-label {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .step-arrow {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.5rem;
+    margin: 0 0.5rem;
+  }
+  
+  @media (max-width: 768px) {
+    .vision-steps {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .step-arrow {
+      transform: rotate(90deg);
+      margin: 0.5rem 0;
+    }
+  }
+  
+  /* Remove the old complex Hominio styles, keeping only what we need */
+  .hominio-visual, .hominio-logo-container, .milestone-timeline, 
+  .founders-container, .hominio-features, .timeline-connector,
+  .milestone, .milestone-dot, .milestone-label, .founders-label,
+  .founders-avatars, .founder-avatar, .hominio-logo, .logo-rays {
+    /* Override with simpler styles or set to display: none */
+    display: none;
+  }
+  
+  /* Keep necessary animations but simplify */
+  @keyframes pulseLogo {
+    0% {
+      box-shadow: 0 0 20px rgba(179, 179, 255, 0.2);
+    }
+    100% {
+      box-shadow: 0 0 30px rgba(179, 179, 255, 0.3);
     }
   }
 </style> 
