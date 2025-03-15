@@ -355,11 +355,11 @@
   <!-- Progress bar -->
   <div class="progress-container">
     <div class="progress-bar" style="width: {progressPercentage}%"></div>
-    </div>
-  
+  </div>
+
   <!-- Scroll to top button -->
   {#if scrollY > windowHeight && !showWelcome}
-    <button 
+      <button 
       class="scroll-top-button"
       on:click={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Scroll to top"
@@ -373,16 +373,16 @@
   <!-- Welcome screen -->
   {#if showWelcome}
     <div class="welcome-screen" transition:fade={{ duration: 300 }}>
-      <div class="glow-background">
-        <div class="glow glow-1"></div>
-        <div class="glow glow-2"></div>
-  </div>
-
+    <div class="glow-background">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+    </div>
+    
       <div class="welcome-content">
         <div class="welcome-title" in:fade={{ duration: 800, delay: 200 }}>
           <div class="title-line">Visioncreator</div>
           <div class="title-subtitle">A New Way to Work</div>
-        </div>
+      </div>
         <p in:fade={{ duration: 800, delay: 400 }}>Own Your Future</p>
         
       <button 
@@ -396,7 +396,7 @@
             <polyline points="7 6 12 11 17 6"></polyline>
           </svg>
         </button>
-  </div>
+      </div>
     </div>
   {/if}
 
@@ -425,7 +425,7 @@
             {#if section.callToAction}
               <div class="call-to-action" in:fade={{ duration: 800, delay: 400 }}>
                 <p>{section.callToAction}</p>
-              </div>
+        </div>
             {/if}
             
             <div class="arrow-down" in:fade={{ duration: 400, delay: 800 }} aria-label="Scroll down to next section">
@@ -433,8 +433,8 @@
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <polyline points="19 12 12 19 5 12"></polyline>
               </svg>
-      </div>
-      
+        </div>
+        
           {:else if section.id === 'outdated'}
             <!-- Custom layout for outdated section -->
             <div class="split-layout">
@@ -452,12 +452,12 @@
                     <h3>Self-Employed</h3>
                     <p>You gain independence but remain chained to trading time for money, with endless stress.</p>
     </div>
-                </div>
-                
+    </div>
+    
                 {#if section.callToAction}
                   <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
                     <p>{section.callToAction}</p>
-                  </div>
+            </div>
                 {/if}
               </div>
               <div class="split-visual">
@@ -470,10 +470,10 @@
                     </svg>
                   </div>
                   <div class="model-new"></div>
-                </div>
-              </div>
-    </div>
-    
+            </div>
+          </div>
+        </div>
+        
           {:else if section.id === 'choice'}
             <!-- Choice section custom layout -->
             <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
@@ -490,7 +490,7 @@
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                       <circle cx="12" cy="7" r="4"></circle>
                     </svg>
-                  </div>
+              </div>
                   <div class="path-content">
                     <h3>Employee</h3>
                     <p>Create value for someone else, never fully realizing your potential.</p>
@@ -498,21 +498,21 @@
                       <span class="restriction">Limited freedom</span>
                       <span class="restriction">No ownership</span>
                       <span class="restriction">Capped income</span>
-                    </div>
-                  </div>
+              </div>
+              </div>
         </div>
         
                 <div class="path-divider">
                   <span>OR</span>
-        </div>
-        
+    </div>
+    
                 <div class="path-option">
                   <div class="path-icon self-employed-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
                       <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
                     </svg>
-                  </div>
+        </div>
                   <div class="path-content">
                     <h3>Self-Employed</h3>
                     <p>Shoulder overwhelming responsibility with little time to breathe.</p>
@@ -520,15 +520,15 @@
                       <span class="restriction">Constant stress</span>
                       <span class="restriction">No security</span>
                       <span class="restriction">Limited scale</span>
-                    </div>
-                  </div>
+        </div>
+        </div>
         </div>
       </div>
       
               {#if section.callToAction}
                 <div class="call-to-action better-way" in:fade={{ duration: 800, delay: 600 }}>
                   <p>{section.callToAction}</p>
-      </div>
+              </div>
               {/if}
               
               <div class="arrow-down" in:fade={{ duration: 400, delay: 700 }} aria-label="Scroll down to next section">
@@ -536,9 +536,9 @@
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <polyline points="19 12 12 19 5 12"></polyline>
                 </svg>
-    </div>
-            </div>
-            
+        </div>
+</div>
+
           {:else if section.id === 'why'}
             <!-- Why This Matters section -->
             <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
@@ -671,7 +671,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 2v4"></path><path d="M12 18v4"></path><path d="m4.93 4.93 2.83 2.83"></path><path d="m16.24 16.24 2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="m4.93 19.07 2.83-2.83"></path><path d="m16.24 7.76 2.83-2.83"></path>
                   </svg>
-              </div>
+                </div>
                 <h3>Shared Resources</h3>
                 <p>Leverage collective expertise, tools, and connections without starting from zero.</p>
               </div>
@@ -681,32 +681,22 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                   </svg>
-              </div>
+                </div>
                 <h3>Built-in Community</h3>
                 <p>Work alongside like-minded builders who support your vision and growth.</p>
-        </div>
+              </div>
               
               <div class="feature-card">
                 <div class="feature-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="m22 9-10 13L2 9l10-5 10 5Z"></path><path d="M12 12v5"></path>
                   </svg>
-      </div>
+                </div>
                 <h3>Aligned Incentives</h3>
                 <p>Build real ownership through contribution, with interests aligned for mutual success.</p>
-    </div>
-              
-              <div class="feature-card">
-                <div class="feature-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect>
-                  </svg>
-                </div>
-                <h3>Freedom with Structure</h3>
-                <p>Maintain autonomy while accessing frameworks that support consistent growth.</p>
               </div>
-    </div>
-    
+            </div>
+            
             {#if section.callToAction}
               <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
                 <p>{section.callToAction}</p>
@@ -928,5 +918,939 @@
 </div>
 
 <style>
+  /* Global styles */
+  :global(body) {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: #fff;
+    background-color: #000;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+  
+  /* Main container */
+  .landing-page {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background-color: #000;
+    color: #fff;
+  }
+  
+  /* Progress Bar */
+  .progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(to right, #7c3aed, #3b82f6);
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  
+  /* Section styling */
+  .sections-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .section {
+    position: relative;
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    padding: 4rem 2rem;
+    box-sizing: border-box;
+    transition: all 0.5s ease;
+  }
+  
+  .section-content {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    z-index: 10;
+    padding: 2rem;
+  }
+  
+  /* Glow background effects - preserve existing space theme */
+  .glow-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+    background-color: #000;
+    /* Adding subtle star field for space theme */
+    background-image: 
+      radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0)),
+      radial-gradient(1px 1px at 40px 70px, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0)),
+      radial-gradient(1px 1px at 50px 160px, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0)),
+      radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0)),
+      radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.3), rgba(0, 0, 0, 0));
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+  
+  .glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.15;
+    animation: float 20s infinite ease-in-out;
+  }
+  
+  .glow-1 {
+    width: 40vw;
+    height: 40vw;
+    background: radial-gradient(circle, #4f46e5 0%, #3730a3 100%);
+    top: 10%;
+    left: 20%;
+    animation-delay: 0s;
+  }
+  
+  .glow-2 {
+    width: 50vw;
+    height: 50vw;
+    background: radial-gradient(circle, #7c3aed 0%, #4c1d95 100%);
+    bottom: 5%;
+    right: 10%;
+    animation-delay: -5s;
+  }
+  
+  /* Modern Typography styling based on reference images */
+  h2 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    line-height: 1.2;
+    background: linear-gradient(to right, #fff, #d4d4d8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .subtitle {
+    font-size: 1.25rem;
+    opacity: 0.9;
+    max-width: 800px;
+    margin-bottom: 2rem;
+  }
+  
+  /* Content blocks styling */
+  .content-block {
+    background: rgba(30, 30, 40, 0.5);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .content-block:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* Button styling */
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(90deg, #7c3aed, #4f46e5);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    cursor: pointer;
+    margin-top: 1rem;
+  }
+  
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+  }
+  
+  .btn.secondary {
+    background: transparent;
+    border: 2px solid rgba(79, 70, 229, 0.6);
+    color: rgba(255, 255, 255, 0.9);
+    box-shadow: none;
+  }
+  
+  .btn.secondary:hover {
+    background: rgba(79, 70, 229, 0.1);
+  }
+  
+  /* Welcome screen */
+  .welcome-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .welcome-content {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+  }
+  
+  .welcome-title {
+    font-size: 5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    line-height: 1;
+  }
+  
+  .title-line {
+    background: linear-gradient(to right, #ffffff, #b3b3ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(179, 179, 255, 0.5);
+  }
+  
+  .title-subtitle {
+    font-size: 2.5rem;
+    font-weight: 300;
+    background: linear-gradient(to right, #64ffda, #4f46e5);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-top: 0.5rem;
+  }
+  
+  .welcome-content p {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 3rem;
+    letter-spacing: 0.05em;
+  }
+  
+  /* Action button */
+  .action-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 2rem;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 2rem;
+    text-decoration: none;
+  }
+  
+  .action-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .action-button svg {
+    transition: transform 0.3s ease;
+  }
+  
+  .action-button:hover svg {
+    transform: translateX(3px);
+  }
+  
+  /* Scroll to top button */
+  .scroll-top-button {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 900;
+    transition: all 0.3s ease;
+  }
+  
+  .scroll-top-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-30px) scale(1.05);
+    }
+  }
+  
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(10px);
+    }
+  }
+  
+  .arrow-down {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem auto;
+    color: rgba(255, 255, 255, 0.6);
+    animation: bounce 2s infinite;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .section {
+      padding: 2rem 1rem;
+    }
+    
+    .section-content {
+      padding: 1rem;
+    }
+    
+    h2 {
+      font-size: 2.25rem;
+    }
+    
+    .subtitle {
+      font-size: 1.1rem;
+    }
+    
+    .welcome-title {
+      font-size: 3.5rem;
+    }
+  }
+  
+  /* Cards and specialized content areas similar to reference images */
+  .feature-card {
+    background: rgba(20, 20, 30, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  
+  .feature-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(124, 58, 237, 0.5);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
+  }
+  
+  .feature-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: rgba(124, 58, 237, 0.1);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    color: #a78bfa;
+  }
+  
+  .feature-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    background: linear-gradient(to right, #fff, #d4d4d8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .solution-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+  
+  /* Modern grid layout */
+  .grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 3rem 0;
+  }
+  
+  /* Hero section specific styles */
+  .section[id="hero"] {
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .section[id="hero"] h2 {
+    font-size: 4rem;
+    max-width: 900px;
+    margin: 0 auto 1rem;
+  }
+  
+  .section[id="hero"] .subtitle {
+    max-width: 700px;
+    margin: 0 auto 2rem;
+    font-size: 1.5rem;
+  }
+  
+  /* Special section styles from reference */
+  .accent-section {
+    position: relative;
+  }
+  
+  .accent-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(124, 58, 237, 0.1), transparent);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  /* Stat counter styled like reference */
+  .stat-card {
+    background: rgba(20, 20, 30, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .stat-number {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(to right, #7c3aed, #3b82f6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .stat-label {
+    font-size: 1rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  /* Quote section like in reference */
+  .quote-card {
+    position: relative;
+    background: rgba(20, 20, 30, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 12px;
+    padding: 2.5rem;
+    margin: 3rem 0;
+  }
+  
+  .quote-card::before {
+    content: '"';
+    position: absolute;
+    top: -1.5rem;
+    left: 1.5rem;
+    font-size: 6rem;
+    line-height: 1;
+    color: rgba(124, 58, 237, 0.4);
+    font-family: serif;
+  }
+  
+  .quote-text {
+    font-size: 1.25rem;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+  }
+  
+  .quote-author {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(to right, #7c3aed, #3b82f6);
+  }
+  
+  .author-details {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .author-name {
+    font-weight: 600;
+  }
+  
+  .author-role {
+    font-size: 0.875rem;
+    opacity: 0.7;
+  }
+  
+  /* Process visualization */
+  .process-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .process-visualization {
+    margin: 2rem 0;
+    width: 100%;
+    max-width: 800px;
+  }
+  
+  .process-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+  
+  .process-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 2;
+    transition: transform 0.3s ease;
+  }
+  
+  .step-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.3s ease;
+  }
+  
+  .process-step.active .step-icon {
+    background: linear-gradient(90deg, #7c3aed, #3b82f6);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.5);
+  }
+  
+  .process-step.current .step-icon {
+    transform: scale(1.2);
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.7);
+  }
+  
+  .process-step:hover {
+    transform: translateY(-5px);
+  }
+  
+  .process-connector {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* DAO Process sections - modern card styling */
+  .idea-card, .vote-progress, .draft-proposal, .reward-visualization {
+    background: rgba(20, 20, 30, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 500px;
+    margin: 2rem auto;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .idea-card:hover, .vote-progress:hover, .draft-proposal:hover, .reward-visualization:hover {
+    transform: translateY(-5px);
+    border-color: rgba(124, 58, 237, 0.4);
+    box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  /* Idea card specific styling */
+  .idea-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .idea-label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #a78bfa;
+    letter-spacing: 0.5px;
+  }
+  
+  .idea-stars {
+    color: #fcd34d;
+  }
+  
+  .idea-content {
+    margin-bottom: 1.5rem;
+  }
+  
+  .idea-content h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .idea-footer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .idea-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #7c3aed, #a78bfa);
+  }
+  
+  .add-idea-btn {
+    width: 100%;
+    background: rgba(124, 58, 237, 0.1);
+    color: #a78bfa;
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    padding: 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+  }
+  
+  .add-idea-btn:hover {
+    background: rgba(124, 58, 237, 0.2);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+  }
+  
+  /* Vote progress styling */
+  .progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed, #3b82f6);
+    border-radius: 4px;
+  }
+  
+  .vote-count {
+    text-align: right;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .vote-avatars {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .vote-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #7c3aed, #3b82f6);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Draft proposal styling */
+  .draft-proposal h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+  }
+  
+  .proposal-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .proposal-line {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+  }
+  
+  .proposal-line.short {
+    width: 70%;
+  }
+  
+  .budget-box {
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    color: #a78bfa;
+    font-weight: 500;
+  }
+  
+  /* Reward visualization styling */
+  .reward-tokens {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .token {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  
+  .token.euro {
+    background: linear-gradient(45deg, #3b82f6, #60a5fa);
+    color: white;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  }
+  
+  .token.vcr {
+    background: linear-gradient(45deg, #7c3aed, #a78bfa);
+    color: white;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
+  }
+  
+  .ownership-stake {
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+    color: #a78bfa;
+    font-weight: 500;
+  }
+  
+  /* Hominio section styling */
+  .hominio-section {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), 
+                radial-gradient(circle at center, rgba(124, 58, 237, 0.2) 0%, rgba(0,0,0,0) 70%);
+    border-radius: 16px;
+    padding: 2.5rem;
+    box-shadow: 0 0 40px rgba(124, 58, 237, 0.2);
+  }
+  
+  .accent-content {
+    background: rgba(20, 20, 30, 0.7);
+    border-color: rgba(124, 58, 237, 0.3);
+    text-align: center;
+  }
+  
+  .accent-content p {
+    font-size: 1.25rem;
+    line-height: 1.8;
+    color: #f0f0f0;
+  }
+  
+  .special-cta {
+    margin-top: 2.5rem;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.1), rgba(59, 130, 246, 0.1));
+    border-radius: 12px;
+    text-align: center;
+    border: none;
+    border-left: 4px solid #7c3aed;
+  }
+  
+  .accent-btn {
+    background: linear-gradient(90deg, #7c3aed, #3b82f6);
+    color: white;
+    padding: 0.75rem 2.5rem;
+    border-radius: 30px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    text-decoration: none;
+    box-shadow: 0 5px 15px rgba(124, 58, 237, 0.4);
+    margin-top: 1.5rem;
+    display: inline-block;
+  }
+  
+  .accent-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.6);
+  }
+  
+  /* Join section styling */
+  .join-section {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .revolutionary {
+    background: rgba(20, 20, 30, 0.7);
+    border-color: rgba(124, 58, 237, 0.3);
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .big-text {
+    font-size: 1.5rem !important;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+  }
+  
+  .join-cta {
+    margin-top: 3rem;
+  }
+  
+  .join-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .glow-btn {
+    background: linear-gradient(90deg, #7c3aed, #3b82f6);
+    color: white;
+    padding: 0.75rem 2.5rem;
+    border-radius: 30px;
+    font-weight: 600;
+    border: none;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    box-shadow: 0 0 25px rgba(124, 58, 237, 0.5);
+  }
+  
+  .glow-btn::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(90deg, #7c3aed, #3b82f6, #7c3aed);
+    z-index: -1;
+    border-radius: 32px;
+    background-size: 200%;
+    animation: glow 3s linear infinite;
+  }
+  
+  @keyframes glow {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  .glow-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 35px rgba(124, 58, 237, 0.7);
+  }
+  
+  .secondary {
+    background: transparent;
+    color: white;
+    padding: 0.75rem 2.5rem;
+    border-radius: 30px;
+    font-weight: 600;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+  
+  .secondary:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-3px);
+  }
+  
+  /* Modern presentation content */
+  .presentation-content {
+    background: rgba(20, 20, 30, 0.7);
+    text-align: center;
+    border-color: rgba(124, 58, 237, 0.2);
+  }
+  
+  .presentation-content p {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+  }
 </style>
 
