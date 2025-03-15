@@ -1,6 +1,9 @@
 <script lang="ts">
+  // Test edit to fix tool calling issues - Debug test
   import Avatar from '$lib/Avatar.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import { fade, fly, scale, slide } from 'svelte/transition';
+  import { quintOut } from 'svelte/easing';
   
   // Seeds for generating consistent avatars
   const seeds = [
@@ -8,852 +11,922 @@
     'frank', 'grace', 'henry'
   ];
   
+  // Navigation links
+  const navLinks = [
+    { label: 'About', url: '/#about' },
+    { label: 'Solution', url: '/#solution' },
+    { label: 'Process', url: '/#process' },
+    { label: 'Join', url: 'https://visioncreator.io/join' }
+  ];
+  
+  // Define sections with proper TypeScript interface
+  interface Section {
+    id: string;
+    title: string;
+    subtitle?: string;
+    content?: string[];
+    callToAction?: string;
+    accent?: boolean;
+    hasListItems?: boolean;
+    listItems?: string[];
+    hasSubslides?: boolean;
+    subslides?: {
+      id: string;
+      title: string;
+      content: string;
+    }[];
+  }
+  
+  // Define sections
+  const sections: Section[] = [
+    {
+      id: 'hero',
+      title: 'We Need a New Way to Work',
+      subtitle: 'A New Way to Work',
+      accent: true,
+      callToAction: 'Join the movement towards a new paradigm of work'
+    },
+    {
+      id: 'outdated',
+      title: 'THE OUTDATED NATURE OF WORK',
+      subtitle: "In today's digital age, traditional work models are hopelessly outdated.",
+      content: [
+        "Employee: You trade time for money with no ownership or freedom.",
+        "Self-Employed: You gain independence but remain chained to trading time for money, with endless stress."
+      ],
+      callToAction: "Neither path fits your life in the modern world. You deserve better.",
+      accent: true
+    },
+    {
+      id: 'choice',
+      title: 'A MISERABLE CHOICE',
+      subtitle: "You face a dilemma:",
+      content: [
+        "Employee: Create value for someone else, never fully realizing your potential.",
+        "Self-Employed: Shoulder overwhelming responsibility with little time to breathe."
+      ],
+      callToAction: "Neither option feels fulfilling in the digital age. It's time for a new way forward."
+    },
+    {
+      id: 'why',
+      title: 'WHY THIS MATTERS',
+      subtitle: "This isn't just inconvenient—it degrades your quality of life.",
+      content: [
+        "You spend a huge part of your day at work. It should:"
+      ],
+      hasListItems: true,
+      listItems: [
+        "Enhance your well-being.",
+        "Secure your financial future."
+      ],
+      callToAction: "Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are."
+    },
+    {
+      id: 'new-way',
+      title: 'A NEW WAY FORWARD',
+      subtitle: "",
+      content: [
+        "Imagine a work model that lets you build assets, collaborate freely, and enjoy income that flows without constant work. Visioncreator is this new way—a path to ownership, freedom, and fulfillment for you."
+      ],
+      accent: true
+    },
+    {
+      id: 'deserve',
+      title: 'WHAT YOU DESERVE',
+      subtitle: "You deserve an organisation form that feels like home. It should offer:",
+      hasSubslides: true,
+      subslides: [
+        {
+          id: 'belonging',
+          title: 'Belonging',
+          content: 'Be part of a community that values you.'
+        },
+        {
+          id: 'autonomy',
+          title: 'Autonomy & Agency',
+          content: 'Pursue your purpose without restrictions.'
+        },
+        {
+          id: 'security',
+          title: 'Financial Security',
+          content: 'Build lasting value for yourself and others.'
+        },
+        {
+          id: 'expression',
+          title: 'Authentic Expression',
+          content: 'Align your work with your true vision.'
+        }
+      ]
+    },
+    {
+      id: 'solution',
+      title: 'A NEW WAY TO WORK AND LIVE',
+      subtitle: "",
+      content: [
+        "Imagine being a co-owner, not just a participant. Visioncreator is a Decentralized Autonomous Organization where power belongs to everyone. You propose ideas, vote on decisions, and shape our future together—no bosses, just collective wisdom. Your voice matters in every feature, resource, and goal we set. This isn't just a platform; it's a revolution in collaborative work and life."
+      ],
+      accent: true
+    },
+    {
+      id: 'dao',
+      title: 'GOT AN IDEA? SHARE IT!',
+      subtitle: "",
+      content: [
+        "Have an idea or a way to make something better? Post it on our idea board! Whether it's a new feature or a small tweak, this is your chance to shape Visioncreator."
+      ]
+    },
+    {
+      id: 'implementation',
+      title: 'DISCUSS AND VOTE',
+      subtitle: "",
+      content: [
+        "Your idea kicks off a conversation. We discuss it together as a collective, share feedback, and then vote. Get enough votes, and your idea turns into a draft—ready to take the next step."
+      ]
+    },
+    {
+      id: 'your-role',
+      title: 'FROM DRAFT TO REALITY',
+      subtitle: "",
+      content: [
+        "Now it's yours to run with. Define your draft, set a budget (say, 1500 euros), and take full responsibility to execute it. You're the leader, backed by the community."
+      ]
+    },
+    {
+      id: 'lifestyle',
+      title: 'SUCCESS PAYS OFF',
+      subtitle: "",
+      content: [
+        "Once it's done, we vote again. If it's a win, you get paid—not just in euros, but also in token shares that boost your ownership in Visioncreator."
+      ]
+    },
+    {
+      id: 'hominio',
+      title: 'INTRODUCING HOMINIO',
+      subtitle: "",
+      content: [
+        "We're building our first project with this new kind of organization form.",
+        "Hominio is where we begin our journey together."
+      ],
+      callToAction: "Be among the founding members.",
+      accent: true
+    },
+    {
+      id: 'join',
+      title: 'JOIN THE REVOLUTION',
+      subtitle: "",
+      content: [
+        "Ready to stop building for others and start building for yourself?"
+      ],
+      callToAction: "Join Visioncreator today and step into the future of work.",
+      accent: true
+    }
+  ];
+  
+  // Reactive variables
   let mounted = false;
   let memberCount = 27;
+  let scrollY = 0;
+  let windowHeight = 0;
+  let documentHeight = 0;
+  let sectionElements: HTMLElement[] = [];
+  let progressPercentage = 0;
+  let showWelcome = true;
+  let currentSection = 0;
+  let currentSubslideIndices: { [key: string]: number } = {};
   
-  // Animated counter for member count
-  function animateCounter(element: HTMLElement | null, targetValue: number, duration: number): void {
-    const startValue = 0;
-    const startTime = Date.now();
-    
-    function updateCounter() {
-      const currentTime = Date.now();
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      
-      // Easing function for smoother animation
-      const easeOutQuad = progress * (2 - progress);
-      const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuad);
-      
-      if (element) {
-        element.textContent = String(currentValue);
-      }
-      
-      if (progress < 1) {
-        requestAnimationFrame(updateCounter);
-      }
+  // Idea process states for visualization
+  const processStates: Record<string, string> = {
+    'dao': 'idea',
+    'implementation': 'vote',
+    'your-role': 'draft',
+    'lifestyle': 'reward'
+  };
+  
+  // Calculate progress
+  function updateProgress() {
+    if (documentHeight <= windowHeight) {
+      progressPercentage = 100;
+      return;
     }
     
-    updateCounter();
+    progressPercentage = Math.min(100, Math.max(0, 
+      (scrollY / (documentHeight - windowHeight)) * 100
+    ));
+    
+    // Hide welcome screen when scrolling down
+    if (scrollY > 100 && showWelcome) {
+      showWelcome = false;
+    }
+  }
+  
+  // Initialize intersection observer
+  function initObserver() {
+    const options = {
+      root: null,
+      rootMargin: "-20% 0px",
+      threshold: 0.3
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const id = entry.target.id;
+        
+        if (entry.isIntersecting) {
+          const index = sections.findIndex(section => section.id === id);
+          if (index >= 0) {
+            currentSection = index;
+            
+            // Update URL hash without triggering scroll
+            const newUrl = window.location.pathname + `#${id}`;
+            history.replaceState(null, '', newUrl);
+          }
+        }
+      });
+    }, options);
+    
+    sectionElements.forEach(el => observer.observe(el));
+    
+    return observer;
+  }
+  
+  // Scroll to section
+  function scrollToSection(index: number) {
+    const section = sectionElements[index];
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+  
+  // Navigate subslides
+  function nextSubslide(sectionId: string) {
+    if (!currentSubslideIndices[sectionId]) {
+      currentSubslideIndices[sectionId] = 0;
+    }
+    
+    const section = sections.find(s => s.id === sectionId);
+    if (section?.hasSubslides && section.subslides) {
+      const maxIndex = section.subslides.length - 1;
+      currentSubslideIndices[sectionId] = Math.min(maxIndex, currentSubslideIndices[sectionId] + 1);
+    }
+  }
+  
+  function prevSubslide(sectionId: string) {
+    if (!currentSubslideIndices[sectionId]) {
+      currentSubslideIndices[sectionId] = 0;
+    }
+    
+    currentSubslideIndices[sectionId] = Math.max(0, currentSubslideIndices[sectionId] - 1);
+  }
+  
+  // Start presentation and hide welcome screen
+  function startPresentation() {
+    showWelcome = false;
+    setTimeout(() => {
+      scrollToSection(0);
+    }, 100);
   }
   
   onMount(() => {
-    // Trigger the entry animation sequence
-    setTimeout(() => {
-      mounted = true;
-      
-      // Animate member counter after fade-in
+    // Initialize current subslide indices
+    sections.forEach(section => {
+      if (section.hasSubslides) {
+        currentSubslideIndices[section.id] = 0;
+      }
+    });
+    
+    // Get section elements
+    sectionElements = sections.map(section => document.getElementById(section.id) as HTMLElement);
+    
+    // Set initial dimensions
+    windowHeight = window.innerHeight;
+    documentHeight = document.body.scrollHeight;
+    
+    // Handle initial hash
+    if (window.location.hash) {
+      const id = window.location.hash.substring(1);
+      const index = sections.findIndex(section => section.id === id);
+      if (index >= 0) {
+        showWelcome = false;
       setTimeout(() => {
-        const counterElement = document.getElementById('memberCounter');
-        if (counterElement) {
-          animateCounter(counterElement, memberCount, 2000);
-        }
-      }, 1000);
-    }, 100);
+          scrollToSection(index);
+        }, 100);
+      }
+    }
+    
+    // Set up observer
+    const observer = initObserver();
+    
+    // Event listeners
+    const handleScroll = () => {
+      scrollY = window.scrollY;
+      updateProgress();
+    };
+    
+    const handleResize = () => {
+      windowHeight = window.innerHeight;
+      documentHeight = document.body.scrollHeight;
+      updateProgress();
+    };
+    
+      window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleResize);
+    
+    // Initial update
+    handleScroll();
+      
+      return () => {
+        window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+      };
   });
 </script>
 
-<!-- Main Content Wrapper with scrolling enabled -->
-<div class="bg-black min-h-screen text-white overflow-y-auto">
+<svelte:head>
+  <title>Visioncreator | Own Your Future</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</svelte:head>
 
-<!-- Entry Animation Overlay -->
-<div class="fixed inset-0 z-[100] pointer-events-none {mounted ? 'opacity-0 scale-110' : 'opacity-100 scale-100'} transition-all duration-1500 transform-gpu">
-  <div class="absolute inset-0 bg-black flex items-center justify-center">
-    <div class="text-center space-y-8 transform-gpu">
-      <div class="text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-cyan-400 to-cyan-600 animate-pulse relative">
-        VisionCreator
-      </div>
-      <div class="text-3xl text-cyan-100/80 animate-fade-in-delayed mt-4">
-        Create Through Voice. Own What You Build.
+<svelte:window bind:scrollY />
+
+<div class="landing-page">
+  <!-- Progress bar -->
+  <div class="progress-container">
+    <div class="progress-bar" style="width: {progressPercentage}%"></div>
+    </div>
+  
+  <!-- Scroll to top button -->
+  {#if scrollY > windowHeight && !showWelcome}
+    <button 
+      class="scroll-top-button"
+      on:click={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Scroll to top"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 15l-6-6-6 6"/>
+      </svg>
+    </button>
+  {/if}
+  
+  <!-- Welcome screen -->
+  {#if showWelcome}
+    <div class="welcome-screen" transition:fade={{ duration: 300 }}>
+      <div class="glow-background">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+  </div>
+
+      <div class="welcome-content">
+        <div class="welcome-title" in:fade={{ duration: 800, delay: 200 }}>
+          <div class="title-line">Visioncreator</div>
+          <div class="title-subtitle">A New Way to Work</div>
+        </div>
+        <p in:fade={{ duration: 800, delay: 400 }}>Own Your Future</p>
+        
+      <button 
+          class="action-button" 
+          on:click={startPresentation}
+          in:fade={{ duration: 800, delay: 600 }}
+        >
+          Explore
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7 13 12 18 17 13"></polyline>
+            <polyline points="7 6 12 11 17 6"></polyline>
+          </svg>
+        </button>
+  </div>
+    </div>
+  {/if}
+
+  <!-- Section content -->
+  <main class="sections-container">
+    <!-- Single global glow background -->
+    <div class="glow-background">
+      <div class="glow glow-1"></div>
+      <div class="glow glow-2"></div>
+    </div>
+    
+    {#each sections as section, i}
+      <section 
+        id={section.id} 
+        class="section"
+        class:active={i === currentSection}
+        class:accent={section.accent}
+        style="--section-index: {i}"
+      >
+        <div class="section-content">
+          {#if section.id === 'hero'}
+            <!-- Hero section with centered content -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            
+            {#if section.callToAction}
+              <div class="call-to-action" in:fade={{ duration: 800, delay: 400 }}>
+                <p>{section.callToAction}</p>
+              </div>
+            {/if}
+            
+            <div class="arrow-down" in:fade={{ duration: 400, delay: 800 }} aria-label="Scroll down to next section">
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <polyline points="19 12 12 19 5 12"></polyline>
+              </svg>
       </div>
       
-      <!-- Loading spinner -->
-      <div class="w-16 h-16 mx-auto mt-8 border-t-4 border-r-4 border-yellow-400 rounded-full animate-spin"></div>
+          {:else if section.id === 'outdated'}
+            <!-- Custom layout for outdated section -->
+            <div class="split-layout">
+              <div class="split-content">
+                <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+                <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+                
+                <div class="comparison-container" in:fade={{ duration: 600, delay: 300 }}>
+                  <div class="comparison-card employee">
+                    <h3>Employee</h3>
+                    <p>You trade time for money with no ownership or freedom.</p>
+      </div>
+                  <div class="comparison-divider">VS</div>
+                  <div class="comparison-card self-employed">
+                    <h3>Self-Employed</h3>
+                    <p>You gain independence but remain chained to trading time for money, with endless stress.</p>
     </div>
-  </div>
+                </div>
+                
+                {#if section.callToAction}
+                  <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
+                    <p>{section.callToAction}</p>
+                  </div>
+                {/if}
+              </div>
+              <div class="split-visual">
+                <div class="model-visual" in:scale={{ duration: 800, delay: 500, start: 0.8 }}>
+                  <div class="model-old"></div>
+                  <div class="model-arrow">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                  </div>
+                  <div class="model-new"></div>
+                </div>
+              </div>
+    </div>
+    
+          {:else if section.id === 'choice'}
+            <!-- Choice section custom layout -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            
+            {#if section.subtitle}
+              <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            {/if}
+            
+            <div class="choice-layout">
+              <div class="paths-container" in:fade={{ duration: 600, delay: 300 }}>
+                <div class="path-option">
+                  <div class="path-icon employee-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  <div class="path-content">
+                    <h3>Employee</h3>
+                    <p>Create value for someone else, never fully realizing your potential.</p>
+                    <div class="restrictions">
+                      <span class="restriction">Limited freedom</span>
+                      <span class="restriction">No ownership</span>
+                      <span class="restriction">Capped income</span>
+                    </div>
+                  </div>
+        </div>
+        
+                <div class="path-divider">
+                  <span>OR</span>
+        </div>
+        
+                <div class="path-option">
+                  <div class="path-icon self-employed-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                  </div>
+                  <div class="path-content">
+                    <h3>Self-Employed</h3>
+                    <p>Shoulder overwhelming responsibility with little time to breathe.</p>
+                    <div class="restrictions">
+                      <span class="restriction">Constant stress</span>
+                      <span class="restriction">No security</span>
+                      <span class="restriction">Limited scale</span>
+                    </div>
+                  </div>
+        </div>
+      </div>
+      
+              {#if section.callToAction}
+                <div class="call-to-action better-way" in:fade={{ duration: 800, delay: 600 }}>
+                  <p>{section.callToAction}</p>
+      </div>
+              {/if}
+              
+              <div class="arrow-down" in:fade={{ duration: 400, delay: 700 }} aria-label="Scroll down to next section">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <polyline points="19 12 12 19 5 12"></polyline>
+                </svg>
+    </div>
+            </div>
+            
+          {:else if section.id === 'why'}
+            <!-- Why This Matters section -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            
+            {#if section.subtitle}
+              <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            {/if}
+            
+            {#if section.content && section.content.length > 0}
+              <div class="content-block" in:fade={{ duration: 600, delay: 300 }}>
+                {#each section.content as paragraph}
+                  <p>{paragraph}</p>
+                {/each}
+                
+                {#if section.hasListItems && section.listItems && section.listItems.length > 0}
+                  <ul class="list-items">
+                    {#each section.listItems as item, index}
+                      <li in:fly={{ x: 20, duration: 400, delay: 400 + 100 * index }}>{item}</li>
+                    {/each}
+                  </ul>
+                {/if}
+    </div>
+            {/if}
+            
+            {#if section.callToAction}
+              <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
+                <p>{section.callToAction}</p>
+              </div>
+            {/if}
+            
+          {:else if section.id === 'new-way'}
+            <!-- New Way Forward section -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            
+            {#if section.subtitle}
+              <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            {/if}
+            
+            <div class="new-way-content" in:fade={{ duration: 600, delay: 300 }}>
+              {#if section.content && section.content.length > 0}
+                <div class="content-block" in:fade={{ duration: 600, delay: 300 }}>
+                  {#each section.content as paragraph}
+                    <p>{paragraph}</p>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+            
+            {#if section.callToAction}
+              <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
+                <p>{section.callToAction}</p>
+              </div>
+            {/if}
+            
+          {:else if section.id === 'deserve'}
+            <!-- Deserve section with subslides -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            
+            {#if section.subtitle}
+              <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            {/if}
+            
+            {#if section.hasSubslides && section.subslides && section.subslides.length > 0}
+              <div class="subslides-container" in:fade={{ duration: 600, delay: 300 }}>
+                <!-- Using index if not initialized -->
+                {#if !currentSubslideIndices[section.id]}
+                  <!-- svelte-ignore missing-declaration -->
+                  {currentSubslideIndices[section.id] = 0}
+                {/if}
+                
+                <div class="subslides-navigation">
+                  <button 
+                    class="subslide-nav-btn" 
+                    on:click={() => prevSubslide(section.id)}
+                    disabled={currentSubslideIndices[section.id] === 0}
+                    aria-label="Previous slide"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m15 18-6-6 6-6"/>
+                    </svg>
+                  </button>
+                  
+                  <div class="subslides-wrapper">
+                    {#each section.subslides as subslide, j}
+                      {#if j === currentSubslideIndices[section.id]}
+                        <div class="subslide" in:fade={{ duration: 300 }}>
+                          <h3>{subslide.title}</h3>
+                          <p>{subslide.content}</p>
+            </div>
+                      {/if}
+                    {/each}
+              </div>
+                  
+                  <button 
+                    class="subslide-nav-btn" 
+                    on:click={() => nextSubslide(section.id)}
+                    disabled={currentSubslideIndices[section.id] === (section.subslides?.length || 0) - 1}
+                    aria-label="Next slide"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m9 18 6-6-6-6"/>
+                    </svg>
+                  </button>
+            </div>
+                
+                <div class="subslides-indicators">
+                  {#each section.subslides as _, j}
+                    <button 
+                      class="subslide-indicator"
+                      class:active={j === currentSubslideIndices[section.id]}
+                      on:click={() => { currentSubslideIndices[section.id] = j }}
+                      aria-label="Go to slide {j + 1}"
+                    ></button>
+                  {/each}
+          </div>
+        </div>
+            {/if}
+            
+          {:else if section.id === 'solution'}
+            <!-- Solution section with feature cards -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            
+            {#if section.subtitle}
+              <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            {/if}
+            
+            <div class="solution-features" in:fade={{ duration: 600, delay: 300 }}>
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v4"></path><path d="M12 18v4"></path><path d="m4.93 4.93 2.83 2.83"></path><path d="m16.24 16.24 2.83 2.83"></path><path d="M2 12h4"></path><path d="M18 12h4"></path><path d="m4.93 19.07 2.83-2.83"></path><path d="m16.24 7.76 2.83-2.83"></path>
+                  </svg>
+              </div>
+                <h3>Shared Resources</h3>
+                <p>Leverage collective expertise, tools, and connections without starting from zero.</p>
+              </div>
+              
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+              </div>
+                <h3>Built-in Community</h3>
+                <p>Work alongside like-minded builders who support your vision and growth.</p>
+        </div>
+              
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m22 9-10 13L2 9l10-5 10 5Z"></path><path d="M12 12v5"></path>
+                  </svg>
+      </div>
+                <h3>Aligned Incentives</h3>
+                <p>Build real ownership through contribution, with interests aligned for mutual success.</p>
+    </div>
+              
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect>
+                  </svg>
+                </div>
+                <h3>Freedom with Structure</h3>
+                <p>Maintain autonomy while accessing frameworks that support consistent growth.</p>
+              </div>
+    </div>
+    
+            {#if section.callToAction}
+              <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
+                <p>{section.callToAction}</p>
+              </div>
+            {/if}
+            
+          {:else if section.id === 'dao' || section.id === 'implementation' || section.id === 'your-role' || section.id === 'lifestyle'}
+            <!-- Process flow sections with visual indicator -->
+            <div class="process-section">
+              <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+              
+              {#if section.subtitle}
+                <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+              {/if}
+              
+              <div class="process-visualization" in:fade={{ duration: 600, delay: 300 }}>
+                <div class="process-steps">
+                  <div class="process-step {processStates['dao'] === 'idea' ? 'active' : ''}" class:current={section.id === 'dao'}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                      </svg>
+                    </div>
+                    <span>Idea</span>
+                  </div>
+                  <div class="process-connector"></div>
+                  <div class="process-step {processStates['implementation'] === 'vote' ? 'active' : ''}" class:current={section.id === 'implementation'}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m9 11 3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                      </svg>
+                    </div>
+                    <span>Vote</span>
+                  </div>
+                  <div class="process-connector"></div>
+                  <div class="process-step {processStates['your-role'] === 'draft' ? 'active' : ''}" class:current={section.id === 'your-role'}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 19c-2.3 0-6.4-.2-8.1-.6-.7-.2-1.2-.7-1.4-1.4-.3-1.1-.5-3.4-.5-5s.2-3.9.5-5c.2-.7.7-1.2 1.4-1.4C5.6 5.2 9.7 5 12 5s6.4.2 8.1.6c.7.2 1.2.7 1.4 1.4.3 1.1.5 3.4.5 5s-.2 3.9-.5 5c-.2.7-.7 1.2-1.4 1.4-1.7.4-5.8.6-8.1.6 0 0 0 0 0 0z"></path>
+                        <polygon points="12 16 14 13 12 10 10 13"></polygon>
+                      </svg>
+                    </div>
+                    <span>Draft</span>
+                  </div>
+                  <div class="process-connector"></div>
+                  <div class="process-step {processStates['lifestyle'] === 'reward' ? 'active' : ''}" class:current={section.id === 'lifestyle'}>
+                    <div class="step-icon">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="7"></circle>
+                        <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+                      </svg>
+                    </div>
+                    <span>Reward</span>
+                  </div>
+                </div>
+              </div>
+              
+              {#if section.id === 'dao'}
+                <!-- Example idea card for the idea section -->
+                <div class="idea-card" in:fade={{ duration: 600, delay: 300 }}>
+                  <div class="idea-header">
+                    <span class="idea-label">Idea</span>
+                    <span class="idea-stars">★ 5</span>
+                  </div>
+                  <div class="idea-content">
+                    <h3>Improve the onboarding process</h3>
+                  </div>
+                  <div class="idea-footer">
+                    <div class="idea-avatar"></div>
+                    <span>Posted by you</span>
+                  </div>
+                  <button class="add-idea-btn">+ Add New Idea</button>
+                </div>
+              {/if}
+              
+              {#if section.id === 'implementation'}
+                <!-- Voting progress for implementation section -->
+                <div class="vote-progress" in:fade={{ duration: 600, delay: 300 }}>
+                  <div class="progress-bar-container">
+                    <div class="progress-fill" style="width: 75%"></div>
+                  </div>
+                  <div class="vote-count">9 of 12 votes</div>
+                  <div class="vote-avatars">
+                    <div class="vote-avatar"></div>
+                    <div class="vote-avatar"></div>
+                    <div class="vote-avatar"></div>
+                    <div class="vote-avatar"></div>
+                  </div>
+                </div>
+              {/if}
+              
+              {#if section.id === 'your-role'}
+                <!-- Draft proposal for the your-role section -->
+                <div class="draft-proposal" in:fade={{ duration: 600, delay: 300 }}>
+                  <h3>Draft Proposal</h3>
+                  <div class="proposal-lines">
+                    <div class="proposal-line"></div>
+                    <div class="proposal-line"></div>
+                    <div class="proposal-line"></div>
+                    <div class="proposal-line short"></div>
+                  </div>
+                  <div class="budget-box">
+                    <span>Budget: €1500</span>
+                  </div>
+                  <div class="proposal-lines">
+                    <div class="proposal-line"></div>
+                    <div class="proposal-line short"></div>
+                  </div>
+                </div>
+              {/if}
+              
+              {#if section.id === 'lifestyle'}
+                <!-- Reward visualization for the lifestyle section -->
+                <div class="reward-visualization" in:fade={{ duration: 600, delay: 300 }}>
+                  <div class="reward-tokens">
+                    <div class="token euro">€</div>
+                    <div class="token vcr">VCR</div>
+                  </div>
+                  <div class="ownership-stake">
+                    <span>Ownership Stake</span>
+                  </div>
+                </div>
+              {/if}
+              
+              {#if section.content && section.content.length > 0}
+                <div class="content-block presentation-content" in:fade={{ duration: 600, delay: 400 }}>
+                  {#each section.content as paragraph}
+                    <p>{paragraph}</p>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          
+          {:else if section.id === 'process'}
+            <!-- This section is no longer used per the presentation images -->
+            <div>
+              <!-- Placeholder for empty process section -->
+            </div>
+            
+          {:else if section.id === 'hominio'}
+            <!-- Hominio section with special styling -->
+            <div class="hominio-section">
+              <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+              
+              {#if section.subtitle}
+                <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+              {/if}
+              
+              {#if section.content && section.content.length > 0}
+                <div class="content-block accent-content" in:fade={{ duration: 600, delay: 300 }}>
+                  {#each section.content as paragraph}
+                    <p>{paragraph}</p>
+                  {/each}
+                </div>
+              {/if}
+              
+              {#if section.callToAction}
+                <div class="call-to-action special-cta" in:fade={{ duration: 800, delay: 600 }}>
+                  <p>{section.callToAction}</p>
+                  <a href="/join" class="btn accent-btn">Join as a Founder</a>
+                </div>
+              {/if}
+            </div>
+            
+          {:else if section.id === 'join'}
+            <!-- Join section with more impactful CTA -->
+            <div class="join-section">
+              <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+              
+              {#if section.subtitle}
+                <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+              {/if}
+              
+              {#if section.content && section.content.length > 0}
+                <div class="content-block revolutionary" in:fade={{ duration: 600, delay: 300 }}>
+                  <p class="big-text">{section.content[0]}</p>
+                </div>
+              {/if}
+              
+              <div class="join-cta" in:fade={{ duration: 800, delay: 500 }}>
+                <p>{section.callToAction}</p>
+                
+                <div class="join-buttons">
+                  <a href="/join" class="btn glow-btn">Join VisionCreator</a>
+                  <a href="#outdated" class="btn secondary">Learn More</a>
+                </div>
+              </div>
+            </div>
+            
+          {:else}
+            <!-- Default section layout -->
+            <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+            
+            {#if section.subtitle}
+              <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+            {/if}
+            
+            {#if section.content && section.content.length > 0}
+              <div class="content-block" in:fade={{ duration: 600, delay: 300 }}>
+                {#each section.content as paragraph}
+                  <p>{paragraph}</p>
+                {/each}
+              </div>
+            {/if}
+            
+            {#if section.callToAction}
+              <div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
+                <p>{section.callToAction}</p>
+              </div>
+            {/if}
+          {/if}
+        </div>
+      </section>
+    {/each}
+  </main>
 </div>
 
-<!-- Hero Section - Simplified in style of email app landing page -->
-<section class="min-h-screen flex flex-col justify-center items-center p-8 relative overflow-hidden bg-black">
-  <!-- Subtle background glow -->
-  <div class="absolute inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
-  </div>
-
-  <div class="max-w-3xl mx-auto text-center space-y-8 relative z-10">
-    <!-- Main Headline - WHO/WHY/WHAT Framework -->
-    <h1 class="text-6xl sm:text-7xl font-bold text-white leading-tight animate-title-rise">
-      The future of <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">creation</span> is here
-    </h1>
-    
-    <p class="text-xl text-gray-300 max-w-2xl mx-auto animate-slide-up">
-      Experience ownership the way you want with VisionCreator — the first community-powered platform that puts your voice and ownership first.
-    </p>
-    
-    <!-- Email/Signup Form -->
-    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in-delayed">
-      <input 
-        type="email" 
-        placeholder="you@example.com" 
-        class="px-6 py-4 bg-gray-800/50 border border-gray-700 rounded-full text-white w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-cyan-400"
-      />
-      
-      <button class="px-8 py-4 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black font-bold hover:scale-105 transition-all duration-300 shadow-lg shadow-cyan-500/20 w-full sm:w-auto">
-        Join waitlist
-      </button>
-    </div>
-    
-    <!-- Social Proof -->
-    <p class="text-2xl font-bold text-white animate-fade-in-delayed">
-      <span id="memberCounter" class="text-cyan-400">0</span> people have already joined the waitlist
-    </p>
-  </div>
-  
-  <!-- App Preview - Added product visual -->
-  <div class="w-full max-w-4xl mx-auto mt-16 px-4 animate-fade-in-delayed-2">
-    <div class="relative bg-gray-900/70 backdrop-blur-md rounded-2xl overflow-hidden border border-gray-800 shadow-2xl shadow-cyan-500/10">
-      <div class="aspect-video p-4">
-        <div class="bg-gray-800 rounded-lg p-6 h-full flex flex-col">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-3 h-3 rounded-full bg-red-400"></div>
-            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-            <div class="w-3 h-3 rounded-full bg-green-400"></div>
-            <div class="text-sm text-gray-400 ml-2">VisionCreator Interface</div>
-          </div>
-          
-          <div class="flex-1 flex items-center justify-center">
-            <div class="text-center">
-              <div class="text-cyan-400 text-4xl mb-4 font-mono">"Create a weather app"</div>
-              <div class="text-sm text-gray-400 mb-8">Creating your app through simple voice commands...</div>
-              <div class="flex items-center gap-3 justify-center">
-                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-pulse"></div>
-                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-pulse delay-100"></div>
-                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-pulse delay-200"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Problem, Agitation, Solution Section (PAS Framework) -->
-<section class="py-24 bg-gray-950 relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
-  </div>
-
-  <div class="max-w-5xl mx-auto px-8">
-    <div class="text-center mb-16">
-      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        Key Problems & Our Solutions
-      </h2>
-      <p class="text-xl text-gray-300 mt-4 max-w-2xl mx-auto">
-        We've identified three core challenges in digital creation and developed direct solutions for each
-      </p>
-    </div>
-
-    <!-- Problem-Solution Pairs -->
-    <!-- Problem 1: Technical Creation Barrier -->
-    <div class="mb-20">
-      <div class="flex items-center justify-center gap-4 mb-8">
-        <div class="h-px bg-red-500/30 flex-1"></div>
-        <h3 class="text-2xl font-bold text-red-400 px-4">Problem 1: The Technical Creation Barrier</h3>
-        <div class="h-px bg-red-500/30 flex-1"></div>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <!-- Problem Statement -->
-        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-red-500/20 p-8">
-          <h4 class="text-xl font-bold text-red-400 mb-4">The Problem Staked:</h4>
-          <p class="text-gray-300 mb-6 italic">
-            "The tools to build valuable digital assets exist, but they're locked behind technical barriers most people can't overcome."
-          </p>
-          
-          <p class="text-gray-300 mb-4">
-            Most people have ideas for apps that could solve problems and generate income, but turning those ideas into reality requires:
-          </p>
-          
-          <ul class="space-y-2 mb-6">
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Programming knowledge across multiple languages</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Understanding of complex development environments</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Expertise in deploying and maintaining applications</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Costly developers or years of learning</p>
-            </li>
-          </ul>
-          
-          <!-- Code snippet to make problem visceral -->
-          <div class="bg-gray-950 border border-red-500/20 rounded-lg p-4 text-xs font-mono text-gray-400 overflow-x-auto">
-            <pre>const app = express();
-app.use(cors());
-app.use(express.json());
-
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
-
-const userSchema = &#123;
-  username: &#123; type: String, required: true, unique: true &#125;,
-  passwordHash: &#123; type: String, required: true &#125;,
-  // And dozens more lines of complex code...</pre>
-          </div>
-          <p class="text-sm text-gray-500 mt-2 text-center">Just a glimpse of what's required to build even a simple app today</p>
-        </div>
-        
-        <!-- Solution -->
-        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 md:translate-y-8">
-          <h4 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-4">Our Direct Solution:</h4>
-          <p class="text-gray-300 mb-6">
-            VisionCreator's Voice-Command Creation Platform eliminates these barriers by allowing anyone to create functional mini-apps through simple voice instructions:
-          </p>
-          
-          <div class="space-y-6 mb-8">
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                1
-              </div>
-              <p class="text-gray-300">Describe what you want your app to do</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                2
-              </div>
-              <p class="text-gray-300">Our AI interprets your instructions and builds the application</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                3
-              </div>
-              <p class="text-gray-300">No coding required - just clear communication of your vision</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                4
-              </div>
-              <p class="text-gray-300">Launch your creation on our marketplace where others can discover and use it</p>
-            </div>
-          </div>
-          
-          <!-- Voice command example -->
-          <div class="bg-gray-950 border border-cyan-500/20 rounded-lg p-6 text-center">
-            <p class="text-cyan-400 text-xl mb-2 font-mono">"Create a weather app that shows the forecast and sends alerts when it's going to rain"</p>
-            <p class="text-sm text-gray-400">With VisionCreator, this single voice command can replace hundreds of lines of code</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Problem 2: AI Wealth Concentration -->
-    <div class="mb-20">
-      <div class="flex items-center justify-center gap-4 mb-8">
-        <div class="h-px bg-red-500/30 flex-1"></div>
-        <h3 class="text-2xl font-bold text-red-400 px-4">Problem 2: The AI Wealth Concentration</h3>
-        <div class="h-px bg-red-500/30 flex-1"></div>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <!-- Problem Statement -->
-        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-red-500/20 p-8">
-          <h4 class="text-xl font-bold text-red-400 mb-4">The Problem Staked:</h4>
-          <p class="text-gray-300 mb-6 italic">
-            "AI is creating the next wave of digital wealth, but without technical skills, you're relegated to being a consumer rather than a creator."
-          </p>
-          
-          <p class="text-gray-300 mb-4">
-            As AI rapidly transforms the economy:
-          </p>
-          
-          <ul class="space-y-2 mb-6">
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Technical specialists are capturing massive value</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">The wealth gap between creators and consumers is widening</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Most people can only consume AI tools, not leverage them for creation</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">The economic benefits of AI are concentrating among a small percentage of the population</p>
-            </li>
-          </ul>
-          
-          <!-- Wealth distribution visualization -->
-          <div class="bg-gray-950 border border-red-500/20 rounded-lg p-6">
-            <h5 class="text-sm text-gray-400 mb-4 text-center">AI Wealth Distribution</h5>
-            <div class="h-6 bg-gray-800 rounded-full overflow-hidden mb-3">
-              <div class="h-full bg-red-500 rounded-full" style="width: 10%;"></div>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500">
-              <span>10% of people</span>
-              <span>90% of AI-generated wealth</span>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Solution -->
-        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 md:translate-y-8">
-          <h4 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-4">Our Direct Solution:</h4>
-          <p class="text-gray-300 mb-6">
-            VisionCreator democratizes AI-powered creation through:
-          </p>
-          
-          <div class="space-y-6 mb-8">
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                1
-              </div>
-              <p class="text-gray-300">Our AI-powered platform that turns your voice instructions into working applications</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                2
-              </div>
-              <p class="text-gray-300">A marketplace where your creations can generate income 24/7</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                3
-              </div>
-              <p class="text-gray-300">Community support to help refine and improve your ideas</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                4
-              </div>
-              <p class="text-gray-300">Educational resources that help you understand what's possible without needing to understand how it works</p>
-            </div>
-          </div>
-          
-          <p class="text-xl text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 font-bold mb-2">
-            We're putting AI in service of everyone, not just technical specialists
-          </p>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Problem 3: The Ownership Disconnect -->
-    <div>
-      <div class="flex items-center justify-center gap-4 mb-8">
-        <div class="h-px bg-red-500/30 flex-1"></div>
-        <h3 class="text-2xl font-bold text-red-400 px-4">Problem 3: The Ownership Disconnect</h3>
-        <div class="h-px bg-red-500/30 flex-1"></div>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <!-- Problem Statement -->
-        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-red-500/20 p-8">
-          <h4 class="text-xl font-bold text-red-400 mb-4">The Problem Staked:</h4>
-          <p class="text-gray-300 mb-6 italic">
-            "In today's digital economy, you build value for platforms but own nothing of what you create."
-          </p>
-          
-          <p class="text-gray-300 mb-4">
-            Traditional platforms:
-          </p>
-          
-          <ul class="space-y-2 mb-6">
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Extract value from user contributions</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Keep all upside for shareholders</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Offer temporary compensation, not lasting ownership</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Can change terms at any time, leaving creators vulnerable</p>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-red-400">•</span>
-              <p class="text-gray-300">Create digital sharecroppers, not digital owners</p>
-            </li>
-          </ul>
-          
-          <!-- Platform vs. Creator visualization -->
-          <div class="bg-gray-950 border border-red-500/20 rounded-lg p-6">
-            <div class="grid grid-cols-2 gap-6">
-              <div class="text-center">
-                <p class="text-sm text-gray-400 mb-2">Hours You Spend Building</p>
-                <p class="text-2xl text-red-400 font-bold">1000+</p>
-              </div>
-              <div class="text-center">
-                <p class="text-sm text-gray-400 mb-2">Ownership You Receive</p>
-                <p class="text-2xl text-red-400 font-bold">0%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Solution -->
-        <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 md:translate-y-8">
-          <h4 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-4">Our Direct Solution:</h4>
-          <p class="text-gray-300 mb-6 italic">
-            "VCR tokens aren't just governance rights—they're actual ownership in a platform being built by and for its users."
-          </p>
-          
-          <p class="text-gray-300 mb-4">
-            VisionCreator's ownership model ensures:
-          </p>
-          
-          <div class="space-y-6 mb-8">
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                1
-              </div>
-              <p class="text-gray-300">Your one-time €365 investment provides permanent ownership through VCR tokens</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                2
-              </div>
-              <p class="text-gray-300">30% of platform ownership is distributed to our first 10,000 members</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                3
-              </div>
-              <p class="text-gray-300">The 50/50 split between platform development and community pool ensures balanced growth</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                4
-              </div>
-              <p class="text-gray-300">When we reach 10,000 members, we transform into a full DAO where token holders control the platform's future</p>
-            </div>
-            <div class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400/20 to-cyan-400/20 flex items-center justify-center">
-                5
-              </div>
-              <p class="text-gray-300">You own a share of everything built on the platform</p>
-            </div>
-          </div>
-          
-          <p class="text-xl text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 font-bold">
-            Perfect alignment between platform success and member success
-          </p>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Integrated Solution Summary -->
-    <div class="mt-20 bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 text-center">
-      <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-6">
-        The Integrated Solution: Create, Earn, Own
-      </h3>
-      <p class="text-gray-300 mb-8 max-w-3xl mx-auto">
-        VisionCreator integrates these solutions into a single platform with a three-phase roadmap that solves the fundamental problems of digital creation and ownership.
-      </p>
-      
-      <div class="flex justify-center items-center">
-        <button class="px-10 py-5 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black text-xl font-bold hover:scale-105 transition-all duration-300">
-          Join the 10,000 Pioneers
-        </button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Three-Phase Roadmap Section (Features/Benefits Framework) -->
-<section class="py-24 bg-black relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-400/5 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-400/5 rounded-full blur-3xl"></div>
-  </div>
-
-  <div class="max-w-5xl mx-auto px-8">
-    <div class="text-center mb-16">
-      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        Our Three-Phase Strategy
-      </h2>
-      <p class="text-xl text-gray-300 mt-4 max-w-2xl mx-auto">
-        Not sequential phases—but a strategic roadmap where building and ownership converge
-      </p>
-    </div>
-    
-    <!-- Phases Timeline -->
-    <div class="relative mx-auto max-w-4xl mb-20">
-      <div class="absolute top-0 left-1/2 h-full w-1 bg-gradient-to-b from-yellow-400/50 to-cyan-400/50 transform -translate-x-1/2"></div>
-      
-      <!-- Phase 1 -->
-      <div class="relative z-10 mb-16">
-        <div class="flex items-center">
-          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl text-black font-bold shadow-lg">
-            1
-          </div>
-          <div class="ml-8 bg-gray-900/50 backdrop-blur-xl rounded-xl border border-yellow-500/20 p-6 flex-1">
-            <h3 class="text-xl font-bold text-yellow-400 mb-2">Voice-Command Platform Development</h3>
-            <p class="text-gray-300">
-              We're building a revolutionary platform where anyone can create mini apps through simple voice commands. Your investment is split between platform development (50%) and our community contribution pool (50%).
-            </p>
-            <div class="mt-4 grid grid-cols-2 gap-4">
-              <div class="bg-gray-800/50 p-3 rounded-lg">
-                <p class="text-sm text-yellow-300 font-medium">Feature</p>
-                <p class="text-xs text-gray-400">Voice-to-app technology</p>
-              </div>
-              <div class="bg-gray-800/50 p-3 rounded-lg">
-                <p class="text-sm text-cyan-300 font-medium">Benefit</p>
-                <p class="text-xs text-gray-400">Create without coding skills</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Phase 2 -->
-      <div class="relative z-10 mb-16 ml-24">
-        <div class="flex items-center">
-          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl text-black font-bold shadow-lg">
-            2
-          </div>
-          <div class="ml-8 bg-gray-900/50 backdrop-blur-xl rounded-xl border border-yellow-500/20 p-6 flex-1">
-            <h3 class="text-xl font-bold text-yellow-400 mb-2">Marketplace Creation</h3>
-            <p class="text-gray-300">
-              Once our core platform is built, we expand to create a comprehensive marketplace where VisionCreators can build and distribute mini apps within our framework. This marketplace becomes the ecosystem where digital assets are created, shared, and monetized.
-            </p>
-            <div class="mt-4 grid grid-cols-2 gap-4">
-              <div class="bg-gray-800/50 p-3 rounded-lg">
-                <p class="text-sm text-yellow-300 font-medium">Feature</p>
-                <p class="text-xs text-gray-400">AI-powered marketplace</p>
-              </div>
-              <div class="bg-gray-800/50 p-3 rounded-lg">
-                <p class="text-sm text-cyan-300 font-medium">Benefit</p>
-                <p class="text-xs text-gray-400">Monetize your creations</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Phase 3 -->
-      <div class="relative z-10">
-        <div class="flex items-center">
-          <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 flex items-center justify-center text-2xl text-black font-bold shadow-lg">
-            3
-          </div>
-          <div class="ml-8 bg-gray-900/50 backdrop-blur-xl rounded-xl border border-yellow-500/20 p-6 flex-1">
-            <h3 class="text-xl font-bold text-yellow-400 mb-2">Community Exit & DAO Transformation</h3>
-            <p class="text-gray-300">
-              Upon reaching our milestone of 10,000 members—both passive investors and active contributors holding VCR tokens—we execute our community exit and transform into a full DAO. At this point, governance transfers completely to token holders.
-            </p>
-            <div class="mt-4 grid grid-cols-2 gap-4">
-              <div class="bg-gray-800/50 p-3 rounded-lg">
-                <p class="text-sm text-yellow-300 font-medium">Feature</p>
-                <p class="text-xs text-gray-400">Complete DAO governance</p>
-              </div>
-              <div class="bg-gray-800/50 p-3 rounded-lg">
-                <p class="text-sm text-cyan-300 font-medium">Benefit</p>
-                <p class="text-xs text-gray-400">Full community control</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Value Proposition (Using Social Proof) -->
-<section class="py-24 bg-gray-950 relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
-  </div>
-
-  <div class="max-w-5xl mx-auto px-8">
-    <div class="text-center mb-16">
-      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        The Value Proposition
-      </h2>
-    </div>
-    
-    <!-- User Stories - Social Proof -->
-    <div class="grid gap-8 md:grid-cols-3">
-      <!-- Creators -->
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-yellow-500/20 p-8 transition-all duration-300 hover:border-yellow-500/40">
-        <div class="flex items-start gap-6 mb-8">
-          <Avatar seed="creator" size="56" />
-          <div>
-            <h3 class="text-xl font-bold text-yellow-400 mb-1">For Creators</h3>
-            <p class="text-sm text-gray-400">Tech enthusiasts & builders</p>
-          </div>
-        </div>
-        
-        <div class="space-y-4">
-          <div class="flex items-start gap-3">
-            <div class="text-yellow-400">•</div>
-            <p class="text-gray-300 text-sm">Create mini apps through voice commands without technical skills</p>
-          </div>
-          <div class="flex items-start gap-3">
-            <div class="text-yellow-400">•</div>
-            <p class="text-gray-300 text-sm">Earn VCR tokens through platform contributions</p>
-          </div>
-          <div class="flex items-start gap-3">
-            <div class="text-yellow-400">•</div>
-            <p class="text-gray-300 text-sm">Build ownership in a growing AI marketplace ecosystem</p>
-          </div>
-        </div>
-        
-        <div class="mt-8 bg-gray-800/50 rounded-xl p-4">
-          <p class="text-gray-300 text-sm italic">
-            "I always had app ideas but couldn't code. Now I just describe my vision through voice and it becomes reality."
-          </p>
-          <p class="text-right text-xs text-gray-400 mt-2">— Alex, Graphic Designer</p>
-        </div>
-      </div>
-      
-      <!-- Investors -->
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 transition-all duration-300 hover:border-cyan-500/40">
-        <div class="flex items-start gap-6 mb-8">
-          <Avatar seed="investor" size="56" />
-          <div>
-            <h3 class="text-xl font-bold text-cyan-400 mb-1">For Investors</h3>
-            <p class="text-sm text-gray-400">Forward-thinking individuals</p>
-          </div>
-        </div>
-        
-        <div class="space-y-4">
-          <div class="flex items-start gap-3">
-            <div class="text-cyan-400">•</div>
-            <p class="text-gray-300 text-sm">One-time €365 investment for lifetime participation</p>
-          </div>
-          <div class="flex items-start gap-3">
-            <div class="text-cyan-400">•</div>
-            <p class="text-gray-300 text-sm">Clear exit strategy at 10,000 member milestone</p>
-          </div>
-          <div class="flex items-start gap-3">
-            <div class="text-cyan-400">•</div>
-            <p class="text-gray-300 text-sm">30% ownership distributed through VCR tokens</p>
-          </div>
-        </div>
-        
-        <div class="mt-8 bg-gray-800/50 rounded-xl p-4">
-          <p class="text-gray-300 text-sm italic">
-            "I've invested in traditional startups before, but never had true ownership or governance rights like with VisionCreator."
-          </p>
-          <p class="text-right text-xs text-gray-400 mt-2">— Maria, Angel Investor</p>
-        </div>
-      </div>
-      
-      <!-- Partners -->
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-purple-500/20 p-8 transition-all duration-300 hover:border-purple-500/40">
-        <div class="flex items-start gap-6 mb-8">
-          <Avatar seed="partner" size="56" />
-          <div>
-            <h3 class="text-xl font-bold text-purple-400 mb-1">For Partners</h3>
-            <p class="text-sm text-gray-400">Businesses & service providers</p>
-          </div>
-        </div>
-        
-        <div class="space-y-4">
-          <div class="flex items-start gap-3">
-            <div class="text-purple-400">•</div>
-            <p class="text-gray-300 text-sm">Join an ecosystem with built-in distribution channel</p>
-          </div>
-          <div class="flex items-start gap-3">
-            <div class="text-purple-400">•</div>
-            <p class="text-gray-300 text-sm">Leverage community resources for development</p>
-          </div>
-          <div class="flex items-start gap-3">
-            <div class="text-purple-400">•</div>
-            <p class="text-gray-300 text-sm">Align with next-generation ownership model</p>
-          </div>
-        </div>
-        
-        <div class="mt-8 bg-gray-800/50 rounded-xl p-4">
-          <p class="text-gray-300 text-sm italic">
-            "We integrated our API with VisionCreator's marketplace and saw a 3x increase in developer adoption."
-          </p>
-          <p class="text-right text-xs text-gray-400 mt-2">— Carlos, API Provider</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- The Numbers (Visuals to Tell the Story) -->
-<section class="py-24 bg-black relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-1/4 -left-48 w-96 h-96 bg-yellow-500/5 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 -right-48 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
-  </div>
-
-  <div class="max-w-5xl mx-auto px-8">
-    <div class="text-center mb-16">
-      <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        The Numbers That Matter
-      </h2>
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
-        <div class="text-3xl font-bold text-yellow-400 mb-2">€365</div>
-        <div class="text-sm text-gray-300">One-time Investment</div>
-      </div>
-      
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
-        <div class="text-3xl font-bold text-cyan-400 mb-2">50/50</div>
-        <div class="text-sm text-gray-300">Platform/Community Split</div>
-      </div>
-      
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
-        <div class="text-3xl font-bold text-yellow-400 mb-2">30%</div>
-        <div class="text-sm text-gray-300">Ownership Distribution</div>
-      </div>
-      
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
-        <div class="text-3xl font-bold text-cyan-400 mb-2">€3.65M</div>
-        <div class="text-sm text-gray-300">Community Treasury</div>
-      </div>
-      
-      <div class="bg-gray-900/30 backdrop-blur-xl rounded-xl p-6 text-center transform transition hover:scale-105 duration-300">
-        <div class="text-3xl font-bold text-yellow-400 mb-2">100%</div>
-        <div class="text-sm text-gray-300">Community Governance</div>
-      </div>
-    </div>
-    
-    <!-- Conversion Funnel Visualization -->
-    <div class="mt-20 bg-gray-900/30 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8">
-      <h3 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 mb-8 text-center">
-        The Journey to Full DAO
-      </h3>
-      
-      <div class="relative">
-        <!-- Progress Bar -->
-        <div class="h-3 bg-gray-800 rounded-full overflow-hidden mb-8">
-          <div class="h-full bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full" style="width: 23%;"></div>
-        </div>
-        
-        <!-- Milestones -->
-        <div class="flex justify-between text-center">
-          <div>
-            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-cyan-400 mx-auto mb-2 flex items-center justify-center text-black text-xs font-bold">1</div>
-            <div class="text-sm text-gray-300">Early<br>Adopters</div>
-            <div class="text-xs text-yellow-300 mt-1">Now</div>
-          </div>
-          
-          <div>
-            <div class="w-8 h-8 rounded-full bg-gray-700 mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold">5K</div>
-            <div class="text-sm text-gray-300">Platform<br>Launch</div>
-          </div>
-          
-          <div>
-            <div class="w-8 h-8 rounded-full bg-gray-700 mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold">10K</div>
-            <div class="text-sm text-gray-300">DAO<br>Transformation</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA Section -->
-<section class="py-24 bg-gradient-to-b from-gray-950 to-black relative overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-1/2 -left-48 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"></div>
-  </div>
-
-  <div class="max-w-3xl mx-auto px-8 text-center space-y-12">
-    <h2 class="text-5xl font-bold">
-      <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
-        Join the future for €365
-      </span>
-    </h2>
-    
-    <p class="text-xl text-gray-300 max-w-xl mx-auto">
-      Be among the first 10,000 members who will own and govern VisionCreator.
-    </p>
-    
-    <!-- CTV instead of CTA -->
-    <div class="flex flex-col sm:flex-row justify-center items-center space-y-6 sm:space-y-0 sm:space-x-6">
-      <button class="px-10 py-5 bg-gradient-to-r from-yellow-400 to-cyan-400 rounded-full text-black text-xl font-bold hover:scale-105 transition-all duration-300 w-full sm:w-auto">
-        Start My Ownership Journey
-      </button>
-      
-      <a href="/roadmap" class="text-cyan-400 underline hover:text-cyan-300 transition-colors">
-        See detailed roadmap
-      </a>
-    </div>
-    
-    <!-- Social Proof -->
-    <div class="flex justify-center gap-4 mt-12">
-      <div class="flex -space-x-3">
-        <Avatar seed="member1" />
-        <Avatar seed="member2" />
-        <Avatar seed="member3" />
-        <div class="w-12 h-12 rounded-full border-2 border-gray-900 bg-gradient-to-br from-gray-800 to-gray-900 backdrop-blur-xl flex items-center justify-center text-cyan-100 text-sm">
-          +{memberCount - 3}
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-</div><!-- End of main wrapper -->
-
 <style>
-  @keyframes title-rise {
-    0% { transform: translateY(30px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  @keyframes fade-in {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-
-  @keyframes slide-up {
-    0% { transform: translateY(20px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  .animate-title-rise {
-    animation: title-rise 1.2s ease-out forwards;
-  }
-
-  .animate-fade-in {
-    animation: fade-in 1s ease-out forwards;
-  }
-
-  .animate-slide-up {
-    animation: slide-up 1s ease-out forwards;
-  }
-
-  .animate-fade-in-delayed {
-    animation: fade-in 1s ease-out 0.5s forwards;
-    opacity: 0;
-  }
-
-  .animate-fade-in-delayed-2 {
-    animation: fade-in 1s ease-out 1s forwards;
-    opacity: 0;
-  }
-
-  .animate-slide-up-delayed {
-    animation: slide-up 1s ease-out 0.3s forwards;
-    opacity: 0;
-  }
 </style>
+

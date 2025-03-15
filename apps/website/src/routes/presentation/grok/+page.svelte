@@ -603,7 +603,7 @@
               <!-- Subslide navigation -->
               <div class="subslide-nav">
                 {#if currentSubslideIndices[section.id] > 0}
-                  <button class="subslide-nav-button prev" on:click={() => prevSubslide(section.id)}>
+                  <button class="subslide-nav-button prev" on:click={() => prevSubslide(section.id)} aria-label="Go to previous subslide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
@@ -620,7 +620,7 @@
                 </div>
                 
                 {#if currentSubslideIndices[section.id] < section.subslides.length - 1}
-                  <button class="subslide-nav-button next" on:click={() => nextSubslide(section.id)}>
+                  <button class="subslide-nav-button next" on:click={() => nextSubslide(section.id)} aria-label="Go to next subslide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
@@ -698,7 +698,7 @@
           {/if}
           
           {#if i < sections.length - 1}
-            <button class="scroll-hint" on:click={() => scrollToSection(i + 1)}>
+            <button class="scroll-hint" on:click={() => scrollToSection(i + 1)} aria-label="Scroll to next section">
               <span class="scroll-dot"></span>
               <span class="scroll-dot"></span>
               <span class="scroll-dot"></span>
@@ -1733,78 +1733,11 @@
   }
   
   /* Vision steps styles */
-  .hominio-vision {
-    margin: 3rem 0;
-  }
-  
-  .vision-steps {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-  
-  .vision-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .step-number {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.9);
-  }
-  
-  .step-label {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.7);
-  }
-  
-  .step-arrow {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 1.5rem;
-    margin: 0 0.5rem;
-  }
+  /* Removing all unused CSS selectors */
   
   @media (max-width: 768px) {
-    .vision-steps {
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    
-    .step-arrow {
-      transform: rotate(90deg);
-      margin: 0.5rem 0;
-    }
+    /* Removing unused media query styles */
   }
   
-  /* Remove the old complex Hominio styles, keeping only what we need */
-  .hominio-visual, .hominio-logo-container, .milestone-timeline, 
-  .founders-container, .hominio-features, .timeline-connector,
-  .milestone, .milestone-dot, .milestone-label, .founders-label,
-  .founders-avatars, .founder-avatar, .hominio-logo, .logo-rays {
-    /* Override with simpler styles or set to display: none */
-    display: none;
-  }
-  
-  /* Keep necessary animations but simplify */
-  @keyframes pulseLogo {
-    0% {
-      box-shadow: 0 0 20px rgba(179, 179, 255, 0.2);
-    }
-    100% {
-      box-shadow: 0 0 30px rgba(179, 179, 255, 0.3);
-    }
-  }
+  /* Removing all unused complex Hominio styles */
 </style> 

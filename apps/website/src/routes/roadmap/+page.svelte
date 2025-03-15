@@ -589,7 +589,7 @@
       </p>
       
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="#" class="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-600 rounded-md text-white font-bold hover:from-rose-400 hover:to-pink-500 transition-all shadow-lg">
+        <a href="/join" class="px-8 py-4 bg-gradient-to-r from-rose-500 to-pink-600 rounded-md text-white font-bold hover:from-rose-400 hover:to-pink-500 transition-all shadow-lg">
           Become a Member
         </a>
         <a href="/presentation" class="px-8 py-4 bg-gray-800 hover:bg-gray-700 rounded-md text-white font-medium transition-all">

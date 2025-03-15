@@ -269,6 +269,7 @@
             class="w-3 h-3 rounded-full transition-all duration-200 {i === currentSlideIndex ? 'bg-yellow-400' : 'bg-gray-500/50 hover:bg-gray-400/70'}"
             on:click={() => goToSlide(i)}
             title={slides[i].title}
+            aria-label={`Go to slide: ${slides[i].title}`}
           ></button>
         {/each}
       </div>

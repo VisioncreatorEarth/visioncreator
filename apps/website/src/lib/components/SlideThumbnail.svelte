@@ -1,7 +1,7 @@
 <script lang="ts">
   export let title: string = '';
   export let index: number = 0;
-  export let slideType: string = 'default';
+  export const slideType: string = 'default';
   
   // Determine background gradient based on slide index and type
   let bgGradient = "";

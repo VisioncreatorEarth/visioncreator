@@ -112,6 +112,10 @@
         <div 
           class="bg-slate-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer border border-gray-700 hover:border-yellow-500"
           on:click={() => goToPresentation(index)}
+          on:keydown={(e) => e.code === 'Enter' && goToPresentation(index)}
+          role="button"
+          tabindex="0"
+          aria-label={`View slide: ${slide.title}`}
         >
           <div class="p-4">
             <span class="inline-block bg-yellow-500 text-black text-xs px-2 py-1 rounded mb-2">{index + 1}</span>
