@@ -45,77 +45,78 @@ The presentation is structured in two main parts with a total of 14 slides:
 
 ### PART I - THE VISION
 
-1. **The Outdated Nature of Work** (`Slide1.svelte`)
-   - Presents the pain point that current organizational and work models are outdated
-   - Sets up the fundamental problem the presentation will address
+The Tale of Visioncreator
 
-2. **Root Causes** (`Slide2.svelte`)
-   - Explores why current work systems are outdated
-   - *[This slide needs further specification]*
+1. **The Outdated Nature of Work, Introduction of hero** (`Slide1.svelte`)
+      *This story begins with a protagonist: you* (Knowledge Workers, Creators, etc.)
+         *And you live in a world, where the work models are hopelessly outdated. And that doesn't make you happy.* 
+
+2. **Current Pain** (`Slide2.svelte`)
+      *What are the current pain points of our work culture?*
+         *The protagonist thinks for a minute: Either I have to work for someone else, creating value for them and being told what to do. I cannot live up to my potential. Or I can be the one who let's others work for them myself. Then my whole life is centerd around my company and the responsibilities are huge. Both not really promoising*
+        
 
 3. **Why This Matters** (`Slide3.svelte`)
-   - References Simon Sinek's approach to importance
-   - Connects to the search for livability and quality of life
-   - Establishes the human-centered motivation
+      *Why does this even matter? Shouldn't you take things as they are and focus on success?*
+         *Hmm, but this fundamentally degrades my quality of life. I spend a big amount of my lifetime at work, I want this place to contribute to my  wellbeing and lasting financial security. Right now I feel disconnected*
 
 4. **Core Human Needs** (`Slide4.svelte`)
-   - Outlines the fundamental needs for quality of life:
-     - Belonging
-     - Autonomy
-     - Agency
-     - Financial security
-     - Expression of one's inner strength/vision
+      *What would you need to feel at home at work?*
+         *If I could dream it would be these points*
+            *Belonging, Autonomy, Agency and Financial Security. I want to express my inner strentgh and vision, the person who I really am!*
 
 5. **Achieving Core Needs** (`Slide5.svelte`)
-   - Explains how each core need can be fulfilled:
-     - Belonging: Being part of a group with shared values, feeling seen and respected
-     - Autonomy: Ability to follow your impulses without restrictions
-     - Agency: Having purpose, drive, dreams, creativity, and self-determination
-     - Financial security: Building projects that create value
-     - Expression of inner strength: Values, congruency, alignment with inner world
+      *Wow, cool words! But what would you need to fulfill these specifically?*
+     -   *1.Belonging: I want to be part of a group with shared values, feeling seen and respected*
+     -   *2.Autonomy and Agency: I want things, I have a purpose, a drive, deams, creativity. I want to act without restrictions and on my own terms*
+     -   *3.Financial security: I want to be part of projects that create lasting value, for us and myself!*
+     -   *4.Expression of my true self: The Outside actions should be aligned with my inner world!*
+
 
 6. **Integrated Organization** (`Slide6.svelte`)
-   - Poses the question: Can these elements be integrated into a single organization?
-   - Transitions to the Visioncreator solution
+     The protagonist is in awe: *Now That I have thought about it, this sounds amazing. But can this every be reality?*
+        
 
 7. **Introducing Visioncreator** (`Slide7.svelte`)
-   - Presents Visioncreator as the answer to the previous question
-   - Establishes it as the integrated solution
+     The guide answers smiling *Yes. We call it "Vision Creator". The future of economic organizations.*
 
 8. **Organizational Principles** (`Slide8.svelte`)
-   - Details how Visioncreator is organized:
-     - Collaborative work structure where anyone can contribute based on skills and interests
-     - Collective ownership through tokenized shares (real ownership, not just virtual tokens)
-     - Democratic but individualized decision-making through quadratic voting
-     - Self-determination aligned with collective goals via proposal system
-     - Transparent contribution tracking and rewards in both tokens and euros
-     - GOAL: Alignment with inner strength/vision for all members
+      The hero asks *Amazing! But how would such an organization be structured?*
+     - *1. Collaborative work structure where anyone can contribute based on their skills and interests*
+     - *2. Collective ownership through tokenized shares*
+     - *3. Democratic decision-making, condensing and integrating individual views.*
+     - *4. Innovation through public proposals, fostering self-determination.*
+     - *5. Transparent contribution tracking and rewards in both tokens and stablecoins.*
+     - *GOAL: Alignment of outside action with your true inner self!*
 
 9. **The DAO Concept** (`Slide9.svelte`)
-   - Introduces the Decentralized Autonomous Organization (DAO) model
-   - Explains key DAO components:
-     - Proposal and voting systems with real examples (shows actual UI screenshot)
-     - Collective ownership through VCR token representing real GmbH shares
-     - Community-driven innovation process where members propose and vote on new ideas
-     - Flexible contribution and reward system (work-for-tokens and euros)
-     - Quadratic voting to ensure fair representation regardless of token holdings
-     - GOAL: Building successful startups together
+     
+      Guide Explains key DAO components:
+      *Proposal and voting systems with real examples (shows actual UI screenshot)*
+      *Collective ownership through VCR token representing real GmbH shares*
+      *Community-driven innovation process where members propose and vote on new ideas*
+      *Flexible contribution and reward system (work-for-tokens and euros)*
+      *Quadratic voting to ensure fair representation regardless of token holdings*
+         *GOAL: Building successful startups together*
 
 10. **Visioncreator Implementation Details** (`Slide10.svelte`)
-    - Specifics of the Visioncreator model:
-      - Tokenized German GmbH using tokenize-it platform
-      - ETH token "VCR" representing actual legal ownership
-      - €365 one-time buy-in with token reward and real stake in the company
-      - Financial pools structure:
-        - Initially 75% platform development pool (for developers, marketers, etc.)
-        - 25% community pool that grows as membership increases
-        - Goal to shift completely to community pool at 10,000 members
-      - Quadratic voting system to prevent wealth concentration in decision-making
-      - Legal framework starting as German GmbH
-      - Transformation plan to full DAO after 10,000 investors:
-        - "Community exit" with 70% of company transitioning to community
-        - All revenue and investments flowing to community pool
-        - Shift from German legal structure to full DAO framework
+      The hero asks *That sounds so complex. Have you already built it?*
+      The guide explains: *Yes, indeed! VisionCreator is a real thing. Here's how it works:*
+         *Tokenized German GmbH using tokenize-it platform*
+      -  *ETH token "VCR" representing actual legal ownership*
+      -  *€365 one-time buy-in with token reward and real stake in the company*
+         *Strong community pool rewarding Creators for their contributions*
+         *Quadratic voting system to prevent wealth concentration in decision-making*
+         *Ever evolving governance system*
+         *Safe german legal framework* 
+         *Transformation to fully decentralized DAO after 10,000 investors:*
+         *All revenue and investments then flow into community pool*
+
+11. **Call to action** 
+      Guide asks *So, would you stop building for others and start building for yourself? Do you want to be part of a growing, vibrant community building awesome things collectively? While always being aligned with your true values?*
+      Hero *Absolutely!*
+      Guide *Then join VisionCreator today by booking your personal 1on1 call!*
+  
 
 ### PART II - OUR FIRST STARTUP/PRODUCT
 

@@ -10,7 +10,7 @@
   import RoundComparison from './components/RoundComparison.svelte';
   
   // Import token emission data
-  import tokenEmissionData from './token_emission_30_rounds.json';
+  import tokenEmissionData from './VC Tokens 2.json';
   
   // Stores for state management
   const tokenData = writable<TokenDataPoint[]>([]);
@@ -64,6 +64,13 @@
     }
   }
   
+  // Function to parse a string with commas to a number
+  function parseStringNumber(value: any): number {
+    if (typeof value === 'number') return value;
+    if (!value || typeof value !== 'string') return 0;
+    return parseFloat(value.replace(/,/g, '').replace(/\"/g, '')) || 0;
+  }
+  
   // Load data from JSON file
   function loadTokenEmissionData() {
     isLoading.set(true);
@@ -75,44 +82,36 @@
       const transformedData = tokenEmissionData.map(round => {
         console.log('Processing round:', round.Round);
         
-        // Add descriptions to specific rounds
+        // Remove all descriptions
         let description = "";
-        if (round.Round === 1) description = "Initial Launch";
-        else if (round.Round === 4) description = "Token Expansion";
-        else if (round.Round === 7) description = "Scaling Phase";
-        else if (round.Round === 10) description = "Growth Acceleration";
-        else if (round.Round === 15) description = "Market Expansion";
-        else if (round.Round === 20) description = "Global Scale";
-        else if (round.Round === 25) description = "Maturity Phase";
-        else if (round.Round === 30) description = "Full Adoption";
         
         try {
           const data: TokenDataPoint = {
             round: round.Round,
-            totalVCs: round["Total VCs (VisionCreators)"],
-            newVCs: round["New VCs"],
-            investRound: parseCurrency(round["Invest Round (= new VCs * 365€)"]),
-            totalInvestSum: parseCurrency(round["Total Invest Sum"]),
-            tokenEmissionPrice: parseCurrency(round["Token Emission Price"]),
-            tokenPerVC: parseFloat(String(round["Token Per VC"]).replace(',', '.')),
-            tokenEmittedInRound: round["Token emitted in this round"],
-            totalShares: parseCurrency(String(round["Total Shares (Token + reg. Capital)"])),
-            communityTokenPool: round["Sum of token in com. token pool"],
-            addedTokensToPool: round["Added tokens to community token pool"],
-            investmentPool: parseCurrency(round["Investment pool (SumInvests *0,75)"]),
-            platformPool: parseCurrency(round["Admin Pool (SumInvest * 0,25)"]),
-            totalPoolValue: parseCurrency(round["Total value of both pools in €"]),
-            addedPoolValue: parseCurrency(round["Added value to both pools in this round in €"]),
-            capitalIncrease: parsePercentage(round["Capital increase in % (from reg. capital)"]),
-            regCapitalShare: parsePercentage(round["Reg. capital share of value"]),
-            foundersDAOTreasuryShare: parsePercentage(round["Founders + DAO Treasury (in % of all tokens)"]),
-            daoTreasuryShare: parsePercentage(round["DAO Treasury (in % of all tokens)"]),
-            perFounderShare: parsePercentage(round["Per Founder Share (in % of all tokens)"]),
-            minValuation: parseCurrency(round["Min Valuation in €"]),
-            daoTreasuryFoundersValue: parseCurrency(round["DAO Treasury + Founders value in €"]),
-            firstRoundEmissionValue: parseCurrency(round["First round emission value (per VC)"]),
-            daoTreasuryValue: parseCurrency(round["DAO Treasury's value  in € "]),
-            foundersShareValue: parseCurrency(round["All founders initial share combined value in €"]),
+            totalVCs: parseStringNumber(round["Total VCs"]),
+            newVCs: parseStringNumber(round["New VCs"]),
+            investRound: parseCurrency(round["Invested in this Round"]),
+            totalInvestSum: parseCurrency(round["Total Invest Pool"]),
+            tokenEmissionPrice: parseCurrency(round["Current Token Emission Price"]),
+            tokenPerVC: parseFloat(String(round["Token Emission Per VC"]).replace(',', '.')),
+            tokenEmittedInRound: parseStringNumber(round["Token Emission in this Round"]),
+            totalShares: parseCurrency(String(round["Total Shares (regs. Capital + total Tokens emitted"])),
+            communityTokenPool: parseStringNumber(round["Contributions Pool (Token)  Total"]),
+            addedTokensToPool: parseStringNumber(round["Contributions Pool (Token) added this round"]),
+            investmentPool: parseCurrency(round["Contributions Pool (Euro) total "]),
+            platformPool: parseCurrency(round["Guardians Operations (Euro) total "]),
+            totalPoolValue: parseCurrency(round["Total Invest Pool"]),
+            addedPoolValue: parseCurrency(round["Invested in this Round"]),
+            capitalIncrease: parsePercentage(round["Capital increase in % per round"]),
+            regCapitalShare: 0, // Not directly available in new data
+            foundersDAOTreasuryShare: parsePercentage(round["Founders holdings (Emissions + GmbH)"]),
+            daoTreasuryShare: round["Guardians Treasury"] ? parsePercentage(round["Guardians Treasury"]) : 0,
+            perFounderShare: parsePercentage(round["Founders  Token Shares"]),
+            minValuation: parseCurrency(round[" Total valuation based on current emission price"]),
+            daoTreasuryFoundersValue: parseCurrency(round["Total Founder Valuation based on emission price"]),
+            firstRoundEmissionValue: 0, // Not directly available
+            daoTreasuryValue: 0, // Would need to calculate
+            foundersShareValue: parseCurrency(round["Founders (GmbH) Valuation based on emission price"]),
             description
           };
           console.log('Transformed data for round', round.Round, ':', data);
@@ -122,8 +121,8 @@
           // Return a complete object with default values to match the interface
           return {
             round: round.Round || 0,
-            totalVCs: round["Total VCs (VisionCreators)"] || 0,
-            newVCs: round["New VCs"] || 0,
+            totalVCs: parseStringNumber(round["Total VCs"]),
+            newVCs: parseStringNumber(round["New VCs"]),
             investRound: 0,
             totalInvestSum: 0,
             tokenEmissionPrice: 0,
@@ -239,141 +238,142 @@
 </div>
 {/if}
 
-<main class="bg-surface-900 text-tertiary-300 font-base">
+<main class="bg-surface-900 text-tertiary-300 font-base overflow-y-auto">
   <div class="container mx-auto py-8 px-4 max-w-[1800px]">
     <h1 class="text-4xl font-heading mb-8 text-center">Token Emission Explorer</h1>
     
-    <div class="grid grid-cols-1 md:grid-cols-[320px_1fr] gap-8">
-      <!-- Sidebar with Rounds -->
-      <div class="bg-surface-800 p-4 rounded-lg rounds-container">
-        <h2 class="text-2xl font-heading mb-4">Investment Rounds</h2>
-        
-        <div class="grid grid-cols-1 gap-2 pb-4">
-          {#each $tokenData as data}
-            <button
-              class="p-3 rounded-md text-left transition-all duration-200 {$selectedRound === data.round ? 'bg-surface-700 border-l-4 border-primary-500' : 'hover:bg-surface-700'}"
-              on:click={() => selectRound(data.round)}
-            >
-              <div class="font-bold">Round {data.round}</div>
-              {#if data.description}
-                <div class="text-xs text-tertiary-500 mt-1">{data.description}</div>
-              {/if}
-            </button>
-          {/each}
+    <div class="flex flex-col md:flex-row gap-8">
+      <!-- Sidebar with Rounds - scrollable -->
+      <div class="md:w-[320px] flex-shrink-0">
+        <div class="bg-surface-800 p-4 rounded-lg rounds-container md:max-h-[calc(100vh-120px)] overflow-y-auto">
+          <h2 class="text-2xl font-heading mb-4">Investment Rounds</h2>
+          
+          <div class="grid grid-cols-1 gap-2 pb-4">
+            {#each $tokenData as data}
+              <button
+                class="p-3 rounded-md text-left transition-all duration-200 {$selectedRound === data.round ? 'bg-surface-700 border-l-4 border-primary-500' : 'hover:bg-surface-700'}"
+                on:click={() => selectRound(data.round)}
+              >
+                <div class="font-bold">Round {data.round}</div>
+              </button>
+            {/each}
+          </div>
         </div>
       </div>
       
-      <!-- Main content area -->
-      <div class="flex-1 bg-surface-800 rounded-lg flex flex-col">
-        <!-- View selector tabs - make them sticky -->
-        <div class="border-b border-surface-700 px-4 sticky top-0 bg-surface-800 z-10">
-          <div class="flex overflow-x-auto">
-            <button 
-              class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'summary' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
-              on:click={() => selectView('summary')}
-            >
-              Summary
-            </button>
-            <button 
-              class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'token-distribution' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
-              on:click={() => selectView('token-distribution')}
-            >
-              Token Distribution
-            </button>
-            <button 
-              class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'investment' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
-              on:click={() => selectView('investment')}
-            >
-              Investment Data
-            </button>
-            <button 
-              class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'comparison' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
-              on:click={() => selectView('comparison')}
-            >
-              Round Comparison
-            </button>
-          </div>
-        </div>
-        
-        <!-- Content for selected round and view -->
-        <div class="p-6">
-          {#if $selectedView === 'summary'}
-            <!-- Summary View -->
-            <div>
-              {#if $currentRoundData}
-                <div class="bg-surface-700 p-5 rounded-lg mb-6">
-                  <h2 class="text-2xl font-bold mb-2">Round {$currentRoundData.round} {$currentRoundData.description ? `- ${$currentRoundData.description}` : ''}</h2>
-                  <p class="text-tertiary-300 mb-4">Overview of token emission for investment round {$currentRoundData.round}</p>
-                  
-                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 2fr 1.5fr 1.5fr">
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Vision Creators</h3>
-                      <p class="text-2xl font-bold">{$currentRoundData.totalVCs}</p>
-                      <p class="text-sm text-tertiary-300">+{$currentRoundData.newVCs} new</p>
-                    </div>
-                    
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Investment</h3>
-                      <p class="text-2xl font-bold">{formatCurrency($currentRoundData.totalInvestSum)}</p>
-                      <p class="text-sm text-tertiary-300">+{formatCurrency($currentRoundData.investRound)} this round</p>
-                    </div>
-                    
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Token Price</h3>
-                      <p class="text-2xl font-bold">{formatCurrency($currentRoundData.tokenEmissionPrice)}</p>
-                      <p class="text-sm text-tertiary-300">{$currentRoundData.tokenPerVC} tokens per VC</p>
-                    </div>
-                    
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Shares</h3>
-                      <p class="text-2xl font-bold">{formatNumber($currentRoundData.totalShares)}</p>
-                      <p class="text-sm text-tertiary-300">+{$currentRoundData.tokenEmittedInRound} tokens this round</p>
-                    </div>
-                  </div>
-                  
-                  <!-- Additional metrics in a grid -->
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 1.7fr 1.2fr 1.5fr">
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Platform Pool</h3>
-                      <p class="text-lg font-bold">{formatCurrency($currentRoundData.platformPool)}</p>
-                    </div>
-                    
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Investment Pool</h3>
-                      <p class="text-lg font-bold">{formatCurrency($currentRoundData.investmentPool)}</p>
-                    </div>
-                    
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Capital Increase</h3>
-                      <p class="text-lg font-bold">{formatPercentage($currentRoundData.capitalIncrease)}</p>
-                    </div>
-                    
-                    <div class="bg-surface-800 p-4 rounded-lg">
-                      <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Minimum Valuation</h3>
-                      <p class="text-lg font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Removed the visualization components from summary view -->
-              {/if}
+      <!-- Main content area - fixed position -->
+      <div class="flex-1">
+        <div class="bg-surface-800 rounded-lg flex flex-col md:sticky md:top-4">
+          <!-- View selector tabs - make them sticky -->
+          <div class="border-b border-surface-700 px-4 sticky top-0 bg-surface-800 z-10">
+            <div class="flex overflow-x-auto">
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'summary' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('summary')}
+              >
+                Summary
+              </button>
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'token-distribution' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('token-distribution')}
+              >
+                Token Distribution
+              </button>
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'investment' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('investment')}
+              >
+                Investment Data
+              </button>
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'comparison' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('comparison')}
+              >
+                Round Comparison
+              </button>
             </div>
-          {:else if $selectedView === 'token-distribution'}
-            <!-- Token Distribution Component -->
-            {#if $currentRoundData}
-              <TokenDistribution data={$currentRoundData} />
+          </div>
+          
+          <!-- Content for selected round and view -->
+          <div class="p-6">
+            {#if $selectedView === 'summary'}
+              <!-- Summary View -->
+              <div>
+                {#if $currentRoundData}
+                  <div class="bg-surface-700 p-5 rounded-lg mb-6">
+                    <h2 class="text-2xl font-bold mb-2">Round {$currentRoundData.round}</h2>
+                    <p class="text-tertiary-300 mb-4">Overview of token emission for investment round {$currentRoundData.round}</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 2fr 1.5fr 1.5fr">
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Vision Creators</h3>
+                        <p class="text-2xl font-bold">{$currentRoundData.totalVCs}</p>
+                        <p class="text-sm text-tertiary-300">+{$currentRoundData.newVCs} new</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Investment</h3>
+                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.totalInvestSum)}</p>
+                        <p class="text-sm text-tertiary-300">+{formatCurrency($currentRoundData.investRound)} this round</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Token Price</h3>
+                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.tokenEmissionPrice)}</p>
+                        <p class="text-sm text-tertiary-300">{$currentRoundData.tokenPerVC} tokens per VC</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Shares</h3>
+                        <p class="text-2xl font-bold">{formatNumber($currentRoundData.totalShares)}</p>
+                        <p class="text-sm text-tertiary-300">+{$currentRoundData.tokenEmittedInRound} tokens this round</p>
+                      </div>
+                    </div>
+                    
+                    <!-- Additional metrics in a grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 1.7fr 1.2fr 1.5fr">
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Platform Pool</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.platformPool)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Contributions Pool</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.investmentPool)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Capital Increase</h3>
+                        <p class="text-lg font-bold">{formatPercentage($currentRoundData.capitalIncrease)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Valuation</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Removed the visualization components from summary view -->
+                {/if}
+              </div>
+            {:else if $selectedView === 'token-distribution'}
+              <!-- Token Distribution Component -->
+              {#if $currentRoundData}
+                <TokenDistribution data={$currentRoundData} />
+              {/if}
+            {:else if $selectedView === 'investment'}
+              <!-- Investment Data Component -->
+              {#if $currentRoundData}
+                <InvestmentData data={$currentRoundData} />
+              {/if}
+            {:else if $selectedView === 'comparison'}
+              <!-- Round Comparison Component -->
+              {#if $tokenData.length > 0}
+                <RoundComparison allRounds={$tokenData} currentRound={$selectedRound} />
+              {/if}
             {/if}
-          {:else if $selectedView === 'investment'}
-            <!-- Investment Data Component -->
-            {#if $currentRoundData}
-              <InvestmentData data={$currentRoundData} />
-            {/if}
-          {:else if $selectedView === 'comparison'}
-            <!-- Round Comparison Component -->
-            {#if $tokenData.length > 0}
-              <RoundComparison allRounds={$tokenData} currentRound={$selectedRound} />
-            {/if}
-          {/if}
+          </div>
         </div>
       </div>
     </div>
