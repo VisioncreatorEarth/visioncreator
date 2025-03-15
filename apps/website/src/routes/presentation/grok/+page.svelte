@@ -1,72 +1,157 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { fade, fly, scale } from 'svelte/transition';
   
   interface Section {
     id: string;
     title: string;
-    message: string;
+    subtitle: string;
+    content: string[];
+    hasListItems?: boolean;
+    listItems?: string[];
+    callToAction?: string;
     accent?: boolean;
   }
   
-  // Core messages for each slide
+  // Updated content for each slide
   const sections: Section[] = [
     {
-      id: 'intro',
-      title: 'The Story',
-      message: 'Traditional work models no longer inspire visionary creators like you.',
+      id: 'outdated',
+      title: 'The Outdated Nature of Work',
+      subtitle: "In today's digital age, traditional work models are hopelessly outdated.",
+      content: [
+        "Employee: You trade time for money with no ownership or freedom.",
+        "Self-Employed: You gain independence but remain chained to trading time for money, with endless stress."
+      ],
+      listItems: [],
+      callToAction: "Neither path fits your life in the modern world. You deserve better.",
       accent: true
     },
     {
-      id: 'pain',
-      title: 'The Dilemma',
-      message: 'Neither working for others nor solo entrepreneurship feels truly fulfilling.'
+      id: 'choice',
+      title: 'A Miserable Choice',
+      subtitle: "You face a dilemma:",
+      content: [
+        "Employee: Create value for someone else, never fully realizing your potential.",
+        "Self-Employed: Shoulder overwhelming responsibility with little time to breathe."
+      ],
+      callToAction: "Neither option feels fulfilling in the digital age. It's time for a new way forward."
     },
     {
       id: 'why',
-      title: 'The Impact',
-      message: 'Work should enhance your wellbeing, not degrade your quality of life.'
+      title: 'Why This Matters',
+      subtitle: "This isn't just inconvenient—it degrades your quality of life.",
+      content: [
+        "You spend a huge part of your day at work. It should:"
+      ],
+      hasListItems: true,
+      listItems: [
+        "Enhance your well-being.",
+        "Secure your financial future."
+      ],
+      callToAction: "Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are."
     },
     {
-      id: 'needs',
-      title: 'The Needs',
-      message: 'Work should provide belonging, autonomy, security, and self-expression.'
-    },
-    {
-      id: 'achieve',
-      title: 'The Ingredients',
-      message: 'True fulfillment requires community, freedom, value creation, and authentic expression.'
-    },
-    {
-      id: 'question',
-      title: 'The Question',
-      message: 'Could such a harmonious vision really come to life?',
+      id: 'new-way',
+      title: 'A New Way Forward',
+      subtitle: "",
+      content: [
+        "Imagine a work model that lets you build assets, collaborate freely, and enjoy income that flows without constant work. Visioncreator is this new way—a path to ownership, freedom, and fulfillment for you."
+      ],
       accent: true
     },
     {
-      id: 'solution',
-      title: 'The Answer',
-      message: 'Welcome to Visioncreator—the future of economic organizations.'
+      id: 'deserve',
+      title: 'What You Deserve',
+      subtitle: "You deserve a workplace that feels like home. It should offer:",
+      content: [],
+      hasListItems: true,
+      listItems: [
+        "Belonging: Be part of a community that values you.",
+        "Autonomy & Agency: Pursue your purpose without restrictions.",
+        "Financial Security: Build lasting value for yourself and others.",
+        "Authentic Expression: Align your work with your true vision."
+      ]
     },
     {
-      id: 'principles',
-      title: 'The Framework',
-      message: 'Align your external actions with your inner vision through collaborative ownership.'
+      id: 'how-works',
+      title: 'How Visioncreator Works',
+      subtitle: "Visioncreator is a collaborative ecosystem where:",
+      content: [],
+      hasListItems: true,
+      listItems: [
+        "You contribute based on your skills and passions.",
+        "Ownership is collective through tokenized shares.",
+        "Decision-making is democratic and transparent.",
+        "Innovation comes from community proposals.",
+        "Your contributions are tracked and rewarded fairly."
+      ]
     },
     {
-      id: 'governance',
-      title: 'The Governance',
-      message: 'Democratic decision-making ensures every voice is valued.'
+      id: 'dao',
+      title: 'The DAO Framework',
+      subtitle: "Visioncreator uses a DAO (Decentralized Autonomous Organization) framework:",
+      content: [],
+      hasListItems: true,
+      listItems: [
+        "Propose & Vote: You shape the future with democratic decisions.",
+        "Own Collectively: VCR tokens give you real legal stakes.",
+        "Innovate Together: You drive innovation through proposals.",
+        "Earn Fairly: Transparent rewards in tokens and stablecoins.",
+        "Quadratic Voting: Ensures fairness, no matter your token holdings."
+      ]
     },
     {
-      id: 'reality',
-      title: 'The Reality',
-      message: 'Visioncreator is operational with real legal ownership and community rewards.'
+      id: 'implementation',
+      title: 'Implementation Details',
+      subtitle: "Visioncreator is live:",
+      content: [],
+      hasListItems: true,
+      listItems: [
+        "A tokenized German GmbH on the tokenize-it platform.",
+        "VCR token represents real legal ownership.",
+        "€365 one-time buy-in gives you tokens and a stake.",
+        "Community pool rewards your contributions.",
+        "Quadratic voting keeps decisions fair.",
+        "At 10,000 investors, it becomes a fully decentralized DAO."
+      ]
     },
     {
-      id: 'action',
-      title: 'The Future',
-      message: 'Stop building for others and start building for yourself.',
+      id: 'your-role',
+      title: 'Your Role in Visioncreator',
+      subtitle: "As a Visioncreator, you can:",
+      content: [],
+      hasListItems: true,
+      listItems: [
+        "Collaborate freely based on your skills and interests.",
+        "Own real stakes in the projects you help build.",
+        "Shape the future by proposing and voting on ideas.",
+        "Earn tokens and stablecoins transparently."
+      ],
+      callToAction: "You're not just working—you're owning and creating."
+    },
+    {
+      id: 'lifestyle',
+      title: 'The Visioncreator Lifestyle',
+      subtitle: "Imagine a life where you:",
+      content: [],
+      hasListItems: true,
+      listItems: [
+        "Collaborate with a vibrant community of creators.",
+        "Build assets that generate income over time.",
+        "Enjoy autonomy and financial security.",
+        "Express your true self and vision.",
+        "Live and work aligned with your values."
+      ]
+    },
+    {
+      id: 'join',
+      title: 'Join the Revolution',
+      subtitle: "",
+      content: [
+        "Ready to stop building for others and start building for yourself?"
+      ],
+      callToAction: "Join Visioncreator today and step into the future of work.",
       accent: true
     }
   ];
@@ -281,18 +366,57 @@
         </div>
         
         <div class="section-content">
-          <h2>{section.title}</h2>
-          <p>{section.message}</p>
+          <!-- Title -->
+          <h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
           
-          {#if section.id === 'action'}
-            <button 
+          <!-- Subtitle if exists -->
+          {#if section.subtitle}
+            <p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>{section.subtitle}</p>
+          {/if}
+          
+          <!-- Regular content paragraphs if any -->
+          {#if section.content && section.content.length > 0}
+            {#each section.content as paragraph, pIndex}
+              <p 
+                class="content-paragraph"
+                in:fly={{ y: 20, duration: 800, delay: 300 + (pIndex * 100) }}
+              >{paragraph}</p>
+            {/each}
+          {/if}
+          
+          <!-- List items if any -->
+          {#if section.hasListItems && section.listItems && section.listItems.length > 0}
+            <ul class="content-list">
+              {#each section.listItems as item, itemIndex}
+                <li 
+                  in:fly={{ y: 20, duration: 800, delay: 300 + (itemIndex * 100) }}
+                >{item}</li>
+              {/each}
+            </ul>
+          {/if}
+          
+          <!-- Call to action if exists -->
+          {#if section.callToAction}
+            <p 
+              class="call-to-action"
+              in:fly={{ y: 20, duration: 800, delay: 500 }}
+            >{section.callToAction}</p>
+          {/if}
+          
+          <!-- Join button on the last slide -->
+          {#if section.id === 'join'}
+            <a 
+              href="https://visioncreator.io" 
+              target="_blank" 
+              rel="noopener noreferrer"
               class="action-button"
+              in:scale={{ duration: 600, delay: 700, start: 0.8 }}
             >
               Join Now
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
-            </button>
+            </a>
           {/if}
           
           {#if i < sections.length - 1}
@@ -477,23 +601,10 @@
     max-width: 800px;
     text-align: center;
     padding: 2rem;
-    animation: fadeInUp 0.8s ease-out both;
-    animation-delay: calc(var(--section-index) * 0.1s);
-  }
-  
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
   }
   
   .section-content h2 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 300;
     margin-bottom: 2rem;
     color: rgba(255, 255, 255, 0.5);
@@ -501,15 +612,65 @@
     letter-spacing: 0.1em;
   }
   
-  .section-content p {
-    font-size: 3.5rem;
+  .section-content .subtitle {
+    font-size: 2.5rem;
     font-weight: 600;
     line-height: 1.2;
-    margin: 0;
+    margin: 0 0 2rem;
     color: rgba(255, 255, 255, 0.9);
   }
   
-  .section.accent .section-content p {
+  .section.accent .section-content .subtitle {
+    background: linear-gradient(to right, #ffffff, #b3b3ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .content-paragraph {
+    font-size: 1.5rem;
+    line-height: 1.5;
+    margin: 1.5rem 0;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .content-list {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: left;
+  }
+  
+  .content-list li {
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .content-list li:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-left-color: rgba(255, 255, 255, 0.4);
+    transform: translateX(5px);
+  }
+  
+  .call-to-action {
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    margin: 2rem 0 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-style: italic;
+  }
+  
+  .section.accent .call-to-action {
     background: linear-gradient(to right, #ffffff, #b3b3ff);
     -webkit-background-clip: text;
     background-clip: text;
@@ -621,7 +782,8 @@
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
-    margin-top: 3rem;
+    margin-top: 2rem;
+    text-decoration: none;
   }
   
   .action-button:hover {
@@ -634,7 +796,7 @@
   }
   
   .action-button:hover svg {
-    transform: translateY(3px);
+    transform: translateX(3px);
   }
   
   /* Scroll to top button */
@@ -672,14 +834,29 @@
     
     .navigation ul {
       flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 90vw;
     }
     
     .navigation .nav-text {
       display: none;
     }
     
-    .section-content p {
-      font-size: 2.5rem;
+    .section-content .subtitle {
+      font-size: 1.75rem;
+    }
+    
+    .content-paragraph {
+      font-size: 1.25rem;
+    }
+    
+    .content-list li {
+      font-size: 1.1rem;
+    }
+    
+    .call-to-action {
+      font-size: 1.4rem;
     }
     
     .welcome-title {
