@@ -7,12 +7,14 @@
 
 	$: avatar = createAvatar(lorelei, {
 		seed,
-		size: Number(size),
+		size: Number(size)
 	});
 
 	$: svgString = avatar.toString();
 </script>
 
-<div class="w-12 h-12 rounded-full border-2 border-slate-800 bg-gradient-to-br from-cyan-400/20 to-yellow-400/20 backdrop-blur-xl overflow-hidden">
+<div
+	class="h-12 w-12 overflow-hidden rounded-full border-2 border-slate-800 bg-gradient-to-br from-cyan-400/20 to-yellow-400/20 backdrop-blur-xl"
+>
 	{@html svgString}
 </div>

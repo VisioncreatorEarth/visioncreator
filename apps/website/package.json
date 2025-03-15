@@ -39,6 +39,11 @@
 	},
 	"dependencies": {
 		"@dicebear/collection": "^9.2.2",
-		"@dicebear/core": "^9.2.2"
+		"@dicebear/core": "^9.2.2",
+		"framer-motion": "^12.5.0",
+		"gsap": "^3.12.7",
+		"popmotion": "^11.0.5",
+		"svelte-motion": "^0.12.2",
+		"three": "^0.174.0"
 	}
 }
