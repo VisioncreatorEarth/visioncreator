@@ -696,12 +696,245 @@
 								</div>
 							</div>
 						</div>
+					{:else if section.id === 'solution'}
+						<div class="solution-cards" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="solution-card interactive" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<div class="solution-icon">
+									<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+										<path d="M13.73 21a2 2 0 01-3.46 0"></path>
+									</svg>
+								</div>
+								<h4>Propose & Vote</h4>
+								<p>Share your ideas and vote on platform decisions. Every voice has equal power to shape our future.</p>
+								<div class="solution-tag">Decentralized Decision-Making</div>
+							</div>
+							
+							<div class="solution-card interactive" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+								<div class="solution-icon">
+									<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+										<circle cx="8.5" cy="7" r="4"></circle>
+										<path d="M20 8v6"></path>
+										<path d="M23 11h-6"></path>
+									</svg>
+								</div>
+								<h4>Join the Collective</h4>
+								<p>Become a co-owner of Visioncreator and contribute based on your unique skills and interests.</p>
+								<div class="solution-tag">Collaborative Ownership</div>
+							</div>
+							
+							<div class="solution-card interactive" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+								<div class="solution-icon">
+									<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+									</svg>
+								</div>
+								<h4>Build Your Security</h4>
+								<p>Earn not just payment for your work, but ownership tokens that increase in value as we grow together.</p>
+								<div class="solution-tag">Long-term Asset Building</div>
+							</div>
+						</div>
 					{:else if section.id === 'implementation'}
 						<ProcessAnimation step="vote" />
 					{:else if section.id === 'your-role'}
 						<ProcessAnimation step="draft" />
+						
+						<div class="budget-calculator interactive" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="budget-header" in:fly={{ y: 20, duration: 500, delay: 500 }}>
+								<h4>Draft Your Project Budget</h4>
+								<p>Take ownership of your idea by defining its scope and resources</p>
+							</div>
+							
+							<div class="budget-sliders" in:fly={{ y: 20, duration: 500, delay: 600 }}>
+								<div class="budget-slider">
+									<div class="slider-label">
+										<span>Development Time</span>
+										<span class="slider-value">2 weeks</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-fill" style="width: 40%"></div>
+										<div class="slider-thumb" style="left: 40%"></div>
+									</div>
+								</div>
+								
+								<div class="budget-slider">
+									<div class="slider-label">
+										<span>Complexity</span>
+										<span class="slider-value">Medium</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-fill" style="width: 50%"></div>
+										<div class="slider-thumb" style="left: 50%"></div>
+									</div>
+								</div>
+								
+								<div class="budget-slider">
+									<div class="slider-label">
+										<span>Team Size</span>
+										<span class="slider-value">3 people</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-fill" style="width: 60%"></div>
+										<div class="slider-thumb" style="left: 60%"></div>
+									</div>
+								</div>
+							</div>
+							
+							<div class="budget-result" in:fly={{ y: 20, duration: 500, delay: 800 }}>
+								<div class="budget-amount">€1,500</div>
+								<div class="budget-estimate">Estimated Budget</div>
+								<button class="budget-submit interactive">Submit Draft</button>
+							</div>
+							
+							<div class="budget-rewards" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<div class="reward-item">
+									<div class="reward-icon">€</div>
+									<div class="reward-info">
+										<span class="reward-value">€1,500</span>
+										<span class="reward-label">Payment Upon Completion</span>
+									</div>
+								</div>
+								
+								<div class="reward-item">
+									<div class="reward-icon">VC</div>
+									<div class="reward-info">
+										<span class="reward-value">+5.7%</span>
+										<span class="reward-label">Ownership Tokens</span>
+									</div>
+								</div>
+							</div>
+						</div>
 					{:else if section.id === 'lifestyle'}
 						<ProcessAnimation step="reward" />
+						
+						<div class="token-showcase" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="token-trophies" in:fly={{ y: 20, duration: 500, delay: 500 }}>
+								<div class="trophy-container">
+									<div class="trophy euro-trophy interactive">
+										<div class="trophy-icon">€</div>
+										<div class="trophy-glow"></div>
+									</div>
+									<div class="trophy-label">Direct Payment</div>
+									<div class="trophy-amount">€1,500</div>
+									<div class="trophy-description">Immediate compensation for your completed work</div>
+								</div>
+								
+								<div class="token-divider">
+									<span>+</span>
+								</div>
+								
+								<div class="trophy-container">
+									<div class="trophy vc-trophy interactive">
+										<div class="trophy-icon">VC</div>
+										<div class="trophy-glow"></div>
+									</div>
+									<div class="trophy-label">Ownership Tokens</div>
+									<div class="trophy-amount">+5.7%</div>
+									<div class="trophy-description">Increased stake in Visioncreator's future growth</div>
+								</div>
+							</div>
+							
+							<div class="token-benefits" in:fly={{ y: 20, duration: 500, delay: 700 }}>
+								<h4>Benefits of Ownership</h4>
+								<div class="benefits-list">
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Grow your stake as the platform grows</div>
+									</div>
+									
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Earn passive income through profit sharing</div>
+									</div>
+									
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Participate in governance decisions</div>
+									</div>
+									
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Build long-term wealth and security</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'hominio'}
+						<div class="hominio-container" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="hominio-logo interactive" in:scale={{ duration: 700, delay: 500 }}>
+								<div class="logo-h">H</div>
+								<div class="logo-glow"></div>
+							</div>
+							
+							<div class="hominio-description" in:fly={{ y: 20, duration: 500, delay: 600 }}>
+								<h4>Our First Project</h4>
+								<p>Hominio is where we're building our vision for the future of work and demonstrating how decentralized ownership can transform how we create value together.</p>
+							</div>
+							
+							<div class="hominio-stats" in:fly={{ y: 20, duration: 500, delay: 700 }}>
+								<div class="stat-item interactive">
+									<div class="stat-value">27</div>
+									<div class="stat-label">Founding Members</div>
+								</div>
+								
+								<div class="stat-item interactive">
+									<div class="stat-value">14</div>
+									<div class="stat-label">Active Projects</div>
+								</div>
+								
+								<div class="stat-item interactive">
+									<div class="stat-value">€42k</div>
+									<div class="stat-label">Distributed Value</div>
+								</div>
+							</div>
+							
+							<div class="hominio-cta" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<button class="hominio-button interactive">Be a Founding Member</button>
+							</div>
+						</div>
+					{:else if section.id === 'join'}
+						<div class="join-showcase" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="join-spotlight" in:scale={{ duration: 800, delay: 500 }}>
+								<div class="spotlight-glow"></div>
+								<div class="spotlight-text" in:fly={{ y: 20, duration: 500, delay: 700 }}>
+									<h2>Ready to Own What You Help Build?</h2>
+									<p>Join Visioncreator today and step into a new future where your work creates lasting value for yourself.</p>
+								</div>
+							</div>
+							
+							<div class="join-actions" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<button class="join-button primary interactive">
+									Join Visioncreator
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M5 12h14M12 5l7 7-7 7"></path>
+									</svg>
+								</button>
+								
+								<button class="join-button secondary interactive">
+									Learn More
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M9 5l7 7-7 7"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
 					{/if}
 
 					{#if section.callToAction}
@@ -1881,4 +2114,726 @@
 		border-color: rgba(124, 58, 237, 0.6);
 		transform: translateY(-2px);
 	}
+
+	/* Solution cards */
+	.solution-cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 1.5rem;
+		margin: 2rem 0;
+	}
+
+	.solution-card {
+		background: rgba(25, 25, 35, 0.7);
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		border-radius: 12px;
+		padding: 1.5rem;
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+		backdrop-filter: blur(10px);
+	}
+
+	.solution-card:hover {
+		transform: translateY(-5px);
+		border-color: rgba(124, 58, 237, 0.6);
+		box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.3);
+	}
+
+	.solution-card::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 4px;
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		opacity: 0;
+		transition: opacity 0.3s ease;
+	}
+
+	.solution-card:hover::before {
+		opacity: 1;
+	}
+
+	.solution-icon {
+		width: 48px;
+		height: 48px;
+		background: rgba(124, 58, 237, 0.1);
+		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 1rem;
+		color: #a78bfa;
+		border: 1px solid rgba(124, 58, 237, 0.3);
+		transition: all 0.3s ease;
+	}
+
+	.solution-card:hover .solution-icon {
+		background: rgba(124, 58, 237, 0.2);
+		transform: scale(1.05);
+	}
+
+	.solution-card h4 {
+		font-size: 1.25rem;
+		font-weight: 700;
+		margin-bottom: 0.75rem;
+		color: #fff;
+	}
+
+	.solution-card p {
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 0.95rem;
+		line-height: 1.6;
+		margin-bottom: 1.5rem;
+		flex-grow: 1;
+	}
+
+	.solution-tag {
+		display: inline-block;
+		background: rgba(124, 58, 237, 0.1);
+		color: #a78bfa;
+		padding: 0.4rem 0.75rem;
+		border-radius: 20px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		transition: all 0.3s ease;
+	}
+
+	.solution-card:hover .solution-tag {
+		background: rgba(124, 58, 237, 0.2);
+		border-color: rgba(124, 58, 237, 0.4);
+	}
+
+	/* Budget calculator */
+	.budget-calculator {
+		background: rgba(25, 25, 35, 0.7);
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		border-radius: 16px;
+		padding: 2rem;
+		margin: 2rem 0;
+		backdrop-filter: blur(10px);
+		max-width: 700px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.budget-header {
+		text-align: center;
+		margin-bottom: 2rem;
+	}
+
+	.budget-header h4 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #fff;
+		margin-bottom: 0.5rem;
+	}
+
+	.budget-header p {
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 1rem;
+	}
+
+	.budget-sliders {
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+		margin-bottom: 2rem;
+	}
+
+	.budget-slider {
+		width: 100%;
+	}
+
+	.slider-label {
+		display: flex;
+		justify-content: space-between;
+		margin-bottom: 0.5rem;
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 0.9rem;
+	}
+
+	.slider-value {
+		font-weight: 600;
+		color: #a78bfa;
+	}
+
+	.slider-track {
+		height: 8px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 4px;
+		position: relative;
+		cursor: pointer;
+	}
+
+	.slider-fill {
+		height: 100%;
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		border-radius: 4px;
+	}
+
+	.slider-thumb {
+		width: 20px;
+		height: 20px;
+		background: #fff;
+		border: 3px solid #7c3aed;
+		border-radius: 50%;
+		position: absolute;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		cursor: grab;
+		box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+		transition: all 0.2s ease;
+	}
+
+	.slider-thumb:hover {
+		transform: translate(-50%, -50%) scale(1.1);
+		box-shadow: 0 0 15px rgba(124, 58, 237, 0.7);
+	}
+
+	.budget-result {
+		text-align: center;
+		margin-bottom: 2rem;
+		padding: 1.5rem;
+		background: rgba(124, 58, 237, 0.1);
+		border-radius: 12px;
+		border: 1px solid rgba(124, 58, 237, 0.3);
+	}
+
+	.budget-amount {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: white;
+		margin-bottom: 0.5rem;
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	.budget-estimate {
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.7);
+		margin-bottom: 1rem;
+	}
+
+	.budget-submit {
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		color: white;
+		border: none;
+		padding: 0.75rem 1.5rem;
+		border-radius: 30px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+	}
+
+	.budget-submit:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
+	}
+
+	.budget-rewards {
+		display: flex;
+		justify-content: center;
+		gap: 2rem;
+		flex-wrap: wrap;
+	}
+
+	.reward-item {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.reward-icon {
+		width: 40px;
+		height: 40px;
+		background: rgba(124, 58, 237, 0.2);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-weight: 700;
+		color: #a78bfa;
+		border: 1px solid rgba(124, 58, 237, 0.4);
+	}
+
+	.reward-info {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.reward-value {
+		font-weight: 700;
+		color: white;
+		font-size: 1.1rem;
+	}
+
+	.reward-label {
+		font-size: 0.8rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	/* Token showcase */
+	.token-showcase {
+		background: rgba(25, 25, 35, 0.7);
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		border-radius: 16px;
+		padding: 2rem;
+		margin: 2rem 0;
+		backdrop-filter: blur(10px);
+		max-width: 800px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.token-trophies {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 2rem;
+		margin-bottom: 3rem;
+	}
+
+	.trophy-container {
+		text-align: center;
+		width: 220px;
+	}
+
+	.trophy {
+		width: 100px;
+		height: 100px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin: 0 auto 1.5rem;
+		position: relative;
+		transition: all 0.3s ease;
+		cursor: pointer;
+	}
+
+	.trophy:hover {
+		transform: translateY(-5px) scale(1.05);
+	}
+
+	.euro-trophy {
+		background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+		box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+		border: 2px solid rgba(59, 130, 246, 0.5);
+	}
+
+	.vc-trophy {
+		background: linear-gradient(145deg, #7c3aed, #4c1d95);
+		box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.5);
+		border: 2px solid rgba(124, 58, 237, 0.5);
+	}
+
+	.trophy-icon {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: white;
+		position: relative;
+		z-index: 2;
+	}
+
+	.trophy-glow {
+		position: absolute;
+		width: 130px;
+		height: 130px;
+		border-radius: 50%;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 1;
+		filter: blur(15px);
+		opacity: 0.6;
+		pointer-events: none;
+		transition: all 0.3s ease;
+	}
+
+	.euro-trophy .trophy-glow {
+		background: radial-gradient(circle, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0));
+	}
+
+	.vc-trophy .trophy-glow {
+		background: radial-gradient(circle, rgba(124, 58, 237, 0.8), rgba(91, 33, 182, 0));
+	}
+
+	.trophy:hover .trophy-glow {
+		width: 150px;
+		height: 150px;
+		opacity: 0.8;
+	}
+
+	.trophy-label {
+		font-size: 1rem;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 0.5rem;
+	}
+
+	.trophy-amount {
+		font-size: 1.75rem;
+		font-weight: 700;
+		margin-bottom: 0.75rem;
+	}
+
+	.euro-trophy + .trophy-label + .trophy-amount {
+		color: #3b82f6;
+	}
+
+	.vc-trophy + .trophy-label + .trophy-amount {
+		color: #7c3aed;
+	}
+
+	.trophy-description {
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.7);
+		line-height: 1.5;
+	}
+
+	.token-divider {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 2.5rem;
+		color: rgba(255, 255, 255, 0.5);
+		font-weight: 300;
+	}
+
+	.token-benefits h4 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		text-align: center;
+		margin-bottom: 1.5rem;
+		color: white;
+	}
+
+	.benefits-list {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 1.5rem;
+	}
+
+	.benefit-item {
+		display: flex;
+		align-items: center;
+		background: rgba(124, 58, 237, 0.1);
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		border-radius: 12px;
+		padding: 1rem;
+		transition: all 0.3s ease;
+	}
+
+	.benefit-item:hover {
+		background: rgba(124, 58, 237, 0.15);
+		border-color: rgba(124, 58, 237, 0.4);
+		transform: translateY(-3px);
+	}
+
+	.benefit-icon {
+		width: 40px;
+		height: 40px;
+		background: rgba(124, 58, 237, 0.2);
+		border-radius: 10px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-right: 1rem;
+		color: #a78bfa;
+		flex-shrink: 0;
+	}
+
+	.benefit-text {
+		font-size: 1rem;
+		line-height: 1.5;
+		color: rgba(255, 255, 255, 0.9);
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.token-trophies {
+			flex-direction: column;
+			gap: 3rem;
+		}
+		
+		.token-divider {
+			transform: rotate(90deg);
+		}
+	}
+	
+	/* Hominio styles */
+	.hominio-container {
+		max-width: 800px;
+		margin: 2rem auto;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+	}
+	
+	.hominio-logo {
+		width: 120px;
+		height: 120px;
+		background: linear-gradient(145deg, #7c3aed, #4c1d95);
+		border-radius: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: relative;
+		margin-bottom: 2rem;
+		box-shadow: 0 15px 30px -10px rgba(124, 58, 237, 0.6);
+		transition: all 0.3s ease;
+		cursor: pointer;
+	}
+	
+	.hominio-logo:hover {
+		transform: translateY(-5px) rotate(5deg);
+		box-shadow: 0 20px 40px -10px rgba(124, 58, 237, 0.8);
+	}
+	
+	.logo-h {
+		font-size: 4rem;
+		font-weight: 900;
+		color: white;
+		position: relative;
+		z-index: 2;
+	}
+	
+	.logo-glow {
+		position: absolute;
+		width: 150px;
+		height: 150px;
+		border-radius: 24px;
+		background: radial-gradient(circle, rgba(124, 58, 237, 0.6), rgba(91, 33, 182, 0));
+		filter: blur(20px);
+		opacity: 0.7;
+		z-index: 1;
+		transition: all 0.3s ease;
+	}
+	
+	.hominio-logo:hover .logo-glow {
+		width: 180px;
+		height: 180px;
+		opacity: 0.9;
+	}
+	
+	.hominio-description {
+		max-width: 700px;
+		margin-bottom: 3rem;
+	}
+	
+	.hominio-description h4 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+		color: white;
+	}
+	
+	.hominio-description p {
+		font-size: 1.1rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.8);
+	}
+	
+	.hominio-stats {
+		display: flex;
+		justify-content: center;
+		gap: 2.5rem;
+		margin-bottom: 3rem;
+	}
+	
+	.stat-item {
+		background: rgba(124, 58, 237, 0.1);
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		border-radius: 16px;
+		padding: 1.5rem;
+		width: 150px;
+		text-align: center;
+		transition: all 0.3s ease;
+	}
+	
+	.stat-item:hover {
+		background: rgba(124, 58, 237, 0.15);
+		border-color: rgba(124, 58, 237, 0.4);
+		transform: translateY(-5px);
+	}
+	
+	.stat-value {
+		font-size: 2rem;
+		font-weight: 700;
+		color: white;
+		margin-bottom: 0.5rem;
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+	
+	.stat-label {
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+	
+	.hominio-button {
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		color: white;
+		border: none;
+		padding: 1rem 2rem;
+		border-radius: 30px;
+		font-size: 1.1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+	}
+	
+	.hominio-button:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 12px 25px rgba(124, 58, 237, 0.5);
+	}
+	
+	/* Join section styles */
+	.join-showcase {
+		max-width: 900px;
+		margin: 2rem auto;
+		position: relative;
+	}
+	
+	.join-spotlight {
+		background: rgba(25, 25, 35, 0.5);
+		border: 1px solid rgba(124, 58, 237, 0.3);
+		border-radius: 20px;
+		padding: 3rem;
+		position: relative;
+		overflow: hidden;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 2rem;
+		backdrop-filter: blur(10px);
+	}
+	
+	.spotlight-glow {
+		position: absolute;
+		width: 300px;
+		height: 300px;
+		border-radius: 50%;
+		background: radial-gradient(circle, rgba(124, 58, 237, 0.4), rgba(91, 33, 182, 0));
+		filter: blur(70px);
+		opacity: 0.7;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 1;
+		animation: pulse-glow 6s infinite alternate ease-in-out;
+	}
+	
+	@keyframes pulse-glow {
+		0% {
+			opacity: 0.5;
+			width: 250px;
+			height: 250px;
+		}
+		100% {
+			opacity: 0.8;
+			width: 350px;
+			height: 350px;
+		}
+	}
+	
+	.spotlight-text {
+		text-align: center;
+		max-width: 700px;
+		position: relative;
+		z-index: 2;
+	}
+	
+	.spotlight-text h2 {
+		font-size: 2.5rem;
+		font-weight: 800;
+		margin-bottom: 1.5rem;
+		background: linear-gradient(to right, #fff, #e5e7eb);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+	
+	.spotlight-text p {
+		font-size: 1.2rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 1rem;
+	}
+	
+	.join-actions {
+		display: flex;
+		justify-content: center;
+		gap: 1.5rem;
+	}
+	
+	.join-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.75rem;
+		padding: 1rem 2rem;
+		border-radius: 30px;
+		font-size: 1.1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+	
+	.join-button.primary {
+		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		color: white;
+		border: none;
+		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+	}
+	
+	.join-button.primary:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 12px 25px rgba(124, 58, 237, 0.5);
+	}
+	
+	.join-button.secondary {
+		background: transparent;
+		color: white;
+		border: 1px solid rgba(124, 58, 237, 0.5);
+	}
+	
+	.join-button.secondary:hover {
+		background: rgba(124, 58, 237, 0.1);
+		border-color: rgba(124, 58, 237, 0.7);
+		transform: translateY(-3px);
+	}
+	
+	/* Responsive adjustments for Hominio and Join sections */
+	@media (max-width: 768px) {
+		.hominio-stats {
+			flex-direction: column;
+			align-items: center;
+			gap: 1.5rem;
+		}
+		
+		.join-actions {
+			flex-direction: column;
+		}
+		
+		.spotlight-text h2 {
+			font-size: 2rem;
+		}
+	}
+
+	/* Idea cards */
 </style>
