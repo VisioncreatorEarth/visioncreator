@@ -60,7 +60,7 @@
 			title: 'A MISERABLE CHOICE',
 			subtitle: 'You face a dilemma:',
 			content: [
-				'Employee: Create value for someone else, never fully realizing your potential.',
+				'Employee: Create value for someone else\'s vision, trading your time for a paycheck while never fully realizing your potential or building lasting equity.',
 				'Self-Employed: Shoulder overwhelming responsibility with little time to breathe.'
 			],
 			callToAction:
@@ -576,59 +576,150 @@
 		{#each sections as section, i}
 			<section id={section.id} class="section" class:accent={section.accent}>
 				<div class="section-content" class:accent-content={section.accent}>
-					<h2 class="section-title">
-						{#if section.id === 'hero'}
-							A New Way to Work
-						{:else}
-							{section.title}
-						{/if}
-					</h2>
-
-					{#if section.subtitle}
-						<div class="section-subtitle">{section.subtitle}</div>
-					{/if}
-
-					{#if section.content}
-						{#each section.content as paragraph}
-							<p>{paragraph}</p>
-						{/each}
-					{/if}
-
-					{#if section.hasListItems && section.listItems}
-						<div class="section-list">
-							{#each section.listItems as item}
-								<div class="list-item">{item}</div>
-							{/each}
-						</div>
-					{/if}
-
-					{#if section.hasSubslides && section.subslides}
-						<div class="subslides">
-							{#each section.subslides as subslide, j}
-								<div class="subslide {currentSubslideIndices[section.id] === j ? 'active' : ''}">
-									<h3 class="subslide-title">{subslide.title}</h3>
-									<p class="subslide-content">{subslide.content}</p>
-								</div>
-							{/each}
-
-							<div class="subslide-nav">
-								<button
-									class="subslide-prev"
-									on:click={() => prevSubslide(section.id)}
-									disabled={currentSubslideIndices[section.id] === 0}>Previous</button
-								>
-								<button
-									class="subslide-next"
-									on:click={() => nextSubslide(section.id)}
-									disabled={!section.subslides || currentSubslideIndices[section.id] === section.subslides.length - 1}
-									>Next</button
-								>
+					{#if section.id === 'hero'}
+						<div class="hero-section">
+							<h1 class="hero-title" in:fly={{ y: -20, duration: 600, delay: 300 }}>
+								Own What You Help Build
+							</h1>
+							
+							<div class="hero-description" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<p>A new way to work, earn, and build in the digital economy.</p>
+							</div>
+							
+							<div class="hero-cta" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+								<button class="btn-primary-large">
+									Join the movement towards a new paradigm of work
+								</button>
 							</div>
 						</div>
-					{/if}
-
-					<!-- Add process animations to specific sections -->
-					{#if section.id === 'dao'}
+					{:else if section.id === 'outdated'}
+						<div class="problem-section">
+							<div class="problem-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
+								<p>In today's digital age, traditional work models are hopelessly outdated.</p>
+							</div>
+							
+							<div class="comparison-cards">
+								<div class="comparison-card" in:fly={{ x: -30, duration: 500, delay: 500 }}>
+									<div class="comparison-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+											<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+										</svg>
+									</div>
+									<h3>Employee</h3>
+									<ul class="comparison-list">
+										<li>Trade time for money with no ownership</li>
+										<li>Limited growth potential and income ceiling</li>
+										<li>Building someone else's dream</li>
+										<li>Security is an illusion (layoffs, restructuring)</li>
+										<li>Little control over your daily schedule</li>
+									</ul>
+								</div>
+								
+								<div class="comparison-card" in:fly={{ x: 30, duration: 500, delay: 600 }}>
+									<div class="comparison-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+											<path d="M12 19v3"></path>
+											<path d="M8 22h8"></path>
+										</svg>
+									</div>
+									<h3>Self-Employed</h3>
+									<ul class="comparison-list">
+										<li>Still trading time for money</li>
+										<li>Overwhelmed by business operations</li>
+										<li>Isolation and lack of collaboration</li>
+										<li>Income instability and unpredictable cash flow</li>
+										<li>Limited scalability without burning out</li>
+									</ul>
+								</div>
+							</div>
+							
+							<div class="problem-cta" in:fly={{ y: 20, duration: 500, delay: 800 }}>
+								<p>Neither path fits your life in the modern world. <span class="highlight">You deserve better.</span></p>
+							</div>
+						</div>
+					{:else if section.id === 'choice'}
+						<div class="dilemma-section">
+							<div class="dilemma-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
+								<p>You face a dilemma:</p>
+							</div>
+							
+							<div class="dilemma-paths">
+								<div class="dilemma-path employee" in:fly={{ x: -30, duration: 500, delay: 500 }}>
+									<div class="path-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+											<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+										</svg>
+									</div>
+									<h3>Employee</h3>
+									<p>Create value for someone else's vision, trading your time for a paycheck while never fully realizing your potential or building lasting equity.</p>
+									<p class="path-consequence">Result: Financial ceiling, minimal autonomy, and a sense of unfulfillment.</p>
+								</div>
+								
+								<div class="path-divider" in:scale={{ start: 0.5, duration: 400, delay: 700 }}>
+									<span>OR</span>
+								</div>
+								
+								<div class="dilemma-path self-employed" in:fly={{ x: 30, duration: 500, delay: 600 }}>
+									<div class="path-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+											<path d="M12 19v3"></path>
+											<path d="M8 22h8"></path>
+										</svg>
+									</div>
+									<h3>Self-Employed</h3>
+									<p>Shoulder overwhelming responsibility with little support, constantly trading time for money, chained to your business, and unable to truly scale.</p>
+									<p class="path-consequence">Result: Burnout, isolation, and trading one boss for many clients.</p>
+								</div>
+							</div>
+							
+							<div class="dilemma-conclusion" in:fly={{ y: 20, duration: 500, delay: 800 }}>
+								<p>Neither option feels fulfilling in the digital age. <span class="highlight">It's time for a new way forward.</span></p>
+							</div>
+						</div>
+					{:else if section.id === 'why'}
+						<div class="why-section">
+							<div class="why-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
+								<p>This isn't just inconvenient—it degrades your quality of life.</p>
+							</div>
+							
+							<div class="why-content" in:fly={{ y: 20, duration: 500, delay: 500 }}>
+								<p>You spend a huge part of your day at work. It should:</p>
+							</div>
+							
+							<div class="why-items">
+								<div class="why-item interactive" in:fly={{ x: -20, duration: 500, delay: 600 }}>
+									<div class="item-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+											<path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+											<path d="M9 9h.01"></path>
+											<path d="M15 9h.01"></path>
+										</svg>
+									</div>
+									<p>Enhance your well-being.</p>
+								</div>
+								
+								<div class="why-item interactive" in:fly={{ x: 20, duration: 500, delay: 700 }}>
+									<div class="item-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+										</svg>
+									</div>
+									<p>Secure your financial future.</p>
+								</div>
+							</div>
+							
+							<div class="why-conclusion" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<p class="highlight-text">Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are.</p>
+							</div>
+						</div>
+					{:else if section.id === 'dao'}
 						<ProcessAnimation step="idea" />
 						
 						<!-- Example idea cards with interactive elements -->
@@ -935,9 +1026,589 @@
 								</button>
 							</div>
 						</div>
+					{:else if section.id === 'new-way'}
+						<div class="minimalist-container" in:fade={{ duration: 800, delay: 300 }}>
+							<div class="minimalist-content">
+								<div class="path-icon" in:scale={{ duration: 700, delay: 500, start: 0.7 }}>
+									<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M9 6l6 6-6 6"></path>
+									</svg>
+									<div class="path-glow"></div>
+								</div>
+								
+								<div class="minimalist-statement" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+									<p class="statement-text">Imagine a work model that lets you build assets, collaborate freely, and enjoy income that flows without constant work.</p>
+								</div>
+								
+								<div class="minimalist-highlight" in:fly={{ y: 20, duration: 600, delay: 800 }}>
+									<h3>Visioncreator is this new way—</h3>
+									<div class="highlight-line"></div>
+									<h4>a path to ownership, freedom, and fulfillment for you.</h4>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'deserve'}
+						<div class="deserve-container" in:fade={{ duration: 800, delay: 300 }}>
+							<div class="deserve-content">
+								<div class="deserve-statement" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+									<p class="statement-text">You deserve an organisation form that feels like home. It should offer:</p>
+								</div>
+								
+								<div class="deserve-list">
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 800 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+												<path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+												<path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+											</svg>
+										</div>
+										<div class="deserve-text">Belonging</div>
+										<div class="deserve-description">Be part of a community that values you.</div>
+									</div>
+									
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 900 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+											</svg>
+										</div>
+										<div class="deserve-text">Autonomy & Agency</div>
+										<div class="deserve-description">Pursue your purpose without restrictions.</div>
+									</div>
+									
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 1000 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
+											</svg>
+										</div>
+										<div class="deserve-text">Financial Security</div>
+										<div class="deserve-description">Build lasting value for yourself and others.</div>
+									</div>
+									
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 1100 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+											</svg>
+										</div>
+										<div class="deserve-text">Authentic Expression</div>
+										<div class="deserve-description">Align your work with your true vision.</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'problem'}
+						<div class="problem-section">
+							<div class="problem-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
+								<p>In today's digital age, traditional work models are hopelessly outdated.</p>
+							</div>
+							
+							<div class="comparison-cards">
+								<div class="comparison-card" in:fly={{ x: -30, duration: 500, delay: 500 }}>
+									<div class="comparison-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+											<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+										</svg>
+									</div>
+									<h3>Employee</h3>
+									<ul class="comparison-list">
+										<li>Trade time for money with no ownership</li>
+										<li>Limited growth potential and income ceiling</li>
+										<li>Building someone else's dream</li>
+										<li>Security is an illusion (layoffs, restructuring)</li>
+										<li>Little control over your daily schedule</li>
+									</ul>
+								</div>
+								
+								<div class="comparison-card" in:fly={{ x: 30, duration: 500, delay: 600 }}>
+									<div class="comparison-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+											<path d="M12 19v3"></path>
+											<path d="M8 22h8"></path>
+										</svg>
+									</div>
+									<h3>Self-Employed</h3>
+									<ul class="comparison-list">
+										<li>Still trading time for money</li>
+										<li>Overwhelmed by business operations</li>
+										<li>Isolation and lack of collaboration</li>
+										<li>Income instability and unpredictable cash flow</li>
+										<li>Limited scalability without burning out</li>
+									</ul>
+								</div>
+							</div>
+							
+							<div class="problem-cta" in:fly={{ y: 20, duration: 500, delay: 800 }}>
+								<p>Neither path fits your life in the modern world. <span class="highlight">You deserve better.</span></p>
+							</div>
+						</div>
+					{:else if section.id === 'dilemma'}
+						<div class="dilemma-section">
+							<div class="dilemma-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
+								<p>You face a dilemma:</p>
+							</div>
+							
+							<div class="dilemma-paths">
+								<div class="dilemma-path employee" in:fly={{ x: -30, duration: 500, delay: 500 }}>
+									<div class="path-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+											<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+										</svg>
+									</div>
+									<h3>Employee</h3>
+									<p>Create value for someone else's vision, trading your time for a paycheck while never fully realizing your potential or building lasting equity.</p>
+									<p class="path-consequence">Result: Financial ceiling, minimal autonomy, and a sense of unfulfillment.</p>
+								</div>
+								
+								<div class="path-divider" in:scale={{ start: 0.5, duration: 400, delay: 700 }}>
+									<span>OR</span>
+								</div>
+								
+								<div class="dilemma-path self-employed" in:fly={{ x: 30, duration: 500, delay: 600 }}>
+									<div class="path-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+											<path d="M12 19v3"></path>
+											<path d="M8 22h8"></path>
+										</svg>
+									</div>
+									<h3>Self-Employed</h3>
+									<p>Shoulder overwhelming responsibility with little support, constantly trading time for money, chained to your business, and unable to truly scale.</p>
+									<p class="path-consequence">Result: Burnout, isolation, and trading one boss for many clients.</p>
+								</div>
+							</div>
+							
+							<div class="dilemma-conclusion" in:fly={{ y: 20, duration: 500, delay: 800 }}>
+								<p>Neither option feels fulfilling in the digital age. <span class="highlight">It's time for a new way forward.</span></p>
+							</div>
+						</div>
+					{:else if section.id === 'why'}
+						<div class="why-section">
+							<div class="why-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
+								<p>This isn't just inconvenient—it degrades your quality of life.</p>
+							</div>
+							
+							<div class="why-content" in:fly={{ y: 20, duration: 500, delay: 500 }}>
+								<p>You spend a huge part of your day at work. It should:</p>
+							</div>
+							
+							<div class="why-items">
+								<div class="why-item interactive" in:fly={{ x: -20, duration: 500, delay: 600 }}>
+									<div class="item-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+											<path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+											<path d="M9 9h.01"></path>
+											<path d="M15 9h.01"></path>
+										</svg>
+									</div>
+									<p>Enhance your well-being.</p>
+								</div>
+								
+								<div class="why-item interactive" in:fly={{ x: 20, duration: 500, delay: 700 }}>
+									<div class="item-icon">
+										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+											<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+										</svg>
+									</div>
+									<p>Secure your financial future.</p>
+								</div>
+							</div>
+							
+							<div class="why-conclusion" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<p class="highlight-text">Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are.</p>
+							</div>
+						</div>
+					{:else if section.id === 'dao'}
+						<ProcessAnimation step="idea" />
+						
+						<!-- Example idea cards with interactive elements -->
+						<div class="idea-cards" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="idea-card interactive" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<div class="idea-header">
+									<div class="idea-avatar"></div>
+									<div class="idea-author">John D.</div>
+								</div>
+								<h4>Improve Onboarding Flow</h4>
+								<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
+								<div class="idea-footer">
+									<div class="idea-votes">
+										<span class="vote-count">12</span>
+										<span class="vote-label">votes</span>
+									</div>
+									<button class="vote-button interactive">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 8v8m0-8l-4 4m4-4l4 4"></path>
+										</svg>
+										Vote
+									</button>
+								</div>
+							</div>
+							
+							<div class="idea-card interactive" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+								<div class="idea-header">
+									<div class="idea-avatar"></div>
+									<div class="idea-author">Alice M.</div>
+								</div>
+								<h4>Centralized Documentation Hub</h4>
+								<p>Build a searchable knowledge base for all project documentation and guidelines.</p>
+								<div class="idea-footer">
+									<div class="idea-votes">
+										<span class="vote-count">8</span>
+										<span class="vote-label">votes</span>
+									</div>
+									<button class="vote-button interactive">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 8v8m0-8l-4 4m4-4l4 4"></path>
+										</svg>
+										Vote
+									</button>
+								</div>
+							</div>
+							
+							<div class="idea-card interactive" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+								<div class="idea-header">
+									<div class="idea-avatar"></div>
+									<div class="idea-author">Mark T.</div>
+								</div>
+								<h4>Community Events Calendar</h4>
+								<p>Create a dedicated calendar feature for upcoming events, workshops, and collaborative sessions.</p>
+								<div class="idea-footer">
+									<div class="idea-votes">
+										<span class="vote-count">6</span>
+										<span class="vote-label">votes</span>
+									</div>
+									<button class="vote-button interactive">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 8v8m0-8l-4 4m4-4l4 4"></path>
+										</svg>
+										Vote
+									</button>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'solution'}
+						<div class="solution-cards" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="solution-card interactive" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<div class="solution-icon">
+									<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+										<path d="M13.73 21a2 2 0 01-3.46 0"></path>
+									</svg>
+								</div>
+								<h4>Propose & Vote</h4>
+								<p>Share your ideas and vote on platform decisions. Every voice has equal power to shape our future.</p>
+								<div class="solution-tag">Decentralized Decision-Making</div>
+							</div>
+							
+							<div class="solution-card interactive" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+								<div class="solution-icon">
+									<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path>
+										<circle cx="8.5" cy="7" r="4"></circle>
+										<path d="M20 8v6"></path>
+										<path d="M23 11h-6"></path>
+									</svg>
+								</div>
+								<h4>Join the Collective</h4>
+								<p>Become a co-owner of Visioncreator and contribute based on your unique skills and interests.</p>
+								<div class="solution-tag">Collaborative Ownership</div>
+							</div>
+							
+							<div class="solution-card interactive" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+								<div class="solution-icon">
+									<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+									</svg>
+								</div>
+								<h4>Build Your Security</h4>
+								<p>Earn not just payment for your work, but ownership tokens that increase in value as we grow together.</p>
+								<div class="solution-tag">Long-term Asset Building</div>
+							</div>
+						</div>
+					{:else if section.id === 'implementation'}
+						<ProcessAnimation step="vote" />
+					{:else if section.id === 'your-role'}
+						<ProcessAnimation step="draft" />
+						
+						<div class="budget-calculator interactive" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="budget-header" in:fly={{ y: 20, duration: 500, delay: 500 }}>
+								<h4>Draft Your Project Budget</h4>
+								<p>Take ownership of your idea by defining its scope and resources</p>
+							</div>
+							
+							<div class="budget-sliders" in:fly={{ y: 20, duration: 500, delay: 600 }}>
+								<div class="budget-slider">
+									<div class="slider-label">
+										<span>Development Time</span>
+										<span class="slider-value">2 weeks</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-fill" style="width: 40%"></div>
+										<div class="slider-thumb" style="left: 40%"></div>
+									</div>
+								</div>
+								
+								<div class="budget-slider">
+									<div class="slider-label">
+										<span>Complexity</span>
+										<span class="slider-value">Medium</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-fill" style="width: 50%"></div>
+										<div class="slider-thumb" style="left: 50%"></div>
+									</div>
+								</div>
+								
+								<div class="budget-slider">
+									<div class="slider-label">
+										<span>Team Size</span>
+										<span class="slider-value">3 people</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-fill" style="width: 60%"></div>
+										<div class="slider-thumb" style="left: 60%"></div>
+									</div>
+								</div>
+							</div>
+							
+							<div class="budget-result" in:fly={{ y: 20, duration: 500, delay: 800 }}>
+								<div class="budget-amount">€1,500</div>
+								<div class="budget-estimate">Estimated Budget</div>
+								<button class="budget-submit interactive">Submit Draft</button>
+							</div>
+							
+							<div class="budget-rewards" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<div class="reward-item">
+									<div class="reward-icon">€</div>
+									<div class="reward-info">
+										<span class="reward-value">€1,500</span>
+										<span class="reward-label">Payment Upon Completion</span>
+									</div>
+								</div>
+								
+								<div class="reward-item">
+									<div class="reward-icon">VC</div>
+									<div class="reward-info">
+										<span class="reward-value">+5.7%</span>
+										<span class="reward-label">Ownership Tokens</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'lifestyle'}
+						<ProcessAnimation step="reward" />
+						
+						<div class="token-showcase" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="token-trophies" in:fly={{ y: 20, duration: 500, delay: 500 }}>
+								<div class="trophy-container">
+									<div class="trophy euro-trophy interactive">
+										<div class="trophy-icon">€</div>
+										<div class="trophy-glow"></div>
+									</div>
+									<div class="trophy-label">Direct Payment</div>
+									<div class="trophy-amount">€1,500</div>
+									<div class="trophy-description">Immediate compensation for your completed work</div>
+								</div>
+								
+								<div class="token-divider">
+									<span>+</span>
+								</div>
+								
+								<div class="trophy-container">
+									<div class="trophy vc-trophy interactive">
+										<div class="trophy-icon">VC</div>
+										<div class="trophy-glow"></div>
+									</div>
+									<div class="trophy-label">Ownership Tokens</div>
+									<div class="trophy-amount">+5.7%</div>
+									<div class="trophy-description">Increased stake in Visioncreator's future growth</div>
+								</div>
+							</div>
+							
+							<div class="token-benefits" in:fly={{ y: 20, duration: 500, delay: 700 }}>
+								<h4>Benefits of Ownership</h4>
+								<div class="benefits-list">
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Grow your stake as the platform grows</div>
+									</div>
+									
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Earn passive income through profit sharing</div>
+									</div>
+									
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Participate in governance decisions</div>
+									</div>
+									
+									<div class="benefit-item interactive">
+										<div class="benefit-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+											</svg>
+										</div>
+										<div class="benefit-text">Build long-term wealth and security</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'hominio'}
+						<div class="hominio-container" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="hominio-logo interactive" in:scale={{ duration: 700, delay: 500 }}>
+								<div class="logo-h">H</div>
+								<div class="logo-glow"></div>
+							</div>
+							
+							<div class="hominio-description" in:fly={{ y: 20, duration: 500, delay: 600 }}>
+								<h4>Our First Project</h4>
+								<p>Hominio is where we're building our vision for the future of work and demonstrating how decentralized ownership can transform how we create value together.</p>
+							</div>
+							
+							<div class="hominio-stats" in:fly={{ y: 20, duration: 500, delay: 700 }}>
+								<div class="stat-item interactive">
+									<div class="stat-value">27</div>
+									<div class="stat-label">Founding Members</div>
+								</div>
+								
+								<div class="stat-item interactive">
+									<div class="stat-value">14</div>
+									<div class="stat-label">Active Projects</div>
+								</div>
+								
+								<div class="stat-item interactive">
+									<div class="stat-value">€42k</div>
+									<div class="stat-label">Distributed Value</div>
+								</div>
+							</div>
+							
+							<div class="hominio-cta" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<button class="hominio-button interactive">Be a Founding Member</button>
+							</div>
+						</div>
+					{:else if section.id === 'join'}
+						<div class="join-showcase" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="join-spotlight" in:scale={{ duration: 800, delay: 500 }}>
+								<div class="spotlight-glow"></div>
+								<div class="spotlight-text" in:fly={{ y: 20, duration: 500, delay: 700 }}>
+									<h2>Ready to Own What You Help Build?</h2>
+									<p>Join Visioncreator today and step into a new future where your work creates lasting value for yourself.</p>
+								</div>
+							</div>
+							
+							<div class="join-actions" in:fly={{ y: 20, duration: 500, delay: 900 }}>
+								<button class="join-button primary interactive">
+									Join Visioncreator
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M5 12h14M12 5l7 7-7 7"></path>
+									</svg>
+								</button>
+								
+								<button class="join-button secondary interactive">
+									Learn More
+									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<path d="M9 5l7 7-7 7"></path>
+									</svg>
+								</button>
+							</div>
+						</div>
+					{:else if section.id === 'new-way'}
+						<div class="minimalist-container" in:fade={{ duration: 800, delay: 300 }}>
+							<div class="minimalist-content">
+								<div class="path-icon" in:scale={{ duration: 700, delay: 500, start: 0.7 }}>
+									<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+										<path d="M9 6l6 6-6 6"></path>
+									</svg>
+									<div class="path-glow"></div>
+								</div>
+								
+								<div class="minimalist-statement" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+									<p class="statement-text">Imagine a work model that lets you build assets, collaborate freely, and enjoy income that flows without constant work.</p>
+								</div>
+								
+								<div class="minimalist-highlight" in:fly={{ y: 20, duration: 600, delay: 800 }}>
+									<h3>Visioncreator is this new way—</h3>
+									<div class="highlight-line"></div>
+									<h4>a path to ownership, freedom, and fulfillment for you.</h4>
+								</div>
+							</div>
+						</div>
+					{:else if section.id === 'deserve'}
+						<div class="deserve-container" in:fade={{ duration: 800, delay: 300 }}>
+							<div class="deserve-content">
+								<div class="deserve-statement" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+									<p class="statement-text">You deserve an organisation form that feels like home. It should offer:</p>
+								</div>
+								
+								<div class="deserve-list">
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 800 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+												<path d="M12 16V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+												<path d="M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+											</svg>
+										</div>
+										<div class="deserve-text">Belonging</div>
+										<div class="deserve-description">Be part of a community that values you.</div>
+									</div>
+									
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 900 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+											</svg>
+										</div>
+										<div class="deserve-text">Autonomy & Agency</div>
+										<div class="deserve-description">Pursue your purpose without restrictions.</div>
+									</div>
+									
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 1000 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"></path>
+											</svg>
+										</div>
+										<div class="deserve-text">Financial Security</div>
+										<div class="deserve-description">Build lasting value for yourself and others.</div>
+									</div>
+									
+									<div class="deserve-item interactive" in:fly={{ y: 20, duration: 600, delay: 1100 }}>
+										<div class="deserve-icon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+												<path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+											</svg>
+										</div>
+										<div class="deserve-text">Authentic Expression</div>
+										<div class="deserve-description">Align your work with your true vision.</div>
+									</div>
+								</div>
+							</div>
+						</div>
 					{/if}
 
-					{#if section.callToAction}
+					{#if section.callToAction && !['new-way', 'deserve', 'solution', 'dao', 'implementation', 'your-role', 'lifestyle', 'hominio', 'join'].includes(section.id)}
 						<div class="cta-button">
 							<button class="interactive">{section.callToAction}</button>
 						</div>
@@ -1339,177 +2010,145 @@
 		animation: float-medium 20s infinite ease-in-out;
 	}
 
-	/* Hero section enhancements */
-	.hero-container {
+	/* Hero Section */
+	.hero-section {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 0 1rem;
-	}
-
-	.split-text {
-		overflow: hidden;
-		position: relative;
 		text-align: center;
+		padding: 4rem 2rem;
+		max-width: 900px;
+		margin: 0 auto;
+		min-height: 70vh;
 	}
-
-	.text-animate-wrapper {
-		display: inline-block;
-		overflow: hidden;
-	}
-
-	.text-animate {
-		display: inline-block;
-		animation: reveal 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards;
-	}
-
-	@keyframes reveal {
-		0% {
-			transform: translateY(100%);
-			opacity: 0;
-		}
-		100% {
-			transform: translateY(0);
-			opacity: 1;
-		}
-	}
-
-	.gradient-text {
-		background: linear-gradient(to right, #7c3aed, #3b82f6);
+	
+	.hero-title {
+		font-size: 3.5rem;
+		font-weight: 800;
+		background: linear-gradient(to right, #ffffff, #a78bfa);
 		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		font-weight: 600;
+		-webkit-text-fill-color: transparent;
+		margin-bottom: 2rem;
+		line-height: 1.2;
 	}
-
-	.hero-subtitle {
-		font-size: 1.75rem;
-		margin-bottom: 2.5rem;
+	
+	.hero-description {
+		margin-bottom: 3rem;
 	}
-
-	.pulse-animation {
-		animation: pulse 2s infinite;
+	
+	.hero-description p {
+		font-size: 1.5rem;
+		color: rgba(255, 255, 255, 0.9);
+		line-height: 1.5;
+		font-weight: 400;
 	}
-
-	@keyframes pulse {
-		0% {
-			transform: scale(1);
-			opacity: 1;
-		}
-		50% {
-			transform: scale(1.1);
-			opacity: 0.7;
-		}
-		100% {
-			transform: scale(1);
-			opacity: 1;
-		}
-	}
-
-	/* Orbit visualization for hero */
-	.hero-visual {
-		margin: 3rem 0;
-		width: 100%;
-		display: flex;
-		justify-content: center;
-	}
-
-	.orbit-container {
-		position: relative;
-		width: 200px;
-		height: 200px;
-	}
-
-	.orbit-center {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 60px;
-		height: 60px;
-		background: linear-gradient(135deg, #7c3aed, #3b82f6);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 0 30px rgba(124, 58, 237, 0.5);
-		z-index: 2;
-	}
-
-	.orbit-center span {
-		color: white;
-		font-weight: 700;
-		font-size: 1.2rem;
-	}
-
-	.orbit {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		border: 1px solid rgba(124, 58, 237, 0.3);
-		border-radius: 50%;
-		animation: rotate 15s linear infinite;
-	}
-
-	@keyframes rotate {
-		from {
-			transform: rotate(0deg);
-		}
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.planet {
-		position: absolute;
-		top: -20px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 40px;
-		height: 40px;
-		background: linear-gradient(135deg, #3b82f6, #2563eb);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
-	}
-
-	.planet span {
-		color: white;
-		font-size: 0.8rem;
-		font-weight: 600;
-	}
-
+	
 	.hero-cta {
-		margin-top: 2rem;
+		margin-top: 1rem;
+	}
+	
+	.btn-primary-large {
+		background: linear-gradient(45deg, #7c3aed, #8b5cf6);
+		color: white;
+		border: none;
+		border-radius: 30px;
+		padding: 1rem 2.5rem;
+		font-size: 1.1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 5px 15px rgba(124, 58, 237, 0.4);
+	}
+	
+	.btn-primary-large:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.5);
+		background: linear-gradient(45deg, #8b5cf6, #7c3aed);
+	}
+	
+	@media (max-width: 768px) {
+		.hero-title {
+			font-size: 2.5rem;
+		}
+		
+		.hero-description p {
+			font-size: 1.2rem;
+		}
+		
+		.btn-primary-large {
+			padding: 0.8rem 2rem;
+			font-size: 1rem;
+		}
 	}
 
-	/* Scroll to top button */
-	.scroll-top-button {
-		position: fixed;
-		bottom: 2rem;
-		right: 2rem;
-		width: 3rem;
-		height: 3rem;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.1);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		color: #ffffff;
+	/* Why Section */
+	.why-section {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
+	
+	.why-subtitle p {
+		font-size: 1.6rem;
+		font-weight: 500;
+		color: var(--primary-text, #ffffff);
+		margin-bottom: 1rem;
+	}
+	
+	.why-content p {
+		font-size: 1.3rem;
+		color: var(--secondary-text, rgba(255, 255, 255, 0.8));
+		margin-bottom: 2rem;
+	}
+	
+	.why-items {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2rem;
+		justify-content: space-between;
+		margin: 1rem 0 2rem;
+	}
+	
+	.why-item {
+		flex: 1;
+		min-width: 250px;
+		padding: 1.5rem;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 12px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		transition: all 0.3s ease;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+	
+	.why-item.interactive:hover {
+		transform: translateY(-5px);
+		border-color: rgba(124, 58, 237, 0.6);
+		cursor: pointer;
+	}
+	
+	.item-icon {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		cursor: pointer;
-		z-index: 900;
-		transition: all 0.3s ease;
+		color: rgba(124, 58, 237, 0.9);
 	}
-
-	.scroll-top-button:hover {
-		background: rgba(255, 255, 255, 0.2);
-		border-color: rgba(255, 255, 255, 0.3);
+	
+	.why-conclusion {
+		margin-top: 1rem;
+	}
+	
+	.highlight-text {
+		font-size: 1.4rem;
+		font-weight: 500;
+		color: var(--primary-text, #ffffff);
+		border-left: 3px solid rgba(124, 58, 237, 0.9);
+		padding-left: 1rem;
 	}
 
 	/* Animations */
@@ -2832,6 +3471,554 @@
 		
 		.spotlight-text h2 {
 			font-size: 2rem;
+		}
+	}
+
+	/* Minimalist styles for "new-way" section */
+	.minimalist-container {
+		max-width: 800px;
+		margin: 3rem auto;
+		padding: 0 1rem;
+	}
+	
+	.minimalist-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+	}
+	
+	.path-icon {
+		position: relative;
+		width: 80px;
+		height: 80px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 2rem;
+		color: rgba(124, 58, 237, 0.9);
+	}
+	
+	.path-glow {
+		position: absolute;
+		width: 100px;
+		height: 100px;
+		border-radius: 50%;
+		background: radial-gradient(circle, rgba(124, 58, 237, 0.3), rgba(124, 58, 237, 0));
+		filter: blur(15px);
+		opacity: 0.7;
+		animation: pulse-subtle 4s infinite alternate ease-in-out;
+	}
+	
+	@keyframes pulse-subtle {
+		0% {
+			opacity: 0.5;
+			transform: scale(0.9);
+		}
+		100% {
+			opacity: 0.8;
+			transform: scale(1.1);
+		}
+	}
+	
+	.minimalist-statement {
+		max-width: 700px;
+		margin-bottom: 2.5rem;
+	}
+	
+	.statement-text {
+		font-size: 1.5rem;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.9);
+		font-weight: 300;
+	}
+	
+	.minimalist-highlight {
+		position: relative;
+	}
+	
+	.minimalist-highlight h3 {
+		font-size: 1.8rem;
+		font-weight: 600;
+		margin-bottom: 1.5rem;
+		color: white;
+	}
+	
+	.highlight-line {
+		width: 60px;
+		height: 2px;
+		background: linear-gradient(to right, rgba(124, 58, 237, 0), rgba(124, 58, 237, 1), rgba(124, 58, 237, 0));
+		margin: 0 auto 1.5rem;
+	}
+	
+	.minimalist-highlight h4 {
+		font-size: 1.3rem;
+		font-weight: 400;
+		color: rgba(255, 255, 255, 0.85);
+	}
+	
+	/* Deserve section styles */
+	.deserve-container {
+		max-width: 800px;
+		margin: 3rem auto;
+		padding: 0 1rem;
+	}
+	
+	.deserve-content {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.deserve-statement {
+		text-align: center;
+		max-width: 700px;
+		margin-bottom: 3rem;
+	}
+	
+	.deserve-list {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 2rem;
+		width: 100%;
+	}
+	
+	.deserve-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 220px;
+		text-align: center;
+		transition: all 0.3s ease;
+		padding: 1.5rem 1rem;
+		border-radius: 12px;
+		background: rgba(124, 58, 237, 0.05);
+		border: 1px solid transparent;
+	}
+	
+	.deserve-item:hover {
+		transform: translateY(-5px);
+		background: rgba(124, 58, 237, 0.1);
+		border-color: rgba(124, 58, 237, 0.2);
+	}
+	
+	.deserve-icon {
+		width: 60px;
+		height: 60px;
+		background: rgba(124, 58, 237, 0.1);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 1rem;
+		color: rgba(124, 58, 237, 0.9);
+		border: 1px solid rgba(124, 58, 237, 0.3);
+		transition: all 0.3s ease;
+	}
+	
+	.deserve-item:hover .deserve-icon {
+		background: rgba(124, 58, 237, 0.2);
+		border-color: rgba(124, 58, 237, 0.5);
+		box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3);
+	}
+	
+	.deserve-text {
+		font-size: 1rem;
+		font-weight: 500;
+		color: white;
+		margin-bottom: 0.5rem;
+	}
+	
+	.deserve-description {
+		font-size: 0.85rem;
+		color: rgba(255, 255, 255, 0.7);
+		line-height: 1.5;
+	}
+	
+	/* Responsive adjustments for minimalist sections */
+	@media (max-width: 768px) {
+		.statement-text {
+			font-size: 1.2rem;
+		}
+		
+		.minimalist-highlight h3 {
+			font-size: 1.5rem;
+		}
+		
+		.minimalist-highlight h4 {
+			font-size: 1.1rem;
+		}
+		
+		.deserve-list {
+			gap: 1.5rem;
+		}
+		
+		.deserve-item {
+			width: 150px;
+		}
+	}
+
+	/* Why Section */
+	.why-section {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
+	
+	.why-subtitle p {
+		font-size: 1.6rem;
+		font-weight: 500;
+		color: var(--primary-text, #ffffff);
+		margin-bottom: 1rem;
+	}
+	
+	.why-content p {
+		font-size: 1.3rem;
+		color: var(--secondary-text, rgba(255, 255, 255, 0.8));
+		margin-bottom: 2rem;
+	}
+	
+	.why-items {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2rem;
+		justify-content: space-between;
+		margin: 1rem 0 2rem;
+	}
+	
+	.why-item {
+		flex: 1;
+		min-width: 250px;
+		padding: 1.5rem;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 12px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		transition: all 0.3s ease;
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+	
+	.why-item.interactive:hover {
+		transform: translateY(-5px);
+		border-color: rgba(124, 58, 237, 0.6);
+		cursor: pointer;
+	}
+	
+	.item-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: rgba(124, 58, 237, 0.9);
+	}
+	
+	.why-conclusion {
+		margin-top: 1rem;
+	}
+	
+	.highlight-text {
+		font-size: 1.4rem;
+		font-weight: 500;
+		color: var(--primary-text, #ffffff);
+		border-left: 3px solid rgba(124, 58, 237, 0.9);
+		padding-left: 1rem;
+	}
+
+	/* Dilemma Section */
+	.dilemma-section {
+		display: flex;
+		flex-direction: column;
+		gap: 2.5rem;
+		max-width: 900px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
+	
+	.dilemma-subtitle p {
+		font-size: 1.8rem;
+		font-weight: 600;
+		color: #fff;
+		text-align: center;
+		margin-bottom: 1.5rem;
+	}
+	
+	.dilemma-paths {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1.5rem;
+		margin: 1rem 0;
+	}
+	
+	.dilemma-path {
+		flex: 1;
+		max-width: 350px;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 12px;
+		padding: 1.8rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: hidden;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.dilemma-path:hover {
+		transform: translateY(-5px);
+		border-color: rgba(124, 58, 237, 0.4);
+	}
+	
+	.dilemma-path.employee:before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 4px;
+		background: linear-gradient(to right, #6366f1, #8b5cf6);
+		opacity: 0.8;
+	}
+	
+	.dilemma-path.self-employed:before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 4px;
+		background: linear-gradient(to right, #8b5cf6, #ec4899);
+		opacity: 0.8;
+	}
+	
+	.path-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: rgba(124, 58, 237, 0.1);
+		color: #a78bfa;
+		margin-bottom: 0.5rem;
+		border: 1px solid rgba(124, 58, 237, 0.3);
+	}
+	
+	.dilemma-path h3 {
+		font-size: 1.4rem;
+		font-weight: 700;
+		color: #fff;
+		margin-bottom: 0.5rem;
+	}
+	
+	.dilemma-path p {
+		color: rgba(255, 255, 255, 0.8);
+		line-height: 1.6;
+	}
+	
+	.path-consequence {
+		margin-top: auto;
+		font-style: italic;
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.6);
+		padding-top: 1rem;
+		border-top: 1px dashed rgba(124, 58, 237, 0.3);
+	}
+	
+	.path-divider {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 50px;
+		height: 50px;
+		border-radius: 50%;
+		background: rgba(124, 58, 237, 0.1);
+		border: 1px solid rgba(124, 58, 237, 0.3);
+	}
+	
+	.path-divider span {
+		font-weight: 700;
+		color: #a78bfa;
+	}
+	
+	.dilemma-conclusion {
+		text-align: center;
+		max-width: 700px;
+		margin: 1rem auto 0;
+	}
+	
+	.dilemma-conclusion p {
+		font-size: 1.5rem;
+		line-height: 1.5;
+		color: #fff;
+	}
+	
+	.dilemma-conclusion .highlight,
+	.problem-cta .highlight {
+		font-weight: 700;
+		color: rgba(124, 58, 237, 0.9);
+		display: inline-block;
+	}
+	
+	@media (max-width: 768px) {
+		.dilemma-paths {
+			flex-direction: column;
+			gap: 2rem;
+		}
+		
+		.dilemma-path {
+			max-width: 100%;
+		}
+		
+		.path-divider {
+			margin: 0.5rem 0;
+		}
+	}
+
+	/* Problem Section Styles */
+	.problem-section {
+		display: flex;
+		flex-direction: column;
+		gap: 2.5rem;
+		max-width: 900px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
+	
+	.problem-subtitle p {
+		font-size: 1.8rem;
+		font-weight: 600;
+		color: #fff;
+		text-align: center;
+		margin-bottom: 1.5rem;
+	}
+	
+	.comparison-cards {
+		display: flex;
+		justify-content: center;
+		gap: 2rem;
+		margin: 1rem 0;
+	}
+	
+	.comparison-card {
+		flex: 1;
+		max-width: 350px;
+		background: rgba(255, 255, 255, 0.03);
+		border-radius: 12px;
+		padding: 1.8rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: hidden;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.comparison-card:hover {
+		transform: translateY(-5px);
+		border-color: rgba(124, 58, 237, 0.4);
+		box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.2);
+	}
+	
+	.comparison-card:first-child:before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 4px;
+		background: linear-gradient(to right, #6366f1, #8b5cf6);
+		opacity: 0.8;
+	}
+	
+	.comparison-card:last-child:before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 4px;
+		background: linear-gradient(to right, #8b5cf6, #ec4899);
+		opacity: 0.8;
+	}
+	
+	.comparison-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: rgba(124, 58, 237, 0.1);
+		color: #a78bfa;
+		margin-bottom: 0.5rem;
+		border: 1px solid rgba(124, 58, 237, 0.3);
+	}
+	
+	.comparison-card h3 {
+		font-size: 1.4rem;
+		font-weight: 700;
+		color: #fff;
+		margin-bottom: 0.5rem;
+	}
+	
+	.comparison-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+	
+	.comparison-list li {
+		position: relative;
+		padding-left: 1.5rem;
+		margin-bottom: 0.8rem;
+		color: rgba(255, 255, 255, 0.8);
+		line-height: 1.5;
+	}
+	
+	.comparison-list li:before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0.5rem;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: rgba(124, 58, 237, 0.7);
+	}
+	
+	.problem-cta {
+		text-align: center;
+		max-width: 700px;
+		margin: 1rem auto 0;
+	}
+	
+	.problem-cta p {
+		font-size: 1.5rem;
+		line-height: 1.5;
+		color: #fff;
+	}
+	
+	.problem-cta .highlight {
+		font-weight: 700;
+		color: #a78bfa;
+	}
+	
+	@media (max-width: 768px) {
+		.comparison-cards {
+			flex-direction: column;
+			align-items: center;
+			gap: 2rem;
+		}
+		
+		.comparison-card {
+			max-width: 100%;
 		}
 	}
 
