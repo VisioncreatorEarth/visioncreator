@@ -4,6 +4,8 @@
 	import { onMount, tick } from 'svelte';
 	import { fade, fly, scale, slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import CustomCursor from '$lib/CustomCursor.svelte';
+	import ProcessAnimation from '$lib/ProcessAnimation.svelte';
 
 	// Seeds for generating consistent avatars
 	const seeds = ['alice', 'bob', 'charlie', 'david', 'eve', 'frank', 'grace', 'henry'];
@@ -38,9 +40,8 @@
 	const sections: Section[] = [
 		{
 			id: 'hero',
-			title: 'We Need a New Way to Work',
-			subtitle: 'A New Way to Work',
-			accent: true,
+			title: 'A New Way to Work',
+			subtitle: 'Join the movement towards a new paradigm of work',
 			callToAction: 'Join the movement towards a new paradigm of work'
 		},
 		{
@@ -335,6 +336,9 @@
 	});
 </script>
 
+<!-- Custom Cursor Component -->
+<CustomCursor />
+
 <svelte:head>
 	<title>Visioncreator | Own Your Future</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -452,12 +456,12 @@
 				</div>
 				
 				<h1 class="modern-title" in:fade={{ duration: 800, delay: 300 }}>
-					<span class="gradient-text">Visioncreator</span>
-					<span class="subtitle-text">A New Way to Work</span>
+					<span class="gradient-text">Own What You Help Build</span>
+					<span class="subtitle-text">Visioncreator</span>
 				</h1>
 				
 				<p class="modern-description" in:fade={{ duration: 800, delay: 500 }}>
-					Build ownership through contribution with a revolutionary organization structure
+					The old system is broken. Create a life of value, freedom, and abundance through collaborative entrepreneurship.
 				</p>
 
 				<div class="feature-cards">
@@ -486,7 +490,7 @@
 
 				<div class="cta-group" in:scale={{ duration: 600, delay: 1000, start: 0.9 }}>
 					<button class="btn-primary" on:click={startPresentation}>
-						Explore
+						Start Building
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							width="16"
@@ -501,7 +505,7 @@
 							<polyline points="9 18 15 12 9 6"></polyline>
 						</svg>
 					</button>
-					<button class="btn-secondary" on:click={startPresentation}>Learn More</button>
+					<button class="btn-secondary" on:click={startPresentation}>Join the Movement</button>
 				</div>
 				
 				<div class="companies" in:fade={{ duration: 800, delay: 1200 }}>
@@ -512,6 +516,13 @@
 						<div class="company-logo"></div>
 						<div class="company-logo"></div>
 					</div>
+				</div>
+				
+				<!-- Join CTA at the bottom of the welcome screen -->
+				<div class="join-cta" in:fade={{ duration: 800, delay: 1400 }}>
+					<button class="btn-primary-large" on:click={startPresentation}>
+						Join the movement towards a new paradigm of work
+					</button>
 				</div>
 			</div>
 		</div>
@@ -548,7 +559,8 @@
 		<!-- Modern header with fixed navigation -->
 		<header class="modern-header" in:fly={{ y: -100, duration: 800, easing: quintOut }}>
 			<div class="logo">
-				<span class="logo-text">VC</span>
+				<img src="/logo.png" alt="Visioncreator Logo" class="logo-image" />
+				<span class="logo-text">Visioncreator</span>
 			</div>
 			<nav class="modern-nav">
 				{#each navLinks as link}
@@ -557,991 +569,145 @@
 			</nav>
 			<div class="header-actions">
 				<button class="btn-outline">Sign In</button>
-				<button class="btn-primary">Join Now</button>
+				<button class="btn-primary">Build With Us</button>
 			</div>
 		</header>
 
 		{#each sections as section, i}
-			<section
-				id={section.id}
-				class="section"
-				class:active={i === currentSection}
-				class:accent={section.accent}
-				style="--section-index: {i}"
-			>
-				<div class="section-content">
-					{#if section.id === 'hero'}
-						<!-- Hero section with centered content -->
-						<div class="hero-container">
-							<h2 class="split-text" in:fly={{ y: 20, duration: 800, delay: 100 }}>
-								<span class="text-animate-wrapper">
-									<span class="text-animate">{section.title}</span>
-								</span>
-							</h2>
-							<p class="subtitle hero-subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-								<span class="gradient-text">{section.subtitle}</span>
-							</p>
-
-							<div class="hero-visual">
-								<div class="orbit-container">
-									<div class="orbit">
-										<div class="planet">
-											<span>You</span>
-										</div>
-									</div>
-									<div class="orbit-center">
-										<span>VC</span>
-									</div>
-								</div>
-							</div>
-
-							{#if section.callToAction}
-								<div class="call-to-action hero-cta" in:fade={{ duration: 800, delay: 400 }}>
-									<p>{section.callToAction}</p>
-								</div>
-							{/if}
-
-							<div
-								class="arrow-down pulse-animation"
-								in:fade={{ duration: 400, delay: 800 }}
-								aria-label="Scroll down to next section"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="40"
-									height="40"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								>
-									<line x1="12" y1="5" x2="12" y2="19"></line>
-									<polyline points="19 12 12 19 5 12"></polyline>
-								</svg>
-							</div>
-						</div>
-					{:else if section.id === 'outdated'}
-						<!-- Custom layout for outdated section -->
-						<div class="split-layout">
-							<div class="split-content">
-								<h2 in:fly={{ y: 20, duration: 800, delay: 100 }} class="accent-heading">
-									{section.title}
-								</h2>
-								<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-									{section.subtitle}
-								</p>
-
-								<div class="comparison-container" in:fade={{ duration: 600, delay: 300 }}>
-									<div class="comparison-card employee">
-										<div class="card-icon">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="32"
-												height="32"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-												<circle cx="12" cy="7" r="4"></circle>
-											</svg>
-										</div>
-										<h3>Employee</h3>
-										<div class="card-divider"></div>
-										<p>You trade time for money with no ownership or freedom.</p>
-										<div class="limitation-indicator">
-											<span class="limitation-text">Limited potential</span>
-											<div class="limitation-bar">
-												<div class="limitation-fill" style="width: 35%"></div>
-											</div>
-										</div>
-									</div>
-									<div class="comparison-divider">VS</div>
-									<div class="comparison-card self-employed">
-										<div class="card-icon">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="32"
-												height="32"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-												<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-											</svg>
-										</div>
-										<h3>Self-Employed</h3>
-										<div class="card-divider"></div>
-										<p>
-											You gain independence but remain chained to trading time for money, with
-											endless stress.
-										</p>
-										<div class="limitation-indicator">
-											<span class="limitation-text">Freedom vs Security</span>
-											<div class="limitation-bar">
-												<div class="limitation-fill" style="width: 50%"></div>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								{#if section.callToAction}
-									<div class="call-to-action highlight" in:fade={{ duration: 800, delay: 600 }}>
-										<p>{section.callToAction}</p>
-									</div>
-								{/if}
-							</div>
-							<div class="split-visual">
-								<div class="model-visual" in:scale={{ duration: 800, delay: 500, start: 0.8 }}>
-									<div class="model-old broken-system"></div>
-									<div class="model-arrow">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="48"
-											height="48"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										>
-											<line x1="5" y1="12" x2="19" y2="12"></line>
-											<polyline points="12 5 19 12 12 19"></polyline>
-										</svg>
-									</div>
-									<div class="model-new new-approach"></div>
-								</div>
-							</div>
-						</div>
-					{:else if section.id === 'choice'}
-						<!-- Choice section custom layout -->
-						<div class="choice-container">
-							<h2 in:fly={{ y: 20, duration: 800, delay: 100 }} class="accent-heading">
-								{section.title}
-							</h2>
-
-							{#if section.subtitle}
-								<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-									{section.subtitle}
-								</p>
-							{/if}
-
-							<div class="choice-layout">
-								<div class="paths-container" in:fade={{ duration: 600, delay: 300 }}>
-									<div class="path-option hoverable">
-										<div class="path-icon employee-icon glow-on-hover">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="32"
-												height="32"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-												<circle cx="12" cy="7" r="4"></circle>
-											</svg>
-										</div>
-										<div class="path-content">
-											<h3>Employee</h3>
-											<p>Create value for someone else, never fully realizing your potential.</p>
-											<div class="restrictions">
-												<span class="restriction">Limited freedom</span>
-												<span class="restriction">No ownership</span>
-												<span class="restriction">Capped income</span>
-											</div>
-										</div>
-									</div>
-
-									<div class="path-divider">
-										<div class="divider-circle"></div>
-										<div class="divider-line"></div>
-										<div class="divider-circle"></div>
-									</div>
-
-									<div class="path-option hoverable">
-										<div class="path-icon self-employed-icon glow-on-hover">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="32"
-												height="32"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-												<path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-											</svg>
-										</div>
-										<div class="path-content">
-											<h3>Self-Employed</h3>
-											<p>Shoulder overwhelming responsibility with little time to breathe.</p>
-											<div class="restrictions">
-												<span class="restriction">Constant stress</span>
-												<span class="restriction">No security</span>
-												<span class="restriction">Limited scale</span>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								<div class="third-path">
-									<div class="third-path-connector">
-										<div class="connector-line"></div>
-										<div class="connector-arrow">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="32"
-												height="32"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<polyline points="6 9 12 15 18 9"></polyline>
-											</svg>
-										</div>
-									</div>
-
-									<div class="third-option">
-										<div class="third-badge">New Way</div>
-										<h3>Visioncreator</h3>
-										<p>A new model that combines freedom, ownership, and security</p>
-									</div>
-								</div>
-
-								{#if section.callToAction}
-									<div
-										class="call-to-action better-way highlight"
-										in:fade={{ duration: 800, delay: 600 }}
-									>
-										<p>{section.callToAction}</p>
-									</div>
-								{/if}
-							</div>
-
-							<div
-								class="arrow-down"
-								in:fade={{ duration: 400, delay: 700 }}
-								aria-label="Scroll down to next section"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="40"
-									height="40"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								>
-									<line x1="12" y1="5" x2="12" y2="19"></line>
-									<polyline points="19 12 12 19 5 12"></polyline>
-								</svg>
-							</div>
-						</div>
-					{:else if section.id === 'why'}
-						<!-- Why This Matters section -->
-						<div class="why-matters-container">
-							<h2 in:fly={{ y: 20, duration: 800, delay: 100 }} class="accent-heading">
-								{section.title}
-							</h2>
-
-							{#if section.subtitle}
-								<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-									{section.subtitle}
-								</p>
-							{/if}
-
-							{#if section.content && section.content.length > 0}
-								<div class="content-block impact-block" in:fade={{ duration: 600, delay: 300 }}>
-									<div class="impact-visual">
-										<div class="impact-chart">
-											<div class="chart-segment work">
-												<span>Work</span>
-											</div>
-											<div class="chart-segment sleep">
-												<span>Sleep</span>
-											</div>
-											<div class="chart-segment other">
-												<span>Other</span>
-											</div>
-										</div>
-										<div class="chart-center">
-											<div class="chart-label">Your Life</div>
-										</div>
-									</div>
-
-									<div class="impact-content">
-										{#each section.content as paragraph}
-											<p>{paragraph}</p>
-										{/each}
-
-										{#if section.hasListItems && section.listItems && section.listItems.length > 0}
-											<ul class="list-items impact-list">
-												{#each section.listItems as item, index}
-													<li
-														class="impact-item"
-														in:fly={{ x: 20, duration: 400, delay: 400 + 100 * index }}
-													>
-														<div class="item-icon">
-															{#if index === 0}
-																<svg
-																	xmlns="http://www.w3.org/2000/svg"
-																	width="24"
-																	height="24"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<path d="M18 8a6 6 0 0 0-6-6 6 6 0 0 0-6 6 8 8 0 0 0 13 6.326"
-																	></path>
-																	<path d="M13.5 14h.5a2 2 0 0 0 2-2"></path>
-																	<path d="M10 9.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"></path>
-																	<path d="M15 9.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"></path>
-																</svg>
-															{:else}
-																<svg
-																	xmlns="http://www.w3.org/2000/svg"
-																	width="24"
-																	height="24"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<path d="M12 2v2"></path>
-																	<path d="M12 8v2"></path>
-																	<path d="M12 14v2"></path>
-																	<path d="M12 20v2"></path>
-																	<path d="M19 5l-1.73 1"></path>
-																	<path d="M16.27 8l-1.73 1"></path>
-																	<path d="M9.46 13l-1.73 1"></path>
-																	<path d="M6.73 16l-1.73 1"></path>
-																	<path d="M5 5l1.73 1"></path>
-																	<path d="M7.73 8l1.73 1"></path>
-																	<path d="M14.54 13l1.73 1"></path>
-																	<path d="M17.27 16l1.73 1"></path>
-																	<circle cx="12" cy="12" r="3"></circle>
-																</svg>
-															{/if}
-														</div>
-														<span>{item}</span>
-													</li>
-												{/each}
-											</ul>
-										{/if}
-									</div>
-								</div>
-							{/if}
-
-							{#if section.callToAction}
-								<div
-									class="call-to-action highlight impact-cta"
-									in:fade={{ duration: 800, delay: 600 }}
-								>
-									<p>{section.callToAction}</p>
-									<div class="impact-arrow">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="36"
-											height="36"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										>
-											<path
-												d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-											></path>
-											<path d="m9 12 2 2 4-4"></path>
-										</svg>
-									</div>
-								</div>
-							{/if}
-						</div>
-					{:else if section.id === 'new-way'}
-						<!-- New Way Forward section -->
-						<h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
-
-						{#if section.subtitle}
-							<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-								{section.subtitle}
-							</p>
-						{/if}
-
-						<div class="new-way-content" in:fade={{ duration: 600, delay: 300 }}>
-							{#if section.content && section.content.length > 0}
-								<div class="content-block" in:fade={{ duration: 600, delay: 300 }}>
-									{#each section.content as paragraph}
-										<p>{paragraph}</p>
-									{/each}
-								</div>
-							{/if}
-						</div>
-
-						{#if section.callToAction}
-							<div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
-								<p>{section.callToAction}</p>
-							</div>
-						{/if}
-					{:else if section.id === 'deserve'}
-						<!-- Deserve section with subslides -->
-						<h2 in:fly={{ y: 20, duration: 800, delay: 100 }} class="accent-heading">
+			<section id={section.id} class="section" class:accent={section.accent}>
+				<div class="section-content" class:accent-content={section.accent}>
+					<h2 class="section-title">
+						{#if section.id === 'hero'}
+							A New Way to Work
+						{:else}
 							{section.title}
-						</h2>
-
-						{#if section.subtitle}
-							<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-								{section.subtitle}
-							</p>
 						{/if}
+					</h2>
 
-						{#if section.hasSubslides && section.subslides && section.subslides.length > 0}
-							<div
-								class="subslides-container modern-slides"
-								in:fade={{ duration: 600, delay: 300 }}
-							>
-								<!-- Using index if not initialized -->
-								{#if !currentSubslideIndices[section.id]}
-									<!-- svelte-ignore missing-declaration -->
-									{(currentSubslideIndices[section.id] = 0)}
-								{/if}
+					{#if section.subtitle}
+						<div class="section-subtitle">{section.subtitle}</div>
+					{/if}
 
-								<div class="subslides-navigation">
-									<button
-										class="subslide-nav-btn modern-nav-btn"
-										on:click={() => prevSubslide(section.id)}
-										disabled={currentSubslideIndices[section.id] === 0}
-										aria-label="Previous slide"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="24"
-											height="24"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										>
-											<path d="m15 18-6-6 6-6" />
-										</svg>
-									</button>
+					{#if section.content}
+						{#each section.content as paragraph}
+							<p>{paragraph}</p>
+						{/each}
+					{/if}
 
-									<div class="subslides-wrapper">
-										{#each section.subslides as subslide, j}
-											{#if j === currentSubslideIndices[section.id]}
-												<div class="subslide modern-subslide" in:fade={{ duration: 300 }}>
-													<div class="slide-icon">
-														{#if subslide.id === 'belonging'}
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																width="48"
-																height="48"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<path d="M18 8a6 6 0 0 0-6-6 6 6 0 0 0-6 6 8 8 0 0 0 13 6.326"
-																></path>
-																<path d="M13.5 14h.5a2 2 0 0 0 2-2"></path>
-																<path d="M10 9.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"></path>
-																<path d="M15 9.5a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0Z"></path>
-															</svg>
-														{:else if subslide.id === 'autonomy'}
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																width="48"
-																height="48"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"></path>
-																<path d="m9 12 2 2 4-4"></path>
-															</svg>
-														{:else if subslide.id === 'security'}
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																width="48"
-																height="48"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<path
-																	d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1 5-5 10 10 0 0 0-10 0Z"
-																></path>
-																<path d="M12 2v8"></path>
-																<path d="m4.93 4.93 5.66 5.66"></path>
-																<path d="M2 12h8"></path>
-																<path d="m4.93 19.07 5.66-5.66"></path>
-															</svg>
-														{:else}
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																width="48"
-																height="48"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<path
-																	d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-																></path>
-																<path d="m8 14 2.5-2.5C11.5 10.5 13 10 16 8"></path>
-																<path d="M8 10c4 0 6.608 2.186 8 4"></path>
-															</svg>
-														{/if}
-													</div>
-													<h3 class="highlight-text">{subslide.title}</h3>
-													<p>{subslide.content}</p>
-													<div class="slide-accent"></div>
-												</div>
-											{/if}
-										{/each}
-									</div>
-
-									<button
-										class="subslide-nav-btn modern-nav-btn"
-										on:click={() => nextSubslide(section.id)}
-										disabled={currentSubslideIndices[section.id] ===
-											(section.subslides?.length || 0) - 1}
-										aria-label="Next slide"
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											width="24"
-											height="24"
-											viewBox="0 0 24 24"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="2"
-											stroke-linecap="round"
-											stroke-linejoin="round"
-										>
-											<path d="m9 18 6-6-6-6" />
-										</svg>
-									</button>
-								</div>
-
-								<div class="subslides-indicators modern-indicators">
-									{#each section.subslides as _, j}
-										<button
-											class="subslide-indicator"
-											class:active={j === currentSubslideIndices[section.id]}
-											on:click={() => {
-												currentSubslideIndices[section.id] = j;
-											}}
-											aria-label="Go to slide {j + 1}"
-										></button>
-									{/each}
-								</div>
-							</div>
-						{/if}
-					{:else if section.id === 'solution'}
-						<!-- Solution section with feature cards -->
-						<h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
-
-						{#if section.subtitle}
-							<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-								{section.subtitle}
-							</p>
-						{/if}
-
-						<div class="solution-features" in:fade={{ duration: 600, delay: 300 }}>
-							<div class="feature-card">
-								<div class="feature-icon">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="24"
-										height="24"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									>
-										<path d="M12 2v4"></path><path d="M12 18v4"></path><path
-											d="m4.93 4.93 2.83 2.83"
-										></path><path d="m16.24 16.24 2.83 2.83"></path><path d="M2 12h4"></path><path
-											d="M18 12h4"
-										></path><path d="m4.93 19.07 2.83-2.83"></path><path d="m16.24 7.76 2.83-2.83"
-										></path>
-									</svg>
-								</div>
-								<h3>Shared Resources</h3>
-								<p>
-									Leverage collective expertise, tools, and connections without starting from zero.
-								</p>
-							</div>
-
-							<div class="feature-card">
-								<div class="feature-icon">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="24"
-										height="24"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									>
-										<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle
-											cx="9"
-											cy="7"
-											r="4"
-										></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path
-											d="M16 3.13a4 4 0 0 1 0 7.75"
-										></path>
-									</svg>
-								</div>
-								<h3>Built-in Community</h3>
-								<p>Work alongside like-minded builders who support your vision and growth.</p>
-							</div>
-
-							<div class="feature-card">
-								<div class="feature-icon">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="24"
-										height="24"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									>
-										<path d="m22 9-10 13L2 9l10-5 10 5Z"></path><path d="M12 12v5"></path>
-									</svg>
-								</div>
-								<h3>Aligned Incentives</h3>
-								<p>
-									Build real ownership through contribution, with interests aligned for mutual
-									success.
-								</p>
-							</div>
+					{#if section.hasListItems && section.listItems}
+						<div class="section-list">
+							{#each section.listItems as item}
+								<div class="list-item">{item}</div>
+							{/each}
 						</div>
+					{/if}
 
-						{#if section.callToAction}
-							<div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
-								<p>{section.callToAction}</p>
-							</div>
-						{/if}
-					{:else if section.id === 'dao' || section.id === 'implementation' || section.id === 'your-role' || section.id === 'lifestyle'}
-						<!-- Process flow sections with visual indicator -->
-						<div class="process-section">
-							<h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
-
-							{#if section.subtitle}
-								<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-									{section.subtitle}
-								</p>
-							{/if}
-
-							<div class="process-visualization" in:fade={{ duration: 600, delay: 300 }}>
-								<div class="process-steps">
-									<div
-										class="process-step {processStates['dao'] === 'idea' ? 'active' : ''}"
-										class:current={section.id === 'dao'}
-									>
-										<div class="step-icon">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="24"
-												height="24"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<circle cx="12" cy="12" r="10"></circle>
-												<path d="M12 16v-4"></path>
-												<path d="M12 8h.01"></path>
-											</svg>
-										</div>
-										<span>Idea</span>
-									</div>
-									<div class="process-connector"></div>
-									<div
-										class="process-step {processStates['implementation'] === 'vote'
-											? 'active'
-											: ''}"
-										class:current={section.id === 'implementation'}
-									>
-										<div class="step-icon">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="24"
-												height="24"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<path d="m9 11 3 3L22 4"></path>
-												<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-											</svg>
-										</div>
-										<span>Vote</span>
-									</div>
-									<div class="process-connector"></div>
-									<div
-										class="process-step {processStates['your-role'] === 'draft' ? 'active' : ''}"
-										class:current={section.id === 'your-role'}
-									>
-										<div class="step-icon">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="24"
-												height="24"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<path
-													d="M12 19c-2.3 0-6.4-.2-8.1-.6-.7-.2-1.2-.7-1.4-1.4-.3-1.1-.5-3.4-.5-5s.2-3.9.5-5c.2-.7.7-1.2 1.4-1.4C5.6 5.2 9.7 5 12 5s6.4.2 8.1.6c.7.2 1.2.7 1.4 1.4.3 1.1.5 3.4.5 5s-.2 3.9-.5 5c-.2.7-.7 1.2-1.4 1.4-1.7.4-5.8.6-8.1.6 0 0 0 0 0 0z"
-												></path>
-												<polygon points="12 16 14 13 12 10 10 13"></polygon>
-											</svg>
-										</div>
-										<span>Draft</span>
-									</div>
-									<div class="process-connector"></div>
-									<div
-										class="process-step {processStates['lifestyle'] === 'reward' ? 'active' : ''}"
-										class:current={section.id === 'lifestyle'}
-									>
-										<div class="step-icon">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="24"
-												height="24"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<circle cx="12" cy="8" r="7"></circle>
-												<polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
-											</svg>
-										</div>
-										<span>Reward</span>
-									</div>
+					{#if section.hasSubslides && section.subslides}
+						<div class="subslides">
+							{#each section.subslides as subslide, j}
+								<div class="subslide {currentSubslideIndices[section.id] === j ? 'active' : ''}">
+									<h3 class="subslide-title">{subslide.title}</h3>
+									<p class="subslide-content">{subslide.content}</p>
 								</div>
-							</div>
+							{/each}
 
-							{#if section.id === 'dao'}
-								<!-- Example idea card for the idea section -->
-								<div class="idea-card" in:fade={{ duration: 600, delay: 300 }}>
-									<div class="idea-header">
-										<span class="idea-label">Idea</span>
-										<span class="idea-stars">★ 5</span>
-									</div>
-									<div class="idea-content">
-										<h3>Improve the onboarding process</h3>
-									</div>
-									<div class="idea-footer">
-										<div class="idea-avatar"></div>
-										<span>Posted by you</span>
-									</div>
-									<button class="add-idea-btn">+ Add New Idea</button>
-								</div>
-							{/if}
-
-							{#if section.id === 'implementation'}
-								<!-- Voting progress for implementation section -->
-								<div class="vote-progress" in:fade={{ duration: 600, delay: 300 }}>
-									<div class="progress-bar-container">
-										<div class="progress-fill" style="width: 75%"></div>
-									</div>
-									<div class="vote-count">9 of 12 votes</div>
-									<div class="vote-avatars">
-										<div class="vote-avatar"></div>
-										<div class="vote-avatar"></div>
-										<div class="vote-avatar"></div>
-										<div class="vote-avatar"></div>
-									</div>
-								</div>
-							{/if}
-
-							{#if section.id === 'your-role'}
-								<!-- Draft proposal for the your-role section -->
-								<div class="draft-proposal" in:fade={{ duration: 600, delay: 300 }}>
-									<h3>Draft Proposal</h3>
-									<div class="proposal-lines">
-										<div class="proposal-line"></div>
-										<div class="proposal-line"></div>
-										<div class="proposal-line"></div>
-										<div class="proposal-line short"></div>
-									</div>
-									<div class="budget-box">
-										<span>Budget: €1500</span>
-									</div>
-									<div class="proposal-lines">
-										<div class="proposal-line"></div>
-										<div class="proposal-line short"></div>
-									</div>
-								</div>
-							{/if}
-
-							{#if section.id === 'lifestyle'}
-								<!-- Reward visualization for the lifestyle section -->
-								<div class="reward-visualization" in:fade={{ duration: 600, delay: 300 }}>
-									<div class="reward-tokens">
-										<div class="token euro">€</div>
-										<div class="token vcr">VCR</div>
-									</div>
-									<div class="ownership-stake">
-										<span>Ownership Stake</span>
-									</div>
-								</div>
-							{/if}
-
-							{#if section.content && section.content.length > 0}
-								<div
-									class="content-block presentation-content"
-									in:fade={{ duration: 600, delay: 400 }}
+							<div class="subslide-nav">
+								<button
+									class="subslide-prev"
+									on:click={() => prevSubslide(section.id)}
+									disabled={currentSubslideIndices[section.id] === 0}>Previous</button
 								>
-									{#each section.content as paragraph}
-										<p>{paragraph}</p>
-									{/each}
-								</div>
-							{/if}
+								<button
+									class="subslide-next"
+									on:click={() => nextSubslide(section.id)}
+									disabled={!section.subslides || currentSubslideIndices[section.id] === section.subslides.length - 1}
+									>Next</button
+								>
+							</div>
 						</div>
-					{:else if section.id === 'process'}
-						<!-- This section is no longer used per the presentation images -->
-						<div>
-							<!-- Placeholder for empty process section -->
-						</div>
-					{:else if section.id === 'hominio'}
-						<!-- Hominio section with special styling -->
-						<div class="hominio-section">
-							<h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+					{/if}
 
-							{#if section.subtitle}
-								<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-									{section.subtitle}
-								</p>
-							{/if}
-
-							{#if section.content && section.content.length > 0}
-								<div class="content-block accent-content" in:fade={{ duration: 600, delay: 300 }}>
-									{#each section.content as paragraph}
-										<p>{paragraph}</p>
-									{/each}
+					<!-- Add process animations to specific sections -->
+					{#if section.id === 'dao'}
+						<ProcessAnimation step="idea" />
+						
+						<!-- Example idea cards with interactive elements -->
+						<div class="idea-cards" in:fade={{ duration: 600, delay: 400 }}>
+							<div class="idea-card interactive" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<div class="idea-header">
+									<div class="idea-avatar"></div>
+									<div class="idea-author">John D.</div>
 								</div>
-							{/if}
-
-							{#if section.callToAction}
-								<div class="call-to-action special-cta" in:fade={{ duration: 800, delay: 600 }}>
-									<p>{section.callToAction}</p>
-									<a href="/join" class="btn accent-btn">Join as a Founder</a>
+								<h4>Improve Onboarding Flow</h4>
+								<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
+								<div class="idea-footer">
+									<div class="idea-votes">
+										<span class="vote-count">12</span>
+										<span class="vote-label">votes</span>
+									</div>
+									<button class="vote-button interactive">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 8v8m0-8l-4 4m4-4l4 4"></path>
+										</svg>
+										Vote
+									</button>
 								</div>
-							{/if}
-						</div>
-					{:else if section.id === 'join'}
-						<!-- Join section with more impactful CTA -->
-						<div class="join-section">
-							<h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
-
-							{#if section.subtitle}
-								<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-									{section.subtitle}
-								</p>
-							{/if}
-
-							{#if section.content && section.content.length > 0}
-								<div class="content-block revolutionary" in:fade={{ duration: 600, delay: 300 }}>
-									<p class="big-text">{section.content[0]}</p>
+							</div>
+							
+							<div class="idea-card interactive" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+								<div class="idea-header">
+									<div class="idea-avatar"></div>
+									<div class="idea-author">Alice M.</div>
 								</div>
-							{/if}
-
-							<div class="join-cta" in:fade={{ duration: 800, delay: 500 }}>
-								<p>{section.callToAction}</p>
-
-								<div class="join-buttons">
-									<a href="/join" class="btn glow-btn">Join VisionCreator</a>
-									<a href="#outdated" class="btn secondary">Learn More</a>
+								<h4>Centralized Documentation Hub</h4>
+								<p>Build a searchable knowledge base for all project documentation and guidelines.</p>
+								<div class="idea-footer">
+									<div class="idea-votes">
+										<span class="vote-count">8</span>
+										<span class="vote-label">votes</span>
+									</div>
+									<button class="vote-button interactive">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 8v8m0-8l-4 4m4-4l4 4"></path>
+										</svg>
+										Vote
+									</button>
+								</div>
+							</div>
+							
+							<div class="idea-card interactive" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+								<div class="idea-header">
+									<div class="idea-avatar"></div>
+									<div class="idea-author">Mark T.</div>
+								</div>
+								<h4>Community Events Calendar</h4>
+								<p>Create a dedicated calendar feature for upcoming events, workshops, and collaborative sessions.</p>
+								<div class="idea-footer">
+									<div class="idea-votes">
+										<span class="vote-count">6</span>
+										<span class="vote-label">votes</span>
+									</div>
+									<button class="vote-button interactive">
+										<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+											<path d="M12 8v8m0-8l-4 4m4-4l4 4"></path>
+										</svg>
+										Vote
+									</button>
 								</div>
 							</div>
 						</div>
-					{:else}
-						<!-- Default section layout -->
-						<h2 in:fly={{ y: 20, duration: 800, delay: 100 }}>{section.title}</h2>
+					{:else if section.id === 'implementation'}
+						<ProcessAnimation step="vote" />
+					{:else if section.id === 'your-role'}
+						<ProcessAnimation step="draft" />
+					{:else if section.id === 'lifestyle'}
+						<ProcessAnimation step="reward" />
+					{/if}
 
-						{#if section.subtitle}
-							<p class="subtitle" in:fly={{ y: 20, duration: 800, delay: 200 }}>
-								{section.subtitle}
-							</p>
-						{/if}
-
-						{#if section.content && section.content.length > 0}
-							<div class="content-block" in:fade={{ duration: 600, delay: 300 }}>
-								{#each section.content as paragraph}
-									<p>{paragraph}</p>
-								{/each}
-							</div>
-						{/if}
-
-						{#if section.callToAction}
-							<div class="call-to-action" in:fade={{ duration: 800, delay: 600 }}>
-								<p>{section.callToAction}</p>
-							</div>
-						{/if}
+					{#if section.callToAction}
+						<div class="cta-button">
+							<button class="interactive">{section.callToAction}</button>
+						</div>
 					{/if}
 				</div>
 			</section>
@@ -1746,6 +912,27 @@
 
 	.btn.secondary:hover {
 		background: rgba(79, 70, 229, 0.1);
+	}
+
+	.btn.secondary:hover {
+		background: rgba(255, 255, 255, 0.05);
+		border-color: rgba(255, 255, 255, 0.2);
+	}
+
+	.btn-outline {
+		background: transparent;
+		color: white;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: 8px;
+		padding: 0.5rem 1rem;
+		font-size: 0.9rem;
+		font-weight: 500;
+		transition: all 0.3s ease;
+	}
+
+	.btn-outline:hover {
+		background: rgba(255, 255, 255, 0.05);
+		border-color: rgba(255, 255, 255, 0.5);
 	}
 
 	/* Welcome screen */
@@ -2322,10 +1509,17 @@
 	.logo {
 		display: flex;
 		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.logo-image {
+		height: 28px;
+		width: auto;
+		display: block;
 	}
 
 	.logo-text {
-		font-size: 1.5rem;
+		font-size: 1.25rem;
 		font-weight: 700;
 		color: white;
 	}
@@ -2512,5 +1706,179 @@
 		.modern-nav {
 			display: none;
 		}
+	}
+
+	/* Additional button styles */
+	.btn-primary-large {
+		background: linear-gradient(90deg, #7c3aed, #4f46e5);
+		color: white;
+		font-weight: 600;
+		border: none;
+		border-radius: 8px;
+		padding: 1rem 2rem;
+		font-size: 1.1rem;
+		transition: all 0.3s ease;
+		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+		position: relative;
+		overflow: hidden;
+		cursor: pointer;
+		margin-top: 2rem;
+	}
+	
+	.btn-primary-large:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 12px 25px rgba(124, 58, 237, 0.4);
+	}
+	
+	.join-cta {
+		margin-top: 2rem;
+	}
+
+	/* Add interactive class for cursor effects */
+	.interactive {
+		cursor: pointer;
+	}
+	
+	/* Make buttons and links interactive for the custom cursor */
+	button, a, .section-title, .cta-button {
+		cursor: none; /* Hide default cursor on interactive elements */
+	}
+	
+	.section-content {
+		position: relative;
+		z-index: 5; /* Ensure content is above animations */
+	}
+	
+	/* Add styles for idea cards to match the cursor interactions */
+	.idea-cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 1.5rem;
+		margin: 2rem 0;
+	}
+	
+	.idea-card {
+		background: rgba(20, 20, 30, 0.7);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(124, 58, 237, 0.2);
+		border-radius: 12px;
+		padding: 1.5rem;
+		transition: all 0.3s ease;
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+	
+	.idea-card:hover {
+		transform: translateY(-5px) scale(1.02);
+		border-color: rgba(124, 58, 237, 0.5);
+		box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2);
+	}
+	
+	.idea-header {
+		display: flex;
+		align-items: center;
+		margin-bottom: 1rem;
+	}
+	
+	.idea-avatar {
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		background: rgba(124, 58, 237, 0.3);
+		margin-right: 0.75rem;
+		position: relative;
+		overflow: hidden;
+	}
+	
+	.idea-avatar::before {
+		content: '';
+		position: absolute;
+		width: 20px;
+		height: 20px;
+		background: rgba(255, 255, 255, 0.5);
+		border-radius: 50%;
+		top: 26px;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+	
+	.idea-avatar::after {
+		content: '';
+		position: absolute;
+		width: 16px;
+		height: 16px;
+		background: rgba(255, 255, 255, 0.5);
+		border-radius: 50%;
+		top: 8px;
+		left: 50%;
+		transform: translateX(-50%);
+	}
+	
+	.idea-author {
+		font-size: 0.9rem;
+		font-weight: 500;
+		color: rgba(255, 255, 255, 0.9);
+	}
+	
+	.idea-card h4 {
+		font-size: 1.1rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+		color: white;
+	}
+	
+	.idea-card p {
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 0.9rem;
+		line-height: 1.5;
+		margin-bottom: 1.5rem;
+		flex-grow: 1;
+	}
+	
+	.idea-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-top: auto;
+		border-top: 1px solid rgba(124, 58, 237, 0.2);
+		padding-top: 1rem;
+	}
+	
+	.idea-votes {
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.vote-count {
+		font-size: 1.1rem;
+		font-weight: 700;
+		color: white;
+	}
+	
+	.vote-label {
+		font-size: 0.7rem;
+		text-transform: uppercase;
+		color: rgba(255, 255, 255, 0.5);
+	}
+	
+	.vote-button {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: rgba(124, 58, 237, 0.2);
+		border: 1px solid rgba(124, 58, 237, 0.4);
+		color: white;
+		border-radius: 8px;
+		padding: 0.5rem 1rem;
+		font-size: 0.9rem;
+		font-weight: 500;
+		transition: all 0.3s ease;
+	}
+	
+	.vote-button:hover {
+		background: rgba(124, 58, 237, 0.3);
+		border-color: rgba(124, 58, 237, 0.6);
+		transform: translateY(-2px);
 	}
 </style>
