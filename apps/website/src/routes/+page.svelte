@@ -40,9 +40,9 @@
 	const sections: Section[] = [
 		{
 			id: 'hero',
-			title: 'A New Way to Work',
-			subtitle: '',
-			callToAction: ''
+			title: 'Own What You Help Build',
+			subtitle: 'A new way to work, earn, and build in the digital economy.',
+			callToAction: 'Explore'
 		},
 		{
 			id: 'outdated',
@@ -454,12 +454,12 @@
 				</div>
 				
 				<h1 class="modern-title" in:fade={{ duration: 800, delay: 300 }}>
-					<span class="visioncreator-main">Visioncreator</span>
-					<span class="gradient-text">Build, Own, Thrive—Together</span>
+					<span class="gradient-text">Own What You Help Build</span>
+					<span class="subtitle-text">Visioncreator</span>
 				</h1>
 				
 				<p class="modern-description" in:fade={{ duration: 800, delay: 500 }}>
-					A new way to work, earn, and build in this digital economy.
+					The old system is broken. Create a life of value, freedom, and abundance through collaborative entrepreneurship.
 				</p>
 
 				<div class="feature-cards">
@@ -576,25 +576,50 @@
 				<div class="section-content" class:accent-content={section.accent}>
 					{#if section.id === 'hero'}
 						<div class="hero-section">
-							<h1 class="hero-title" in:fly={{ y: -20, duration: 600, delay: 300 }}>
-								<span class="visioncreator-main">Visioncreator</span>
-								<span>Build, Own, Thrive—Together</span>
-							</h1>
-							
-							<div class="hero-description" in:fly={{ y: 20, duration: 600, delay: 500 }}>
-								<p>A new way to work, earn, and build in this digital economy.</p>
-							</div>
-							
-							<div class="hero-cta" in:fly={{ y: 20, duration: 600, delay: 700 }}>
-								<button class="btn-primary-large">
-									Explore
-								</button>
+							<div class="hero-personal">
+								<div class="hero-image-container" in:scale={{ duration: 800, delay: 200 }}>
+									<img src="/images/chielo_-43.JPG" alt="Chieloka Jairus" class="hero-image" />
+									<div class="image-overlay"></div>
+								</div>
+								
+								<div class="hero-story">
+									<h1 class="hero-title" in:fly={{ y: -20, duration: 600, delay: 300 }}>
+										Own What You Help Build
+									</h1>
+									
+									<div class="hero-intro" in:fly={{ y: 20, duration: 600, delay: 450 }}>
+										<p class="personal-quote">
+											"I was tired of building value for others without sharing in the ownership."
+										</p>
+										<p class="personal-story">
+											After years of watching my work enrich companies while I remained stuck in the same position,
+											I knew there had to be a better way. This is the solution I wish I had found years ago.
+										</p>
+									</div>
+									
+									<div class="hero-description" in:fly={{ y: 20, duration: 600, delay: 550 }}>
+										<p>A new way to work, earn, and build in the digital economy.</p>
+									</div>
+									
+									<div class="hero-cta" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+										<button class="btn-primary-large">
+											Explore
+										</button>
+									</div>
+								</div>
 							</div>
 						</div>
 					{:else if section.id === 'outdated'}
 						<div class="problem-section">
 							<div class="problem-subtitle" in:fly={{ y: 20, duration: 500, delay: 400 }}>
 								<p>In today's digital age, traditional work models are hopelessly outdated.</p>
+							</div>
+
+							<div class="personal-experience" in:fly={{ y: 20, duration: 500, delay: 450 }}>
+								<p>
+									For years, I felt trapped in this system - creating value that I couldn't own, 
+									investing my time and talent into projects where success meant someone else's profit.
+								</p>
 							</div>
 							
 							<div class="comparison-cards">
@@ -613,6 +638,9 @@
 										<li>Security is an illusion (layoffs, restructuring)</li>
 										<li>Little control over your daily schedule</li>
 									</ul>
+									<div class="personal-note">
+										<p>"I watched my work make millions for companies while I remained on the same salary."</p>
+									</div>
 								</div>
 								
 								<div class="comparison-card" in:fly={{ x: 30, duration: 500, delay: 600 }}>
@@ -620,23 +648,22 @@
 										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
 											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-											<path d="M12 19v3"></path>
-											<path d="M8 22h8"></path>
+											<line x1="12" y1="19" x2="12" y2="23"></line>
+											<line x1="8" y1="23" x2="16" y2="23"></line>
 										</svg>
 									</div>
 									<h3>Self-Employed</h3>
 									<ul class="comparison-list">
+										<li>Endless stress and responsibility</li>
 										<li>Still trading time for money</li>
-										<li>Overwhelmed by business operations</li>
-										<li>Isolation and lack of collaboration</li>
-										<li>Income instability and unpredictable cash flow</li>
-										<li>Limited scalability without burning out</li>
+										<li>Dealing with unstable income</li>
+										<li>No real freedom (clients become your bosses)</li>
+										<li>Burnout from wearing too many hats</li>
 									</ul>
+									<div class="personal-note">
+										<p>"Going solo meant more freedom but also meant living project-to-project with no stability."</p>
+									</div>
 								</div>
-							</div>
-							
-							<div class="problem-cta" in:fly={{ y: 20, duration: 500, delay: 800 }}>
-								<p>Neither path fits your life in the modern world. <span class="highlight">You deserve better.</span></p>
 							</div>
 						</div>
 					{:else if section.id === 'choice'}
@@ -667,8 +694,8 @@
 										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
 											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-											<path d="M12 19v3"></path>
-											<path d="M8 22h8"></path>
+											<line x1="12" y1="19" x2="12" y2="23"></line>
+											<line x1="8" y1="23" x2="16" y2="23"></line>
 										</svg>
 									</div>
 									<h3>Self-Employed</h3>
@@ -1107,17 +1134,17 @@
 										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
 											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-											<path d="M12 19v3"></path>
-											<path d="M8 22h8"></path>
+											<line x1="12" y1="19" x2="12" y2="23"></line>
+											<line x1="8" y1="23" x2="16" y2="23"></line>
 										</svg>
 									</div>
 									<h3>Self-Employed</h3>
 									<ul class="comparison-list">
+										<li>Endless stress and responsibility</li>
 										<li>Still trading time for money</li>
-										<li>Overwhelmed by business operations</li>
-										<li>Isolation and lack of collaboration</li>
-										<li>Income instability and unpredictable cash flow</li>
-										<li>Limited scalability without burning out</li>
+										<li>Dealing with unstable income</li>
+										<li>No real freedom (clients become your bosses)</li>
+										<li>Burnout from wearing too many hats</li>
 									</ul>
 								</div>
 							</div>
@@ -1154,8 +1181,8 @@
 										<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 											<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
 											<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-											<path d="M12 19v3"></path>
-											<path d="M8 22h8"></path>
+											<line x1="12" y1="19" x2="12" y2="23"></line>
+											<line x1="8" y1="23" x2="16" y2="23"></line>
 										</svg>
 									</div>
 									<h3>Self-Employed</h3>
@@ -1980,70 +2007,108 @@
 		align-items: center;
 		justify-content: center;
 		text-align: center;
-		padding: 4rem 1rem;
-		min-height: 85vh;
-	}
-	
-	.hero-title {
-		font-size: 4rem;
-		font-weight: 700;
-		margin-bottom: 1.5rem;
-		line-height: 1.2;
-		letter-spacing: -0.02em;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	
-	.visioncreator-text {
-		font-size: 2.5rem;
-		color: #64ffda;
-		letter-spacing: 0.05em;
-		margin-bottom: 0.5rem;
-		display: block;
+		padding: 2rem;
 	}
 
-	.visioncreator-main {
-		font-size: 4.5rem;
-		font-weight: 700;
-		color: #ffffff;
-		letter-spacing: 0.03em;
-		margin-bottom: 0.5rem;
-		display: block;
-		text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-		position: relative;
-		overflow: hidden;
+	.hero-personal {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 2.5rem;
+		max-width: 1200px;
+		margin: 0 auto;
 	}
-	
-	.visioncreator-main:after {
-		content: '';
+
+	.hero-image-container {
+		position: relative;
+		width: 350px;
+		height: 350px;
+		border-radius: 8px;
+		overflow: hidden;
+		flex-shrink: 0;
+		box-shadow: 0 0 25px rgba(100, 255, 218, 0.15);
+	}
+
+	.hero-image {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+		transition: transform 0.5s ease;
+	}
+
+	.hero-image-container:hover .hero-image {
+		transform: scale(1.05);
+	}
+
+	.image-overlay {
 		position: absolute;
 		top: 0;
-		left: -100%;
-		width: 50%;
+		left: 0;
+		width: 100%;
 		height: 100%;
-		background: linear-gradient(
-			to right,
-			rgba(255, 255, 255, 0) 0%,
-			rgba(255, 255, 255, 0.4) 50%,
-			rgba(255, 255, 255, 0) 100%
-		);
-		animation: shine 4s infinite;
-		transform: skewX(-25deg);
-	}
-	
-	@keyframes shine {
-		0% { left: -100%; }
-		20% { left: 100%; }
-		100% { left: 100%; }
+		background: linear-gradient(135deg, rgba(100, 255, 218, 0.1), rgba(0, 0, 0, 0));
+		z-index: 1;
 	}
 
-	.hero-description {
+	.hero-story {
+		text-align: left;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.personal-quote {
 		font-size: 1.5rem;
-		max-width: 700px;
-		margin: 0 auto 2rem;
-		opacity: 0.9;
+		font-style: italic;
+		margin-bottom: 0.5rem;
+		color: #64ffda;
+		font-weight: 500;
+	}
+
+	.personal-story {
+		font-size: 1.1rem;
+		line-height: 1.6;
+		margin-bottom: 1.5rem;
+		color: #a8b2d1;
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 900px) {
+		.hero-personal {
+			flex-direction: column;
+			gap: 2rem;
+		}
+
+		.hero-image-container {
+			width: 280px;
+			height: 280px;
+		}
+
+		.hero-story {
+			text-align: center;
+		}
+	}
+
+	.hero-title {
+		font-size: 3.5rem;
+		font-weight: 800;
+		background: linear-gradient(to right, #ffffff, #a78bfa);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		margin-bottom: 2rem;
+		line-height: 1.2;
+	}
+	
+	.hero-description {
+		margin-bottom: 3rem;
+	}
+	
+	.hero-description p {
+		font-size: 1.5rem;
+		color: rgba(255, 255, 255, 0.9);
+		line-height: 1.5;
 		font-weight: 400;
 	}
 	
@@ -2075,17 +2140,8 @@
 			font-size: 2.5rem;
 		}
 		
-		.visioncreator-text {
-			font-size: 1.8rem;
-		}
-		
-		.visioncreator-main {
-			font-size: 3rem;
-		}
-		
-		.hero-description {
+		.hero-description p {
 			font-size: 1.2rem;
-			padding: 0 1rem;
 		}
 		
 		.btn-primary-large {
@@ -2575,7 +2631,7 @@
 	/* Responsive adjustments */
 	@media (max-width: 768px) {
 		.gradient-text {
-			font-size: 2rem;
+			font-size: 3rem;
 		}
 		
 		.subtitle-text {
@@ -3955,12 +4011,14 @@
 	.problem-section {
 		display: flex;
 		flex-direction: column;
-		gap: 2.5rem;
-		max-width: 900px;
-		margin: 0 auto;
+		align-items: center;
+		justify-content: center;
 		padding: 2rem;
+		max-width: 1200px;
+		margin: 0 auto;
+		gap: 2rem;
 	}
-	
+
 	.problem-subtitle p {
 		font-size: 1.8rem;
 		font-weight: 600;
@@ -3969,11 +4027,25 @@
 		margin-bottom: 1.5rem;
 	}
 	
+	.personal-experience {
+		max-width: 800px;
+		margin: 0 auto 1rem;
+		font-size: 1.2rem;
+		line-height: 1.6;
+		text-align: center;
+		color: #a8b2d1;
+		padding: 0.5rem 1.5rem;
+		border-left: 3px solid #64ffda;
+		border-right: 3px solid #64ffda;
+		font-style: italic;
+	}
+
 	.comparison-cards {
 		display: flex;
 		justify-content: center;
 		gap: 2rem;
 		margin: 1rem 0;
+		width: 100%;
 	}
 	
 	.comparison-card {
@@ -3995,28 +4067,6 @@
 		transform: translateY(-5px);
 		border-color: rgba(124, 58, 237, 0.4);
 		box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.2);
-	}
-	
-	.comparison-card:first-child:before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 4px;
-		background: linear-gradient(to right, #6366f1, #8b5cf6);
-		opacity: 0.8;
-	}
-	
-	.comparison-card:last-child:before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 4px;
-		background: linear-gradient(to right, #8b5cf6, #ec4899);
-		opacity: 0.8;
 	}
 	
 	.comparison-icon {
@@ -4063,22 +4113,24 @@
 		border-radius: 50%;
 		background: rgba(124, 58, 237, 0.7);
 	}
-	
-	.problem-cta {
-		text-align: center;
-		max-width: 700px;
-		margin: 1rem auto 0;
+
+	.personal-note {
+		margin-top: 1.5rem;
+		padding: 1rem;
+		background: rgba(100, 255, 218, 0.05);
+		border-radius: 4px;
+		font-style: italic;
+		color: #64ffda;
+		position: relative;
 	}
-	
-	.problem-cta p {
-		font-size: 1.5rem;
-		line-height: 1.5;
-		color: #fff;
-	}
-	
-	.problem-cta .highlight {
-		font-weight: 700;
-		color: #a78bfa;
+
+	.personal-note:before {
+		content: '"';
+		position: absolute;
+		top: 0;
+		left: 0.5rem;
+		font-size: 2rem;
+		color: rgba(100, 255, 218, 0.3);
 	}
 	
 	@media (max-width: 768px) {
@@ -4407,58 +4459,5 @@
 		box-shadow: 0 0 10px rgba(51, 204, 204, 0.5);
 		transition: width 0.2s ease;
 		z-index: 20;
-	}
-
-	.modern-title {
-		font-size: 4rem;
-		font-weight: 800;
-		line-height: 1.1;
-		margin-bottom: 1.5rem;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.subtitle-text {
-		font-size: 2.5rem;
-		color: #64ffda;
-		letter-spacing: 0.05em;
-		margin-bottom: 0.5rem;
-	}
-	
-	.gradient-text {
-		background: linear-gradient(to right, #ffffff, #a78bfa);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-	}
-	
-	@media (max-width: 768px) {
-		.modern-title {
-			font-size: 2.5rem;
-		}
-		
-		.modern-title .visioncreator-main {
-			font-size: 3rem;
-		}
-		
-		.modern-title .gradient-text {
-			font-size: 2rem;
-		}
-		
-		.hero-title span:not(.visioncreator-main) {
-			font-size: 2rem;
-		}
-	}
-
-	.hero-title span:not(.visioncreator-main) {
-		font-size: 3.2rem;
-		font-weight: 600;
-	}
-	
-	.gradient-text {
-		font-size: 3.2rem;
-		font-weight: 600;
-		background: linear-gradient(to right, #ffffff, #a78bfa);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
 	}
 </style>
