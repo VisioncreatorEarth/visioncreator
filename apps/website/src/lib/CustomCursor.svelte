@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { browser } from '$app/environment';
   
   // Mouse position state
   let mouseX = 0;
@@ -108,6 +109,9 @@
   }
   
   onMount(() => {
+    // Skip execution during SSR
+    if (!browser) return;
+    
     // Initialize cursor elements
     cursorDot = document.querySelector('.cursor-dot') as HTMLElement;
     cursorRing = document.querySelector('.cursor-ring') as HTMLElement;
@@ -137,6 +141,9 @@
   });
   
   onDestroy(() => {
+    // Skip execution during SSR
+    if (!browser) return;
+    
     // Clean up event listeners and animation frame
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseover', handleMouseOver, true);
