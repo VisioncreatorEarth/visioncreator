@@ -41,8 +41,8 @@
 		{
 			id: 'hero',
 			title: 'A New Way to Work',
-			subtitle: 'Join the movement towards a new paradigm of work',
-			callToAction: 'Join the movement towards a new paradigm of work'
+			subtitle: '',
+			callToAction: ''
 		},
 		{
 			id: 'outdated',
@@ -52,7 +52,7 @@
 				'Employee: You trade time for money with no ownership or freedom.',
 				'Self-Employed: You gain independence but remain chained to trading time for money, with endless stress.'
 			],
-			callToAction: 'Neither path fits your life in the modern world. You deserve better.',
+			callToAction: '',
 			accent: true
 		},
 		{
@@ -63,8 +63,7 @@
 				'Employee: Create value for someone else\'s vision, trading your time for a paycheck while never fully realizing your potential or building lasting equity.',
 				'Self-Employed: Shoulder overwhelming responsibility with little time to breathe.'
 			],
-			callToAction:
-				"Neither option feels fulfilling in the digital age. It's time for a new way forward."
+			callToAction: ""
 		},
 		{
 			id: 'why',
@@ -73,8 +72,7 @@
 			content: ['You spend a huge part of your day at work. It should:'],
 			hasListItems: true,
 			listItems: ['Enhance your well-being.', 'Secure your financial future.'],
-			callToAction:
-				'Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are.'
+			callToAction: ''
 		},
 		{
 			id: 'new-way',
@@ -167,7 +165,7 @@
 		},
 		{
 			id: 'join',
-			title: 'JOIN THE REVOLUTION',
+			title: 'BUILD YOUR FUTURE',
 			subtitle: '',
 			content: ['Ready to stop building for others and start building for yourself?'],
 			callToAction: 'Join Visioncreator today and step into the future of work.',
@@ -351,7 +349,7 @@
 
 <svelte:window bind:scrollY />
 
-<div class="landing-page">
+<div class="page-container universe-theme">
 	<!-- Progress bar -->
 	<div class="progress-container">
 		<div class="progress-bar" style="width: {progressPercentage}%"></div>
@@ -456,12 +454,12 @@
 				</div>
 				
 				<h1 class="modern-title" in:fade={{ duration: 800, delay: 300 }}>
-					<span class="gradient-text">Own What You Help Build</span>
-					<span class="subtitle-text">Visioncreator</span>
+					<span class="visioncreator-main">Visioncreator</span>
+					<span class="gradient-text">Build, Own, Thrive—Together</span>
 				</h1>
 				
 				<p class="modern-description" in:fade={{ duration: 800, delay: 500 }}>
-					The old system is broken. Create a life of value, freedom, and abundance through collaborative entrepreneurship.
+					A new way to work, earn, and build in this digital economy.
 				</p>
 
 				<div class="feature-cards">
@@ -505,7 +503,7 @@
 							<polyline points="9 18 15 12 9 6"></polyline>
 						</svg>
 					</button>
-					<button class="btn-secondary" on:click={startPresentation}>Join the Movement</button>
+					<button class="btn-secondary" on:click={startPresentation}>Explore</button>
 				</div>
 				
 				<div class="companies" in:fade={{ duration: 800, delay: 1200 }}>
@@ -521,7 +519,7 @@
 				<!-- Join CTA at the bottom of the welcome screen -->
 				<div class="join-cta" in:fade={{ duration: 800, delay: 1400 }}>
 					<button class="btn-primary-large" on:click={startPresentation}>
-						Join the movement towards a new paradigm of work
+						Explore
 					</button>
 				</div>
 			</div>
@@ -579,16 +577,17 @@
 					{#if section.id === 'hero'}
 						<div class="hero-section">
 							<h1 class="hero-title" in:fly={{ y: -20, duration: 600, delay: 300 }}>
-								Own What You Help Build
+								<span class="visioncreator-main">Visioncreator</span>
+								<span>Build, Own, Thrive—Together</span>
 							</h1>
 							
 							<div class="hero-description" in:fly={{ y: 20, duration: 600, delay: 500 }}>
-								<p>A new way to work, earn, and build in the digital economy.</p>
+								<p>A new way to work, earn, and build in this digital economy.</p>
 							</div>
 							
 							<div class="hero-cta" in:fly={{ y: 20, duration: 600, delay: 700 }}>
 								<button class="btn-primary-large">
-									Join the movement towards a new paradigm of work
+									Explore
 								</button>
 							</div>
 						</div>
@@ -679,7 +678,7 @@
 							</div>
 							
 							<div class="dilemma-conclusion" in:fly={{ y: 20, duration: 500, delay: 800 }}>
-								<p>Neither option feels fulfilling in the digital age. <span class="highlight">It's time for a new way forward.</span></p>
+								<p><span class="highlight"></span></p>
 							</div>
 						</div>
 					{:else if section.id === 'why'}
@@ -716,7 +715,7 @@
 							</div>
 							
 							<div class="why-conclusion" in:fly={{ y: 20, duration: 500, delay: 900 }}>
-								<p class="highlight-text">Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are.</p>
+								<p class="highlight-text"></p>
 							</div>
 						</div>
 					{:else if section.id === 'dao'}
@@ -969,61 +968,41 @@
 						</div>
 					{:else if section.id === 'hominio'}
 						<div class="hominio-container" in:fade={{ duration: 600, delay: 400 }}>
-							<div class="hominio-logo interactive" in:scale={{ duration: 700, delay: 500 }}>
-								<div class="logo-h">H</div>
-								<div class="logo-glow"></div>
+							<div class="vision-statement" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<p class="vision-intro" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+									<strong>Imagine a world where every organization is built and owned by its community.</strong>
+								</p>
+								<p class="vision-description" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+									Where everyone who becomes an owner, and success is shared by all.
+								</p>
+								<p class="vision-content" in:fly={{ y: 20, duration: 600, delay: 900 }}>
+									At Visioncreator, we're getting a step closer to bring this vision into reality. 
+									Where we invest together, build together and own together.
+								</p>
 							</div>
 							
-							<div class="hominio-description" in:fly={{ y: 20, duration: 500, delay: 600 }}>
-								<h4>Our First Project</h4>
-								<p>Hominio is where we're building our vision for the future of work and demonstrating how decentralized ownership can transform how we create value together.</p>
+							<div class="introducing-text" in:fly={{ y: 20, duration: 600, delay: 1000 }}>
+								<h3 class="introducing-title">Introducing our first community built and owned project</h3>
 							</div>
 							
-							<div class="hominio-stats" in:fly={{ y: 20, duration: 500, delay: 700 }}>
-								<div class="stat-item interactive">
-									<div class="stat-value">27</div>
-									<div class="stat-label">Founding Members</div>
-								</div>
-								
-								<div class="stat-item interactive">
-									<div class="stat-value">14</div>
-									<div class="stat-label">Active Projects</div>
-								</div>
-								
-								<div class="stat-item interactive">
-									<div class="stat-value">€42k</div>
-									<div class="stat-label">Distributed Value</div>
-								</div>
+							<div class="hominio-logo-large interactive" in:scale={{ duration: 700, delay: 1100 }}>
+								<h2 class="hominio-title">HOMINIO</h2>
+								<div class="logo-glow-large"></div>
 							</div>
-							
-							<div class="hominio-cta" in:fly={{ y: 20, duration: 500, delay: 900 }}>
-								<button class="hominio-button interactive">Be a Founding Member</button>
+
+							<div class="hominio-description" in:fly={{ y: 20, duration: 500, delay: 1300 }}>
+								<p>Our first project is the technical infrastructure that enables new organization forms to come to life.</p>
 							</div>
 						</div>
 					{:else if section.id === 'join'}
-						<div class="join-showcase" in:fade={{ duration: 600, delay: 400 }}>
-							<div class="join-spotlight" in:scale={{ duration: 800, delay: 500 }}>
-								<div class="spotlight-glow"></div>
-								<div class="spotlight-text" in:fly={{ y: 20, duration: 500, delay: 700 }}>
-									<h2>Ready to Own What You Help Build?</h2>
-									<p>Join Visioncreator today and step into a new future where your work creates lasting value for yourself.</p>
-								</div>
+						<div class="join-section text-center">
+							<div class="join-content" in:fly={{ y: 20, duration: 600, delay: 400 }}>
+								<p>Ready to stop building for others and start building for yourself?</p>
 							</div>
 							
-							<div class="join-actions" in:fly={{ y: 20, duration: 500, delay: 900 }}>
-								<button class="join-button primary interactive">
-									Join Visioncreator
-									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M5 12h14M12 5l7 7-7 7"></path>
-									</svg>
-								</button>
-								
-								<button class="join-button secondary interactive">
-									Learn More
-									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M9 5l7 7-7 7"></path>
-									</svg>
-								</button>
+							<div class="join-buttons" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+								<button class="btn-primary-large">Build With Us</button>
+								<button class="btn-outline-large">Learn More</button>
 							</div>
 						</div>
 					{:else if section.id === 'new-way'}
@@ -1186,7 +1165,7 @@
 							</div>
 							
 							<div class="dilemma-conclusion" in:fly={{ y: 20, duration: 500, delay: 800 }}>
-								<p>Neither option feels fulfilling in the digital age. <span class="highlight">It's time for a new way forward.</span></p>
+								<p><span class="highlight"></span></p>
 							</div>
 						</div>
 					{:else if section.id === 'why'}
@@ -1223,7 +1202,7 @@
 							</div>
 							
 							<div class="why-conclusion" in:fly={{ y: 20, duration: 500, delay: 900 }}>
-								<p class="highlight-text">Instead, you feel disconnected and unfulfilled. You deserve work that aligns with who you are.</p>
+								<p class="highlight-text"></p>
 							</div>
 						</div>
 					{:else if section.id === 'dao'}
@@ -1476,61 +1455,41 @@
 						</div>
 					{:else if section.id === 'hominio'}
 						<div class="hominio-container" in:fade={{ duration: 600, delay: 400 }}>
-							<div class="hominio-logo interactive" in:scale={{ duration: 700, delay: 500 }}>
-								<div class="logo-h">H</div>
-								<div class="logo-glow"></div>
+							<div class="vision-statement" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+								<p class="vision-intro" in:fly={{ y: 20, duration: 600, delay: 500 }}>
+									<strong>Imagine a world where every organization is built and owned by its community.</strong>
+								</p>
+								<p class="vision-description" in:fly={{ y: 20, duration: 600, delay: 700 }}>
+									Where everyone who becomes an owner, and success is shared by all.
+								</p>
+								<p class="vision-content" in:fly={{ y: 20, duration: 600, delay: 900 }}>
+									At Visioncreator, we're getting a step closer to bring this vision into reality. 
+									Where we invest together, build together and own together.
+								</p>
 							</div>
 							
-							<div class="hominio-description" in:fly={{ y: 20, duration: 500, delay: 600 }}>
-								<h4>Our First Project</h4>
-								<p>Hominio is where we're building our vision for the future of work and demonstrating how decentralized ownership can transform how we create value together.</p>
+							<div class="introducing-text" in:fly={{ y: 20, duration: 600, delay: 1000 }}>
+								<h3 class="introducing-title">Introducing our first community built and owned project</h3>
 							</div>
 							
-							<div class="hominio-stats" in:fly={{ y: 20, duration: 500, delay: 700 }}>
-								<div class="stat-item interactive">
-									<div class="stat-value">27</div>
-									<div class="stat-label">Founding Members</div>
-								</div>
-								
-								<div class="stat-item interactive">
-									<div class="stat-value">14</div>
-									<div class="stat-label">Active Projects</div>
-								</div>
-								
-								<div class="stat-item interactive">
-									<div class="stat-value">€42k</div>
-									<div class="stat-label">Distributed Value</div>
-								</div>
+							<div class="hominio-logo-large interactive" in:scale={{ duration: 700, delay: 1100 }}>
+								<h2 class="hominio-title">HOMINIO</h2>
+								<div class="logo-glow-large"></div>
 							</div>
-							
-							<div class="hominio-cta" in:fly={{ y: 20, duration: 500, delay: 900 }}>
-								<button class="hominio-button interactive">Be a Founding Member</button>
+
+							<div class="hominio-description" in:fly={{ y: 20, duration: 500, delay: 1300 }}>
+								<p>Our first project is the technical infrastructure that enables new organization forms to come to life.</p>
 							</div>
 						</div>
 					{:else if section.id === 'join'}
-						<div class="join-showcase" in:fade={{ duration: 600, delay: 400 }}>
-							<div class="join-spotlight" in:scale={{ duration: 800, delay: 500 }}>
-								<div class="spotlight-glow"></div>
-								<div class="spotlight-text" in:fly={{ y: 20, duration: 500, delay: 700 }}>
-									<h2>Ready to Own What You Help Build?</h2>
-									<p>Join Visioncreator today and step into a new future where your work creates lasting value for yourself.</p>
-								</div>
+						<div class="join-section text-center">
+							<div class="join-content" in:fly={{ y: 20, duration: 600, delay: 400 }}>
+								<p>Ready to stop building for others and start building for yourself?</p>
 							</div>
 							
-							<div class="join-actions" in:fly={{ y: 20, duration: 500, delay: 900 }}>
-								<button class="join-button primary interactive">
-									Join Visioncreator
-									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M5 12h14M12 5l7 7-7 7"></path>
-									</svg>
-								</button>
-								
-								<button class="join-button secondary interactive">
-									Learn More
-									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<path d="M9 5l7 7-7 7"></path>
-									</svg>
-								</button>
+							<div class="join-buttons" in:fly={{ y: 20, duration: 600, delay: 600 }}>
+								<button class="btn-primary-large">Build With Us</button>
+								<button class="btn-outline-large">Learn More</button>
 							</div>
 						</div>
 					{:else if section.id === 'new-way'}
@@ -1606,9 +1565,11 @@
 								</div>
 							</div>
 						</div>
+					{:else if section.id === 'vision'}
+						<!-- Vision section removed as requested -->
 					{/if}
 
-					{#if section.callToAction && !['new-way', 'deserve', 'solution', 'dao', 'implementation', 'your-role', 'lifestyle', 'hominio', 'join'].includes(section.id)}
+					{#if section.callToAction && !['new-way', 'deserve', 'solution', 'dao', 'implementation', 'your-role', 'lifestyle', 'hominio', 'join', 'vision'].includes(section.id)}
 						<div class="cta-button">
 							<button class="interactive">{section.callToAction}</button>
 						</div>
@@ -1622,24 +1583,25 @@
 <style>
 	/* Global styles */
 	:global(body) {
+		background-color: #050510;
+		color: #efefef;
+		font-family: 'Inter', sans-serif;
+		line-height: 1.5;
 		margin: 0;
 		padding: 0;
-		font-family:
-			'Inter',
-			-apple-system,
-			BlinkMacSystemFont,
-			'Segoe UI',
-			Roboto,
-			Oxygen,
-			Ubuntu,
-			Cantarell,
-			'Open Sans',
-			'Helvetica Neue',
-			sans-serif;
-		color: #fff;
-		background-color: #000;
 		overflow-x: hidden;
-		line-height: 1.6;
+		position: relative;
+		background-image: 
+			radial-gradient(1px 1px at 10% 10%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 50% 10%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 80% 40%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 90% 60%, rgba(255, 255, 255, 0.4) 1px, transparent 0),
+			radial-gradient(1px 1px at 75% 85%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 30% 80%, rgba(255, 255, 255, 0.2) 1px, transparent 0);
+		background-repeat: repeat;
+		background-size: 250px 250px;
 	}
 
 	/* Main container */
@@ -1671,33 +1633,34 @@
 
 	/* Section styling */
 	.sections-container {
-		position: relative;
 		width: 100%;
-		height: 100%;
-		z-index: 2; /* Ensure sections appear over the background */
+		max-width: 1200px;
+		margin: 0 auto;
+		position: relative;
 	}
 
 	.section {
-		position: relative;
-		min-height: 100vh;
-		width: 100%;
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
-		overflow: hidden;
-		padding: 4rem 2rem;
+		min-height: 100vh;
+		width: 100%;
+		padding: 40px 20px;
+		margin-bottom: 40px;
 		box-sizing: border-box;
-		transition: all 0.5s ease;
-		z-index: 2; /* Ensure section content appears above the background */
+		position: relative;
+		backdrop-filter: blur(3px);
+		border-radius: 8px;
 	}
 
 	.section-content {
-		max-width: 1200px;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		max-width: 800px;
 		width: 100%;
 		margin: 0 auto;
-		position: relative;
-		z-index: 10;
-		padding: 2rem;
+		z-index: 1;
 	}
 
 	/* Glow background effects - preserve existing space theme */
@@ -2017,30 +1980,70 @@
 		align-items: center;
 		justify-content: center;
 		text-align: center;
-		padding: 4rem 2rem;
-		max-width: 900px;
-		margin: 0 auto;
-		min-height: 70vh;
+		padding: 4rem 1rem;
+		min-height: 85vh;
 	}
 	
 	.hero-title {
-		font-size: 3.5rem;
-		font-weight: 800;
-		background: linear-gradient(to right, #ffffff, #a78bfa);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		margin-bottom: 2rem;
+		font-size: 4rem;
+		font-weight: 700;
+		margin-bottom: 1.5rem;
 		line-height: 1.2;
+		letter-spacing: -0.02em;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
 	}
 	
+	.visioncreator-text {
+		font-size: 2.5rem;
+		color: #64ffda;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.5rem;
+		display: block;
+	}
+
+	.visioncreator-main {
+		font-size: 4.5rem;
+		font-weight: 700;
+		color: #ffffff;
+		letter-spacing: 0.03em;
+		margin-bottom: 0.5rem;
+		display: block;
+		text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+		position: relative;
+		overflow: hidden;
+	}
+	
+	.visioncreator-main:after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -100%;
+		width: 50%;
+		height: 100%;
+		background: linear-gradient(
+			to right,
+			rgba(255, 255, 255, 0) 0%,
+			rgba(255, 255, 255, 0.4) 50%,
+			rgba(255, 255, 255, 0) 100%
+		);
+		animation: shine 4s infinite;
+		transform: skewX(-25deg);
+	}
+	
+	@keyframes shine {
+		0% { left: -100%; }
+		20% { left: 100%; }
+		100% { left: 100%; }
+	}
+
 	.hero-description {
-		margin-bottom: 3rem;
-	}
-	
-	.hero-description p {
 		font-size: 1.5rem;
-		color: rgba(255, 255, 255, 0.9);
-		line-height: 1.5;
+		max-width: 700px;
+		margin: 0 auto 2rem;
+		opacity: 0.9;
 		font-weight: 400;
 	}
 	
@@ -2072,8 +2075,17 @@
 			font-size: 2.5rem;
 		}
 		
-		.hero-description p {
+		.visioncreator-text {
+			font-size: 1.8rem;
+		}
+		
+		.visioncreator-main {
+			font-size: 3rem;
+		}
+		
+		.hero-description {
 			font-size: 1.2rem;
+			padding: 0 1rem;
 		}
 		
 		.btn-primary-large {
@@ -2563,7 +2575,7 @@
 	/* Responsive adjustments */
 	@media (max-width: 768px) {
 		.gradient-text {
-			font-size: 3rem;
+			font-size: 2rem;
 		}
 		
 		.subtitle-text {
@@ -3212,135 +3224,194 @@
 	
 	/* Hominio styles */
 	.hominio-container {
-		max-width: 800px;
-		margin: 2rem auto;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		text-align: center;
-	}
-	
-	.hominio-logo {
-		width: 120px;
-		height: 120px;
-		background: linear-gradient(145deg, #7c3aed, #4c1d95);
-		border-radius: 24px;
-		display: flex;
-		align-items: center;
 		justify-content: center;
-		position: relative;
-		margin-bottom: 2rem;
-		box-shadow: 0 15px 30px -10px rgba(124, 58, 237, 0.6);
-		transition: all 0.3s ease;
-		cursor: pointer;
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 2rem;
+		text-align: center;
+		gap: 1.5rem;
 	}
-	
-	.hominio-logo:hover {
-		transform: translateY(-5px) rotate(5deg);
-		box-shadow: 0 20px 40px -10px rgba(124, 58, 237, 0.8);
-	}
-	
-	.logo-h {
-		font-size: 4rem;
-		font-weight: 900;
-		color: white;
-		position: relative;
-		z-index: 2;
-	}
-	
-	.logo-glow {
-		position: absolute;
-		width: 150px;
-		height: 150px;
-		border-radius: 24px;
-		background: radial-gradient(circle, rgba(124, 58, 237, 0.6), rgba(91, 33, 182, 0));
-		filter: blur(20px);
-		opacity: 0.7;
-		z-index: 1;
-		transition: all 0.3s ease;
-	}
-	
-	.hominio-logo:hover .logo-glow {
-		width: 180px;
-		height: 180px;
-		opacity: 0.9;
-	}
-	
-	.hominio-description {
-		max-width: 700px;
-		margin-bottom: 3rem;
-	}
-	
-	.hominio-description h4 {
-		font-size: 1.5rem;
-		font-weight: 700;
+
+	.introducing-text {
 		margin-bottom: 1rem;
-		color: white;
+		width: 100%;
 	}
-	
-	.hominio-description p {
-		font-size: 1.1rem;
-		line-height: 1.7;
-		color: rgba(255, 255, 255, 0.8);
+
+	.introducing-title {
+		font-size: 1.35rem;
+		color: #a8b2d1;
+		font-weight: 500;
+		letter-spacing: 0.5px;
+		margin-bottom: 1rem;
+		position: relative;
+		display: inline-block;
 	}
-	
-	.hominio-stats {
-		display: flex;
-		justify-content: center;
-		gap: 2.5rem;
+
+	.introducing-title::after {
+		content: '';
+		position: absolute;
+		width: 100%;
+		height: 2px;
+		bottom: -5px;
+		left: 0;
+		background: linear-gradient(to right, #64ffda, #0a192f);
+		transform: scaleX(0);
+		transform-origin: bottom right;
+		transition: transform 0.3s;
+	}
+
+	.introducing-title:hover::after {
+		transform: scaleX(1);
+		transform-origin: bottom left;
+	}
+
+	.vision-statement {
 		margin-bottom: 3rem;
+		max-width: 800px;
 	}
-	
-	.stat-item {
-		background: rgba(124, 58, 237, 0.1);
-		border: 1px solid rgba(124, 58, 237, 0.2);
-		border-radius: 16px;
-		padding: 1.5rem;
-		width: 150px;
-		text-align: center;
-		transition: all 0.3s ease;
-	}
-	
-	.stat-item:hover {
-		background: rgba(124, 58, 237, 0.15);
-		border-color: rgba(124, 58, 237, 0.4);
-		transform: translateY(-5px);
-	}
-	
-	.stat-value {
+
+	.vision-intro {
 		font-size: 2rem;
-		font-weight: 700;
-		color: white;
-		margin-bottom: 0.5rem;
-		background: linear-gradient(to right, #7c3aed, #8b5cf6);
+		line-height: 1.4;
+		margin-bottom: 1.5rem;
+		background: linear-gradient(to right, #ffffff, #b3b3ff);
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
 	}
-	
-	.stat-label {
-		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.7);
+
+	.vision-description {
+		font-size: 1.5rem;
+		line-height: 1.5;
+		margin-bottom: 2rem;
+		color: #e0e0ff;
 	}
-	
+
+	.vision-content {
+		font-size: 1.4rem;
+		line-height: 1.6;
+		color: #a78bfa;
+		max-width: 700px;
+		margin: 0 auto;
+	}
+
+	.hominio-logo-large {
+		position: relative;
+		margin: 3rem auto;
+		padding: 2rem;
+		transition: transform 0.3s ease;
+	}
+
+	.hominio-logo-large:hover {
+		transform: scale(1.05);
+	}
+
+	.hominio-title {
+		font-size: 5rem;
+		font-weight: 700;
+		letter-spacing: 0.5rem;
+		margin: 0;
+		background: linear-gradient(to right, #ffffff, #a78bfa);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		position: relative;
+		z-index: 2;
+	}
+
+	.logo-glow-large {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+		background: radial-gradient(circle, rgba(124, 58, 237, 0.6), rgba(59, 130, 246, 0) 70%);
+		filter: blur(25px);
+		z-index: 1;
+	}
+
+	.hominio-description p {
+		font-size: 1.5rem;
+		line-height: 1.5;
+		color: #e0e0ff;
+		max-width: 700px;
+		margin: 0 auto 3rem;
+	}
+
+	.hominio-stats {
+		display: flex;
+		justify-content: center;
+		gap: 3rem;
+		margin-bottom: 3rem;
+	}
+
+	.stat-item {
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 16px;
+		padding: 1.5rem;
+		min-width: 140px;
+		transition: transform 0.3s ease, background 0.3s ease;
+	}
+
+	.stat-item:hover {
+		transform: translateY(-5px);
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.stat-value {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: #a78bfa;
+		margin-bottom: 0.5rem;
+	}
+
+	.stat-label {
+		font-size: 1rem;
+		color: #e0e0ff;
+	}
+
 	.hominio-button {
 		background: linear-gradient(to right, #7c3aed, #8b5cf6);
 		color: white;
-		border: none;
-		padding: 1rem 2rem;
-		border-radius: 30px;
-		font-size: 1.1rem;
+		font-size: 1.2rem;
 		font-weight: 600;
+		padding: 1rem 2rem;
+		border-radius: 50px;
+		border: none;
 		cursor: pointer;
-		transition: all 0.3s ease;
-		box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+		transition: transform 0.3s ease, opacity 0.3s ease;
+		box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
 	}
-	
+
 	.hominio-button:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 12px 25px rgba(124, 58, 237, 0.5);
+		transform: translateY(-2px);
+		opacity: 0.9;
 	}
-	
+
+	@media (max-width: 768px) {
+		.vision-intro {
+			font-size: 1.5rem;
+		}
+
+		.vision-description, .vision-content, .hominio-description p {
+			font-size: 1.2rem;
+		}
+
+		.hominio-title {
+			font-size: 3.5rem;
+		}
+
+		.hominio-stats {
+			flex-direction: column;
+			gap: 1.5rem;
+		}
+	}
+
 	/* Join section styles */
 	.join-showcase {
 		max-width: 900px;
@@ -4022,5 +4093,372 @@
 		}
 	}
 
-	/* Idea cards */
+	/* Vision Section - Black Universe Theme */
+	.vision-section {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 2.5rem;
+		background: rgba(10, 10, 15, 0.7);
+		border: 1px solid rgba(20, 20, 30, 0.4);
+		border-radius: 16px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+		position: relative;
+		overflow: hidden;
+	}
+	
+	/* Star-like dots in background */
+	.vision-section::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-image: 
+			radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 50% 10%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 80% 40%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 75% 85%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 30% 80%, rgba(255, 255, 255, 0.2) 1px, transparent 0);
+		background-repeat: repeat;
+		background-size: 250px 250px;
+		opacity: 0.3;
+		z-index: -1;
+	}
+	
+	.vision-statement {
+		text-align: center;
+		max-width: 700px;
+		margin: 0 auto 2rem;
+	}
+	
+	.vision-statement h2 {
+		font-size: 2.2rem;
+		margin-bottom: 1.5rem;
+		color: #fff;
+		font-weight: 700;
+		letter-spacing: 1px;
+	}
+	
+	.vision-intro {
+		font-size: 1.8rem;
+		font-weight: 600;
+		color: #fff;
+		margin-bottom: 1.5rem;
+		line-height: 1.4;
+	}
+	
+	.vision-intro strong {
+		position: relative;
+	}
+	
+	.vision-intro strong::after {
+		content: '';
+		position: absolute;
+		bottom: -5px;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, rgba(51, 204, 204, 0.5), transparent);
+	}
+	
+	.vision-description {
+		font-size: 1.3rem;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 1rem;
+		line-height: 1.5;
+	}
+	
+	.vision-content {
+		text-align: center;
+		max-width: 700px;
+		margin: 0 auto 2rem;
+		padding: 1.8rem;
+		background: rgba(0, 0, 0, 0.4);
+		border-radius: 12px;
+		border: 1px solid rgba(30, 30, 40, 0.6);
+	}
+	
+	.vision-content p {
+		font-size: 1.2rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.85);
+	}
+	
+	.vision-conclusion {
+		text-align: center;
+		max-width: 700px;
+		margin: 1rem auto 0;
+	}
+	
+	.vision-conclusion p {
+		font-size: 1.5rem;
+		line-height: 1.5;
+		color: #fff;
+		font-weight: 500;
+	}
+	
+	/* Subtle teal accent on the last word */
+	.vision-conclusion p::after {
+		content: '';
+		display: block;
+		width: 80px;
+		height: 2px;
+		background: linear-gradient(90deg, transparent, rgba(51, 204, 204, 0.7), transparent);
+		margin: 1.5rem auto 0;
+	}
+	
+	@media (max-width: 768px) {
+		.vision-section {
+			padding: 1.8rem;
+		}
+		
+		.vision-statement h2 {
+			font-size: 1.8rem;
+		}
+		
+		.vision-intro {
+			font-size: 1.5rem;
+		}
+		
+		.vision-description {
+			font-size: 1.1rem;
+		}
+		
+		.vision-content p {
+			font-size: 1rem;
+		}
+		
+		.vision-conclusion p {
+			font-size: 1.2rem;
+		}
+	}
+
+	h1, h2, h3, h4, h5, h6 {
+		margin: 0 0 1rem 0;
+	}
+
+	h2 {
+		background: linear-gradient(90deg, #fff, rgba(51, 204, 204, 0.8));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		letter-spacing: 1px;
+	}
+
+	/* Update the problem section */
+	.problem-statement {
+		font-size: 3rem;
+		font-weight: 700;
+		line-height: 1.2;
+		margin-bottom: 2rem;
+		text-align: center;
+	}
+
+	/* Add custom styles for the universe theme */
+	.universe-theme button.interactive {
+		background-color: rgba(51, 204, 204, 0.3);
+		color: white;
+		border: 1px solid rgba(51, 204, 204, 0.5);
+		border-radius: 4px;
+		padding: 12px 24px;
+		font-size: 1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		backdrop-filter: blur(5px);
+	}
+
+	.universe-theme button.interactive:hover {
+		background-color: rgba(51, 204, 204, 0.5);
+		transform: translateY(-2px);
+		box-shadow: 0 0 15px rgba(51, 204, 204, 0.3);
+	}
+
+	.universe-theme .section-text {
+		color: rgba(255, 255, 255, 0.9);
+		background: rgba(10, 10, 15, 0.4);
+		padding: 24px;
+		border-radius: 12px;
+		border: 1px solid rgba(30, 40, 50, 0.3);
+	}
+
+	.universe-theme .cta-button button {
+		background: linear-gradient(135deg, rgba(51, 204, 204, 0.5), rgba(20, 184, 166, 0.5));
+		border: 1px solid rgba(51, 204, 204, 0.6);
+		box-shadow: 0 0 20px rgba(51, 204, 204, 0.2);
+	}
+
+	.universe-theme .cta-button button:hover {
+		background: linear-gradient(135deg, rgba(51, 204, 204, 0.7), rgba(20, 184, 166, 0.7));
+		box-shadow: 0 0 25px rgba(51, 204, 204, 0.4);
+	}
+
+	.universe-theme .benefit-card {
+		background: rgba(10, 10, 20, 0.6);
+		border: 1px solid rgba(51, 204, 204, 0.2);
+		transition: all 0.3s ease;
+	}
+	
+	.universe-theme .benefit-card:hover {
+		transform: translateY(-5px);
+		border-color: rgba(51, 204, 204, 0.4);
+		box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+	}
+
+	.universe-theme .benefit-icon {
+		background: rgba(51, 204, 204, 0.2);
+	}
+
+	.universe-theme .reality-statement {
+		border-left: 3px solid rgba(51, 204, 204, 0.6);
+		background: rgba(10, 10, 20, 0.4);
+		padding: 1.5rem 2rem;
+		border-radius: 0 8px 8px 0;
+	}
+
+	.universe-theme .deserving-statement {
+		text-align: center;
+		padding: 1.5rem;
+		background: rgba(10, 10, 20, 0.5);
+		border: 1px solid rgba(51, 204, 204, 0.15);
+		border-radius: 8px;
+	}
+
+	.universe-theme h2 {
+		background: linear-gradient(90deg, #fff, rgba(51, 204, 204, 0.8));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		letter-spacing: 1px;
+	}
+
+	.universe-theme .problem-statement {
+		background: linear-gradient(90deg, #fff, rgba(51, 204, 204, 0.8));
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+
+	/* Add background blur to sections */
+	.landing-page {
+		position: relative;
+		min-height: 100vh;
+		background-color: #000;
+		overflow-x: hidden;
+	}
+
+	/* Add the starry background */
+	.page-container::before {
+		content: '';
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-image: 
+			radial-gradient(1px 1px at 10% 10%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 40% 70%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 50% 10%, rgba(255, 255, 255, 0.2) 1px, transparent 0),
+			radial-gradient(1px 1px at 80% 40%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 90% 60%, rgba(255, 255, 255, 0.4) 1px, transparent 0),
+			radial-gradient(1px 1px at 75% 85%, rgba(255, 255, 255, 0.3) 1px, transparent 0),
+			radial-gradient(1px 1px at 30% 80%, rgba(255, 255, 255, 0.2) 1px, transparent 0);
+		background-repeat: repeat;
+		background-size: 250px 250px;
+		z-index: -1;
+		pointer-events: none;
+	}
+
+	/* Update button styles with teal accents */
+	button.interactive {
+		background-color: #7c3aed;
+		color: white;
+		border: none;
+		padding: 12px 24px;
+		font-weight: 600;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+
+	button.interactive:hover {
+		background-color: #6d28d9;
+		transform: translateY(-2px);
+	}
+
+	/* Update progress bar */
+	.progress-bar {
+		height: 4px;
+		background-color: #7c3aed;
+		transition: width 0.2s ease;
+		z-index: 20;
+	}
+
+	/* Update progress bar */
+	.progress-bar {
+		height: 4px;
+		background: linear-gradient(90deg, rgba(51, 204, 204, 0.7), rgba(51, 204, 204, 0.9)) !important;
+		box-shadow: 0 0 10px rgba(51, 204, 204, 0.5);
+		transition: width 0.2s ease;
+		z-index: 20;
+	}
+
+	.modern-title {
+		font-size: 4rem;
+		font-weight: 800;
+		line-height: 1.1;
+		margin-bottom: 1.5rem;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.subtitle-text {
+		font-size: 2.5rem;
+		color: #64ffda;
+		letter-spacing: 0.05em;
+		margin-bottom: 0.5rem;
+	}
+	
+	.gradient-text {
+		background: linear-gradient(to right, #ffffff, #a78bfa);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+	}
+	
+	@media (max-width: 768px) {
+		.modern-title {
+			font-size: 2.5rem;
+		}
+		
+		.modern-title .visioncreator-main {
+			font-size: 3rem;
+		}
+		
+		.modern-title .gradient-text {
+			font-size: 2rem;
+		}
+		
+		.hero-title span:not(.visioncreator-main) {
+			font-size: 2rem;
+		}
+	}
+
+	.hero-title span:not(.visioncreator-main) {
+		font-size: 3.2rem;
+		font-weight: 600;
+	}
+	
+	.gradient-text {
+		font-size: 3.2rem;
+		font-weight: 600;
+		background: linear-gradient(to right, #ffffff, #a78bfa);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+	}
 </style>

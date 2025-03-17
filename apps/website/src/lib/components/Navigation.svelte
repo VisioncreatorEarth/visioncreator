@@ -60,9 +60,9 @@
 </script>
 
 <header class="nav-glass fixed z-50 w-full">
-	<div class="container mx-auto flex items-center justify-between px-4 py-3">
+	<div class="container mx-auto flex items-center px-4 py-3">
 		{#if navReady}
-			<a href="/" class="group relative flex items-center" in:fly={{ y: -20, duration: 400 }}>
+			<a href="/" class="group relative flex items-center mx-auto" in:fly={{ y: -20, duration: 400 }}>
 				<!-- Logo Image -->
 				<div class="logo-container mr-3 flex items-center">
 					{#if !logoError}
@@ -119,137 +119,9 @@
 					<span class="text-white">Vision</span><span class="text-[#64ffda]">creator</span>
 				</div>
 			</a>
-
-			<div class="flex items-center gap-4">
-				<!-- Desktop Navigation -->
-				<nav class="hidden gap-6 md:flex">
-					<a
-						href="/"
-						class="nav-link relative rounded-md border-b-2 px-3 py-1.5 transition-all duration-200 {isActive(
-							'/'
-						)
-							? 'nav-active border-[#64ffda] font-medium text-white'
-							: 'border-transparent text-gray-300 hover:border-[#64ffda]/50 hover:text-white'}"
-						in:fly={{ y: -20, duration: 400, delay: 100 }}
-					>
-						Home
-					</a>
-					<a
-						href="/presentation"
-						class="nav-link relative rounded-md border-b-2 px-3 py-1.5 transition-all duration-200 {isActive(
-							'/presentation'
-						)
-							? 'nav-active border-[#64ffda] font-medium text-white'
-							: 'border-transparent text-gray-300 hover:border-[#64ffda]/50 hover:text-white'}"
-						in:fly={{ y: -20, duration: 400, delay: 150 }}
-					>
-						Presentation
-					</a>
-					<a
-						href="/join"
-						class="rounded-full border border-[#64ffda]/20 bg-gradient-to-r from-[#f0b429] to-[#64ffda] px-5 py-2 font-medium text-black shadow-lg shadow-[#64ffda]/20 transition-all duration-300 hover:scale-105 hover:opacity-90"
-						in:fly={{ y: -20, duration: 400, delay: 200 }}
-					>
-						Join
-					</a>
-				</nav>
-
-				<!-- Mobile menu button -->
-				<button
-					class="flex h-10 w-10 items-center justify-center text-gray-300 hover:text-white md:hidden"
-					on:click={toggleMenu}
-					aria-label="Toggle menu"
-					in:fade={{ duration: 400, delay: 250 }}
-				>
-					{#if menuOpen}
-						<!-- X icon -->
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/>
-						</svg>
-					{:else}
-						<!-- Hamburger icon -->
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 6h16M4 12h16M4 18h16"
-							/>
-						</svg>
-					{/if}
-				</button>
-			</div>
 		{/if}
 	</div>
-
-	<!-- Mobile Navigation -->
-	{#if menuOpen}
-		<div
-			class="border-t border-gray-800/50 bg-black/80 backdrop-blur-md md:hidden"
-			transition:fade={{ duration: 200 }}
-		>
-			<nav class="container mx-auto flex flex-col gap-4 px-4 py-4">
-				<a
-					href="/"
-					on:click={closeMenu}
-					class="rounded-md px-4 py-2 transition-all {isActive('/')
-						? 'nav-active border-l-2 border-[#64ffda] bg-white/10 pl-3 font-medium text-white'
-						: 'text-gray-300 hover:bg-white/5 hover:text-white'}"
-					in:fly={{ x: -10, duration: 200, delay: 100 }}
-				>
-					Home
-				</a>
-				<a
-					href="/presentation"
-					on:click={closeMenu}
-					class="rounded-md px-4 py-2 transition-all {isActive('/presentation')
-						? 'nav-active border-l-2 border-[#64ffda] bg-white/10 pl-3 font-medium text-white'
-						: 'text-gray-300 hover:bg-white/5 hover:text-white'}"
-					in:fly={{ x: -10, duration: 200, delay: 150 }}
-				>
-					Presentation
-				</a>
-				<a
-					href="/join"
-					on:click={closeMenu}
-					class="mt-2 rounded-full bg-gradient-to-r from-[#f0b429] to-[#64ffda] px-4 py-2 text-center font-medium text-black"
-					in:fly={{ x: -10, duration: 200, delay: 200 }}
-				>
-					Join
-				</a>
-			</nav>
-		</div>
-	{/if}
 </header>
-
-<!-- Simplified overlay -->
-{#if menuOpen}
-	<div
-		class="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
-		on:click={closeMenu}
-		on:keydown={(e) => e.key === 'Escape' && closeMenu()}
-		role="button"
-		tabindex="0"
-		aria-label="Close menu"
-	></div>
-{/if}
 
 <style>
 	/* Logo hover animation */
@@ -286,9 +158,11 @@
 
 	/* Glassmorphism effect for the navigation */
 	.nav-glass {
-		background: rgba(0, 0, 0, 0.6);
-		backdrop-filter: blur(10px);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+		background: rgba(0, 0, 0, 0.75); /* Increased opacity for better visibility */
+		backdrop-filter: blur(12px); /* Increased blur */
+		-webkit-backdrop-filter: blur(12px); /* For Safari */
+		border-bottom: 1px solid rgba(255, 255, 255, 0.15); /* Slightly more visible border */
+		box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3); /* Added subtle shadow */
 	}
 
 	/* Glow effect for active elements */
