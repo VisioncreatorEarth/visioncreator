@@ -207,7 +207,7 @@
 			<!-- Removed logo-title from hero section as it's now in the header -->
 			
 			<p class="main-text" class:visible={textVisible}>
-				Join us in building Hominio, the first community-built and owned startup, powered by Visioncreator
+				Join us in building Hominio, the first community-built and owned startup
 			</p>
 			
 			<div class="introducing" class:visible={textVisible}><span class="smaller-text">INTRODUCING</span> <span class="bigger-text">HOMINIO</span></div>
@@ -360,9 +360,10 @@
 							</div>
 							
 								<div class="budget-result">
-								<div class="budget-amount">€1,500</div>
-									<div class="budget-label">Estimated Budget</div>
-							</div>
+									<div class="budget-amount">€1,500</div>
+									<div class="token-amount">+ 150 VCR</div>
+									<div class="budget-label">Estimated Rewards</div>
+								</div>
 									</div>
 								</div>
 									</div>
@@ -396,47 +397,71 @@
 									</div>
 									
 							<div class="investment-split-section animate-item" style="animation-delay: 0.4s;">
-								<h4 class="animate-fade-up" style="animation-delay: 0.2s;">50/50 Investment Split</h4>
+								<div class="split-header">
+									<div class="split-title-container animate-fade-up" style="animation-delay: 0.2s;">
+										<div class="split-badge">
+											<span class="split-value">50</span>
+											<span class="split-divider">/</span>
+											<span class="split-value">50</span>
+										</div>
+										<h4 class="split-title">Investment Split</h4>
+									</div>
+								</div>
 								<p class="animate-fade-up" style="animation-delay: 0.3s;">Every investment is distributed in a balanced way that ensures both community growth and platform sustainability:</p>
 								
 								<div class="split-visualization animate-fade-up" style="animation-delay: 0.4s;">
 									<div class="split-chart">
 										<div class="split-half community-half">
 											<div class="split-label animate-pulse">50%</div>
+											<div class="community-icon">👥</div>
 											<div class="flow-arrow community-arrow"></div>
-							</div>
+										</div>
+										<div class="split-divider-line">
+											<div class="divider-circle"></div>
+										</div>
 										<div class="split-half platform-half">
 											<div class="split-label animate-pulse">50%</div>
+											<div class="platform-icon">🚀</div>
 											<div class="flow-arrow platform-arrow"></div>
-								</div>
-								</div>
-								
+										</div>
+									</div>
+									
 									<div class="split-destinations">
 										<div class="destination community-pool animate-fade-up" style="animation-delay: 0.5s;">
 											<div class="destination-icon animate-pulse">
 												<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 													<path d="M17 20H7M17 20C18.1046 20 19 19.1046 19 18V9.41421C19 9.149 18.8946 8.89464 18.7071 8.70711L13.2929 3.29289C13.1054 3.10536 12.851 3 12.5858 3H6C4.89543 3 4 3.89543 4 5V18C4 19.1046 4.89543 20 6 20H7M17 20H7M9 16H10M9 13H10M9 10H10M14 16H15M14 13H15M14 10H15" stroke="#5078C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 												</svg>
-								</div>
+											</div>
 											<h4>Community Pool</h4>
 											<p>Funds community projects, rewards contributors, and supports the growth of Hominio ecosystem.</p>
-											<div class="coin-animation community-coins"></div>
-							</div>
-							
+											<div class="destination-progress">
+												<span class="progress-label">Growing</span>
+												<div class="progress-bar">
+													<div class="progress-fill community-fill"></div>
+												</div>
+											</div>
+										</div>
+										
 										<div class="destination platform-team animate-fade-up" style="animation-delay: 0.7s;">
 											<div class="destination-icon animate-pulse">
 												<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 													<path d="M17 20H7V16.7C7 16.0717 7 15.7576 7.10897 15.5123C7.20487 15.2957 7.35993 15.1099 7.55245 14.9759C7.77045 14.824 8.07612 14.7575 8.68745 14.6243L9.21233 14.5139C11.37 14.0492 12.4489 13.8169 13.5202 13.9275C14.4593 14.0271 15.3788 14.3321 16.2144 14.823C16.5251 15.0021 16.828 15.2177 17.4338 15.6488C17.867 15.9651 18.0835 16.1232 18.2275 16.33C18.354 16.5127 18.4431 16.7194 18.4903 16.9376C18.5443 17.1871 18.5443 17.4539 18.5443 17.9874V20H17ZM17 20H21V16.5C21 16.0879 20.614 15.7018 20.0188 15.5442C18.4327 15.1036 16.9781 14.2498 15.8144 13.0862L15.6506 12.9223C15.3992 12.671 15.2735 12.5453 15.1925 12.3913C15.1386 12.2843 15.1034 12.1698 15.0881 12.0519C15.0667 11.8873 15.0901 11.7178 15.1369 11.3789C15.2572 10.5188 15.0586 9.64333 14.5842 8.9238L14.3841 8.6237C13.6252 7.4853 12.4842 6.70528 11.1751 6.40482C10.915 6.3479 10.7849 6.31944 10.6611 6.28117C10.5691 6.25259 10.4796 6.21793 10.3935 6.17746C10.2775 6.12455 10.1686 6.05432 9.95079 5.91385L9.75984 5.79155C9.07478 5.35452 8.27906 5.24389 7.5289 5.48723L6.83946 5.71484C6.3902 5.8481 6.16558 5.91474 5.96247 5.97056C5.69016 6.04501 5.42586 6.14646 5.17436 6.27351C4.98519 6.3708 4.80693 6.49399 4.45042 6.74036L3.36395 7.5C3.13469 7.66765 3.02006 7.75147 2.92893 7.84853C2.7649 8.02539 2.63976 8.23498 2.5584 8.46282C2.5 8.63342 2.5 8.82284 2.5 9.20168V20H6V13C6 12.4477 6.44771 12 7 12C7.55228 12 8 12.4477 8 13V14.9198M12 4.5C10.067 4.5 8.5 3.17392 8.5 1.5C8.5 3.17392 6.933 4.5 5 4.5C6.933 4.5 8.5 5.82608 8.5 7.5C8.5 5.82608 10.067 4.5 12 4.5Z" stroke="#5078C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-									</svg>
-							</div>
+												</svg>
+											</div>
 											<h4>Platform Team</h4>
 											<p>Ensures ongoing development, maintenance, and growth of the Hominio platform.</p>
-											<!-- Removed coin animation -->
-						</div>
+											<div class="destination-progress">
+												<span class="progress-label">Building</span>
+												<div class="progress-bar">
+													<div class="progress-fill platform-fill"></div>
+												</div>
+											</div>
+										</div>
+									</div>
 								</div>
-								</div>
-								</div>
-								
+							</div>
+							
 							<div class="token-benefits animate-item" style="animation-delay: 0.9s;">
 								<div class="benefit animate-fade-up" style="animation-delay: 0.3s;">
 									<div class="benefit-value">100%</div>
@@ -1066,6 +1091,11 @@
 		margin-top: 1rem;
 		animation: fadeUp 0.8s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
 		animation-delay: 0.5s;
+		background: rgba(30, 40, 60, 0.4);
+		border: 1px solid rgba(80, 120, 200, 0.3);
+		border-radius: 12px;
+		padding: 1.5rem;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 	}
 	
 	/* Updated budget amount with deeper blues */
@@ -1074,6 +1104,26 @@
 		font-weight: 700;
 		color: rgba(100, 140, 220, 0.9);
 		margin-bottom: 0.3rem;
+	}
+	
+	.token-amount {
+		font-size: 1.8rem;
+		font-weight: 600;
+		color: #5078C8;
+		margin-bottom: 0.6rem;
+		display: flex;
+		align-items: center;
+	}
+	
+	.token-amount::before {
+		content: '';
+		display: inline-block;
+		width: 20px;
+		height: 20px;
+		background: #5078C8;
+		border-radius: 50%;
+		margin-right: 8px;
+		box-shadow: 0 0 10px rgba(80, 120, 200, 0.6);
 	}
 	
 	.budget-label {
@@ -1147,56 +1197,202 @@
 	/* Investment split section */
 	.investment-split-section {
 		margin: 2rem 0;
+		background: rgba(15, 25, 40, 0.5);
+		border-radius: 16px;
+		padding: 2rem;
+		border: 1px solid rgba(80, 120, 200, 0.2);
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 	}
 	
-	.investment-split-section h4 {
-		font-size: 1.2rem;
-		margin-bottom: 1rem;
+	.split-header {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 1.5rem;
+	}
+	
+	.split-title-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.split-badge {
+		background: linear-gradient(135deg, #3a5a99, #5078C8);
+		padding: 0.5rem 1.5rem;
+		border-radius: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		margin-bottom: 0.8rem;
+		box-shadow: 0 5px 15px rgba(50, 70, 120, 0.4);
+		position: relative;
+		overflow: hidden;
+		transform: perspective(1px) translateZ(0);
+	}
+	
+	.split-badge::before {
+		content: "";
+		position: absolute;
+		z-index: -1;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(135deg, #5078C8, #3a5a99);
+		transform: scaleX(0);
+		transform-origin: 0 50%;
+		transition: transform 0.6s ease-out;
+	}
+	
+	.split-badge:hover::before {
+		transform: scaleX(1);
+	}
+	
+	.split-value {
+		font-size: 1.8rem;
+		font-weight: 700;
+		color: white;
+	}
+	
+	.split-divider {
+		font-size: 1.8rem;
+		font-weight: 700;
+		color: rgba(255, 255, 255, 0.7);
+		margin: 0 0.3rem;
+	}
+	
+	.split-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: white;
+		margin: 0;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 	}
 	
 	/* Split visualization */
 	.split-visualization {
-		margin: 1.5rem 0;
+		margin: 2rem 0;
 	}
 	
 	.split-chart {
 		display: flex;
-		height: 100px;
-		margin-bottom: 1.5rem;
+		height: 150px;
+		margin-bottom: 2.5rem;
+		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+		border-radius: 16px;
+		overflow: hidden;
+		position: relative;
 	}
 	
 	.split-half {
 		width: 50%;
 		height: 100%;
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		position: relative;
+		transition: all 0.3s ease;
+		overflow: hidden;
+	}
+	
+	.split-half::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+		opacity: 0;
+		transition: opacity 0.5s ease;
+	}
+	
+	.split-half:hover {
+		transform: translateY(-5px);
+	}
+	
+	.split-half:hover::before {
+		opacity: 1;
 	}
 	
 	.community-half {
-		background: linear-gradient(to right, rgba(70, 90, 150, 0.3), rgba(80, 120, 200, 0.5));
-		border-radius: 12px 0 0 12px;
+		background: linear-gradient(135deg, rgba(50, 80, 150, 0.5), rgba(80, 120, 200, 0.7));
+		border-radius: 16px 0 0 16px;
 	}
 	
 	.platform-half {
-		background: linear-gradient(to left, rgba(70, 90, 150, 0.3), rgba(80, 120, 200, 0.5));
-		border-radius: 0 12px 12px 0;
+		background: linear-gradient(135deg, rgba(60, 100, 180, 0.7), rgba(40, 70, 130, 0.5));
+		border-radius: 0 16px 16px 0;
+	}
+	
+	.community-icon, .platform-icon {
+		font-size: 2rem;
+		margin-top: 0.5rem;
+		filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+	}
+	
+	.split-divider-line {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 50%;
+		width: 2px;
+		background: rgba(255, 255, 255, 0.3);
+		transform: translateX(-50%);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+	
+	.divider-circle {
+		width: 24px;
+		height: 24px;
+		background: #fff;
+		border-radius: 50%;
+		box-shadow: 0 0 10px rgba(80, 120, 200, 0.6);
+		position: relative;
+	}
+	
+	.divider-circle::before, .divider-circle::after {
+		content: '';
+		position: absolute;
+		background: #5078C8;
+		top: 50%;
+		left: 50%;
+	}
+	
+	.divider-circle::before {
+		width: 12px;
+		height: 2px;
+		transform: translate(-50%, -50%);
+	}
+	
+	.divider-circle::after {
+		width: 2px;
+		height: 12px;
+		transform: translate(-50%, -50%);
 	}
 	
 	.split-label {
-		font-size: 1.8rem;
-		font-weight: 700;
-		color: rgba(255, 255, 255, 0.9);
+		font-size: 2.5rem;
+		font-weight: 800;
+		color: rgba(255, 255, 255, 0.95);
+		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+		margin-bottom: 0.5rem;
 	}
 	
 	.flow-arrow {
 		position: absolute;
-		bottom: -20px;
-		width: 30px;
-		height: 30px;
-		background: rgba(80, 120, 200, 0.6);
+		bottom: -30px;
+		width: 40px;
+		height: 40px;
+		background: rgba(80, 120, 200, 0.8);
 		clip-path: polygon(50% 100%, 0 0, 100% 0);
+		filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.2));
+		z-index: 10;
 	}
 	
 	.community-arrow {
@@ -1211,39 +1407,109 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 2rem;
-		margin-top: 2rem;
+		margin-top: 3rem;
 	}
 	
 	.destination {
-		background: rgba(20, 30, 50, 0.3);
-		border-radius: 12px;
-		padding: 1.5rem;
+		background: rgba(20, 30, 50, 0.5);
+		border-radius: 16px;
+		padding: 2rem;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		text-align: center;
+		border: 1px solid rgba(80, 120, 200, 0.2);
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+		transition: all 0.3s ease;
+		position: relative;
+		overflow: hidden;
+	}
+	
+	.destination::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		right: 0;
+		border-width: 0 40px 40px 0;
+		border-style: solid;
+		border-color: transparent rgba(80, 120, 200, 0.4) transparent transparent;
+		filter: drop-shadow(-5px 5px 5px rgba(0, 0, 0, 0.2));
+	}
+	
+	.destination:hover {
+		transform: translateY(-8px);
+		border-color: rgba(80, 120, 200, 0.5);
+		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
 	}
 	
 	.destination-icon {
-		margin-bottom: 1rem;
-		width: 50px;
-		height: 50px;
+		margin-bottom: 1.5rem;
+		width: 60px;
+		height: 60px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(50, 70, 120, 0.2);
+		background: rgba(50, 70, 120, 0.3);
 		border-radius: 50%;
+		box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+		border: 2px solid rgba(80, 120, 200, 0.3);
 	}
 	
 	.destination h4 {
-		margin: 0 0 0.5rem;
-		font-size: 1.1rem;
+		margin: 0 0 0.8rem;
+		font-size: 1.3rem;
+		font-weight: 600;
 	}
 	
 	.destination p {
-		font-size: 0.9rem;
-		opacity: 0.8;
-		margin: 0;
+		font-size: 0.95rem;
+		line-height: 1.6;
+		opacity: 0.9;
+		margin: 0 0 1.5rem;
+	}
+	
+	.destination-progress {
+		width: 100%;
+		margin-top: auto;
+	}
+	
+	.progress-label {
+		display: block;
+		font-size: 0.85rem;
+		font-weight: 500;
+		color: rgba(120, 160, 240, 0.9);
+		margin-bottom: 0.5rem;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+	}
+	
+	.progress-bar {
+		width: 100%;
+		height: 6px;
+		background: rgba(255, 255, 255, 0.1);
+		border-radius: 3px;
+		overflow: hidden;
+	}
+	
+	.progress-fill {
+		height: 100%;
+		border-radius: 3px;
+		animation: progress-animation 3s ease-out forwards;
+	}
+	
+	.community-fill {
+		background: linear-gradient(to right, #3a5a99, #5078C8);
+		width: 85%;
+	}
+	
+	.platform-fill {
+		background: linear-gradient(to right, #5078C8, #3a5a99);
+		width: 75%;
+	}
+	
+	@keyframes progress-animation {
+		0% { width: 0; }
+		100% { width: 75%; } /* Default width, overridden by inline styles */
 	}
 	
 	/* Token benefits */
@@ -1266,7 +1532,7 @@
 		font-size: 1.2rem;
 		font-weight: 600;
 		margin-bottom: 0.3rem;
-		color: rgba(120, 160, 255, 0.9);
+		color: rgba(120, 160, 240, 0.9);
 	}
 	
 	.benefit-label {
