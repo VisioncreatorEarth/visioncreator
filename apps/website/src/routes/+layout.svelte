@@ -2,7 +2,6 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import Avatar from '$lib/Avatar.svelte';
 	
 	// Logo image handling
 	let logoError = false;
@@ -40,22 +39,11 @@
 	
 	// Content visibility animation
 	let storyVisible = false;
-	let problemVisible = false;
-	let communityVisible = false;
-	
-	// Community avatar seeds (for consistent generation)
-	const communitySeeds = [
-		'Alex', 'Maria', 'Jordan', 'Taylor', 
-		'Robin', 'Casey', 'Jamie', 'Quinn',
-		'Morgan', 'Avery', 'Riley', 'Skyler'
-	];
 	
 	onMount(() => {
 		logoVisible = true;
 		// Add staggered delays for animations
 		setTimeout(() => { storyVisible = true; }, 800);
-		setTimeout(() => { problemVisible = true; }, 1200);
-		setTimeout(() => { communityVisible = true; }, 1600);
 	});
 </script>
 
@@ -122,86 +110,30 @@
 							S
 						</div>
 					</div>
+					<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#5078C8] bg-gray-900">
+						<div class="w-full h-full bg-gray-800 flex items-center justify-center text-white text-base font-bold">
+							Y
+						</div>
+					</div>
 				</div>
 				
 				<div class="md:ml-4">
 					<h2 class="text-2xl font-bold text-white">The Vision Behind Visioncreator</h2>
-					<p class="text-gray-300 text-sm">Founded by Chielo & Sami</p>
+					<p class="text-gray-300 text-sm">Founded by Chielo, Sami & Yvonne</p>
 				</div>
 			</div>
 			
 			<!-- Personal message before the problem statement -->
 			<div class="personal-message mb-10 text-center max-w-3xl mx-auto">
 				<p class="text-lg text-gray-200 italic">
-					"We've both spent years watching talented people pour their hearts into building companies, 
+					"We've spent years watching talented people pour their hearts into building companies, 
 					only to walk away with nothing but a paycheck. Meanwhile, those who had money to invest 
 					reaped the rewards. We knew there had to be a better way."
 				</p>
 				<div class="mt-2 text-[#5078C8] text-sm font-semibold">— Our Inspiration</div>
 			</div>
 			
-			<!-- The Problem Statement - Emphasized -->
-			<div class="problem-statement mb-12 p-6 bg-gradient-to-r from-gray-900/50 to-gray-900/30 border-l-4 border-[#5078C8] rounded-r-md" class:visible={problemVisible}>
-				<h2 class="text-2xl font-bold mb-4 text-white">The Problem</h2>
-				
-				<div class="space-y-4">
-					<div class="flex items-start">
-						<div class="w-8 h-8 mr-4 bg-[#5078C8]/20 rounded-full flex items-center justify-center text-[#5078C8]">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
-							</svg>
-						</div>
-						<p class="text-lg text-gray-200">
-							<span class="font-bold text-white">Exclusive investment opportunities</span> - Regular people are shut out from investing in promising startups.
-						</p>
-					</div>
-					
-					<div class="flex items-start">
-						<div class="w-8 h-8 mr-4 bg-[#5078C8]/20 rounded-full flex items-center justify-center text-[#5078C8]">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
-							</svg>
-						</div>
-						<p class="text-lg text-gray-200">
-							<span class="font-bold text-white">No ownership for contributors</span> - People who build and grow companies rarely own a piece of them.
-						</p>
-					</div>
-					
-					<div class="flex items-start">
-						<div class="w-8 h-8 mr-4 bg-[#5078C8]/20 rounded-full flex items-center justify-center text-[#5078C8]">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
-							</svg>
-						</div>
-						<p class="text-lg text-gray-200">
-							<span class="font-bold text-white">Wealth concentration</span> - Only a handful of people benefit from everyone's collective effort.
-						</p>
-					</div>
-				</div>
-				
-				<div class="mt-6 text-lg text-white">
-					We believe rewards should be <span class="font-bold text-[#5078C8]">fair and distributed</span> to everyone who contributes to a company's success.
-				</div>
-			</div>
-			
-			<!-- Community of Believers -->
-			<div class="community-section" class:visible={communityVisible}>
-				<h3 class="text-xl font-bold mb-6 text-center text-white">Join Our Community of Believers</h3>
-				
-				<div class="flex flex-wrap justify-center gap-4 mb-8">
-					<!-- Community faces using the Avatar component -->
-					{#each communitySeeds.slice(0, 8) as seed, i}
-						<div class="community-avatar" style="animation-delay: {i * 0.1}s">
-							<Avatar {seed} size="52" />
-						</div>
-					{/each}
-				</div>
-				
-				<p class="text-center text-gray-200 max-w-2xl mx-auto">
-					People from all walks of life believe in our vision of a more inclusive, 
-					fair startup ecosystem where everyone can participate and benefit.
-				</p>
-			</div>
+			<!-- The Problem Statement and Community sections have been removed -->
 		</div>
 	</section>
 
@@ -233,38 +165,15 @@
 	}
 	
 	/* Animation classes */
-	.section-container,
-	.problem-statement,
-	.community-section {
+	.section-container {
 		opacity: 0;
 		transform: translateY(20px);
 		transition: all 1s cubic-bezier(0.215, 0.61, 0.355, 1);
 	}
 	
-	.section-container.visible,
-	.problem-statement.visible,
-	.community-section.visible {
+	.section-container.visible {
 		opacity: 1;
 		transform: translateY(0);
-	}
-	
-	/* Community avatar animation */
-	.community-avatar {
-		opacity: 0;
-		transform: scale(0.8);
-		animation: pop-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-		animation-delay: var(--delay, 0s);
-	}
-	
-	@keyframes pop-in {
-		0% { 
-			opacity: 0;
-			transform: scale(0.8);
-		}
-		100% { 
-			opacity: 1;
-			transform: scale(1);
-		}
 	}
 	
 	/* Universe background with stars */
