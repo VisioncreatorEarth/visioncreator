@@ -14,6 +14,7 @@
 	let sectionsVisible = false;
 	let cardsVisible = false;
 	let investVisible = false;
+	let journeyVisible = false;
 	
 	onMount(() => {
 		// Only run on client
@@ -37,10 +38,40 @@
 			setTimeout(() => { buttonsVisible = true; }, 2000);
 			setTimeout(() => { sectionsVisible = true; }, 2500);
 			setTimeout(() => { cardsVisible = true; }, 3000);
-			setTimeout(() => { investVisible = true; }, 3500);
+			
+			// Add scroll animation detection
+			const handleScroll = () => {
+				const scrollPosition = window.scrollY;
+				const windowHeight = window.innerHeight;
+				
+				// Get element positions
+				const investmentSection = document.getElementById('investment-section');
+				const journeySection = document.getElementById('journey-section');
+				
+				if (investmentSection) {
+					const investmentPosition = investmentSection.getBoundingClientRect().top + scrollPosition;
+					if (scrollPosition > investmentPosition - windowHeight * 0.8) {
+						investVisible = true;
+					}
+				}
+				
+				if (journeySection) {
+					const journeyPosition = journeySection.getBoundingClientRect().top + scrollPosition;
+					if (scrollPosition > journeyPosition - windowHeight * 0.8) {
+						journeyVisible = true;
+					}
+				}
+			};
+			
+			// Initial call for elements already in viewport
+			setTimeout(handleScroll, 100);
+			
+			// Add scroll listener
+			window.addEventListener('scroll', handleScroll);
 			
 			return () => {
 				window.removeEventListener('resize', handleResize);
+				window.removeEventListener('scroll', handleScroll);
 			};
 		}
 	});
@@ -207,7 +238,7 @@
 		<div class="hero-wrapper">
 			<!-- Left side with main statement -->
 			<div class="hero-left" class:visible={textVisible}>
-				<h2 class="hero-statement">Innovation belongs to everyone.</h2>
+				<h2 class="hero-statement">Everyone should be part of building the future.</h2>
 				
 				<div class="hero-actions">
 					<a href="/contribute" class="hero-cta primary" class:visible={buttonsVisible}>
@@ -222,7 +253,7 @@
 			<!-- Right side with more detailed content -->
 			<div class="hero-right" class:visible={textVisible}>
 				<h1 class="hero-title">
-					The <span>Ownership</span> Layer
+					The <span>Collective</span> Blueprint
 							</h1>
 							
 				<div class="hero-problem">
@@ -288,9 +319,9 @@
 		<div class="join-banner" class:visible={sectionsVisible}>
 			<div class="join-content">
 				<h2 class="join-heading">JOIN US IN BUILDING OUR FIRST COMMUNITY BUILT AND OWNED STARTUP</h2>
-								</div>
-							</div>
-							
+			</div>
+		</div>
+		
 		<div class="participate-section" class:visible={sectionsVisible}>
 			<h2 class="section-title animate-fade-in">How to Participate</h2>
 			
@@ -499,7 +530,7 @@
 <div id="journey-section" class="journey-section" class:visible={sectionsVisible}>
 	<h2 class="section-title animate-fade-in">Our Journey</h2>
 	
-	<div class="journey-container" class:visible={investVisible}>
+	<div class="journey-container" class:visible={journeyVisible}>
 		<div class="timeline-intro">
 			<p class="timeline-intro-text animate-text">
 				From idea to innovation: The story of how VisionCreator came to be.
@@ -1454,30 +1485,7 @@
 	}
 	
 	/* Investment section */
-	.investment-container {
-		max-width: 1200px;
-		margin: 6rem auto;
-		padding: 0 2rem;
-	}
-	
-	.invest-card {
-		opacity: 0;
-		transform: translateY(20px);
-		transition: all 0.6s ease-out;
-		background: rgba(30, 58, 138, 0.15);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		border-radius: 16px;
-		padding: 3rem;
-		margin-bottom: 4rem;
-	}
-	
-	.invest-card.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	/* Journey section */
-	.journey-section {
+	.investment-section {
 		padding: 5rem 2rem;
 		margin: 0 auto;
 		max-width: 1200px;
@@ -1486,63 +1494,157 @@
 		transition: all 0.8s ease-out;
 	}
 	
-	.journey-section.visible {
+	.investment-section.visible {
 		opacity: 1;
 		transform: translateY(0);
 	}
 	
-	.journey-container {
-		margin-top: 3rem;
+	.split-container {
 		opacity: 0;
 		transform: translateY(20px);
 		transition: all 0.5s ease-out 0.2s;
 	}
 	
-	.journey-container.visible {
+	.split-container.visible {
 		opacity: 1;
 		transform: translateY(0);
 	}
 	
-	.timeline-intro {
+	.split-header {
+		margin-bottom: 3rem;
 		text-align: center;
-		max-width: 800px;
-		margin: 0 auto 6rem;
 	}
 	
-	.timeline-intro-text {
-		font-size: 1.4rem;
-		line-height: 1.7;
-		color: rgba(255, 255, 255, 0.9);
-		margin-bottom: 2rem;
-	}
-	
-	.timeline-conclusion {
-		text-align: center;
-		margin: 4rem auto 2rem;
-		max-width: 800px;
-	}
-	
-	.timeline-conclusion-text {
-		font-size: 1.4rem;
-		line-height: 1.7;
-		padding: 2rem;
-		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
-		border-radius: 12px;
-		box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
-		border: 1px solid rgba(59, 130, 246, 0.3);
+	.split-title {
+		font-size: 2.2rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
 		color: white;
-		font-weight: 600;
-		margin-top: 2rem;
-		animation: pulse-text 3s ease infinite;
 	}
 	
-	@keyframes pulse-text {
-		0%, 100% { 
-			box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
-		}
-		50% { 
-			box-shadow: 0 15px 35px rgba(59, 130, 246, 0.5);
-		}
+	.split-description {
+		font-size: 1.1rem;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.8);
+		max-width: 800px;
+		margin: 0 auto;
+	}
+	
+	.split-chart {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2rem;
+		margin-bottom: 3rem;
+	}
+	
+	.split-half {
+		background: rgba(30, 58, 138, 0.15);
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		border-radius: 12px;
+		padding: 2rem;
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		animation: fadeIn 0.6s ease-out forwards;
+		animation-delay: calc(var(--index, 0) * 0.2s);
+		opacity: 0;
+	}
+	
+	.split-half:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+		border-color: rgba(59, 130, 246, 0.3);
+	}
+	
+	.split-half.community {
+		--index: 1;
+	}
+	
+	.split-half.platform {
+		--index: 2;
+	}
+	
+	.split-label {
+		display: inline-block;
+		padding: 0.4rem 1rem;
+		background: rgba(59, 130, 246, 0.1);
+		border-radius: 20px;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: #60A5FA;
+		margin-bottom: 1rem;
+	}
+	
+	.split-percentage {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: white;
+		margin-bottom: 1.5rem;
+	}
+	
+	.split-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.8rem;
+	}
+	
+	.split-item {
+		position: relative;
+		padding-left: 1.5rem;
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 1rem;
+	}
+	
+	.split-item:before {
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 0.5rem;
+		width: 0.5rem;
+		height: 0.5rem;
+		background: #3B82F6;
+		border-radius: 50%;
+	}
+	
+	.investment-info {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 2rem;
+	}
+	
+	.info-card {
+		background: rgba(30, 58, 138, 0.15);
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		border-radius: 12px;
+		padding: 1.5rem;
+		text-align: center;
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		animation: fadeIn 0.6s ease-out forwards;
+		animation-delay: calc(var(--index, 0) * 0.2s);
+		opacity: 0;
+	}
+	
+	.info-card:nth-child(1) {
+		--index: 3;
+	}
+	
+	.info-card:nth-child(2) {
+		--index: 4;
+	}
+	
+	.info-card:nth-child(3) {
+		--index: 5;
+	}
+	
+	.info-card:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+		border-color: rgba(59, 130, 246, 0.3);
+	}
+	
+	.info-title {
+		font-size: 1.2rem;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 1rem;
 	}
 	
 	/* Timeline styles */
@@ -1556,21 +1658,14 @@
 		top: 0;
 		bottom: 0;
 		left: 50%;
-		width: 4px;
+		width: 6px;
 		background: linear-gradient(to bottom, #3B82F6, #60A5FA);
 		transform: translateX(-50%);
 		z-index: 1;
-		/* Create snake effect with curved path */
-		animation: snake-path 0.5s ease-in-out infinite alternate;
-		animation-play-state: paused;
+		border-radius: 6px;
 	}
 	
-	@keyframes snake-path {
-		0% { transform: translateX(-50%) translateY(0); }
-		100% { transform: translateX(-50%) translateY(5px); }
-	}
-	
-	.timeline-section.visible .timeline-path {
+	.timeline-section-visible .timeline-path {
 		animation-play-state: running;
 	}
 	
@@ -1580,10 +1675,12 @@
 		position: absolute;
 		top: 40px;
 		right: 50%;
-		width: 100px;
-		height: 4px;
-		background: linear-gradient(to right, transparent, #3B82F6);
+		width: 120px;
+		height: 6px;
+		background: #3B82F6;
 		z-index: 1;
+		border-radius: 6px;
+		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
 	}
 	
 	.timeline-node:nth-child(even)::before {
@@ -1591,10 +1688,76 @@
 		position: absolute;
 		top: 40px;
 		left: 50%;
-		width: 100px;
-		height: 4px;
-		background: linear-gradient(to left, transparent, #3B82F6);
+		width: 120px;
+		height: 6px;
+		background: #3B82F6;
 		z-index: 1;
+		border-radius: 6px;
+		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+	}
+	
+	/* Add curved connectors between nodes */
+	.timeline-node:nth-child(1)::after {
+		content: "";
+		position: absolute;
+		top: 150px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 120px;
+		height: 80px;
+		border-right: 6px solid #3B82F6;
+		border-top: 6px solid #3B82F6;
+		border-top-right-radius: 60px;
+		z-index: 0;
+	}
+	
+	.timeline-node:nth-child(2)::after {
+		content: "";
+		position: absolute;
+		top: 150px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 120px;
+		height: 80px;
+		border-left: 6px solid #3B82F6;
+		border-top: 6px solid #3B82F6;
+		border-top-left-radius: 60px;
+		z-index: 0;
+	}
+	
+	.timeline-node:nth-child(3)::after {
+		content: "";
+		position: absolute;
+		top: 150px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 120px;
+		height: 80px;
+		border-right: 6px solid #3B82F6;
+		border-top: 6px solid #3B82F6;
+		border-top-right-radius: 60px;
+		z-index: 0;
+	}
+	
+	.timeline-node:nth-child(4)::after {
+		content: "";
+		position: absolute;
+		top: 150px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 120px;
+		height: 80px;
+		border-left: 6px solid #3B82F6;
+		border-top: 6px solid #3B82F6;
+		border-top-left-radius: 60px;
+		z-index: 0;
+	}
+	
+	/* Remove curved connectors on mobile */
+	@media (max-width: 992px) {
+		.timeline-node::after {
+			display: none;
+		}
 	}
 	
 	.timeline-node {
@@ -1868,6 +2031,177 @@
 		
 		.split-percentage {
 			font-size: 2rem;
+		}
+	}
+	
+	/* Journey section */
+	.journey-section {
+		padding: 5rem 2rem;
+		margin: 0 auto;
+		max-width: 1200px;
+		opacity: 0;
+		transform: translateY(30px);
+		transition: all 0.8s ease-out;
+	}
+	
+	.journey-section.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.journey-container {
+		margin-top: 3rem;
+		opacity: 0;
+		transform: translateY(20px);
+		transition: all 0.5s ease-out 0.2s;
+	}
+	
+	.journey-container.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.timeline-intro {
+		text-align: center;
+		max-width: 800px;
+		margin: 0 auto 6rem;
+	}
+	
+	.timeline-intro-text {
+		font-size: 1.4rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 2rem;
+	}
+	
+	.timeline-conclusion {
+		text-align: center;
+		margin: 4rem auto 2rem;
+		max-width: 800px;
+	}
+	
+	.timeline-conclusion-text {
+		font-size: 1.4rem;
+		line-height: 1.7;
+		padding: 2rem;
+		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
+		border-radius: 12px;
+		box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
+		border: 1px solid rgba(59, 130, 246, 0.3);
+		color: white;
+		font-weight: 600;
+		margin-top: 2rem;
+		animation: pulse-text 3s ease infinite;
+	}
+	
+	@keyframes pulse-text {
+		0%, 100% { 
+			box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
+		}
+		50% { 
+			box-shadow: 0 15px 35px rgba(59, 130, 246, 0.5);
+		}
+	}
+	
+	/* Animation utility classes */
+	.animate-text {
+		opacity: 0;
+		transform: translateY(20px);
+		animation: fadeIn 1s ease-out forwards;
+	}
+	
+	.animate-text.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	@keyframes fadeUpIn {
+		0% {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		100% {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+	
+	.timeline-node:nth-child(even)::before {
+		content: "";
+		position: absolute;
+		top: 40px;
+		left: 50%;
+		width: 120px;
+		height: 6px;
+		background: #3B82F6;
+		z-index: 1;
+		border-radius: 6px;
+		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+	}
+	
+	.timeline-section-visible .timeline-path {
+		animation-play-state: running;
+	}
+	
+	.journey-container.visible .timeline-path {
+		animation-play-state: running;
+	}
+	
+	.journey-container.visible .timeline-node {
+		animation: fadeUpIn 0.8s forwards;
+		animation-delay: calc(var(--index, 0) * 0.2s);
+		opacity: 0;
+	}
+	
+	.journey-container .timeline-node:nth-child(1) {
+		--index: 1;
+	}
+	
+	.journey-container .timeline-node:nth-child(2) {
+		--index: 2;
+	}
+	
+	.journey-container .timeline-node:nth-child(3) {
+		--index: 3;
+	}
+	
+	.journey-container .timeline-node:nth-child(4) {
+		--index: 4;
+	}
+	
+	.journey-container .timeline-node:nth-child(5) {
+		--index: 5;
+	}
+	
+	/* Improved join banner styles */
+	.join-banner {
+		margin: 6rem auto;
+		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
+		padding: 3rem 2rem;
+		border-radius: 16px;
+		text-align: center;
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+		max-width: 1400px;
+	}
+	
+	.join-heading {
+		font-size: 2.8rem;
+		font-weight: 800;
+		color: white;
+		margin: 0;
+		line-height: 1.3;
+		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+	}
+	
+	@media (max-width: 768px) {
+		.join-heading {
+			font-size: 2.2rem;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.join-heading {
+			font-size: 1.8rem;
 		}
 	}
 </style>
