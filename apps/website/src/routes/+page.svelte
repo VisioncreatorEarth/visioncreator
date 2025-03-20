@@ -495,42 +495,122 @@
 							</div>
 	</main>
 
-<!-- Personal Journey Section -->
+<!-- Personal Journey Section - Redesigned for visual storytelling -->
 <div id="journey-section" class="journey-section" class:visible={sectionsVisible}>
-	<h2 class="section-title animate-fade-in">My Personal Journey</h2>
+	<h2 class="section-title animate-fade-in">Our Journey</h2>
 	
 	<div class="journey-container" class:visible={investVisible}>
-		<div class="journey-content">
-			<div class="journey-meeting">
-				<h3 class="journey-subtitle">Meeting Sami</h3>
-				<p class="journey-text">
-					When I first met Sami, I immediately recognized his brilliant mind and passion for technology. 
-					As we talked about the problems in the startup world, we realized we shared the same vision: 
-					creating something that would let everyone build and own the future together.
-				</p>
-				<p class="journey-text">
-					Sami showed me how we could create a platform where ideas are valued, where contribution leads 
-					to ownership, and where communities can build businesses together. His vision for bringing people 
-					together to solve problems collaboratively resonated deeply with me.
-				</p>
+		<div class="timeline-intro">
+			<p class="timeline-intro-text animate-text">
+				From idea to innovation: The story of how VisionCreator came to be.
+			</p>
+		</div>
+		
+		<div class="timeline-container">
+			<!-- Vertical timeline track -->
+			<div class="timeline-path"></div>
+			
+			<!-- Chielo's beginning -->
+			<div class="timeline-node">
+				<div class="timeline-avatar">
+					<img src="/images/chielo_-43.JPG" alt="Chielo" />
+				</div>
+				<div class="timeline-pulse"></div>
+				<div class="timeline-content">
+					<div class="timeline-date">The Beginning</div>
+					<h3 class="timeline-title">The Dream</h3>
+					<p class="timeline-text">
+						At 16, I dreamed of building something meaningful but lacked resources and connections. 
+						Great ideas kept coming, but they remained just ideas.
+					</p>
+					<p class="timeline-highlight">
+						"There has to be a better way to bring ideas to life."
+					</p>
+				</div>
 			</div>
 			
-			<div class="journey-vision">
-				<h3 class="journey-subtitle">Building Something Different</h3>
-				<p class="journey-text">
-					Together, we're building a new kind of platform - one that puts community at its heart. 
-					We believe that innovation thrives when more people can participate, when contributors become 
-					owners, and when ideas can come from anywhere.
-				</p>
-				<p class="journey-text">
-					Hominio is just the beginning. It's our first community-built and owned startup, but we're 
-					creating a new model that can be applied to many more ventures in the future.
-				</p>
+			<!-- Meeting Sami -->
+			<div class="timeline-node">
+				<div class="timeline-avatar">
+					<div class="timeline-avatar-placeholder">S</div>
+				</div>
+				<div class="timeline-pulse"></div>
+				<div class="timeline-content">
+					<div class="timeline-date">The Catalyst</div>
+					<h3 class="timeline-title">Meeting Sami</h3>
+					<p class="timeline-text">
+						Meeting Sami changed everything. A tech innovator with industry experience, 
+						we connected over shared frustrations with how startups operate.
+					</p>
+					<p class="timeline-highlight">
+						"What if everyone who helps build something actually owns a piece of it?"
+					</p>
+				</div>
 			</div>
 			
-			<div class="journey-invitation">
-				<p class="journey-highlight">Join us in building this new world of collaborative innovation and shared ownership.</p>
+			<!-- Meeting Yvonne -->
+			<div class="timeline-node">
+				<div class="timeline-avatar">
+					<div class="timeline-avatar-placeholder">Y</div>
+				</div>
+				<div class="timeline-pulse"></div>
+				<div class="timeline-content">
+					<div class="timeline-date">The Structure</div>
+					<h3 class="timeline-title">German Connection</h3>
+					<p class="timeline-text">
+						Yvonne brought crucial bureaucratic expertise and became our guide through Germany's complex 
+						regulatory framework, helping position our vision within the established system.
+					</p>
+					<p class="timeline-highlight">
+						"Innovation needs structure to thrive."
+					</p>
+				</div>
 			</div>
+			
+			<!-- Founding VisionCreator -->
+			<div class="timeline-node">
+				<div class="timeline-avatar">
+					<div class="timeline-avatar-placeholder">VC</div>
+				</div>
+				<div class="timeline-pulse"></div>
+				<div class="timeline-content">
+					<div class="timeline-date">The Launch</div>
+					<h3 class="timeline-title">VisionCreator Born</h3>
+					<p class="timeline-text">
+						In early 2023, we made it official. VisionCreator was founded with a simple but revolutionary principle: 
+						everyone who contributes gets ownership.
+					</p>
+					<p class="timeline-highlight">
+						Building a world where contribution determines your opportunity to own the future.
+					</p>
+				</div>
+			</div>
+			
+			<!-- Meeting Ceva -->
+			<div class="timeline-node">
+				<div class="timeline-avatar">
+					<div class="timeline-avatar-placeholder">C</div>
+				</div>
+				<div class="timeline-pulse"></div>
+				<div class="timeline-content">
+					<div class="timeline-date">The Foundation</div>
+					<h3 class="timeline-title">Ceva Completes Us</h3>
+					<p class="timeline-text">
+						Ceva's expertise in governance systems completed our founding team, creating the proposal and voting 
+						system that enables transparent, collective decision-making.
+					</p>
+					<p class="timeline-highlight">
+						"Good governance channels different perspectives toward better outcomes."
+					</p>
+				</div>
+			</div>
+		</div>
+		
+		<div class="timeline-conclusion">
+			<p class="timeline-conclusion-text animate-pulse-text">
+				Hominio is our first community-built and owned startup. Join us in building 
+				a new world of collaborative innovation and shared ownership!
+			</p>
 		</div>
 	</div>
 </div>
@@ -1398,312 +1478,6 @@
 	
 	/* Journey section */
 	.journey-section {
-		max-width: 1200px;
-		margin: 8rem auto;
-		padding: 0 2rem;
-	}
-	
-	.journey-title {
-		font-size: 2.5rem;
-		font-weight: 700;
-		text-align: center;
-		margin-bottom: 4rem;
-		position: relative;
-	}
-
-	.journey-title::after {
-		content: "";
-		position: absolute;
-		bottom: -15px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 100px;
-		height: 4px;
-		background: linear-gradient(90deg, #3B82F6, #93C5FD);
-		border-radius: 2px;
-	}
-	
-	/* Investment Section Styling */
-	.investment-section {
-		opacity: 0;
-		transform: translateY(30px);
-		transition: all 0.8s ease-out;
-		padding: 4rem 2rem;
-		max-width: 1400px;
-		margin: 0 auto 5rem;
-	}
-	
-	.investment-section.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.split-container {
-		opacity: 0;
-		transform: translateY(20px);
-		transition: all 0.6s ease-out;
-		transition-delay: 0.2s;
-	}
-	
-	.split-container.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.split-header {
-		text-align: center;
-		margin-bottom: 3rem;
-	}
-	
-	.split-title {
-		font-size: 1.8rem;
-		font-weight: 600;
-		color: white;
-		margin-bottom: 1rem;
-	}
-	
-	.split-description {
-		font-size: 1.1rem;
-		color: rgba(255, 255, 255, 0.8);
-		max-width: 700px;
-		margin: 0 auto;
-	}
-	
-	.split-chart {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 2rem;
-		margin-bottom: 3rem;
-	}
-	
-	.split-half {
-		position: relative;
-		border-radius: 12px;
-		padding: 2.5rem;
-		text-align: center;
-		background: rgba(30, 58, 138, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		transition: transform 0.3s ease, box-shadow 0.3s ease;
-	}
-	
-	.split-half:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);
-		border-color: rgba(59, 130, 246, 0.3);
-	}
-	
-	.split-half.community {
-		background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
-		border: 1px solid rgba(59, 130, 246, 0.3);
-	}
-	
-	.split-half.platform {
-		background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(67, 56, 202, 0.1));
-		border: 1px solid rgba(79, 70, 229, 0.3);
-	}
-	
-	.split-label {
-		font-size: 1.4rem;
-		font-weight: 600;
-		margin-bottom: 0.75rem;
-		color: white;
-	}
-	
-	.split-percentage {
-		font-size: 3.5rem;
-		font-weight: 800;
-		margin-bottom: 1.5rem;
-	}
-	
-	.split-half.community .split-percentage {
-		color: #3B82F6;
-	}
-	
-	.split-half.platform .split-percentage {
-		color: #6366F1;
-	}
-	
-	.split-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		text-align: left;
-	}
-	
-	.split-item {
-		font-size: 1.1rem;
-		color: rgba(255, 255, 255, 0.8);
-		padding-left: 1.5rem;
-		position: relative;
-	}
-	
-	.split-item:before {
-		content: "•";
-		position: absolute;
-		left: 0;
-		color: #3B82F6;
-		font-weight: bold;
-	}
-	
-	.investment-info {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-		gap: 2rem;
-		margin-top: 3rem;
-	}
-	
-	.info-card {
-		background: rgba(30, 41, 59, 0.4);
-		border: 1px solid rgba(255, 255, 255, 0.05);
-		border-radius: 12px;
-		padding: 2rem;
-		text-align: center;
-		transition: all 0.3s ease;
-	}
-	
-	.info-card:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-		background: rgba(30, 41, 59, 0.6);
-		border-color: rgba(255, 255, 255, 0.1);
-	}
-	
-	.info-title {
-		font-size: 1.1rem;
-		font-weight: 600;
-		color: #3B82F6;
-		margin-bottom: 1rem;
-	}
-	
-	@media (max-width: 768px) {
-		.split-chart {
-			grid-template-columns: 1fr;
-		}
-	}
-	
-	/* Responsive adjustments */
-	@media (max-width: 1024px) {
-		.hero-wrapper {
-			grid-template-columns: 1fr;
-			padding: 4rem 2rem;
-		}
-		
-		.hero-left,
-		.hero-right {
-			padding-right: 0;
-		}
-		
-		.hero-statement {
-			font-size: 3.5rem;
-		}
-		
-		.process-flow {
-			grid-template-columns: 1fr;
-		}
-	}
-	
-	@media (max-width: 768px) {
-		.hero-statement {
-			font-size: 2.8rem;
-		}
-		
-		.hero-title {
-			font-size: 2rem;
-		}
-		
-		.section-title {
-			font-size: 2rem;
-		}
-		
-		.hominio-title {
-			font-size: 2.5rem;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.hero-statement {
-			font-size: 2.2rem;
-		}
-		
-		.hero-title {
-		font-size: 1.8rem;
-		}
-		
-		.hero-actions {
-		flex-direction: column;
-		}
-		
-		.section-title {
-		font-size: 1.8rem;
-		}
-		
-		.hominio-title {
-			font-size: 2rem;
-		}
-	}
-	
-	/* JOIN US Banner - Subtle Design */
-	.join-banner {
-		position: relative;
-		width: 100%;
-		background-color: transparent; /* Removed blue background */
-		margin: 6rem 0;
-		padding: 0;
-		opacity: 0;
-		transform: translateY(30px);
-		transition: opacity 0.6s ease, transform 0.6s ease;
-	}
-	
-	.join-banner.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.join-content {
-		position: relative;
-		padding: 2rem;
-		max-width: 100%;
-		margin: 0 auto;
-		text-align: center;
-	}
-	
-	.join-heading {
-		font-size: 3.25rem;
-		font-weight: 700;
-		margin: 0;
-		color: white;
-		letter-spacing: 0;
-		line-height: 1.2;
-		max-width: 1400px;
-		margin: 0 auto;
-		text-transform: uppercase; /* To ensure all caps as in image */
-	}
-	
-	@media (max-width: 768px) {
-		.join-heading {
-			font-size: 1.75rem;
-		}
-		
-		.join-content {
-			padding: 1.5rem;
-		}
-	}
-	
-	/* Media queries */
-	@media (max-width: 1200px) {
-		/* Responsive rules... */
-	}
-	
-	@media (max-width: 768px) {
-		/* Responsive rules... */
-	}
-	
-	@media (max-width: 480px) {
-		/* Responsive rules... */
-	}
-	
-	/* Personal Journey Section Styles */
-	.journey-section {
 		padding: 5rem 2rem;
 		margin: 0 auto;
 		max-width: 1200px;
@@ -1729,94 +1503,372 @@
 		transform: translateY(0);
 	}
 	
-	.journey-content {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 3rem;
-	}
-	
-	.journey-meeting, .journey-vision {
-		background: rgba(15, 23, 42, 0.6);
-		border-radius: 12px;
-		padding: 2rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-		backdrop-filter: blur(10px);
-	}
-	
-	.journey-subtitle {
-		font-size: 1.8rem;
-		font-weight: 700;
-		margin-bottom: 1.5rem;
-		color: #3B82F6;
-		position: relative;
-	}
-	
-	.journey-subtitle::after {
-		content: "";
-		position: absolute;
-		bottom: -8px;
-		left: 0;
-		width: 40px;
-		height: 3px;
-		background: linear-gradient(90deg, #3B82F6, #93C5FD);
-		border-radius: 2px;
-	}
-	
-	.journey-text {
-		font-size: 1.1rem;
-		line-height: 1.7;
-		color: rgba(255, 255, 255, 0.8);
-		margin-bottom: 1.5rem;
-	}
-	
-	.journey-text:last-child {
-		margin-bottom: 0;
-	}
-	
-	.journey-invitation {
+	.timeline-intro {
 		text-align: center;
-		margin-top: 2rem;
+		max-width: 800px;
+		margin: 0 auto 6rem;
 	}
 	
-	.journey-highlight {
+	.timeline-intro-text {
 		font-size: 1.4rem;
-		font-weight: 600;
-		line-height: 1.5;
-		color: white;
-		padding: 1.5rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 2rem;
+	}
+	
+	.timeline-conclusion {
+		text-align: center;
+		margin: 4rem auto 2rem;
+		max-width: 800px;
+	}
+	
+	.timeline-conclusion-text {
+		font-size: 1.4rem;
+		line-height: 1.7;
+		padding: 2rem;
 		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
 		border-radius: 12px;
 		box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
 		border: 1px solid rgba(59, 130, 246, 0.3);
+		color: white;
+		font-weight: 600;
+		margin-top: 2rem;
+		animation: pulse-text 3s ease infinite;
 	}
 	
-	@media (min-width: 768px) {
-		.journey-content {
-			grid-template-columns: 1fr 1fr;
+	@keyframes pulse-text {
+		0%, 100% { 
+			box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
 		}
-		
-		.journey-invitation {
-			grid-column: span 2;
+		50% { 
+			box-shadow: 0 15px 35px rgba(59, 130, 246, 0.5);
 		}
 	}
 	
-	@media (max-width: 767px) {
-		.journey-section {
-			padding: 4rem 1.5rem;
+	/* Timeline styles */
+	.timeline-container {
+		position: relative;
+		margin: 4rem auto;
+	}
+	
+	.timeline-path {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 50%;
+		width: 4px;
+		background: linear-gradient(to bottom, #3B82F6, #60A5FA);
+		transform: translateX(-50%);
+		z-index: 1;
+		/* Create snake effect with curved path */
+		animation: snake-path 0.5s ease-in-out infinite alternate;
+		animation-play-state: paused;
+	}
+	
+	@keyframes snake-path {
+		0% { transform: translateX(-50%) translateY(0); }
+		100% { transform: translateX(-50%) translateY(5px); }
+	}
+	
+	.timeline-section.visible .timeline-path {
+		animation-play-state: running;
+	}
+	
+	/* Create snake-like path with pseudo-elements */
+	.timeline-node:nth-child(odd)::before {
+		content: "";
+		position: absolute;
+		top: 40px;
+		right: 50%;
+		width: 100px;
+		height: 4px;
+		background: linear-gradient(to right, transparent, #3B82F6);
+		z-index: 1;
+	}
+	
+	.timeline-node:nth-child(even)::before {
+		content: "";
+		position: absolute;
+		top: 40px;
+		left: 50%;
+		width: 100px;
+		height: 4px;
+		background: linear-gradient(to left, transparent, #3B82F6);
+		z-index: 1;
+	}
+	
+	.timeline-node {
+		position: relative;
+		margin-bottom: 8rem;
+		z-index: 2;
+	}
+	
+	.timeline-node:nth-child(odd) {
+		text-align: right;
+		padding-right: calc(50% + 2rem);
+		padding-left: 0;
+	}
+	
+	.timeline-node:nth-child(even) {
+		text-align: left;
+		padding-left: calc(50% + 2rem);
+		padding-right: 0;
+	}
+	
+	.timeline-node:last-child {
+		margin-bottom: 0;
+	}
+	
+	.timeline-content {
+		background: rgba(15, 23, 42, 0.6);
+		border-radius: 12px;
+		padding: 2rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+		backdrop-filter: blur(10px);
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		display: inline-block;
+		max-width: 100%;
+	}
+	
+	.timeline-content:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+	}
+	
+	.timeline-node:nth-child(odd) .timeline-content {
+		border-right: 4px solid #3B82F6;
+	}
+	
+	.timeline-node:nth-child(even) .timeline-content {
+		border-left: 4px solid #3B82F6;
+	}
+	
+	/* Use same color for all nodes for consistency, with subtle variations */
+	.timeline-node .timeline-content {
+		border-color: #3B82F6;
+	}
+	
+	.timeline-date {
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.6);
+		margin-bottom: 0.5rem;
+	}
+	
+	.timeline-title {
+		font-size: 1.6rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+		color: white;
+	}
+	
+	/* Use consistent color scheme for all titles */
+	.timeline-node .timeline-title {
+		color: #3B82F6;
+	}
+	
+	.timeline-text {
+		font-size: 1.1rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.8);
+		margin-bottom: 1rem;
+	}
+	
+	.timeline-quote {
+		font-style: italic;
+		color: rgba(255, 255, 255, 0.9);
+		border-left: 3px solid #3B82F6;
+		padding-left: 1rem;
+		margin:.5rem 0 1.5rem;
+	}
+	
+	.timeline-highlight {
+		color: #60A5FA;
+		font-weight: 600;
+	}
+	
+	.timeline-avatar {
+		position: absolute;
+		top: 0;
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		border: 4px solid #3B82F6;
+		background: rgba(30, 58, 138, 0.3);
+		overflow: hidden;
+		z-index: 3;
+		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+	}
+	
+	/* Use consistent color for all avatars */
+	.timeline-node .timeline-avatar {
+		border-color: #3B82F6;
+	}
+	
+	.timeline-node:nth-child(odd) .timeline-avatar {
+		right: calc(50% - 40px);
+	}
+	
+	.timeline-node:nth-child(even) .timeline-avatar {
+		left: calc(50% - 40px);
+	}
+	
+	.timeline-avatar img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	
+	.timeline-avatar-placeholder {
+		width: 100%;
+		height: 100%;
+		background: rgba(30, 58, 138, 0.3);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 2rem;
+		font-weight: 700;
+		color: white;
+	}
+	
+	/* Consistent blue color for all placeholders */
+	.timeline-node .timeline-avatar-placeholder {
+		color: #60A5FA;
+	}
+	
+	.timeline-pulse {
+		position: absolute;
+		top: 40px;
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: white;
+		z-index: 4;
+	}
+	
+	.timeline-node:nth-child(odd) .timeline-pulse {
+		right: calc(50% - 8px);
+	}
+	
+	.timeline-node:nth-child(even) .timeline-pulse {
+		left: calc(50% - 8px);
+	}
+	
+	.timeline-pulse::after {
+		content: "";
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.4);
+		animation: pulse-timeline 2s infinite;
+	}
+	
+	@keyframes pulse-timeline {
+		0% { transform: scale(1); opacity: 1; }
+		100% { transform: scale(4); opacity: 0; }
+	}
+	
+	/* Media queries for timeline */
+	@media (max-width: 992px) {
+		.timeline-path {
+			left: 40px;
 		}
 		
-		.journey-subtitle {
-			font-size: 1.6rem;
+		.timeline-node {
+			margin-bottom: 6rem;
+			padding-left: 100px !important;
+			padding-right: 0 !important;
+			text-align: left !important;
 		}
 		
-		.journey-text {
+		.timeline-avatar {
+			left: 0 !important;
+			right: auto !important;
+		}
+		
+		.timeline-pulse {
+			left: 32px !important;
+			right: auto !important;
+		}
+		
+		.timeline-content {
+			border-left: 4px solid #3B82F6 !important;
+			border-right: none !important;
+		}
+		
+		/* Remove the snake-like effect on small screens */
+		.timeline-node::before {
+			display: none;
+		}
+	}
+	
+	@media (max-width: 768px) {
+		.split-chart {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+		
+		.investment-info {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+		
+		.timeline-intro-text,
+		.timeline-conclusion-text {
+			font-size: 1.2rem;
+		}
+		
+		.timeline-title {
+			font-size: 1.4rem;
+		}
+		
+		.timeline-text {
 			font-size: 1rem;
 		}
+	}
+	
+	@media (max-width: 480px) {
+		.timeline-path {
+			left: 30px;
+		}
 		
-		.journey-highlight {
-			font-size: 1.2rem;
-			padding: 1.2rem;
+		.timeline-node {
+			padding-left: 80px !important;
+		}
+		
+		.timeline-avatar {
+			width: 60px;
+			height: 60px;
+			border-width: 3px;
+		}
+		
+		.timeline-pulse {
+			left: 22px !important;
+		}
+		
+		.timeline-intro-text,
+		.timeline-conclusion-text {
+			font-size: 1.1rem;
+		}
+		
+		.timeline-title {
+			font-size: 1.3rem;
+		}
+		
+		.info-title {
+			font-size: 1.1rem;
+		}
+		
+		.split-title {
+			font-size: 1.8rem;
+		}
+		
+		.split-percentage {
+			font-size: 2rem;
 		}
 	}
 </style>
+
