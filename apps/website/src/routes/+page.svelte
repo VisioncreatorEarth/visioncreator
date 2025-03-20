@@ -231,7 +231,7 @@
 				</div>
 				
 				<div class="read-more" class:visible={buttonsVisible}>
-					<a href="#vision-section">
+					<a href="#investment-section">
 						Read the vision
 						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -241,17 +241,59 @@
 			</div>
 		</div>
 		
-		<!-- Hominio section -->
-		<div class="hominio-banner" class:visible={sectionsVisible}>
-			<div class="hominio-content">
-				<div class="hominio-label">INTRODUCING</div>
-				<h2 class="hominio-title">HOMINIO</h2>
-				<p class="hominio-description">Join us in building Hominio, the first community-built and owned startup</p>
+		<!-- Hominio section (redesigned) -->
+		<div class="hominio-section" class:visible={sectionsVisible}>
+			<div class="hominio-container">
+				<div class="hominio-left">
+					<div class="hominio-label">INTRODUCING</div>
+					<h2 class="hominio-title">HOMINIO</h2>
+					<p class="hominio-description">
+						An AI-powered platform that lets you interact with your digital world through voice commands.
+					</p>
+					<ul class="hominio-features">
+						<li>Build mini-apps with simple voice instructions</li>
+						<li>Manage your private data securely</li>
+						<li>Control your digital experience</li>
+						<li>Everything runs locally on your device</li>
+					</ul>
+					<div class="hominio-cta">
+						<a href="#investment-section" class="hominio-button">Get Involved</a>
+					</div>
+				</div>
+				<div class="hominio-right">
+					<div class="terminal">
+						<div class="terminal-header">
+							<div class="terminal-buttons">
+								<span></span>
+								<span></span>
+								<span></span>
+							</div>
+							<div class="terminal-title">Hominio AI</div>
+						</div>
+						<div class="terminal-body">
+							<div class="terminal-line">$ <span class="terminal-user">Launch Hominio</span></div>
+							<div class="terminal-line"><span class="terminal-system">Initializing AI system...</span></div>
+							<div class="terminal-line"><span class="terminal-system">Voice interface activated.</span></div>
+							<div class="terminal-line terminal-space"></div>
+							<div class="terminal-line"><span class="terminal-ai">How can I help you today?</span></div>
+							<div class="terminal-line"><span class="terminal-user">"Create a budget tracker app"</span></div>
+							<div class="terminal-line"><span class="terminal-ai">Building budget tracker... What features do you need?</span></div>
+							<div class="terminal-line terminal-current">|</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<!-- JOIN US banner (simplified) -->
+		<div class="join-banner" class:visible={sectionsVisible}>
+			<div class="join-content">
+				<h2 class="join-heading">JOIN US IN BUILDING OUR FIRST COMMUNITY BUILT AND OWNED STARTUP</h2>
 			</div>
 		</div>
 		
 		<div class="participate-section" class:visible={sectionsVisible}>
-			<h2 class="section-title animate-fade-in" id="vision-section">How to Participate</h2>
+			<h2 class="section-title animate-fade-in">How to Participate</h2>
 			
 			<!-- Contribute section - simple sentence above Got an Idea -->
 			<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
@@ -393,6 +435,65 @@
 						</div>
 				</div>
 			</section>
+		
+		<!-- How to Invest Section -->
+		<div id="investment-section" class="investment-section" class:visible={sectionsVisible}>
+			<h2 class="section-title animate-fade-in">How to Invest</h2>
+			
+			<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
+				<p>You can invest in Visioncreator by buying VCR tokens. Your investment helps build the future of community-owned startups.</p>
+			</div>
+			
+			<div class="split-container" class:visible={investVisible}>
+				<div class="split-header">
+					<h3 class="split-title">Investment Split</h3>
+					<p class="split-description">
+						All investments are split equally into two pools, both working together to grow Hominio as a community-owned project.
+					</p>
+				</div>
+				
+				<div class="split-chart">
+					<div class="split-half community">
+						<div class="split-label">Community Pool</div>
+						<div class="split-percentage">50%</div>
+						<div class="split-list">
+							<div class="split-item">Community proposals</div>
+							<div class="split-item">Public contributions</div>
+							<div class="split-item">Development grants</div>
+							<div class="split-item">Community-driven initiatives</div>
+						</div>
+					</div>
+					<div class="split-half platform">
+						<div class="split-label">Platform Pool</div>
+						<div class="split-percentage">50%</div>
+						<div class="split-list">
+							<div class="split-item">Hiring professional developers</div>
+							<div class="split-item">Infrastructure & operations</div>
+							<div class="split-item">Marketing campaigns</div>
+							<div class="split-item">Core feature development</div>
+						</div>
+					</div>
+				</div>
+				
+				<div class="investment-info">
+					<div class="info-card">
+						<h3 class="info-title">Minimum Investment</h3>
+						<div class="budget-amount">€200</div>
+						<p class="budget-label">Entry-level investment to join Hominio</p>
+					</div>
+					<div class="info-card">
+						<h3 class="info-title">Initial Fundraising</h3>
+						<div class="budget-amount">€8M</div>
+						<p class="budget-label">First phase target for Hominio launch</p>
+					</div>
+					<div class="info-card">
+						<h3 class="info-title">Maximum Investment</h3>
+						<div class="budget-amount">Unlimited</div>
+						<p class="budget-label">No cap on how much you can contribute</p>
+					</div>
+				</div>
+			</div>
+		</div>
 	</main>
 
 <style>
@@ -403,7 +504,7 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		z-index: 0;
+		z-index: 1;
 		opacity: 0.6;
 	}
 	
@@ -415,7 +516,7 @@
 		width: 100%;
 		height: 100%;
 		background: radial-gradient(circle, rgba(70, 90, 150, 0.15) 0%, rgba(0, 0, 0, 0) 60%);
-		z-index: 1;
+		z-index: 2;
 		pointer-events: none;
 		animation: pulse 8s ease-in-out infinite;
 	}
@@ -427,7 +528,7 @@
 		width: 80%;
 		height: 80%;
 		background: radial-gradient(circle, rgba(50, 70, 120, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
-		z-index: 1;
+		z-index: 2;
 		pointer-events: none;
 		animation: pulse 12s ease-in-out infinite alternate;
 	}
@@ -443,7 +544,7 @@
 		position: relative;
 		width: 100%;
 		min-height: 100vh;
-		z-index: 2;
+		z-index: 3;
 	}
 
 	/* Hero Section Styling */
@@ -462,26 +563,25 @@
 		background-size: cover;
 		background-position: center;
 		opacity: 0.3;
-		z-index: 0;
 		filter: contrast(1.2) brightness(0.6);
-		transform: scale(1.05);
-		animation: subtle-scale 30s ease-in-out infinite alternate;
+		z-index: 0;
+		animation: subtle-zoom 30s infinite alternate ease-in-out;
 	}
 	
-	@keyframes subtle-scale {
-		0% { transform: scale(1.05); }
-		100% { transform: scale(1.15); }
+	@keyframes subtle-zoom {
+		0% { transform: scale(1); }
+		100% { transform: scale(1.05); }
 	}
 	
 	.hero-wrapper {
 		position: relative;
-		z-index: 1;
+		z-index: 2;
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 2rem;
 		max-width: 1400px;
 		margin: 0 auto;
-		padding: 0 2rem;
+		padding: 8rem 2rem;
 		min-height: 80vh;
 		align-items: center;
 	}
@@ -644,55 +744,269 @@
 		transform: translateY(3px);
 	}
 	
-	/* Hominio Banner */
-	.hominio-banner {
+	/* Hominio Section (New Design) */
+	.hominio-section {
 		opacity: 0;
 		transform: translateY(30px);
 		transition: all 0.8s ease-out;
-		margin-top: 2rem;
-		margin-bottom: 5rem;
-		background: rgba(30, 58, 138, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		backdrop-filter: blur(10px);
-		border-radius: 12px;
-		padding: 2rem;
+		margin: 5rem auto;
 		max-width: 1400px;
-		margin-left: auto;
-		margin-right: auto;
+		padding: 0 2rem;
 	}
 	
-	.hominio-banner.visible {
+	.hominio-section.visible {
 		opacity: 1;
 		transform: translateY(0);
 	}
 	
-	.hominio-content {
-		text-align: center;
+	.hominio-container {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 3rem;
+		background: rgba(20, 30, 60, 0.4);
+		border-radius: 16px;
+		overflow: hidden;
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
+					0 0 0 1px rgba(59, 130, 246, 0.2);
+		backdrop-filter: blur(10px);
+	}
+	
+	.hominio-left {
+		padding: 4rem 3rem;
 	}
 	
 	.hominio-label {
-		font-size: 0.9rem;
-		font-weight: 600;
-		letter-spacing: 1.5px;
-		color: #93C5FD;
-		margin-bottom: 0.5rem;
+		display: inline-block;
+		padding: 0.5rem 1rem;
+		background: rgba(59, 130, 246, 0.1);
+		border-radius: 20px;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 2px;
+		color: #60A5FA;
+		margin-bottom: 1.5rem;
 	}
 	
 	.hominio-title {
-		font-size: 3rem;
+		font-size: 4rem;
 		font-weight: 800;
-		margin: 0.5rem 0;
+		margin: 0 0 1.5rem;
 		background: linear-gradient(135deg, #3B82F6, #93C5FD);
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
+		line-height: 1;
 	}
 	
 	.hominio-description {
-		font-size: 1.2rem;
+		font-size: 1.3rem;
+		color: rgba(255, 255, 255, 0.9);
+		margin-bottom: 2rem;
+		line-height: 1.5;
+	}
+	
+	.hominio-features {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 2.5rem;
+	}
+	
+	.hominio-features li {
+		position: relative;
+		padding-left: 1.8rem;
+		margin-bottom: 1rem;
 		color: rgba(255, 255, 255, 0.8);
-		max-width: 700px;
-		margin: 1rem auto 0;
+		font-size: 1.1rem;
+	}
+	
+	.hominio-features li:before {
+		content: "";
+		position: absolute;
+		left: 0;
+		top: 0.5rem;
+		width: 0.8rem;
+		height: 0.8rem;
+		background: #3B82F6;
+		border-radius: 50%;
+	}
+	
+	.hominio-cta {
+		margin-top: 2rem;
+	}
+	
+	.hominio-button {
+		display: inline-block;
+		padding: 1rem 2.5rem;
+		background: linear-gradient(135deg, #3B82F6, #2563EB);
+		color: white;
+		font-weight: 600;
+		font-size: 1.1rem;
+		border-radius: 8px;
+		text-decoration: none;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+	}
+	
+	.hominio-button:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+		background: linear-gradient(135deg, #4287f5, #1d4ed8);
+	}
+	
+	.hominio-right {
+		background: linear-gradient(135deg, rgba(30, 58, 138, 0.3), rgba(30, 58, 138, 0.1));
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 2rem;
+	}
+	
+	/* Terminal styling */
+	.terminal {
+		width: 100%;
+		max-width: 500px;
+		background: rgba(15, 23, 42, 0.9);
+		border-radius: 10px;
+		overflow: hidden;
+		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+		font-family: 'Courier New', monospace;
+	}
+	
+	.terminal-header {
+		background: rgba(30, 41, 59, 0.8);
+		padding: 0.8rem 1rem;
+		display: flex;
+		align-items: center;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.terminal-buttons {
+		display: flex;
+		gap: 0.5rem;
+		margin-right: 1rem;
+	}
+	
+	.terminal-buttons span {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		display: block;
+	}
+	
+	.terminal-buttons span:nth-child(1) {
+		background: #ff5f56;
+	}
+	
+	.terminal-buttons span:nth-child(2) {
+		background: #ffbd2e;
+	}
+	
+	.terminal-buttons span:nth-child(3) {
+		background: #27c93f;
+	}
+	
+	.terminal-title {
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 0.9rem;
+		text-align: center;
+		flex-grow: 1;
+		margin-right: 3rem;
+	}
+	
+	.terminal-body {
+		padding: 1.5rem;
+		color: rgba(255, 255, 255, 0.9);
+		font-size: 0.95rem;
+		line-height: 1.5;
+	}
+	
+	.terminal-line {
+		margin-bottom: 0.8rem;
+	}
+	
+	.terminal-space {
+		height: 1rem;
+	}
+	
+	.terminal-system {
+		color: #a5a5a5;
+	}
+	
+	.terminal-user {
+		color: #5beda7;
+	}
+	
+	.terminal-ai {
+		color: #60A5FA;
+	}
+	
+	.terminal-current {
+		animation: blink 1s infinite;
+	}
+	
+	@keyframes blink {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0; }
+	}
+	
+	/* Media queries for hominio section */
+	@media (max-width: 1024px) {
+		.hominio-container {
+			grid-template-columns: 1fr;
+		}
+		
+		.hominio-right {
+			padding: 2rem 3rem 4rem;
+		}
+		
+		.hominio-title {
+			font-size: 3.5rem;
+		}
+	}
+	
+	@media (max-width: 768px) {
+		.hominio-left {
+			padding: 3rem 2rem;
+		}
+		
+		.hominio-title {
+			font-size: 3rem;
+		}
+		
+		.join-heading {
+			font-size: 1.8rem;
+		}
+		
+		.join-subtext {
+			font-size: 1rem;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.hominio-left {
+			padding: 2rem 1.5rem;
+		}
+		
+		.hominio-title {
+			font-size: 2.5rem;
+		}
+		
+		.hominio-description {
+			font-size: 1.1rem;
+		}
+		
+		.hominio-features li {
+			font-size: 1rem;
+		}
+		
+		.terminal-body {
+			padding: 1rem;
+			font-size: 0.8rem;
+		}
+		
+		.join-heading {
+			font-size: 1.5rem;
+		}
 	}
 	
 	/* Participate Section */
@@ -1069,6 +1383,164 @@
 		border-radius: 2px;
 	}
 	
+	/* Investment Section Styling */
+	.investment-section {
+		opacity: 0;
+		transform: translateY(30px);
+		transition: all 0.8s ease-out;
+		padding: 4rem 2rem;
+		max-width: 1400px;
+		margin: 0 auto 5rem;
+	}
+	
+	.investment-section.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.split-container {
+		opacity: 0;
+		transform: translateY(20px);
+		transition: all 0.6s ease-out;
+		transition-delay: 0.2s;
+	}
+	
+	.split-container.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.split-header {
+		text-align: center;
+		margin-bottom: 3rem;
+	}
+	
+	.split-title {
+		font-size: 1.8rem;
+		font-weight: 600;
+		color: white;
+		margin-bottom: 1rem;
+	}
+	
+	.split-description {
+		font-size: 1.1rem;
+		color: rgba(255, 255, 255, 0.8);
+		max-width: 700px;
+		margin: 0 auto;
+	}
+	
+	.split-chart {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 2rem;
+		margin-bottom: 3rem;
+	}
+	
+	.split-half {
+		position: relative;
+		border-radius: 12px;
+		padding: 2.5rem;
+		text-align: center;
+		background: rgba(30, 58, 138, 0.1);
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		transition: transform 0.3s ease, box-shadow 0.3s ease;
+	}
+	
+	.split-half:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);
+		border-color: rgba(59, 130, 246, 0.3);
+	}
+	
+	.split-half.community {
+		background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+		border: 1px solid rgba(59, 130, 246, 0.3);
+	}
+	
+	.split-half.platform {
+		background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(67, 56, 202, 0.1));
+		border: 1px solid rgba(79, 70, 229, 0.3);
+	}
+	
+	.split-label {
+		font-size: 1.4rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+		color: white;
+	}
+	
+	.split-percentage {
+		font-size: 3.5rem;
+		font-weight: 800;
+		margin-bottom: 1.5rem;
+	}
+	
+	.split-half.community .split-percentage {
+		color: #3B82F6;
+	}
+	
+	.split-half.platform .split-percentage {
+		color: #6366F1;
+	}
+	
+	.split-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		text-align: left;
+	}
+	
+	.split-item {
+		font-size: 1.1rem;
+		color: rgba(255, 255, 255, 0.8);
+		padding-left: 1.5rem;
+		position: relative;
+	}
+	
+	.split-item:before {
+		content: "•";
+		position: absolute;
+		left: 0;
+		color: #3B82F6;
+		font-weight: bold;
+	}
+	
+	.investment-info {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 2rem;
+		margin-top: 3rem;
+	}
+	
+	.info-card {
+		background: rgba(30, 41, 59, 0.4);
+		border: 1px solid rgba(255, 255, 255, 0.05);
+		border-radius: 12px;
+		padding: 2rem;
+		text-align: center;
+		transition: all 0.3s ease;
+	}
+	
+	.info-card:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+		background: rgba(30, 41, 59, 0.6);
+		border-color: rgba(255, 255, 255, 0.1);
+	}
+	
+	.info-title {
+		font-size: 1.1rem;
+		font-weight: 600;
+		color: #3B82F6;
+		margin-bottom: 1rem;
+	}
+	
+	@media (max-width: 768px) {
+		.split-chart {
+			grid-template-columns: 1fr;
+		}
+	}
+	
 	/* Responsive adjustments */
 	@media (max-width: 1024px) {
 		.hero-wrapper {
@@ -1127,6 +1599,45 @@
 		
 		.hominio-title {
 			font-size: 2rem;
+		}
+	}
+	
+	/* JOIN US Banner - Simplified Design */
+	.join-banner {
+		position: relative;
+		width: 100%;
+		background-color: #2563eb;
+		margin: 5rem 0;
+		padding: 0;
+		opacity: 0;
+		transform: translateY(30px);
+		transition: opacity 0.6s ease, transform 0.6s ease;
+	}
+	
+	.join-banner.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.join-content {
+		position: relative;
+		padding: 4rem 2rem;
+		max-width: 1200px;
+		margin: 0 auto;
+		text-align: center;
+	}
+	
+	.join-heading {
+		font-size: 2.5rem;
+		font-weight: 800;
+		margin: 0;
+		color: white;
+		letter-spacing: 1px;
+	}
+	
+	@media (max-width: 768px) {
+		.join-heading {
+			font-size: 1.75rem;
 		}
 	}
 </style>

@@ -48,94 +48,9 @@
 </script>
 
 <div class="min-h-screen bg-black text-white universe-bg">
-	<!-- Visioncreator logo in top left corner -->
-	<div class="fixed top-4 left-4 z-50 flex items-center">
-		<div class="logo-container mr-3 flex items-center">
-			{#if !logoError}
-				<img 
-					src={currentLogoPath} 
-					alt="Visioncreator Logo" 
-					class="h-12 w-12 rounded-full object-contain" 
-					on:error={handleLogoError}
-				/>
-			{:else}
-				<div class="relative h-12 w-12">
-					<svg viewBox="0 0 200 200" width="48" height="48">
-						<circle
-							cx="100"
-							cy="100"
-							r="95"
-							fill="rgba(10,25,47,0.8)"
-							stroke="#5078C8"
-							stroke-width="2"
-						/>
-						<path
-							d="M80,70 Q100,40 135,70 Q150,90 130,120 Q100,150 70,120 Q60,100 80,70"
-							fill="white"
-							stroke="none"
-						/>
-					</svg>
-				</div>
-			{/if}
-		</div>
-		
-		<div class="text-2xl font-bold tracking-wide">
-			<span class="text-white">Vision</span><span class="text-[#5078C8]">creator</span>
-		</div>
-	</div>
+	<!-- Visioncreator logo in top left corner has been removed -->
 
-	<!-- Vision & Problem Section -->
-	<section class="vision-section pt-28 pb-10 px-4 md:px-8 max-w-6xl mx-auto">
-		<div class="section-container" class:visible={storyVisible}>
-			<!-- Founders brief intro -->
-			<div class="flex flex-col md:flex-row items-center mb-8 gap-6">
-				<!-- Founder images - smaller size -->
-				<div class="flex -space-x-2">
-					<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#5078C8] bg-gray-900 z-10">
-						{#if !personalImageError}
-							<img 
-								src="/chielo_-43.JPG" 
-								alt="Chielo" 
-								class="w-full h-full object-cover"
-								on:error={handlePersonalImageError}
-							/>
-						{:else}
-							<div class="w-full h-full bg-gray-800 flex items-center justify-center text-white text-base font-bold">
-								C
-							</div>
-						{/if}
-					</div>
-					<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#5078C8] bg-gray-900">
-						<div class="w-full h-full bg-gray-800 flex items-center justify-center text-white text-base font-bold">
-							S
-						</div>
-					</div>
-					<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-[#5078C8] bg-gray-900">
-						<div class="w-full h-full bg-gray-800 flex items-center justify-center text-white text-base font-bold">
-							Y
-						</div>
-					</div>
-				</div>
-				
-				<div class="md:ml-4">
-					<h2 class="text-2xl font-bold text-white">The Vision Behind Visioncreator</h2>
-					<p class="text-gray-300 text-sm">Founded by Chielo, Sami & Yvonne</p>
-				</div>
-			</div>
-			
-			<!-- Personal message before the problem statement -->
-			<div class="personal-message mb-10 text-center max-w-3xl mx-auto">
-				<p class="text-lg text-gray-200 italic">
-					"We've spent years watching talented people pour their hearts into building companies, 
-					only to walk away with nothing but a paycheck. Meanwhile, those who had money to invest 
-					reaped the rewards. We knew there had to be a better way."
-				</p>
-				<div class="mt-2 text-[#5078C8] text-sm font-semibold">— Our Inspiration</div>
-			</div>
-			
-			<!-- The Problem Statement and Community sections have been removed -->
-		</div>
-	</section>
+	<!-- Vision & Problem Section has been removed -->
 
 	<div class="pt-0">
 		<slot />
