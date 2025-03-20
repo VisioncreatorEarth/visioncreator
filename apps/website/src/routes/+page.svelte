@@ -201,10 +201,9 @@
 	
 	<div class="ambient-light"></div>
 	<div class="ambient-light-2"></div>
+	<div class="full-page-background"></div>
 	
 	<section class="hero">
-		<div class="hero-background"></div>
-		
 		<div class="hero-wrapper">
 			<!-- Left side with main statement -->
 			<div class="hero-left" class:visible={textVisible}>
@@ -217,19 +216,19 @@
 					<a href="/invest" class="hero-cta secondary" class:visible={buttonsVisible}>
 						Invest
 					</a>
+							</div>
 				</div>
-			</div>
-			
+
 			<!-- Right side with more detailed content -->
 			<div class="hero-right" class:visible={textVisible}>
 				<h1 class="hero-title">
 					The <span>Ownership</span> Layer
-				</h1>
-				
+							</h1>
+							
 				<div class="hero-problem">
 					<p>The startup world is structured to favor a select few—founders and big investors—who take the lion's share while contributors and supporters are left with nothing but a paycheck.</p>
-				</div>
-				
+							</div>
+							
 				<div class="read-more" class:visible={buttonsVisible}>
 					<a href="#investment-section">
 						Read the vision
@@ -237,10 +236,10 @@
 							<path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 						</svg>
 					</a>
-				</div>
-			</div>
-		</div>
-		
+							</div>
+						</div>
+							</div>
+							
 		<!-- Hominio section (redesigned) -->
 		<div class="hominio-section" class:visible={sectionsVisible}>
 			<div class="hominio-container">
@@ -255,11 +254,11 @@
 						<li>Manage your private data securely</li>
 						<li>Control your digital experience</li>
 						<li>Everything runs locally on your device</li>
-					</ul>
+									</ul>
 					<div class="hominio-cta">
-						<a href="#investment-section" class="hominio-button">Get Involved</a>
-					</div>
-				</div>
+						<a href="#investment-section" class="hominio-button">Learn More</a>
+								</div>
+									</div>
 				<div class="hominio-right">
 					<div class="terminal">
 						<div class="terminal-header">
@@ -267,9 +266,9 @@
 								<span></span>
 								<span></span>
 								<span></span>
-							</div>
+								</div>
 							<div class="terminal-title">Hominio AI</div>
-						</div>
+							</div>
 						<div class="terminal-body">
 							<div class="terminal-line">$ <span class="terminal-user">Launch Hominio</span></div>
 							<div class="terminal-line"><span class="terminal-system">Initializing AI system...</span></div>
@@ -279,27 +278,27 @@
 							<div class="terminal-line"><span class="terminal-user">"Create a budget tracker app"</span></div>
 							<div class="terminal-line"><span class="terminal-ai">Building budget tracker... What features do you need?</span></div>
 							<div class="terminal-line terminal-current">|</div>
+							</div>
 						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-		
+							</div>
+									</div>
+								</div>
+								
 		<!-- JOIN US banner (simplified) -->
 		<div class="join-banner" class:visible={sectionsVisible}>
 			<div class="join-content">
 				<h2 class="join-heading">JOIN US IN BUILDING OUR FIRST COMMUNITY BUILT AND OWNED STARTUP</h2>
-			</div>
-		</div>
-		
+								</div>
+							</div>
+							
 		<div class="participate-section" class:visible={sectionsVisible}>
 			<h2 class="section-title animate-fade-in">How to Participate</h2>
 			
 			<!-- Contribute section - simple sentence above Got an Idea -->
 			<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
 				<p>Contribute your skills and ideas to shape the future of Visioncreator and Hominio.</p>
-			</div>
-			
+							</div>
+							
 			<!-- Step by step idea flow as seen in screenshots -->
 			<div class="process-flow">
 				<!-- Step 1: Got an Idea? Share It! -->
@@ -308,10 +307,10 @@
 						<div class="icon-wrapper">
 							<svg class="megaphone-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<path d="M3 10.5V13.5M3 13.5H6M3 13.5L4.5 12M4.5 12L6 10.5M4.5 12L6.5 13.5M6.5 13.5L8 12M6.5 13.5H13" stroke="#5078C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-									</svg>
-								</div>
+										</svg>
+									</div>
 						<h3 class="card-title">Got an Idea? Share It!</h3>
-							</div>
+								</div>
 					<div class="card-body">
 						<p>Have an idea or a way to make something better? Post it on our idea board! Whether it's a new feature or a small tweak, this is your chance to shape Visioncreator.</p>
 						
@@ -321,9 +320,9 @@
 								<div class="idea-user">
 									<div class="user-avatar">JD</div>
 									<span>John D.</span>
-							</div>
-							<h4>Improve Onboarding Flow</h4>
-							<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
+								</div>
+								<h4>Improve Onboarding Flow</h4>
+								<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
 								<div class="vote-count">
 									<span class="votes">12</span>
 									<span class="votes-label">VOTES</span>
@@ -331,15 +330,15 @@
 										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 											<path d="M12 5L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 											<path d="M5 12L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-									</svg>
-									Vote
-								</button>
-							</div>
-						</div>
+										</svg>
+										Vote
+									</button>
+								</div>
 							</div>
 								</div>
-						</div>
-						
+								</div>
+							</div>
+							
 				<!-- Step 2: Discuss and Vote -->
 				<div class="process-card vote-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.6s;">
 					<div class="card-header">
@@ -348,10 +347,10 @@
 								<circle cx="12" cy="12" r="8" stroke="#5078C8" stroke-width="2"/>
 								<path d="M12 8L12 16" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
 								<path d="M16 12L8 12" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-									</svg>
-							</div>
+										</svg>
+								</div>
 						<h3 class="card-title">Discuss and Vote</h3>
-						</div>
+							</div>
 					<div class="card-body">
 						<p>Your idea kicks off a conversation. We discuss it together as a collective, share feedback, and then vote. Get enough votes, and your idea turns into a draft—ready to take the next step.</p>
 						
@@ -360,27 +359,27 @@
 								<div class="user-vote">
 									<div class="user-avatar">
 										<span class="vote-plus">+1</span>
+								</div>
 							</div>
+								<div class="user-vote">
+									<div class="user-avatar"></div>
+									<span class="vote-plus">+1</span>
 								</div>
 								<div class="user-vote">
 									<div class="user-avatar"></div>
 									<span class="vote-plus">+1</span>
 							</div>
-								<div class="user-vote">
-									<div class="user-avatar"></div>
-									<span class="vote-plus">+1</span>
 						</div>
-					</div>
 							<div class="vote-result">
 								<div class="big-vote-count">
 									<span>8</span>
 									<div class="votes-label">VOTES</div>
 							</div>
-						</div>
-							</div>
+									</div>
+									</div>
+									</div>
 								</div>
-						</div>
-						
+								
 				<!-- Step 3: Combined Success Earns & Investment Split -->
 				<div class="process-card combined-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.8s;">
 					<div class="card-header">
@@ -390,50 +389,50 @@
 								<path d="M12 15V22" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
 								<path d="M15 19H9" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
 								<path d="M15 12L9 8" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-								</svg>
-							</div>
+											</svg>
+										</div>
 						<h3 class="card-title">Success Earns You Rewards</h3>
-						</div>
+									</div>
 					<div class="card-body">
 						<p>Take ownership of your idea by defining its scope and resources. Successful projects earn you both payment and ownership tokens.</p>
 						
 						<div class="rewards-section">
 							<div class="budget-sliders">
 								<div class="slider-group">
-								<div class="slider-label">
-									<span>Development Time</span>
-									<span class="slider-value">2 weeks</span>
-								</div>
-								<div class="slider-track">
+									<div class="slider-label">
+										<span>Development Time</span>
+										<span class="slider-value">2 weeks</span>
+									</div>
+									<div class="slider-track">
 										<div class="slider-progress" style="width: 40%;">
 											<div class="slider-handle"></div>
 										</div>
+									</div>
+								</div>
+								
+								<div class="slider-group">
+									<div class="slider-label">
+										<span>Complexity</span>
+										<span class="slider-value">Medium</span>
+									</div>
+									<div class="slider-track">
+										<div class="slider-progress" style="width: 60%;">
+											<div class="slider-handle"></div>
+									</div>
+								</div>
 								</div>
 							</div>
 							
-								<div class="slider-group">
-								<div class="slider-label">
-									<span>Complexity</span>
-									<span class="slider-value">Medium</span>
-								</div>
-								<div class="slider-track">
-										<div class="slider-progress" style="width: 60%;">
-											<div class="slider-handle"></div>
-								</div>
-							</div>
-							</div>
-						</div>
-						
 							<div class="budget-result">
-							<div class="budget-amount">€1,500</div>
+								<div class="budget-amount">€1,500</div>
 								<div class="token-amount">+ 150 VCR</div>
 								<div class="budget-label">Estimated Rewards</div>
-						</div>
+							</div>
+									</div>
+								</div>
+									</div>
 								</div>
 							</div>
-								</div>
-						</div>
-				</div>
 			</section>
 		
 		<!-- How to Invest Section -->
@@ -442,16 +441,16 @@
 			
 			<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
 				<p>You can invest in Visioncreator by buying VCR tokens. Your investment helps build the future of community-owned startups.</p>
-			</div>
-			
+								</div>
+								
 			<div class="split-container" class:visible={investVisible}>
 				<div class="split-header">
 					<h3 class="split-title">Investment Split</h3>
 					<p class="split-description">
 						All investments are split equally into two pools, both working together to grow Hominio as a community-owned project.
 					</p>
-				</div>
-				
+							</div>
+							
 				<div class="split-chart">
 					<div class="split-half community">
 						<div class="split-label">Community Pool</div>
@@ -461,8 +460,8 @@
 							<div class="split-item">Public contributions</div>
 							<div class="split-item">Development grants</div>
 							<div class="split-item">Community-driven initiatives</div>
-						</div>
-					</div>
+										</div>
+									</div>
 					<div class="split-half platform">
 						<div class="split-label">Platform Pool</div>
 						<div class="split-percentage">50%</div>
@@ -471,30 +470,70 @@
 							<div class="split-item">Infrastructure & operations</div>
 							<div class="split-item">Marketing campaigns</div>
 							<div class="split-item">Core feature development</div>
-						</div>
-					</div>
-				</div>
-				
+										</div>
+									</div>
+									</div>
+									
 				<div class="investment-info">
 					<div class="info-card">
 						<h3 class="info-title">Minimum Investment</h3>
 						<div class="budget-amount">€200</div>
 						<p class="budget-label">Entry-level investment to join Hominio</p>
-					</div>
+										</div>
 					<div class="info-card">
 						<h3 class="info-title">Initial Fundraising</h3>
 						<div class="budget-amount">€8M</div>
 						<p class="budget-label">First phase target for Hominio launch</p>
-					</div>
+									</div>
 					<div class="info-card">
 						<h3 class="info-title">Maximum Investment</h3>
 						<div class="budget-amount">Unlimited</div>
 						<p class="budget-label">No cap on how much you can contribute</p>
-					</div>
-				</div>
+								</div>
+							</div>
+						</div>
+							</div>
+	</main>
+
+<!-- Personal Journey Section -->
+<div id="journey-section" class="journey-section" class:visible={sectionsVisible}>
+	<h2 class="section-title animate-fade-in">My Personal Journey</h2>
+	
+	<div class="journey-container" class:visible={investVisible}>
+		<div class="journey-content">
+			<div class="journey-meeting">
+				<h3 class="journey-subtitle">Meeting Sami</h3>
+				<p class="journey-text">
+					When I first met Sami, I immediately recognized his brilliant mind and passion for technology. 
+					As we talked about the problems in the startup world, we realized we shared the same vision: 
+					creating something that would let everyone build and own the future together.
+				</p>
+				<p class="journey-text">
+					Sami showed me how we could create a platform where ideas are valued, where contribution leads 
+					to ownership, and where communities can build businesses together. His vision for bringing people 
+					together to solve problems collaboratively resonated deeply with me.
+				</p>
+			</div>
+			
+			<div class="journey-vision">
+				<h3 class="journey-subtitle">Building Something Different</h3>
+				<p class="journey-text">
+					Together, we're building a new kind of platform - one that puts community at its heart. 
+					We believe that innovation thrives when more people can participate, when contributors become 
+					owners, and when ideas can come from anywhere.
+				</p>
+				<p class="journey-text">
+					Hominio is just the beginning. It's our first community-built and owned startup, but we're 
+					creating a new model that can be applied to many more ventures in the future.
+				</p>
+			</div>
+			
+			<div class="journey-invitation">
+				<p class="journey-highlight">Join us in building this new world of collaborative innovation and shared ownership.</p>
 			</div>
 		</div>
-	</main>
+	</div>
+</div>
 
 <style>
 	/* Canvas for stars */
@@ -547,14 +586,9 @@
 		z-index: 3;
 	}
 
-	/* Hero Section Styling */
-	.hero {
-		position: relative;
-		overflow: hidden;
-	}
-	
-	.hero-background {
-		position: absolute;
+	/* Full-page background */
+	.full-page-background {
+		position: fixed;
 		top: 0;
 		left: 0;
 		width: 100%;
@@ -571,6 +605,12 @@
 	@keyframes subtle-zoom {
 		0% { transform: scale(1); }
 		100% { transform: scale(1.05); }
+	}
+
+	/* Hero Section Styling */
+	.hero {
+		position: relative;
+		overflow: hidden;
 	}
 	
 	.hero-wrapper {
@@ -693,7 +733,7 @@
 		margin-bottom: 1.5rem;
 		color: white;
 	}
-	
+
 	.hero-title span {
 		background: linear-gradient(90deg, #3B82F6, #93C5FD);
 		-webkit-background-clip: text;
@@ -978,7 +1018,7 @@
 		}
 		
 		.join-subtext {
-			font-size: 1rem;
+		font-size: 1rem;
 		}
 	}
 	
@@ -1031,7 +1071,7 @@
 		margin-bottom: 3rem;
 		color: white;
 	}
-	
+
 	.contribute-intro {
 		text-align: center;
 		max-width: 700px;
@@ -1240,7 +1280,7 @@
 		flex-direction: column;
 		gap: 1.5rem;
 	}
-	
+
 	.budget-sliders {
 		display: flex;
 		flex-direction: column;
@@ -1252,26 +1292,26 @@
 		flex-direction: column;
 		gap: 0.5rem;
 	}
-	
+
 	.slider-label {
 		display: flex;
 		justify-content: space-between;
 		font-size: 0.9rem;
 		color: rgba(255, 255, 255, 0.7);
 	}
-	
+
 	.slider-value {
 		color: #3B82F6;
 		font-weight: 500;
 	}
-	
+
 	.slider-track {
 		height: 8px;
 		background: rgba(255, 255, 255, 0.1);
 		border-radius: 4px;
 		overflow: hidden;
 	}
-	
+
 	.slider-progress {
 		height: 100%;
 		background: linear-gradient(90deg, #3B82F6, #60A5FA);
@@ -1290,7 +1330,7 @@
 		transform: translate(50%, -50%);
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 	}
-	
+
 	.budget-result {
 		margin-top: 1.5rem;
 		display: flex;
@@ -1299,7 +1339,7 @@
 		border-top: 1px solid rgba(255, 255, 255, 0.1);
 		padding-top: 1.5rem;
 	}
-	
+
 	.budget-amount {
 		font-size: 2rem;
 		font-weight: 700;
@@ -1370,7 +1410,7 @@
 		margin-bottom: 4rem;
 		position: relative;
 	}
-	
+
 	.journey-title::after {
 		content: "";
 		position: absolute;
@@ -1586,15 +1626,15 @@
 		}
 		
 		.hero-title {
-			font-size: 1.8rem;
+		font-size: 1.8rem;
 		}
 		
 		.hero-actions {
-			flex-direction: column;
+		flex-direction: column;
 		}
 		
 		.section-title {
-			font-size: 1.8rem;
+		font-size: 1.8rem;
 		}
 		
 		.hominio-title {
@@ -1602,12 +1642,12 @@
 		}
 	}
 	
-	/* JOIN US Banner - Simplified Design */
+	/* JOIN US Banner - Subtle Design */
 	.join-banner {
 		position: relative;
 		width: 100%;
-		background-color: #2563eb;
-		margin: 5rem 0;
+		background-color: transparent; /* Removed blue background */
+		margin: 6rem 0;
 		padding: 0;
 		opacity: 0;
 		transform: translateY(30px);
@@ -1621,23 +1661,162 @@
 	
 	.join-content {
 		position: relative;
-		padding: 4rem 2rem;
-		max-width: 1200px;
+		padding: 2rem;
+		max-width: 100%;
 		margin: 0 auto;
 		text-align: center;
 	}
 	
 	.join-heading {
-		font-size: 2.5rem;
-		font-weight: 800;
+		font-size: 3.25rem;
+		font-weight: 700;
 		margin: 0;
 		color: white;
-		letter-spacing: 1px;
+		letter-spacing: 0;
+		line-height: 1.2;
+		max-width: 1400px;
+		margin: 0 auto;
+		text-transform: uppercase; /* To ensure all caps as in image */
 	}
 	
 	@media (max-width: 768px) {
 		.join-heading {
 			font-size: 1.75rem;
+		}
+		
+		.join-content {
+			padding: 1.5rem;
+		}
+	}
+	
+	/* Media queries */
+	@media (max-width: 1200px) {
+		/* Responsive rules... */
+	}
+	
+	@media (max-width: 768px) {
+		/* Responsive rules... */
+	}
+	
+	@media (max-width: 480px) {
+		/* Responsive rules... */
+	}
+	
+	/* Personal Journey Section Styles */
+	.journey-section {
+		padding: 5rem 2rem;
+		margin: 0 auto;
+		max-width: 1200px;
+		opacity: 0;
+		transform: translateY(30px);
+		transition: all 0.8s ease-out;
+	}
+	
+	.journey-section.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.journey-container {
+		margin-top: 3rem;
+		opacity: 0;
+		transform: translateY(20px);
+		transition: all 0.5s ease-out 0.2s;
+	}
+	
+	.journey-container.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.journey-content {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 3rem;
+	}
+	
+	.journey-meeting, .journey-vision {
+		background: rgba(15, 23, 42, 0.6);
+		border-radius: 12px;
+		padding: 2rem;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+		backdrop-filter: blur(10px);
+	}
+	
+	.journey-subtitle {
+		font-size: 1.8rem;
+		font-weight: 700;
+		margin-bottom: 1.5rem;
+		color: #3B82F6;
+		position: relative;
+	}
+	
+	.journey-subtitle::after {
+		content: "";
+		position: absolute;
+		bottom: -8px;
+		left: 0;
+		width: 40px;
+		height: 3px;
+		background: linear-gradient(90deg, #3B82F6, #93C5FD);
+		border-radius: 2px;
+	}
+	
+	.journey-text {
+		font-size: 1.1rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.8);
+		margin-bottom: 1.5rem;
+	}
+	
+	.journey-text:last-child {
+		margin-bottom: 0;
+	}
+	
+	.journey-invitation {
+		text-align: center;
+		margin-top: 2rem;
+	}
+	
+	.journey-highlight {
+		font-size: 1.4rem;
+		font-weight: 600;
+		line-height: 1.5;
+		color: white;
+		padding: 1.5rem;
+		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
+		border-radius: 12px;
+		box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
+		border: 1px solid rgba(59, 130, 246, 0.3);
+	}
+	
+	@media (min-width: 768px) {
+		.journey-content {
+			grid-template-columns: 1fr 1fr;
+		}
+		
+		.journey-invitation {
+			grid-column: span 2;
+		}
+	}
+	
+	@media (max-width: 767px) {
+		.journey-section {
+			padding: 4rem 1.5rem;
+		}
+		
+		.journey-subtitle {
+			font-size: 1.6rem;
+		}
+		
+		.journey-text {
+			font-size: 1rem;
+		}
+		
+		.journey-highlight {
+			font-size: 1.2rem;
+			padding: 1.2rem;
 		}
 	}
 </style>
