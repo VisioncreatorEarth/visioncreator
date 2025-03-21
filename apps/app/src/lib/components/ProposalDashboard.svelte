@@ -25,24 +25,52 @@ This is the dashboard area of the proposals view that:
 <script lang="ts">
 	import type { ProposalState } from '$lib/stores/proposalStore';
 	import { createQuery } from '$lib/wundergraph';
+	import { onMount, tick } from 'svelte';
+	import LineChart from './LineChart.svelte';
+	
+	// Remove dynamic D3 imports and replace with static rendering
+	// We'll use a completely static approach that doesn't depend on D3
 
 	// Props
 	export let activeTab: string;
 	export let states: string[];
 	export let onStateSelect: (state: string) => void;
 
+	// Add flags for SSR and client-side rendering
+	let isBrowser = typeof window !== 'undefined';
+	let isMounted = false;
+	
+	// Add fallback data and error states
+	let apiError = false;
+	
+	// Fallback for API failure
+	$: {
+		// Check if any of the queries have failed
+		if (isBrowser && 
+			($orgaStatsQuery.error || $ccpQuery.error || $activeVCQuery.error || $investmentMetricsQuery.error)) {
+			console.error('API Error:', {
+				orgaStats: $orgaStatsQuery.error,
+				ccp: $ccpQuery.error,
+				activeVC: $activeVCQuery.error,
+				investmentMetrics: $investmentMetricsQuery.error
+			});
+			apiError = true;
+		}
+	}
+	
+	onMount(() => {
+		try {
+			isMounted = true;
+			console.log('ProposalDashboard component mounted');
+		} catch (error) {
+			console.error('Error during component mount:', error);
+		}
+	});
+
 	// Query organization stats
 	const orgaStatsQuery = createQuery({
 		operationName: 'queryOrgaStats',
 		refetchInterval: 30000 // Refetch every 30 seconds
-	});
-
-	// Query admin's EURe balance and VCE balance
-	const adminTokensQuery = createQuery({
-		operationName: 'getUserTokens',
-		input: { userId: '00000000-0000-0000-0000-000000000001' },
-		enabled: true,
-		refetchInterval: 30000
 	});
 
 	// Add CCP query
@@ -52,16 +80,18 @@ This is the dashboard area of the proposals view that:
 		refetchInterval: 5000 // Update every 5 seconds
 	});
 
-	// Get total VCs from investment metrics
+	// Query for the current VC count
+	const activeVCQuery = createQuery({
+		operationName: 'activeVC',
+		enabled: true
+	});
+	
+	// Query for the investment metrics for details like next milestone threshold
 	const investmentMetricsQuery = createQuery({
 		operationName: 'getInvestmentMetrics',
 		enabled: true,
 		refetchInterval: 5000
 	});
-
-	// Declare variables before using them in reactive statements
-	let eurePercentage = 0;
-	let vcePercentage = 0;
 
 	// Reactive values from API
 	$: stats = $orgaStatsQuery.data || {
@@ -70,45 +100,50 @@ This is the dashboard area of the proposals view that:
 		currentTokenPrice: 1.0
 	};
 
-	// Get admin's EURe balance
-	$: adminEureBalance = $adminTokensQuery.data?.balances?.EURe?.balance || 0;
-
 	// Fixed values
 	const tokenPriceIncrease = 5.7;
 	const contributionIncrease = 16.32;
 	const monthlyRevenue = 0; // Hardcoded MRR
 
-	// Get current token price from orgaStats
-	$: currentTokenPrice = $orgaStatsQuery.data?.currentTokenPrice || 1.0;
+	// Compute token emission price from orgaStats
+	$: tokenEmissionPrice = (() => {
+		const price = $orgaStatsQuery.data?.currentTokenPrice;
+		if (typeof price === 'object' && price !== null) {
+			// Use optional chaining with a default value to handle potential missing 'value' property
+			return Number((price as any)?.value ?? 1.0) || 1.0;
+		}
+		return Number(price) || 1.0;
+	})();
 
-	// Calculate CCP using admin's total VCE (staked + unstaked) * token price + EURe
-	$: ccpValue = new Intl.NumberFormat('en-US', {
+	// Format the total pool value from CCP data
+	$: formattedPoolValue = new Intl.NumberFormat('en-US', {
 		style: 'currency',
 		currency: 'EUR',
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0
-	}).format(
-		($adminTokensQuery.data?.balances?.EURe?.balance || 0) +
-			(($adminTokensQuery.data?.balances?.VCE?.balance || 0) +
-				($adminTokensQuery.data?.balances?.VCE?.staked_balance || 0)) *
-				currentTokenPrice
-	);
+	}).format($ccpQuery.data?.total ?? 0);
 
-	// Format distribution percentages based on actual values
-	$: {
-		const eureAmount = $adminTokensQuery.data?.balances?.EURe?.balance || 0;
-		const totalVceAmount =
-			($adminTokensQuery.data?.balances?.VCE?.balance || 0) +
-			($adminTokensQuery.data?.balances?.VCE?.staked_balance || 0);
-		const vceInEure = totalVceAmount * currentTokenPrice;
-		const total = eureAmount + vceInEure;
+	// Get distribution percentages from the API
+	$: eurePercentage = Math.round($ccpQuery.data?.distribution?.eure ?? 0);
+	$: vcrPercentage = Math.round($ccpQuery.data?.distribution?.vce ?? 0);
 
-		eurePercentage = total > 0 ? Math.round((eureAmount / total) * 100) : 0;
-		vcePercentage = total > 0 ? Math.round((vceInEure / total) * 100) : 0;
-	}
+	// Extract the current VC count from the 'activeVC' endpoint (0 if not loaded)
+	$: totalVCs = $activeVCQuery.data?.totalVCs ?? 0;
 
-	// Reactive value for total VCs
-	$: totalVCs = $investmentMetricsQuery.data?.totalVCs || 0;
+	// Compute the next milestone threshold based on levels from investment metrics.
+	$: nextMilestone = (() => {
+		const levels = $investmentMetricsQuery.data?.levels;
+		if (!levels || levels.length === 0) return 0;
+		// Find the first level whose totalVCs is greater than the current totalVCs.
+		for (const level of levels) {
+			if (level.totalVCs > totalVCs) return level.totalVCs;
+		}
+		// If none found, use the highest milestone available.
+		return levels[levels.length - 1].totalVCs;
+	})();
+
+	// Calculate remaining Vision Creators needed for the next milestone; if the next milestone is not yet met, subtract current VCs
+	$: remainingVCs = nextMilestone > totalVCs ? nextMilestone - totalVCs : 0;
 
 	// Add state for modal
 	let isMetricsModalOpen = false;
@@ -123,6 +158,21 @@ This is the dashboard area of the proposals view that:
 		if (event.key === 'Escape' && isMetricsModalOpen) {
 			toggleMetricsModal(false);
 		}
+	}
+
+	// Static chart data - completely independent of D3
+	const staticChartData = [
+		{ month: 'Sep', value: 6000 },
+		{ month: 'Oct', value: 9000 },
+		{ month: 'Nov', value: 13000 },
+		{ month: 'Dec', value: 17000 },
+		{ month: 'Jan', value: 22000 },
+		{ month: 'Feb', value: 28000 }
+	];
+	
+	// Handle event with proper typing
+	function handleMetricsClick(event: MouseEvent) {
+		toggleMetricsModal();
 	}
 </script>
 
@@ -146,7 +196,7 @@ This is the dashboard area of the proposals view that:
 				<!-- Add group class and click handler -->
 				<div 
 					class="group relative cursor-pointer"
-					on:click={toggleMetricsModal}
+					on:click={handleMetricsClick}
 				>
 					<!-- Glow effect rectangle -->
 					<div class="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 
@@ -172,7 +222,7 @@ This is the dashboard area of the proposals view that:
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">TEP</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100 whitespace-nowrap">
-								€{stats.currentTokenPrice.toFixed(2)}<span class="text-xs font-medium sm:text-sm">/t</span>
+								€{tokenEmissionPrice.toFixed(2)}
 							</p>
 						</div>
 
@@ -182,7 +232,11 @@ This is the dashboard area of the proposals view that:
 								<h3 class="text-xs font-medium sm:text-sm text-tertiary-200">POOL</h3>
 							</div>
 							<p class="text-lg font-bold sm:text-2xl text-tertiary-100">
-								{ccpValue}
+								{#if $ccpQuery.data}
+									{formattedPoolValue}
+								{:else}
+									Loading…
+								{/if}
 							</p>
 						</div>
 					</div>
@@ -205,7 +259,7 @@ This is the dashboard area of the proposals view that:
 		class="fixed inset-0 z-50 flex items-start justify-center pointer-events-none"
 	>
 		<div 
-			class="relative w-full max-w-[640px] h-[80vh] mt-24 mx-4 bg-surface-800 
+			class="relative w-full max-w-[640px] max-h-[80vh] mt-24 mx-4 bg-surface-800 
 			rounded-xl border border-surface-600/50 shadow-2xl overflow-y-auto
 			pointer-events-auto"
 		>
@@ -225,82 +279,94 @@ This is the dashboard area of the proposals view that:
 
 			<!-- Modal body -->
 			<div class="p-4 space-y-4">
+				{#if apiError}
+					<div class="p-4 bg-red-900/30 rounded-lg border border-red-500/30">
+						<h3 class="text-red-300 font-medium">Connection Error</h3>
+						<p class="text-red-200 text-sm mt-2">
+							Unable to connect to the API. Please check your connection and try again.
+						</p>
+					</div>
+				{/if}
+				
 				<!-- Detailed metrics grid -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Current VCs/Next VC Milestone</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{totalVCs}/21</p>
-						<p class="text-sm text-tertiary-300 mt-2">{21 - totalVCs} more Vision Creators needed for next milestone</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $investmentMetricsQuery.data}
+								{totalVCs}/{nextMilestone}
+							{:else}
+								Loading…
+							{/if}
+						</p>
+						<p class="text-sm text-tertiary-300 mt-2">
+							{#if $investmentMetricsQuery.data}
+								Bring in {remainingVCs} new VC{remainingVCs !== 1 ? 's' : ''} to unlock next milestone
+							{:else}
+								Please wait…
+							{/if}
+						</p>
 					</div>
 					
 					<div class="p-4 rounded-lg bg-surface-700/30">
-						<h3 class="text-sm font-medium text-tertiary-200">Current Token Emission Price</h3>
-						<p class="text-2xl font-bold text-tertiary-100">€{stats.currentTokenPrice.toFixed(2)}</p>
-						<p class="text-sm text-tertiary-300 mt-2">1000 Tokens sold for €2000 in last round</p>
+						<h3 class="text-sm font-medium text-tertiary-200">Current VCR Emission Price</h3>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $orgaStatsQuery.data}
+								€{tokenEmissionPrice.toFixed(2)}
+							{:else}
+								Loading…
+							{/if}
+						</p>
+						<p class="text-sm text-tertiary-300 mt-2">Price VCR sold for in last round</p>
 					</div>
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Pool Distribution</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{eurePercentage}% / {vcePercentage}%</p>
-						<p class="text-sm text-tertiary-300 mt-2">EURe / VCE ratio</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $ccpQuery.data}
+								{eurePercentage}% / {vcrPercentage}%
+							{:else}
+								Loading…
+							{/if}
+						</p>
+						<p class="text-sm text-tertiary-300 mt-2">EURe / VCR ratio</p>
 					</div>
 
 					<div class="p-4 rounded-lg bg-surface-700/30">
 						<h3 class="text-sm font-medium text-tertiary-200">Total Pool Value</h3>
-						<p class="text-2xl font-bold text-tertiary-100">{ccpValue}</p>
-						<p class="text-sm text-tertiary-300 mt-2">Combined value of EURe and VCE</p>
+						<p class="text-2xl font-bold text-tertiary-100">
+							{#if $ccpQuery.data}
+								{formattedPoolValue}
+							{:else}
+								Loading…
+							{/if}
+						</p>
+						<p class="text-sm text-tertiary-300 mt-2">Combined value of EURe and VCR</p>
 					</div>
 				</div>
 
-				<!-- New Detailed Metrics Section -->
-				<div class="p-4 rounded-lg bg-surface-700/30">
-					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Detailed Metrics</h3>
-					<div class="space-y-2">
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 1</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 2</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 3</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 4</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 5</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 6</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 7</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 8</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 9</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
-						<div class="flex justify-between items-center">
-							<span class="text-tertiary-300">Metric 10</span>
-							<span class="text-tertiary-100 font-medium">-</span>
-						</div>
+			
+				<!-- <div class="p-4 rounded-lg bg-surface-700/30">
+					<h3 class="text-sm font-medium text-tertiary-200 mb-3">Cashflow</h3>
+			
+					<div class="h-80 w-full">
+						<LineChart 
+							data={staticChartData}
+							height={260}
+							showNegativeValues={true}
+						/>
 					</div>
-				</div>
+				</div> -->
 			</div>
 		</div>
 	</div>
 {/if}
+
+<style>
+	/* Add glow effect for the chart line */
+	.filter-glow {
+		filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.8)); /* Stronger glow */
+	}
+</style>
 
 

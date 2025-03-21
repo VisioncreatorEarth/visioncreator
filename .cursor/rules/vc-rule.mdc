@@ -1,0 +1,6 @@
+---
+description: Basic Tech stack
+globs: 
+alwaysApply: true
+---
+We are building  a webpage using svelte/tailwind for rontend and supabase postgres through wundergraph as backend

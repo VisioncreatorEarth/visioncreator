@@ -1,0 +1,6 @@
+---
+description: no-restart-npm
+globs: 
+alwaysApply: false
+---
+Do not restart npm by running npm run dev, it's already running!
