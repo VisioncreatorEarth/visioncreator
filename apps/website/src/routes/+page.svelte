@@ -235,296 +235,318 @@
 	<div class="full-page-background"></div>
 	
 	<section class="hero">
+		<div class="time-indicator" class:visible={textVisible}>
+			<div class="current-date">MARCH 21, 2025</div>
+			<div class="timeline-divider"></div>
+			<div class="future-date">MARCH 21, 2026</div>
+		</div>
+		
 		<div class="hero-wrapper">
-			<!-- Left side with main statement -->
-			<div class="hero-left" class:visible={textVisible}>
-				<h2 class="hero-statement">Everyone should be part of building the future.</h2>
+			<!-- Future Vision Panel - Simplified -->
+			<div class="hero-left future-panel" class:visible={textVisible}>
+				<div class="future-badge">MARCH 21, 2026</div>
+				<h2 class="hero-statement">The Day Everything Changed</h2>
 				
-				<div class="hero-actions">
-					<a href="/contribute" class="hero-cta primary" class:visible={buttonsVisible}>
-						Contribute
-					</a>
-					<a href="/invest" class="hero-cta secondary" class:visible={buttonsVisible}>
-						Invest
-					</a>
-							</div>
+				<div class="hero-story">
+					<p>You're celebrating alongside 10,000 others who built something revolutionary together. You played a crucial role.</p>
+					
+					<div class="ownership-visual">
+						<div class="ownership-chart">
+							<div class="ownership-segment"></div>
+							<div class="ownership-segment"></div>
+							<div class="ownership-segment"></div>
+							<div class="ownership-you"></div>
+						</div>
+						<div class="ownership-label">You are an <span>owner</span> of Hominio</div>
+					</div>
+					
+					<p class="vision-highlight">This is just the beginning of a new era in how we build startups together.</p>
 				</div>
+			</div>
 
-			<!-- Right side with more detailed content -->
-			<div class="hero-right" class:visible={textVisible}>
-				<h1 class="hero-title">
-					The <span>Collective</span> Blueprint
-							</h1>
-							
-				<div class="hero-problem">
-					<p>The startup world is structured to favor a select few—founders and big investors—who take the lion's share while contributors and supporters are left with nothing but a paycheck.</p>
-							</div>
-							
-				<div class="read-more" class:visible={buttonsVisible}>
-					<a href="#investment-section">
-						Read the vision
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-						</svg>
-					</a>
-							</div>
-						</div>
-							</div>
-							
-		<!-- Hominio section (redesigned) -->
-		<div class="hominio-section" class:visible={sectionsVisible}>
-			<div class="hominio-container">
-				<div class="hominio-left">
-					<div class="hominio-label">INTRODUCING</div>
-					<h2 class="hominio-title">HOMINIO</h2>
-					<p class="hominio-description">
-						An AI-powered platform that lets you interact with your digital world through voice commands.
-					</p>
-					<ul class="hominio-features">
-						<li>Build mini-apps with simple voice instructions</li>
-						<li>Manage your private data securely</li>
-						<li>Control your digital experience</li>
-						<li>Everything runs locally on your device</li>
-									</ul>
-					<div class="hominio-cta">
-						<a href="#investment-section" class="hominio-button">Learn More</a>
-								</div>
-									</div>
-				<div class="hominio-right">
-					<div class="terminal">
-						<div class="terminal-header">
-							<div class="terminal-buttons">
-								<span></span>
-								<span></span>
-								<span></span>
-								</div>
-							<div class="terminal-title">Hominio AI</div>
-							</div>
-						<div class="terminal-body">
-							<div class="terminal-line">$ <span class="terminal-user">Launch Hominio</span></div>
-							<div class="terminal-line"><span class="terminal-system">Initializing AI system...</span></div>
-							<div class="terminal-line"><span class="terminal-system">Voice interface activated.</span></div>
-							<div class="terminal-line terminal-space"></div>
-							<div class="terminal-line"><span class="terminal-ai">How can I help you today?</span></div>
-							<div class="terminal-line"><span class="terminal-user">"Create a budget tracker app"</span></div>
-							<div class="terminal-line"><span class="terminal-ai">Building budget tracker... What features do you need?</span></div>
-							<div class="terminal-line terminal-current">|</div>
-							</div>
-						</div>
-							</div>
-									</div>
-								</div>
-								
-		<!-- JOIN US banner (simplified) -->
-		<div class="join-banner" class:visible={sectionsVisible}>
-			<div class="join-content">
-				<h2 class="join-heading">JOIN US IN BUILDING OUR FIRST COMMUNITY BUILT AND OWNED STARTUP</h2>
+			<!-- Current Day Call to Action Panel - Simplified -->
+			<div class="hero-right present-panel" class:visible={textVisible}>
+				<div class="present-badge">TODAY</div>
+				<h1 class="hero-title">Will you be a <span>pioneer</span>?</h1>
+				
+				<div class="hero-question">
+					<p>You have a choice: help build the future of startups, or watch it happen without you.</p>
+					
+					<div class="decision-prompt">
+						<span class="highlight-text">You deserve to own what you help build.</span>
+					</div>
+					
+					<p>Join us in creating Hominio, our first community-built and community-owned startup that gives everyone a stake in its success.</p>
+				</div>
+				
+				<div class="hero-actions" class:visible={buttonsVisible}>
+					<a href="/contribute" class="hero-cta primary">Join The Journey</a>
+					<a href="/invest" class="hero-cta secondary">Learn How</a>
+				</div>
 			</div>
 		</div>
 		
-		<div class="participate-section" class:visible={sectionsVisible}>
-			<h2 class="section-title animate-fade-in">How to Participate</h2>
-			
-			<!-- Contribute section - simple sentence above Got an Idea -->
-			<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
-				<p>Contribute your skills and ideas to shape the future of Visioncreator and Hominio.</p>
-							</div>
-							
-			<!-- Step by step idea flow as seen in screenshots -->
-			<div class="process-flow">
-				<!-- Step 1: Got an Idea? Share It! -->
-				<div class="process-card idea-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.4s;">
-					<div class="card-header">
-						<div class="icon-wrapper">
-							<svg class="megaphone-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<path d="M3 10.5V13.5M3 13.5H6M3 13.5L4.5 12M4.5 12L6 10.5M4.5 12L6.5 13.5M6.5 13.5L8 12M6.5 13.5H13" stroke="#5078C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-										</svg>
-									</div>
-						<h3 class="card-title">Got an Idea? Share It!</h3>
-								</div>
-					<div class="card-body">
-						<p>Have an idea or a way to make something better? Post it on our idea board! Whether it's a new feature or a small tweak, this is your chance to shape Visioncreator.</p>
-						
-						<!-- Example idea cards as shown in screenshot - keeping only the first one -->
-						<div class="idea-examples">
-							<div class="idea-example-card">
-								<div class="idea-user">
-									<div class="user-avatar">JD</div>
-									<span>John D.</span>
-								</div>
-								<h4>Improve Onboarding Flow</h4>
-								<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
-								<div class="vote-count">
-									<span class="votes">12</span>
-									<span class="votes-label">VOTES</span>
-									<button class="vote-button">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path d="M12 5L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-											<path d="M5 12L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-										</svg>
-										Vote
-									</button>
-								</div>
-							</div>
-								</div>
-								</div>
-							</div>
-							
-				<!-- Step 2: Discuss and Vote -->
-				<div class="process-card vote-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.6s;">
-					<div class="card-header">
-						<div class="icon-wrapper">
-							<svg class="vote-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<circle cx="12" cy="12" r="8" stroke="#5078C8" stroke-width="2"/>
-								<path d="M12 8L12 16" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-								<path d="M16 12L8 12" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-										</svg>
-								</div>
-						<h3 class="card-title">Discuss and Vote</h3>
-							</div>
-					<div class="card-body">
-						<p>Your idea kicks off a conversation. We discuss it together as a collective, share feedback, and then vote. Get enough votes, and your idea turns into a draft—ready to take the next step.</p>
-						
-						<div class="vote-visualization">
-							<div class="users-voting">
-								<div class="user-vote">
-									<div class="user-avatar">
-										<span class="vote-plus">+1</span>
-								</div>
-							</div>
-								<div class="user-vote">
-									<div class="user-avatar"></div>
-									<span class="vote-plus">+1</span>
-								</div>
-								<div class="user-vote">
-									<div class="user-avatar"></div>
-									<span class="vote-plus">+1</span>
-							</div>
+		<div class="scroll-indicator" class:visible={textVisible}>
+			<span>Scroll to explore</span>
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</div>
+	</section>
+	
+	<!-- Hominio section (redesigned) -->
+	<div class="hominio-section" class:visible={sectionsVisible}>
+		<div class="hominio-container">
+			<div class="hominio-left">
+				<div class="hominio-label">INTRODUCING</div>
+				<h2 class="hominio-title">HOMINIO</h2>
+				<p class="hominio-description">
+					An AI-powered platform that lets you interact with your digital world through voice commands.
+				</p>
+				<ul class="hominio-features">
+					<li>Build mini-apps with simple voice instructions</li>
+					<li>Manage your private data securely</li>
+					<li>Control your digital experience</li>
+					<li>Everything runs locally on your device</li>
+				</ul>
+				<div class="hominio-cta">
+					<a href="#investment-section" class="hominio-button">Learn More</a>
+				</div>
+			</div>
+			<div class="hominio-right">
+				<div class="terminal">
+					<div class="terminal-header">
+						<div class="terminal-buttons">
+							<span></span>
+							<span></span>
+							<span></span>
 						</div>
-							<div class="vote-result">
-								<div class="big-vote-count">
-									<span>8</span>
-									<div class="votes-label">VOTES</div>
-							</div>
-									</div>
-									</div>
-									</div>
-								</div>
-								
-				<!-- Step 3: Combined Success Earns & Investment Split -->
-				<div class="process-card combined-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.8s;">
-					<div class="card-header">
-						<div class="icon-wrapper">
-							<svg class="reward-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#5078C8" stroke-width="2"/>
-								<path d="M12 15V22" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-								<path d="M15 19H9" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-								<path d="M15 12L9 8" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-											</svg>
-										</div>
-						<h3 class="card-title">Success Earns You Rewards</h3>
-									</div>
-					<div class="card-body">
-						<p>Take ownership of your idea by defining its scope and resources. Successful projects earn you both payment and ownership tokens.</p>
-						
-						<div class="rewards-section">
-							<div class="budget-sliders">
-								<div class="slider-group">
-									<div class="slider-label">
-										<span>Development Time</span>
-										<span class="slider-value">2 weeks</span>
-									</div>
-									<div class="slider-track">
-										<div class="slider-progress" style="width: 40%;">
-											<div class="slider-handle"></div>
-										</div>
-									</div>
-								</div>
-								
-								<div class="slider-group">
-									<div class="slider-label">
-										<span>Complexity</span>
-										<span class="slider-value">Medium</span>
-									</div>
-									<div class="slider-track">
-										<div class="slider-progress" style="width: 60%;">
-											<div class="slider-handle"></div>
-									</div>
-								</div>
-								</div>
-							</div>
-							
-							<div class="budget-result">
-								<div class="budget-amount">€1,500</div>
-								<div class="token-amount">+ 150 VCR</div>
-								<div class="budget-label">Estimated Rewards</div>
-							</div>
-									</div>
-								</div>
-									</div>
-								</div>
-							</div>
-			</section>
+						<div class="terminal-title">Hominio AI</div>
+					</div>
+					<div class="terminal-body">
+						<div class="terminal-line">$ <span class="terminal-user">Launch Hominio</span></div>
+						<div class="terminal-line"><span class="terminal-system">Initializing AI system...</span></div>
+						<div class="terminal-line"><span class="terminal-system">Voice interface activated.</span></div>
+						<div class="terminal-line terminal-space"></div>
+						<div class="terminal-line"><span class="terminal-ai">How can I help you today?</span></div>
+						<div class="terminal-line"><span class="terminal-user">"Create a budget tracker app"</span></div>
+						<div class="terminal-line"><span class="terminal-ai">Building budget tracker... What features do you need?</span></div>
+						<div class="terminal-line terminal-current">|</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- JOIN US banner (simplified) -->
+	<div class="join-banner" class:visible={sectionsVisible}>
+		<div class="join-content">
+			<h2 class="join-heading">JOIN US IN BUILDING OUR FIRST COMMUNITY BUILT AND OWNED STARTUP</h2>
+		</div>
+	</div>
+	
+	<div class="participate-section" class:visible={sectionsVisible}>
+		<h2 class="section-title animate-fade-in">How to Participate</h2>
 		
-		<!-- How to Invest Section -->
-		<div id="investment-section" class="investment-section" class:visible={sectionsVisible}>
-			<h2 class="section-title animate-fade-in">How to Invest</h2>
+		<!-- Contribute section - simple sentence above Got an Idea -->
+		<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
+			<p>Contribute your skills and ideas to shape the future of Visioncreator and Hominio.</p>
+		</div>
+		
+		<!-- Step by step idea flow as seen in screenshots -->
+		<div class="process-flow">
+			<!-- Step 1: Got an Idea? Share It! -->
+			<div class="process-card idea-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.4s;">
+				<div class="card-header">
+					<div class="icon-wrapper">
+						<svg class="megaphone-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M3 10.5V13.5M3 13.5H6M3 13.5L4.5 12M4.5 12L6 10.5M4.5 12L6.5 13.5M6.5 13.5L8 12M6.5 13.5H13" stroke="#5078C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</div>
+					<h3 class="card-title">Got an Idea? Share It!</h3>
+				</div>
+				<div class="card-body">
+					<p>Have an idea or a way to make something better? Post it on our idea board! Whether it's a new feature or a small tweak, this is your chance to shape Visioncreator.</p>
+					
+					<!-- Example idea cards as shown in screenshot - keeping only the first one -->
+					<div class="idea-examples">
+						<div class="idea-example-card">
+							<div class="idea-user">
+								<div class="user-avatar">JD</div>
+								<span>John D.</span>
+							</div>
+							<h4>Improve Onboarding Flow</h4>
+							<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
+							<div class="vote-count">
+								<span class="votes">12</span>
+								<span class="votes-label">VOTES</span>
+								<button class="vote-button">
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<path d="M12 5L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+										<path d="M5 12L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+									</svg>
+									Vote
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 			
-			<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
-				<p>You can invest in Visioncreator by buying VCR tokens. Your investment helps build the future of community-owned startups.</p>
+			<!-- Step 2: Discuss and Vote -->
+			<div class="process-card vote-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.6s;">
+				<div class="card-header">
+					<div class="icon-wrapper">
+						<svg class="vote-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="12" cy="12" r="8" stroke="#5078C8" stroke-width="2"/>
+							<path d="M12 8L12 16" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
+							<path d="M16 12L8 12" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
+						</svg>
+					</div>
+					<h3 class="card-title">Discuss and Vote</h3>
+				</div>
+				<div class="card-body">
+					<p>Your idea kicks off a conversation. We discuss it together as a collective, share feedback, and then vote. Get enough votes, and your idea turns into a draft—ready to take the next step.</p>
+					
+					<div class="vote-visualization">
+						<div class="users-voting">
+							<div class="user-vote">
+								<div class="user-avatar">
+									<span class="vote-plus">+1</span>
 								</div>
-								
-			<div class="split-container" class:visible={investVisible}>
-				<div class="split-header">
-					<h3 class="split-title">Investment Split</h3>
-					<p class="split-description">
-						All investments are split equally into two pools, both working together to grow Hominio as a community-owned project.
-					</p>
+							</div>
+							<div class="user-vote">
+								<div class="user-avatar"></div>
+								<span class="vote-plus">+1</span>
+							</div>
+							<div class="user-vote">
+								<div class="user-avatar"></div>
+								<span class="vote-plus">+1</span>
+							</div>
+						</div>
+						<div class="vote-result">
+							<div class="big-vote-count">
+								<span>8</span>
+								<div class="votes-label">VOTES</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Step 3: Combined Success Earns & Investment Split -->
+			<div class="process-card combined-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.8s;">
+				<div class="card-header">
+					<div class="icon-wrapper">
+						<svg class="reward-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#5078C8" stroke-width="2"/>
+							<path d="M12 15V22" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
+							<path d="M15 19H9" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
+							<path d="M15 12L9 8" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
+						</svg>
+					</div>
+					<h3 class="card-title">Success Earns You Rewards</h3>
+				</div>
+				<div class="card-body">
+					<p>Take ownership of your idea by defining its scope and resources. Successful projects earn you both payment and ownership tokens.</p>
+					
+					<div class="rewards-section">
+						<div class="budget-sliders">
+							<div class="slider-group">
+								<div class="slider-label">
+									<span>Development Time</span>
+									<span class="slider-value">2 weeks</span>
+								</div>
+								<div class="slider-track">
+									<div class="slider-progress" style="width: 40%;">
+										<div class="slider-handle"></div>
+									</div>
+								</div>
 							</div>
 							
-				<div class="split-chart">
-					<div class="split-half community">
-						<div class="split-label">Community Pool</div>
-						<div class="split-percentage">50%</div>
-						<div class="split-list">
-							<div class="split-item">Community proposals</div>
-							<div class="split-item">Public contributions</div>
-							<div class="split-item">Development grants</div>
-							<div class="split-item">Community-driven initiatives</div>
-										</div>
+							<div class="slider-group">
+								<div class="slider-label">
+									<span>Complexity</span>
+									<span class="slider-value">Medium</span>
+								</div>
+								<div class="slider-track">
+									<div class="slider-progress" style="width: 60%;">
+										<div class="slider-handle"></div>
 									</div>
-					<div class="split-half platform">
-						<div class="split-label">Platform Pool</div>
-						<div class="split-percentage">50%</div>
-						<div class="split-list">
-							<div class="split-item">Hiring professional developers</div>
-							<div class="split-item">Infrastructure & operations</div>
-							<div class="split-item">Marketing campaigns</div>
-							<div class="split-item">Core feature development</div>
-										</div>
-									</div>
-									</div>
-									
-				<div class="investment-info">
-					<div class="info-card">
-						<h3 class="info-title">Minimum Investment</h3>
-						<div class="budget-amount">€200</div>
-						<p class="budget-label">Entry-level investment to join Hominio</p>
-										</div>
-					<div class="info-card">
-						<h3 class="info-title">Initial Fundraising</h3>
-						<div class="budget-amount">€8M</div>
-						<p class="budget-label">First phase target for Hominio launch</p>
-									</div>
-					<div class="info-card">
-						<h3 class="info-title">Maximum Investment</h3>
-						<div class="budget-amount">Unlimited</div>
-						<p class="budget-label">No cap on how much you can contribute</p>
 								</div>
 							</div>
 						</div>
-							</div>
-	</main>
+						
+						<div class="budget-result">
+							<div class="budget-amount">€1,500</div>
+							<div class="token-amount">+ 150 VCR</div>
+							<div class="budget-label">Estimated Rewards</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- How to Invest Section -->
+	<div id="investment-section" class="investment-section" class:visible={sectionsVisible}>
+		<h2 class="section-title animate-fade-in">How to Invest</h2>
+		
+		<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
+			<p>You can invest in Visioncreator by buying VCR tokens. Your investment helps build the future of community-owned startups.</p>
+		</div>
+		
+		<div class="split-container" class:visible={investVisible}>
+			<div class="split-header">
+				<h3 class="split-title">Investment Split</h3>
+				<p class="split-description">
+					All investments are split equally into two pools, both working together to grow Hominio as a community-owned project.
+				</p>
+			</div>
+			
+			<div class="split-chart">
+				<div class="split-half community">
+					<div class="split-label">Community Pool</div>
+					<div class="split-percentage">50%</div>
+					<div class="split-list">
+						<div class="split-item">Community proposals</div>
+						<div class="split-item">Public contributions</div>
+						<div class="split-item">Development grants</div>
+						<div class="split-item">Community-driven initiatives</div>
+					</div>
+				</div>
+				<div class="split-half platform">
+					<div class="split-label">Platform Pool</div>
+					<div class="split-percentage">50%</div>
+					<div class="split-list">
+						<div class="split-item">Hiring professional developers</div>
+						<div class="split-item">Infrastructure & operations</div>
+						<div class="split-item">Marketing campaigns</div>
+						<div class="split-item">Core feature development</div>
+					</div>
+				</div>
+			</div>
+			
+			<div class="investment-info">
+				<div class="info-card">
+					<h3 class="info-title">Minimum Investment</h3>
+					<div class="budget-amount">€200</div>
+					<p class="budget-label">Entry-level investment to join Hominio</p>
+				</div>
+				<div class="info-card">
+					<h3 class="info-title">Initial Fundraising</h3>
+					<div class="budget-amount">€8M</div>
+					<p class="budget-label">First phase target for Hominio launch</p>
+				</div>
+				<div class="info-card">
+					<h3 class="info-title">Maximum Investment</h3>
+					<div class="budget-amount">Unlimited</div>
+					<p class="budget-label">No cap on how much you can contribute</p>
+				</div>
+			</div>
+		</div>
+	</div>
+</main>
 
 <!-- Personal Journey Section - Redesigned for visual storytelling -->
 <div id="journey-section" class="journey-section" class:visible={sectionsVisible}>
@@ -718,10 +740,77 @@
 		100% { transform: scale(1.05); }
 	}
 
-	/* Hero Section Styling */
+	/* Hero Section Styling - New Streamlined Design */
 	.hero {
 		position: relative;
 		overflow: hidden;
+		padding-top: 2rem;
+		min-height: 100vh;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+	}
+	
+	.time-indicator {
+		position: absolute;
+		top: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		background: rgba(0, 0, 0, 0.4);
+		backdrop-filter: blur(10px);
+		padding: 0.5rem 1.5rem;
+		border-radius: 50px;
+		z-index: 10;
+		opacity: 0;
+		transition: opacity 0.8s ease, transform 0.8s ease;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+	}
+	
+	.time-indicator.visible {
+		opacity: 1;
+	}
+	
+	.current-date, .future-date {
+		font-weight: 700;
+		font-size: 0.9rem;
+		letter-spacing: 1px;
+	}
+	
+	.current-date {
+		color: #60A5FA;
+	}
+	
+	.future-date {
+		color: #8B5CF6;
+	}
+	
+	.timeline-divider {
+		height: 2px;
+		width: 80px;
+		background: linear-gradient(90deg, #60A5FA, #8B5CF6);
+		position: relative;
+	}
+	
+	.timeline-divider:before, .timeline-divider:after {
+		content: "";
+		position: absolute;
+		top: 50%;
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		transform: translateY(-50%);
+		background: white;
+	}
+	
+	.timeline-divider:before {
+		left: 0;
+	}
+	
+	.timeline-divider:after {
+		right: 0;
 	}
 	
 	.hero-wrapper {
@@ -729,60 +818,240 @@
 		z-index: 2;
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 2rem;
+		gap: 3rem;
 		max-width: 1400px;
 		margin: 0 auto;
-		padding: 8rem 2rem;
+		padding: 4rem 2rem;
 		min-height: 80vh;
 		align-items: center;
 	}
 	
-	/* Left Side - Main Statement */
-	.hero-left {
-		padding-right: 2rem;
+	/* Future Panel Styling - Simplified */
+	.future-panel {
+		position: relative;
+		padding: 2.5rem;
+		background: rgba(91, 33, 182, 0.1);
+		border-radius: 16px;
+		border: 1px solid rgba(139, 92, 246, 0.2);
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+		backdrop-filter: blur(10px);
+		transition: all 0.8s ease-out;
 		opacity: 0;
 		transform: translateX(-30px);
-		transition: all 0.8s ease-out;
-		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 	}
 	
-	.hero-left.visible {
+	.future-panel.visible {
 		opacity: 1;
 		transform: translateX(0);
 	}
 	
-	.hero-statement {
-		font-size: 4.5rem;
-		font-weight: 800;
-		line-height: 1.1;
-		margin-bottom: 3rem;
+	.future-badge {
+		position: absolute;
+		top: -15px;
+		left: 30px;
+		background: linear-gradient(135deg, #8B5CF6, #6366F1);
 		color: white;
-		position: relative;
+		padding: 0.5rem 1.5rem;
+		border-radius: 20px;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
 	}
 	
-	.hero-statement::before {
-		content: "";
+	.hero-statement {
+		font-size: 2.5rem;
+		font-weight: 700;
+		margin-bottom: 1.5rem;
+		color: white;
+	}
+	
+	.hero-story {
+		font-size: 1.1rem;
+		line-height: 1.7;
+		color: rgba(255, 255, 255, 0.85);
+	}
+	
+	.hero-story p {
+		margin-bottom: 1.5rem;
+	}
+	
+	/* New ownership visualization */
+	.ownership-visual {
+		margin: 2rem 0;
+		padding: 1.5rem;
+		background: rgba(139, 92, 246, 0.1);
+		border-radius: 12px;
+		border: 1px solid rgba(139, 92, 246, 0.2);
+		text-align: center;
+	}
+	
+	.ownership-chart {
+		display: flex;
+		justify-content: center;
+		gap: 0.4rem;
+		margin-bottom: 1rem;
+	}
+	
+	.ownership-segment {
+		height: 40px;
+		width: 8px;
+		background: rgba(139, 92, 246, 0.3);
+		border-radius: 4px;
+		position: relative;
+		transform-origin: bottom;
+		animation: rise 1.5s ease-out forwards;
+		animation-delay: calc(var(--index, 0) * 0.2s);
+		opacity: 0;
+	}
+	
+	.ownership-segment:nth-child(1) { --index: 1; height: 50px; }
+	.ownership-segment:nth-child(2) { --index: 2; height: 60px; }
+	.ownership-segment:nth-child(3) { --index: 3; height: 40px; }
+	
+	.ownership-you {
+		height: 70px;
+		width: 8px;
+		background: #8B5CF6;
+		border-radius: 4px;
+		position: relative;
+		transform-origin: bottom;
+		animation: rise 1.5s ease-out forwards;
+		animation-delay: 0.8s;
+		opacity: 0;
+	}
+	
+	.ownership-you:after {
+		content: "YOU";
 		position: absolute;
-		top: -30px;
-		left: 0;
-		width: 60px;
-		height: 6px;
+		top: -20px;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 0.7rem;
+		font-weight: 700;
+		color: #8B5CF6;
+	}
+	
+	@keyframes rise {
+		0% {
+			transform: scaleY(0);
+			opacity: 0;
+		}
+		100% {
+			transform: scaleY(1);
+			opacity: 1;
+		}
+	}
+	
+	.ownership-label {
+		font-size: 1.2rem;
+		font-weight: 600;
+		color: rgba(255, 255, 255, 0.9);
+	}
+	
+	.ownership-label span {
+		color: #8B5CF6;
+		text-transform: uppercase;
+		font-weight: 700;
+	}
+	
+	.vision-highlight {
+		font-style: italic;
+		border-left: 3px solid #8B5CF6;
+		padding-left: 1.2rem;
+		font-size: 1.15rem;
+		color: rgba(255, 255, 255, 0.95);
+	}
+	
+	/* Present Panel Styling - Simplified */
+	.present-panel {
+		position: relative;
+		padding: 2.5rem;
+		background: rgba(37, 99, 235, 0.1);
+		border-radius: 16px;
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+		backdrop-filter: blur(10px);
+		transition: all 0.8s ease-out;
+		transition-delay: 0.2s;
+		opacity: 0;
+		transform: translateX(30px);
+	}
+	
+	.present-panel.visible {
+		opacity: 1;
+		transform: translateX(0);
+	}
+	
+	.present-badge {
+		position: absolute;
+		top: -15px;
+		left: 30px;
+		background: linear-gradient(135deg, #3B82F6, #60A5FA);
+		color: white;
+		padding: 0.5rem 1.5rem;
+		border-radius: 20px;
+		font-size: 0.8rem;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+	}
+	
+	.hero-title {
+		font-size: 2.8rem;
+		font-weight: 700;
+		margin-bottom: 1.5rem;
+		color: white;
+	}
+	
+	.hero-title span {
 		background: linear-gradient(90deg, #3B82F6, #93C5FD);
-		border-radius: 3px;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		font-weight: 800;
+	}
+	
+	.hero-question {
+		font-size: 1.1rem;
+		line-height: 1.6;
+		color: rgba(255, 255, 255, 0.8);
+		margin-bottom: 2rem;
+	}
+	
+	.hero-question p {
+		margin-bottom: 1.2rem;
+	}
+	
+	.decision-prompt {
+		margin: 1.5rem 0;
+		padding: 1.5rem;
+		background: rgba(59, 130, 246, 0.1);
+		border-radius: 12px;
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		text-align: center;
+	}
+	
+	.highlight-text {
+		color: #60A5FA;
+		font-weight: 600;
+		font-size: 1.2rem;
 	}
 	
 	.hero-actions {
 		display: flex;
 		gap: 1.5rem;
-		margin-top: 3rem;
+		margin-top: 2.5rem;
 	}
 	
 	.hero-cta {
 		opacity: 0;
 		transform: translateY(20px);
 		transition: all 0.5s ease-out;
-		padding: 0.75rem 2rem;
-		border-radius: 6px;
+		padding: 1rem 2rem;
+		border-radius: 8px;
 		font-weight: 600;
 		font-size: 1.1rem;
 		text-decoration: none;
@@ -794,105 +1063,160 @@
 		cursor: pointer;
 	}
 	
+	.hero-cta.primary {
+		background: linear-gradient(135deg, #3B82F6, #2563EB);
+		color: white;
+		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+	}
+	
+	.hero-cta.secondary {
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(5px);
+		color: #60A5FA;
+		border: 1px solid rgba(96, 165, 250, 0.3);
+	}
+	
+	.hero-cta.primary:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+	}
+	
+	.hero-cta.secondary:hover {
+		background: rgba(255, 255, 255, 0.15);
+		transform: translateY(-3px);
+	}
+	
 	.hero-cta.visible {
 		opacity: 1;
 		transform: translateY(0);
 	}
 	
-	.hero-cta.primary {
-		background: linear-gradient(135deg, #3B82F6, #1D4ED8);
-		color: white;
-		box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
-	}
-	
-	.hero-cta.primary:hover {
-		background: linear-gradient(135deg, #2563EB, #1E40AF);
-		box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-		transform: translateY(-2px);
-	}
-	
-	.hero-cta.secondary {
-		background: rgba(255, 255, 255, 0.05);
-		backdrop-filter: blur(10px);
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		color: white;
-	}
-	
-	.hero-cta.secondary:hover {
-		background: rgba(255, 255, 255, 0.1);
-		border-color: rgba(255, 255, 255, 0.2);
-		transform: translateY(-2px);
-	}
-	
-	/* Right Side - Details */
-	.hero-right {
-		opacity: 0;
-		transform: translateX(30px);
-		transition: all 0.8s ease-out;
-		transition-delay: 0.2s;
-		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-	}
-	
-	.hero-right.visible {
-		opacity: 1;
-		transform: translateX(0);
-	}
-	
-	.hero-title {
-		font-size: 2.5rem;
-		font-weight: 700;
-		margin-bottom: 1.5rem;
-		color: white;
-	}
-
-	.hero-title span {
-		background: linear-gradient(90deg, #3B82F6, #93C5FD);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		font-weight: 800;
-	}
-	
-	.hero-problem {
-		font-size: 1.2rem;
-		line-height: 1.6;
-		color: rgba(255, 255, 255, 0.8);
-		margin-bottom: 2rem;
-		max-width: 90%;
-	}
-	
-	.read-more {
-		opacity: 0;
-		transform: translateY(20px);
-		transition: all 0.5s ease-out;
-		margin-top: 2rem;
-	}
-	
-	.read-more.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.read-more a {
-		display: inline-flex;
+	.scroll-indicator {
+		position: absolute;
+		bottom: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		flex-direction: column;
 		align-items: center;
 		gap: 0.5rem;
-		color: #3B82F6;
-		text-decoration: none;
-		font-weight: 500;
-		transition: all 0.2s ease;
+		color: rgba(255, 255, 255, 0.6);
+		font-size: 0.9rem;
+		opacity: 0;
+		transition: opacity 1.2s ease 1.5s, transform 0.3s ease;
 	}
 	
-	.read-more a:hover {
-		color: #93C5FD;
+	.scroll-indicator.visible {
+		opacity: 1;
 	}
 	
-	.read-more svg {
-		transition: transform 0.2s ease;
+	.scroll-indicator svg {
+		animation: bounce 2s infinite;
 	}
 	
-	.read-more a:hover svg {
-		transform: translateY(3px);
+	@keyframes bounce {
+		0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+		40% {transform: translateY(10px);}
+		60% {transform: translateY(5px);}
+	}
+	
+	/* Media Queries for Hero Section */
+	@media (max-width: 1200px) {
+		.hero-wrapper {
+			gap: 2rem;
+			padding: 6rem 2rem 4rem;
+		}
+		
+		.hero-title {
+			font-size: 2.4rem;
+		}
+		
+		.hero-statement {
+			font-size: 2.2rem;
+		}
+	}
+	
+	@media (max-width: 992px) {
+		.hero-wrapper {
+			grid-template-columns: 1fr;
+			padding-top: 8rem;
+		}
+		
+		.future-panel, .present-panel {
+			max-width: 650px;
+			margin: 0 auto;
+		}
+		
+		.time-indicator {
+			top: 1rem;
+		}
+	}
+	
+	@media (max-width: 768px) {
+		.hero-title {
+			font-size: 2.2rem;
+		}
+		
+		.hero-statement {
+			font-size: 2rem;
+		}
+		
+		.future-panel, .present-panel {
+			padding: 2rem;
+		}
+		
+		.future-badge, .present-badge {
+			font-size: 0.7rem;
+			padding: 0.4rem 1.2rem;
+		}
+		
+		.time-indicator {
+			padding: 0.4rem 1rem;
+		}
+		
+		.current-date, .future-date {
+			font-size: 0.8rem;
+		}
+		
+		.timeline-divider {
+			width: 50px;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.hero-wrapper {
+			padding: 7rem 1rem 3rem;
+		}
+		
+		.hero-title {
+			font-size: 1.8rem;
+		}
+		
+		.hero-statement {
+			font-size: 1.8rem;
+		}
+		
+		.future-panel, .present-panel {
+			padding: 1.5rem;
+		}
+		
+		.hero-story, .hero-question {
+			font-size: 1rem;
+		}
+		
+		.hero-actions {
+			flex-direction: column;
+			gap: 1rem;
+		}
+		
+		.hero-cta {
+			width: 100%;
+		}
+		
+		.time-indicator {
+			width: 90%;
+			justify-content: center;
+		}
 	}
 	
 	/* Hominio Section (New Design) */
@@ -1560,649 +1884,6 @@
 	
 	.split-half.platform {
 		--index: 2;
-	}
-	
-	.split-label {
-		display: inline-block;
-		padding: 0.4rem 1rem;
-		background: rgba(59, 130, 246, 0.1);
-		border-radius: 20px;
-		font-size: 0.9rem;
-		font-weight: 600;
-		color: #60A5FA;
-		margin-bottom: 1rem;
-	}
-	
-	.split-percentage {
-		font-size: 2.5rem;
-		font-weight: 700;
-		color: white;
-		margin-bottom: 1.5rem;
-	}
-	
-	.split-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.8rem;
-	}
-	
-	.split-item {
-		position: relative;
-		padding-left: 1.5rem;
-		color: rgba(255, 255, 255, 0.8);
-		font-size: 1rem;
-	}
-	
-	.split-item:before {
-		content: "";
-		position: absolute;
-		left: 0;
-		top: 0.5rem;
-		width: 0.5rem;
-		height: 0.5rem;
-		background: #3B82F6;
-		border-radius: 50%;
-	}
-	
-	.investment-info {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		gap: 2rem;
-	}
-	
-	.info-card {
-		background: rgba(30, 58, 138, 0.15);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		border-radius: 12px;
-		padding: 1.5rem;
-		text-align: center;
-		transition: transform 0.3s ease, box-shadow 0.3s ease;
-		animation: fadeIn 0.6s ease-out forwards;
-		animation-delay: calc(var(--index, 0) * 0.2s);
-		opacity: 0;
-	}
-	
-	.info-card:nth-child(1) {
-		--index: 3;
-	}
-	
-	.info-card:nth-child(2) {
-		--index: 4;
-	}
-	
-	.info-card:nth-child(3) {
-		--index: 5;
-	}
-	
-	.info-card:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-		border-color: rgba(59, 130, 246, 0.3);
-	}
-	
-	.info-title {
-		font-size: 1.2rem;
-		font-weight: 600;
-		color: rgba(255, 255, 255, 0.9);
-		margin-bottom: 1rem;
-	}
-	
-	/* Timeline styles */
-	.timeline-container {
-		position: relative;
-		margin: 4rem auto;
-	}
-	
-	.timeline-path {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		left: 50%;
-		width: 6px;
-		background: linear-gradient(to bottom, #3B82F6, #60A5FA);
-		transform: translateX(-50%);
-		z-index: 1;
-		border-radius: 6px;
-	}
-	
-	.timeline-section-visible .timeline-path {
-		animation-play-state: running;
-	}
-	
-	/* Create snake-like path with pseudo-elements */
-	.timeline-node:nth-child(odd)::before {
-		content: "";
-		position: absolute;
-		top: 40px;
-		right: 50%;
-		width: 120px;
-		height: 6px;
-		background: #3B82F6;
-		z-index: 1;
-		border-radius: 6px;
-		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
-	}
-	
-	.timeline-node:nth-child(even)::before {
-		content: "";
-		position: absolute;
-		top: 40px;
-		left: 50%;
-		width: 120px;
-		height: 6px;
-		background: #3B82F6;
-		z-index: 1;
-		border-radius: 6px;
-		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
-	}
-	
-	/* Add curved connectors between nodes */
-	.timeline-node:nth-child(1)::after {
-		content: "";
-		position: absolute;
-		top: 150px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 120px;
-		height: 80px;
-		border-right: 6px solid #3B82F6;
-		border-top: 6px solid #3B82F6;
-		border-top-right-radius: 60px;
-		z-index: 0;
-	}
-	
-	.timeline-node:nth-child(2)::after {
-		content: "";
-		position: absolute;
-		top: 150px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 120px;
-		height: 80px;
-		border-left: 6px solid #3B82F6;
-		border-top: 6px solid #3B82F6;
-		border-top-left-radius: 60px;
-		z-index: 0;
-	}
-	
-	.timeline-node:nth-child(3)::after {
-		content: "";
-		position: absolute;
-		top: 150px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 120px;
-		height: 80px;
-		border-right: 6px solid #3B82F6;
-		border-top: 6px solid #3B82F6;
-		border-top-right-radius: 60px;
-		z-index: 0;
-	}
-	
-	.timeline-node:nth-child(4)::after {
-		content: "";
-		position: absolute;
-		top: 150px;
-		left: 50%;
-		transform: translateX(-50%);
-		width: 120px;
-		height: 80px;
-		border-left: 6px solid #3B82F6;
-		border-top: 6px solid #3B82F6;
-		border-top-left-radius: 60px;
-		z-index: 0;
-	}
-	
-	/* Remove curved connectors on mobile */
-	@media (max-width: 992px) {
-		.timeline-node::after {
-			display: none;
-		}
-	}
-	
-	.timeline-node {
-		position: relative;
-		margin-bottom: 8rem;
-		z-index: 2;
-	}
-	
-	.timeline-node:nth-child(odd) {
-		text-align: right;
-		padding-right: calc(50% + 2rem);
-		padding-left: 0;
-	}
-	
-	.timeline-node:nth-child(even) {
-		text-align: left;
-		padding-left: calc(50% + 2rem);
-		padding-right: 0;
-	}
-	
-	.timeline-node:last-child {
-		margin-bottom: 0;
-	}
-	
-	.timeline-content {
-		background: rgba(15, 23, 42, 0.6);
-		border-radius: 12px;
-		padding: 2rem;
-		border: 1px solid rgba(255, 255, 255, 0.1);
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-		backdrop-filter: blur(10px);
-		transition: transform 0.3s ease, box-shadow 0.3s ease;
-		display: inline-block;
-		max-width: 100%;
-	}
-	
-	.timeline-content:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
-	}
-	
-	.timeline-node:nth-child(odd) .timeline-content {
-		border-right: 4px solid #3B82F6;
-	}
-	
-	.timeline-node:nth-child(even) .timeline-content {
-		border-left: 4px solid #3B82F6;
-	}
-	
-	/* Use same color for all nodes for consistency, with subtle variations */
-	.timeline-node .timeline-content {
-		border-color: #3B82F6;
-	}
-	
-	.timeline-date {
-		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.6);
-		margin-bottom: 0.5rem;
-	}
-	
-	.timeline-title {
-		font-size: 1.6rem;
-		font-weight: 700;
-		margin-bottom: 1rem;
-		color: white;
-	}
-	
-	/* Use consistent color scheme for all titles */
-	.timeline-node .timeline-title {
-		color: #3B82F6;
-	}
-	
-	.timeline-text {
-		font-size: 1.1rem;
-		line-height: 1.7;
-		color: rgba(255, 255, 255, 0.8);
-		margin-bottom: 1rem;
-	}
-	
-	.timeline-quote {
-		font-style: italic;
-		color: rgba(255, 255, 255, 0.9);
-		border-left: 3px solid #3B82F6;
-		padding-left: 1rem;
-		margin:.5rem 0 1.5rem;
-	}
-	
-	.timeline-highlight {
-		color: #60A5FA;
-		font-weight: 600;
-	}
-	
-	.timeline-avatar {
-		position: absolute;
-		top: 0;
-		width: 80px;
-		height: 80px;
-		border-radius: 50%;
-		border: 4px solid #3B82F6;
-		background: rgba(30, 58, 138, 0.3);
-		overflow: hidden;
-		z-index: 3;
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-	}
-	
-	/* Use consistent color for all avatars */
-	.timeline-node .timeline-avatar {
-		border-color: #3B82F6;
-	}
-	
-	.timeline-node:nth-child(odd) .timeline-avatar {
-		right: calc(50% - 40px);
-	}
-	
-	.timeline-node:nth-child(even) .timeline-avatar {
-		left: calc(50% - 40px);
-	}
-	
-	.timeline-avatar img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-	}
-	
-	.timeline-avatar-placeholder {
-		width: 100%;
-		height: 100%;
-		background: rgba(30, 58, 138, 0.3);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 2rem;
-		font-weight: 700;
-		color: white;
-	}
-	
-	/* Consistent blue color for all placeholders */
-	.timeline-node .timeline-avatar-placeholder {
-		color: #60A5FA;
-	}
-	
-	.timeline-pulse {
-		position: absolute;
-		top: 40px;
-		width: 16px;
-		height: 16px;
-		border-radius: 50%;
-		background: white;
-		z-index: 4;
-	}
-	
-	.timeline-node:nth-child(odd) .timeline-pulse {
-		right: calc(50% - 8px);
-	}
-	
-	.timeline-node:nth-child(even) .timeline-pulse {
-		left: calc(50% - 8px);
-	}
-	
-	.timeline-pulse::after {
-		content: "";
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.4);
-		animation: pulse-timeline 2s infinite;
-	}
-	
-	@keyframes pulse-timeline {
-		0% { transform: scale(1); opacity: 1; }
-		100% { transform: scale(4); opacity: 0; }
-	}
-	
-	/* Media queries for timeline */
-	@media (max-width: 992px) {
-		.timeline-path {
-			left: 40px;
-		}
-		
-		.timeline-node {
-			margin-bottom: 6rem;
-			padding-left: 100px !important;
-			padding-right: 0 !important;
-			text-align: left !important;
-		}
-		
-		.timeline-avatar {
-			left: 0 !important;
-			right: auto !important;
-		}
-		
-		.timeline-pulse {
-			left: 32px !important;
-			right: auto !important;
-		}
-		
-		.timeline-content {
-			border-left: 4px solid #3B82F6 !important;
-			border-right: none !important;
-		}
-		
-		/* Remove the snake-like effect on small screens */
-		.timeline-node::before {
-			display: none;
-		}
-	}
-	
-	@media (max-width: 768px) {
-		.split-chart {
-			grid-template-columns: 1fr;
-			gap: 1.5rem;
-		}
-		
-		.investment-info {
-			grid-template-columns: 1fr;
-			gap: 1.5rem;
-		}
-		
-		.timeline-intro-text,
-		.timeline-conclusion-text {
-			font-size: 1.2rem;
-		}
-		
-		.timeline-title {
-			font-size: 1.4rem;
-		}
-		
-		.timeline-text {
-			font-size: 1rem;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.timeline-path {
-			left: 30px;
-		}
-		
-		.timeline-node {
-			padding-left: 80px !important;
-		}
-		
-		.timeline-avatar {
-			width: 60px;
-			height: 60px;
-			border-width: 3px;
-		}
-		
-		.timeline-pulse {
-			left: 22px !important;
-		}
-		
-		.timeline-intro-text,
-		.timeline-conclusion-text {
-			font-size: 1.1rem;
-		}
-		
-		.timeline-title {
-			font-size: 1.3rem;
-		}
-		
-		.info-title {
-			font-size: 1.1rem;
-		}
-		
-		.split-title {
-			font-size: 1.8rem;
-		}
-		
-		.split-percentage {
-			font-size: 2rem;
-		}
-	}
-	
-	/* Journey section */
-	.journey-section {
-		padding: 5rem 2rem;
-		margin: 0 auto;
-		max-width: 1200px;
-		opacity: 0;
-		transform: translateY(30px);
-		transition: all 0.8s ease-out;
-	}
-	
-	.journey-section.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.journey-container {
-		margin-top: 3rem;
-		opacity: 0;
-		transform: translateY(20px);
-		transition: all 0.5s ease-out 0.2s;
-	}
-	
-	.journey-container.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.timeline-intro {
-		text-align: center;
-		max-width: 800px;
-		margin: 0 auto 6rem;
-	}
-	
-	.timeline-intro-text {
-		font-size: 1.4rem;
-		line-height: 1.7;
-		color: rgba(255, 255, 255, 0.9);
-		margin-bottom: 2rem;
-	}
-	
-	.timeline-conclusion {
-		text-align: center;
-		margin: 4rem auto 2rem;
-		max-width: 800px;
-	}
-	
-	.timeline-conclusion-text {
-		font-size: 1.4rem;
-		line-height: 1.7;
-		padding: 2rem;
-		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
-		border-radius: 12px;
-		box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
-		border: 1px solid rgba(59, 130, 246, 0.3);
-		color: white;
-		font-weight: 600;
-		margin-top: 2rem;
-		animation: pulse-text 3s ease infinite;
-	}
-	
-	@keyframes pulse-text {
-		0%, 100% { 
-			box-shadow: 0 10px 25px rgba(30, 58, 138, 0.3);
-		}
-		50% { 
-			box-shadow: 0 15px 35px rgba(59, 130, 246, 0.5);
-		}
-	}
-	
-	/* Animation utility classes */
-	.animate-text {
-		opacity: 0;
-		transform: translateY(20px);
-		animation: fadeIn 1s ease-out forwards;
-	}
-	
-	.animate-text.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	@keyframes fadeUpIn {
-		0% {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		100% {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-	
-	.timeline-node:nth-child(even)::before {
-		content: "";
-		position: absolute;
-		top: 40px;
-		left: 50%;
-		width: 120px;
-		height: 6px;
-		background: #3B82F6;
-		z-index: 1;
-		border-radius: 6px;
-		box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
-	}
-	
-	.timeline-section-visible .timeline-path {
-		animation-play-state: running;
-	}
-	
-	.journey-container.visible .timeline-path {
-		animation-play-state: running;
-	}
-	
-	.journey-container.visible .timeline-node {
-		animation: fadeUpIn 0.8s forwards;
-		animation-delay: calc(var(--index, 0) * 0.2s);
-		opacity: 0;
-	}
-	
-	.journey-container .timeline-node:nth-child(1) {
-		--index: 1;
-	}
-	
-	.journey-container .timeline-node:nth-child(2) {
-		--index: 2;
-	}
-	
-	.journey-container .timeline-node:nth-child(3) {
-		--index: 3;
-	}
-	
-	.journey-container .timeline-node:nth-child(4) {
-		--index: 4;
-	}
-	
-	.journey-container .timeline-node:nth-child(5) {
-		--index: 5;
-	}
-	
-	/* Improved join banner styles */
-	.join-banner {
-		margin: 6rem auto;
-		background: linear-gradient(135deg, rgba(30, 58, 138, 0.7), rgba(59, 130, 246, 0.7));
-		padding: 3rem 2rem;
-		border-radius: 16px;
-		text-align: center;
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-		max-width: 1400px;
-	}
-	
-	.join-heading {
-		font-size: 2.8rem;
-		font-weight: 800;
-		color: white;
-		margin: 0;
-		line-height: 1.3;
-		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-	}
-	
-	@media (max-width: 768px) {
-		.join-heading {
-			font-size: 2.2rem;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.join-heading {
-			font-size: 1.8rem;
-		}
 	}
 </style>
 
