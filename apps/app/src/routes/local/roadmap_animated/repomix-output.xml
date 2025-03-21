@@ -1,0 +1,1999 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+components/
+  InvestmentData.svelte
+  RoundComparison.svelte
+  TokenDistribution.svelte
++page.svelte
+types.ts
+VC Tokens 2.json
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="components/InvestmentData.svelte">
+<script lang="ts">
+  import type { TokenDataPoint } from '../types';
+  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
+  import { select, selectAll } from 'd3-selection';
+  import { scaleLinear, scaleOrdinal } from 'd3-scale';
+  import { area, curveBasis, stack, stackOffsetWiggle } from 'd3-shape';
+  import { min, max } from 'd3-array';
+  import { axisBottom } from 'd3-axis';
+  
+  export let data: TokenDataPoint;
+  
+  let chartElement: HTMLElement;
+  
+  // Format currency values
+  function formatCurrency(value: number): string {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+  
+  // Format short currency values (K, M, B)
+  function formatShortCurrency(value: number): string {
+    if (value >= 1000000000) {
+      return '€' + (value / 1000000000).toFixed(1) + 'B';
+    } else if (value >= 1000000) {
+      return '€' + (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+      return '€' + (value / 1000).toFixed(1) + 'K';
+    } else {
+      return '€' + value.toFixed(0);
+    }
+  }
+  
+  // Prepare data for streamgraph
+  function prepareStreamData() {
+    // We'll fetch all rounds up to current one to show progression
+    let allRounds = [];
+    
+    // In a real application, you would fetch all rounds up to the current one
+    // For demonstration, we'll simulate rounds from the current data
+    for (let i = 1; i <= data.round; i++) {
+      // Create simulated historical data based on current data
+      // In a real app, this would come from actual historical data
+      const factor = i / data.round;
+      allRounds.push({
+        round: i,
+        investmentPool: data.investmentPool * factor * factor,
+        platformPool: data.platformPool * factor * factor,
+        daoTreasury: data.daoTreasuryValue * factor * factor,
+        foundersValue: data.foundersShareValue * factor * factor
+      });
+    }
+    
+    return allRounds;
+  }
+  
+  // Create streamgraph
+  function createStreamGraph() {
+    if (!browser || !chartElement) return;
+    
+    try {
+      // Clear previous chart
+      select(chartElement).selectAll("*").remove();
+      
+      const margin = { top: 30, right: 30, bottom: 30, left: 60 };
+      const width = chartElement.clientWidth - margin.left - margin.right;
+      const height = 300 - margin.top - margin.bottom;
+      
+      // Prepare data
+      const streamData = prepareStreamData();
+      const keys = ["investmentPool", "platformPool", "daoTreasury", "foundersValue"];
+      const labels = ["Investment Pool", "Platform Pool", "DAO Treasury", "Founders Value"];
+      const colors = ["#40b7c8", "#a36cdc", "#e9c96e", "#e96e6e"];
+      
+      // Create color scale
+      const color = scaleOrdinal<string>()
+        .domain(keys)
+        .range(colors);
+      
+      // Stack data
+      const stackGenerator = stack()
+        .keys(keys)
+        .offset(stackOffsetWiggle);
+      
+      const series = stackGenerator(streamData);
+      
+      // Create SVG
+      const svg = select(chartElement)
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+      
+      // Create scales
+      const x = scaleLinear()
+        .domain([1, streamData.length])
+        .range([0, width]);
+      
+      const y = scaleLinear()
+        .domain([min(series, layer => min(layer, d => d[0])) || 0, 
+                max(series, layer => max(layer, d => d[1])) || 0])
+        .range([height, 0]);
+      
+      // Create area generator
+      const areaGenerator = area<any>()
+        .x(d => x(d.data.round))
+        .y0(d => y(d[0]))
+        .y1(d => y(d[1]))
+        .curve(curveBasis);
+      
+      // Add areas
+      svg.selectAll("path")
+        .data(series)
+        .join("path")
+        .attr("d", areaGenerator)
+        .attr("fill", (d, i) => colors[i])
+        .attr("opacity", 0.85)
+        .attr("stroke", "#10153d")
+        .attr("stroke-width", 0.5);
+      
+      // Add x-axis
+      svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(axisBottom(x).ticks(streamData.length).tickFormat(d => `R${d}`))
+        .call(g => {
+          const domain = g.select(".domain");
+          if (domain) domain.remove();
+        })
+        .selectAll("text")
+        .attr("fill", "#f0ede5");
+      
+      // Add legend
+      const legend = svg.append("g")
+        .attr("transform", `translate(${width - 150}, 10)`);
+      
+      keys.forEach((key, i) => {
+        const g = legend.append("g")
+          .attr("transform", `translate(0, ${i * 20})`);
+        
+        g.append("rect")
+          .attr("width", 15)
+          .attr("height", 15)
+          .attr("fill", colors[i]);
+        
+        g.append("text")
+          .attr("x", 20)
+          .attr("y", 12)
+          .attr("fill", "#f0ede5")
+          .attr("font-size", "12px")
+          .text(labels[i]);
+      });
+    } catch (error) {
+      console.error("Error creating streamgraph:", error);
+    }
+  }
+  
+  // Calculate bar width as percentage
+  $: maxInvestment = Math.max(data.totalInvestSum, 1);
+  $: barWidth = (data.totalInvestSum / maxInvestment) * 100;
+  
+  // Create chart on mount and update when data changes
+  onMount(() => {
+    if (!browser) return;
+    
+    try {
+      createStreamGraph();
+      
+      const resizeObserver = new ResizeObserver(() => {
+        createStreamGraph();
+      });
+      
+      if (chartElement) {
+        resizeObserver.observe(chartElement);
+      }
+      
+      return () => {
+        if (chartElement) {
+          resizeObserver.unobserve(chartElement);
+        }
+      };
+    } catch (error) {
+      console.error("Error setting up chart:", error);
+    }
+  });
+</script>
+
+<div class="flex flex-col gap-8 my-6">
+  <div class="investment-chart p-6 bg-surface-700 rounded-lg">
+    <h2 class="text-2xl font-bold mb-6">Investment Data Round {data.round}</h2>
+    
+    <!-- D3 Streamgraph -->
+    <div bind:this={chartElement} class="stream-chart-container"></div>
+  </div>
+  
+  <div class="p-6 bg-surface-700 rounded-lg">
+    <h3 class="text-lg font-bold mb-4">Investment Details</h3>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">VCs Participating</p>
+        <p class="text-xl font-bold">{data.totalVCs}</p>
+        <p class="text-sm opacity-70">+{data.newVCs} new</p>
+      </div>
+      
+      <div class="bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">Investment Pool</p>
+        <p class="text-xl font-bold">{formatShortCurrency(data.investmentPool)}</p>
+        <p class="text-sm opacity-70">75% of investments</p>
+      </div>
+      
+      <div class="bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">Platform Pool</p>
+        <p class="text-xl font-bold">{formatShortCurrency(data.platformPool)}</p>
+        <p class="text-sm opacity-70">25% of investments</p>
+      </div>
+      
+      <div class="bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">Round Investment</p>
+        <p class="text-xl font-bold">{formatCurrency(data.investRound)}</p>
+      </div>
+      
+      <div class="bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">DAO Treasury</p>
+        <p class="text-xl font-bold">{formatShortCurrency(data.daoTreasuryValue)}</p>
+      </div>
+      
+      <div class="bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">Founders Value</p>
+        <p class="text-xl font-bold">{formatShortCurrency(data.foundersShareValue)}</p>
+      </div>
+      
+      <div class="col-span-2 bg-surface-800 p-4 rounded-lg">
+        <p class="text-xs uppercase opacity-70">Total Investment</p>
+        <p class="text-xl font-bold">{formatCurrency(data.totalInvestSum)}</p>
+        <div class="h-3 w-full bg-surface-600 rounded-full overflow-hidden mt-2">
+          <div class="h-full bg-blue-500 rounded-full" style="width: {barWidth}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .stream-chart-container {
+    width: 100%;
+    height: 300px;
+    margin: 0 auto;
+  }
+</style>
+</file>
+
+<file path="components/RoundComparison.svelte">
+<script lang="ts">
+  import type { TokenDataPoint } from '../types';
+  
+  export let allRounds: TokenDataPoint[] = [];
+  export let currentRound: number = 1;
+  
+  // Add logging when props change
+  $: {
+    console.log('RoundComparison - allRounds:', allRounds);
+    console.log('RoundComparison - currentRound:', currentRound);
+  }
+  
+  // Format currency values
+  function formatCurrency(value: number): string {
+    if (typeof value !== 'number' || isNaN(value)) return '-';
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+  
+  // Format percentage values
+  function formatPercentage(value: number): string {
+    if (typeof value !== 'number' || isNaN(value)) return '-';
+    return `${(value * 100).toFixed(1)}%`;
+  }
+  
+  // Calculate growth percentage
+  function calculateGrowth(previous: number, current: number): number {
+    if (previous === 0 || !previous || !current || typeof previous !== 'number' || typeof current !== 'number') return 0;
+    return (current - previous) / previous;
+  }
+  
+  // Get rounds to display (last 5 up to current round)
+  $: filteredRounds = Array.isArray(allRounds) && allRounds.length > 0
+    ? allRounds.filter((r: TokenDataPoint) => r.round <= currentRound).slice(-5)
+    : [];
+    
+  $: console.log('RoundComparison - filteredRounds:', filteredRounds);
+</script>
+
+<div class="max-w-lg mx-auto">
+  <div class="bg-surface-700 p-4 rounded-lg mb-6">
+    <h2 class="text-xl font-bold mb-4">Round Comparison</h2>
+    <p class="mb-4">Comparing metrics across investment rounds</p>
+    
+    <!-- Simple visualization placeholder -->
+    <div class="relative h-40 bg-surface-800 rounded p-4 mb-6">
+      <div class="text-center text-sm mb-2">Visual comparison not available</div>
+      <div class="text-center">Using simplified tabular data for comparisons</div>
+    </div>
+  </div>
+  
+  <div class="comparison-tables bg-surface-700 p-4 rounded-lg">
+    <h3 class="text-lg font-bold mb-3">Growth Comparison</h3>
+    
+    {#if filteredRounds.length > 1}
+      <div class="grid grid-cols-2 gap-4">
+        <!-- VCs Growth Table -->
+        <div class="bg-surface-800 p-3 rounded-lg">
+          <h4 class="text-sm uppercase opacity-70 mb-2">Vision Creators Growth</h4>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-surface-700">
+                <th class="text-left py-1">Round</th>
+                <th class="text-right py-1">VCs</th>
+                <th class="text-right py-1">Growth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each filteredRounds as round, i}
+                <tr class="border-b border-surface-700 last:border-0" class:text-primary-500={round.round === currentRound}>
+                  <td class="py-1">R{round.round}</td>
+                  <td class="text-right py-1">{round.totalVCs}</td>
+                  <td class="text-right py-1">
+                    {#if i > 0 && filteredRounds[i-1] && filteredRounds[i-1].totalVCs}
+                      {formatPercentage(calculateGrowth(filteredRounds[i-1].totalVCs, round.totalVCs))}
+                    {:else}
+                      -
+                    {/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Price Growth Table -->
+        <div class="bg-surface-800 p-3 rounded-lg">
+          <h4 class="text-sm uppercase opacity-70 mb-2">Token Price Growth</h4>
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-surface-700">
+                <th class="text-left py-1">Round</th>
+                <th class="text-right py-1">Price</th>
+                <th class="text-right py-1">Growth</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each filteredRounds as round, i}
+                <tr class="border-b border-surface-700 last:border-0" class:text-primary-500={round.round === currentRound}>
+                  <td class="py-1">R{round.round}</td>
+                  <td class="text-right py-1">{formatCurrency(round.tokenEmissionPrice)}</td>
+                  <td class="text-right py-1">
+                    {#if i > 0 && filteredRounds[i-1] && filteredRounds[i-1].tokenEmissionPrice}
+                      {formatPercentage(calculateGrowth(filteredRounds[i-1].tokenEmissionPrice, round.tokenEmissionPrice))}
+                    {:else}
+                      -
+                    {/if}
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {:else}
+      <div class="bg-surface-800 p-3 rounded-lg">
+        <p class="text-center">Not enough data to show comparison (found {filteredRounds.length} rounds)</p>
+      </div>
+    {/if}
+  </div>
+</div>
+
+<style>
+  table {
+    border-collapse: collapse;
+  }
+</style>
+</file>
+
+<file path="components/TokenDistribution.svelte">
+<script lang="ts">
+  import type { TokenDataPoint } from '../types';
+  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
+  import { select } from 'd3-selection';
+  import { pie, arc } from 'd3-shape';
+  
+  export let data: TokenDataPoint;
+  
+  type PieDataItem = {
+    name: string;
+    value: number;
+    percentage: number;
+    color: string;
+  };
+  
+  let pieData: PieDataItem[] = [];
+  let chartElement: HTMLElement;
+  
+  // Calculate token distribution data
+  $: {
+    const totalTokens = data.totalShares;
+    const communityPool = data.communityTokenPool;
+    const foundersShare = Math.round((data.foundersDAOTreasuryShare - data.daoTreasuryShare) * totalTokens);
+    const vcShare = totalTokens - communityPool - foundersShare;
+    
+    pieData = [
+      { name: 'Community Pool', value: communityPool, percentage: communityPool / totalTokens, color: '#e9c96e' },
+      { name: 'VCs', value: vcShare, percentage: vcShare / totalTokens, color: '#40b7c8' },
+      { name: 'Founders', value: foundersShare, percentage: foundersShare / totalTokens, color: '#a36cdc' }
+    ];
+  }
+  
+  // Format numbers for display
+  function formatNumber(num: number): string {
+    return new Intl.NumberFormat().format(Math.round(num));
+  }
+  
+  function formatPercentage(value: number): string {
+    return new Intl.NumberFormat('en', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+  }
+  
+  function formatCurrency(value: number): string {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+  
+  // Create and update pie chart
+  function createPieChart() {
+    if (!browser || !chartElement || pieData.length === 0) return;
+    
+    try {
+      // Clear previous chart
+      select(chartElement).selectAll("*").remove();
+      
+      const width = 220;
+      const height = 220;
+      const radius = Math.min(width, height) / 2;
+      
+      // Create SVG element
+      const svg = select(chartElement)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${width / 2}, ${height / 2})`);
+      
+      // Create pie layout
+      const pieLayout = pie<PieDataItem>()
+        .value(d => d.value)
+        .sort(null);
+      
+      // Create arc generator
+      const arcGenerator = arc<any>()
+        .innerRadius(0)
+        .outerRadius(radius * 0.8);
+      
+      // Create arcs for labels
+      const outerArc = arc<any>()
+        .innerRadius(radius * 0.9)
+        .outerRadius(radius * 0.9);
+      
+      // Add tooltip
+      const tooltip = select(chartElement)
+        .append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("opacity", 0)
+        .style("background-color", "#0d1132")
+        .style("color", "#f0ede5")
+        .style("padding", "8px")
+        .style("border-radius", "4px")
+        .style("font-size", "12px")
+        .style("pointer-events", "none");
+      
+      // Create pie chart
+      const path = svg.selectAll("path")
+        .data(pieLayout(pieData))
+        .enter()
+        .append("path")
+        .attr("d", arcGenerator)
+        .attr("fill", d => d.data.color)
+        .attr("stroke", "#10153d")
+        .attr("stroke-width", 2)
+        .style("transition", "opacity 0.3s")
+        .style("cursor", "pointer")
+        .on("mouseover", function(event, d) {
+          select(this).style("opacity", 0.8);
+          tooltip.style("opacity", 1)
+            .html(`${d.data.name}: ${formatPercentage(d.data.percentage)} (${formatNumber(d.data.value)})`)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 25) + "px");
+        })
+        .on("mouseout", function() {
+          select(this).style("opacity", 1);
+          tooltip.style("opacity", 0);
+        });
+      
+      // Add percentage labels at center of arcs
+      const text = svg.selectAll("text")
+        .data(pieLayout(pieData))
+        .enter()
+        .append("text")
+        .attr("transform", d => `translate(${arcGenerator.centroid(d)})`)
+        .attr("dy", ".35em")
+        .style("text-anchor", "middle")
+        .style("fill", "white")
+        .style("font-size", "10px")
+        .style("font-weight", "bold")
+        .text(d => d.data.percentage >= 0.05 ? formatPercentage(d.data.percentage) : "");
+    } catch (error) {
+      console.error("Error creating pie chart:", error);
+    }
+  }
+  
+  // Create chart on mount and update when data changes
+  onMount(() => {
+    if (!browser) return;
+    createPieChart();
+  });
+  
+  $: if (browser && pieData.length > 0 && chartElement) {
+    createPieChart();
+  }
+</script>
+
+<div class="flex flex-col lg:flex-row items-start gap-8 max-w-4xl mx-auto">
+  <div class="token-chart bg-surface-700 p-4 rounded-lg">
+    <h2 class="text-center text-lg font-bold mb-3">Token Distribution Round {data.round}</h2>
+    
+    <!-- D3 Pie Chart -->
+    <div bind:this={chartElement} class="pie-chart-container relative"></div>
+    
+    <div class="mt-2 text-center pt-2">
+      <div class="text-sm font-bold">{formatNumber(data.totalShares)}</div>
+      <div class="text-xs">Total Tokens</div>
+    </div>
+  </div>
+  
+  <div class="token-data">
+    <h2 class="text-xl font-bold mb-4">Distribution for Round {data.round}</h2>
+    
+    <div class="space-y-4">
+      {#each pieData as item}
+        <div class="flex items-center gap-3">
+          <div class="w-4 h-4 rounded-full" style="background-color: {item.color}"></div>
+          <div>
+            <p class="font-medium">{item.name}</p>
+            <p class="text-sm opacity-80">{formatNumber(item.value)} tokens ({formatPercentage(item.percentage)})</p>
+          </div>
+        </div>
+      {/each}
+    </div>
+    
+    <div class="mt-6 p-4 bg-surface-700 rounded-lg">
+      <h3 class="text-sm uppercase opacity-70 mb-2">Token Price</h3>
+      <p class="text-2xl font-bold">{formatCurrency(data.tokenEmissionPrice)}</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .token-chart {
+    border-radius: 0.5rem;
+    min-width: 280px;
+  }
+  
+  .token-data {
+    flex-grow: 1;
+  }
+  
+  .pie-chart-container {
+    width: 220px;
+    height: 220px;
+    margin: 0 auto;
+  }
+</style>
+</file>
+
+<file path="+page.svelte">
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { writable, derived } from 'svelte/store';
+  import { browser } from '$app/environment';
+  import type { TokenDataPoint } from './types';
+  
+  // Import visualization components
+  import TokenDistribution from './components/TokenDistribution.svelte';
+  import InvestmentData from './components/InvestmentData.svelte';
+  import RoundComparison from './components/RoundComparison.svelte';
+  
+  // Import token emission data
+  import tokenEmissionData from './VC Tokens 2.json';
+  
+  // Stores for state management
+  const tokenData = writable<TokenDataPoint[]>([]);
+  const selectedRound = writable(1);
+  const selectedView = writable('summary');
+  const isLoading = writable(true);
+  
+  // Create a derived store for the current round data
+  const currentRoundData = derived(
+    [tokenData, selectedRound],
+    ([$tokenData, $selectedRound]) => {
+      console.log('Deriving currentRoundData, tokenData length:', $tokenData.length, 'selectedRound:', $selectedRound);
+      if ($tokenData.length === 0) {
+        console.log('No token data available');
+        return null;
+      }
+      const foundRound = $tokenData.find(d => d.round === $selectedRound);
+      console.log('Found round data:', foundRound || 'Not found');
+      return foundRound || $tokenData[0];
+    }
+  );
+  
+  // Function to parse currency string to number
+  function parseCurrency(value: string | undefined | null): number {
+    if (!value || typeof value !== 'string') {
+      console.warn('Invalid value for parseCurrency:', value);
+      console.trace('Stack trace for invalid currency value');
+      return 0;
+    }
+    try {
+      // Remove currency symbol, spaces, and replace comma with dot
+      return parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+    } catch (error) {
+      console.error('Error parsing currency:', error);
+      return 0;
+    }
+  }
+  
+  // Function to parse percentage string to number
+  function parsePercentage(value: string | undefined | null): number {
+    if (!value || typeof value !== 'string') {
+      console.warn('Invalid value for parsePercentage:', value);
+      return 0;
+    }
+    try {
+      // Remove percentage symbol, spaces, and replace comma with dot
+      return parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.')) / 100 || 0;
+    } catch (error) {
+      console.error('Error parsing percentage:', error);
+      return 0;
+    }
+  }
+  
+  // Function to parse a string with commas to a number
+  function parseStringNumber(value: any): number {
+    if (typeof value === 'number') return value;
+    if (!value || typeof value !== 'string') return 0;
+    return parseFloat(value.replace(/,/g, '').replace(/\"/g, '')) || 0;
+  }
+  
+  // Load data from JSON file
+  function loadTokenEmissionData() {
+    isLoading.set(true);
+    
+    try {
+      console.log('Loading token emission data from JSON...');
+      
+      // Transform the data to match our interface
+      const transformedData = tokenEmissionData.map(round => {
+        console.log('Processing round:', round.Round);
+        
+        // Remove all descriptions
+        let description = "";
+        
+        try {
+          const data: TokenDataPoint = {
+            round: round.Round,
+            totalVCs: parseStringNumber(round["Total VCs"]),
+            newVCs: parseStringNumber(round["New VCs"]),
+            investRound: parseCurrency(round["Invested in this Round"]),
+            totalInvestSum: parseCurrency(round["Total Invest Pool"]),
+            tokenEmissionPrice: parseCurrency(round["Current Token Emission Price"]),
+            tokenPerVC: parseFloat(String(round["Token Emission Per VC"]).replace(',', '.')),
+            tokenEmittedInRound: parseStringNumber(round["Token Emission in this Round"]),
+            totalShares: parseCurrency(String(round["Total Shares (regs. Capital + total Tokens emitted"])),
+            communityTokenPool: parseStringNumber(round["Contributions Pool (Token)  Total"]),
+            addedTokensToPool: parseStringNumber(round["Contributions Pool (Token) added this round"]),
+            investmentPool: parseCurrency(round["Contributions Pool (Euro) total "]),
+            platformPool: parseCurrency(round["Guardians Operations (Euro) total "]),
+            totalPoolValue: parseCurrency(round["Total Invest Pool"]),
+            addedPoolValue: parseCurrency(round["Invested in this Round"]),
+            capitalIncrease: parsePercentage(round["Capital increase in % per round"]),
+            regCapitalShare: 0, // Not directly available in new data
+            foundersDAOTreasuryShare: parsePercentage(round["Founders holdings (Emissions + GmbH)"]),
+            daoTreasuryShare: round["Guardians Treasury"] ? parsePercentage(round["Guardians Treasury"]) : 0,
+            perFounderShare: parsePercentage(round["Founders  Token Shares"]),
+            minValuation: parseCurrency(round[" Total valuation based on current emission price"]),
+            daoTreasuryFoundersValue: parseCurrency(round["Total Founder Valuation based on emission price"]),
+            firstRoundEmissionValue: 0, // Not directly available
+            daoTreasuryValue: 0, // Would need to calculate
+            foundersShareValue: parseCurrency(round["Founders (GmbH) Valuation based on emission price"]),
+            description
+          };
+          console.log('Transformed data for round', round.Round, ':', data);
+          return data;
+        } catch (roundError) {
+          console.error('Error processing round:', round.Round, roundError);
+          // Return a complete object with default values to match the interface
+          return {
+            round: round.Round || 0,
+            totalVCs: parseStringNumber(round["Total VCs"]),
+            newVCs: parseStringNumber(round["New VCs"]),
+            investRound: 0,
+            totalInvestSum: 0,
+            tokenEmissionPrice: 0,
+            tokenPerVC: 0,
+            tokenEmittedInRound: 0,
+            totalShares: 0,
+            communityTokenPool: 0,
+            addedTokensToPool: 0,
+            investmentPool: 0,
+            platformPool: 0,
+            totalPoolValue: 0,
+            addedPoolValue: 0,
+            capitalIncrease: 0,
+            regCapitalShare: 0,
+            foundersDAOTreasuryShare: 0,
+            daoTreasuryShare: 0,
+            perFounderShare: 0,
+            minValuation: 0,
+            daoTreasuryFoundersValue: 0,
+            firstRoundEmissionValue: 0,
+            daoTreasuryValue: 0,
+            foundersShareValue: 0,
+            description: description || ""
+          };
+        }
+      });
+      
+      console.log('Transformed token emission data:', transformedData);
+      tokenData.set(transformedData);
+      isLoading.set(false);
+    } catch (error) {
+      console.error('Failed to load token emission data:', error);
+      isLoading.set(false);
+    }
+  }
+  
+  // Utility functions
+  function selectRound(round: number) {
+    selectedRound.set(round);
+  }
+  
+  function selectView(view: string) {
+    selectedView.set(view);
+  }
+  
+  // Format currency values for display
+  function formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  }
+  
+  // Format percentages for display
+  function formatPercentage(value: number): string {
+    return new Intl.NumberFormat('en-US', {
+      style: 'percent',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }).format(value);
+  }
+  
+  // Format numbers for display
+  function formatNumber(value: number): string {
+    return new Intl.NumberFormat('en-US').format(value);
+  }
+  
+  // For debugging scroll issues
+  let roundsContainerHeight = 0;
+  let mainContainerHeight = 0;
+  
+  // Track dimensions for debugging
+  function updateDebugInfo() {
+    if (browser) {
+      const roundsEl = document.querySelector('.rounds-container');
+      const mainEl = document.querySelector('main');
+      
+      if (roundsEl) roundsContainerHeight = roundsEl.scrollHeight;
+      if (mainEl) mainContainerHeight = mainEl.scrollHeight;
+    }
+  }
+  
+  // Load data on component mount
+  onMount(() => {
+    if (browser) {
+      loadTokenEmissionData();
+      
+      // Update debug info after data loads
+      setTimeout(updateDebugInfo, 1000);
+      
+      // Listen for window resize
+      window.addEventListener('resize', updateDebugInfo);
+      
+      return () => {
+        window.removeEventListener('resize', updateDebugInfo);
+      };
+    }
+  });
+</script>
+
+<svelte:head>
+  <title>Token Emission Dashboard</title>
+  <meta name="description" content="Visioncreator Token Emission Data Visualization">
+</svelte:head>
+
+<!-- Debug info overlay -->
+{#if browser}
+<div class="debug-height">
+  Rounds height: {roundsContainerHeight}px<br>
+  Main height: {mainContainerHeight}px
+</div>
+{/if}
+
+<main class="bg-surface-900 text-tertiary-300 font-base overflow-y-auto">
+  <div class="container mx-auto py-8 px-4 max-w-[1800px]">
+    <h1 class="text-4xl font-heading mb-8 text-center">Token Emission Explorer</h1>
+    
+    <div class="flex flex-col md:flex-row gap-8">
+      <!-- Sidebar with Rounds - scrollable -->
+      <div class="md:w-[320px] flex-shrink-0">
+        <div class="bg-surface-800 p-4 rounded-lg rounds-container md:max-h-[calc(100vh-120px)] overflow-y-auto">
+          <h2 class="text-2xl font-heading mb-4">Investment Rounds</h2>
+          
+          <div class="grid grid-cols-1 gap-2 pb-4">
+            {#each $tokenData as data}
+              <button
+                class="p-3 rounded-md text-left transition-all duration-200 {$selectedRound === data.round ? 'bg-surface-700 border-l-4 border-primary-500' : 'hover:bg-surface-700'}"
+                on:click={() => selectRound(data.round)}
+              >
+                <div class="font-bold">Round {data.round}</div>
+              </button>
+            {/each}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Main content area - fixed position -->
+      <div class="flex-1">
+        <div class="bg-surface-800 rounded-lg flex flex-col md:sticky md:top-4">
+          <!-- View selector tabs - make them sticky -->
+          <div class="border-b border-surface-700 px-4 sticky top-0 bg-surface-800 z-10">
+            <div class="flex overflow-x-auto">
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'summary' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('summary')}
+              >
+                Summary
+              </button>
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'token-distribution' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('token-distribution')}
+              >
+                Token Distribution
+              </button>
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'investment' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('investment')}
+              >
+                Investment Data
+              </button>
+              <button 
+                class="p-4 font-medium transition-colors whitespace-nowrap {$selectedView === 'comparison' ? 'border-b-2 border-primary-500 text-primary-500' : 'hover:text-tertiary-300'}"
+                on:click={() => selectView('comparison')}
+              >
+                Round Comparison
+              </button>
+            </div>
+          </div>
+          
+          <!-- Content for selected round and view -->
+          <div class="p-6">
+            {#if $selectedView === 'summary'}
+              <!-- Summary View -->
+              <div>
+                {#if $currentRoundData}
+                  <div class="bg-surface-700 p-5 rounded-lg mb-6">
+                    <h2 class="text-2xl font-bold mb-2">Round {$currentRoundData.round}</h2>
+                    <p class="text-tertiary-300 mb-4">Overview of token emission for investment round {$currentRoundData.round}</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 2fr 1.5fr 1.5fr">
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Vision Creators</h3>
+                        <p class="text-2xl font-bold">{$currentRoundData.totalVCs}</p>
+                        <p class="text-sm text-tertiary-300">+{$currentRoundData.newVCs} new</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Investment</h3>
+                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.totalInvestSum)}</p>
+                        <p class="text-sm text-tertiary-300">+{formatCurrency($currentRoundData.investRound)} this round</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Token Price</h3>
+                        <p class="text-2xl font-bold">{formatCurrency($currentRoundData.tokenEmissionPrice)}</p>
+                        <p class="text-sm text-tertiary-300">{$currentRoundData.tokenPerVC} tokens per VC</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Shares</h3>
+                        <p class="text-2xl font-bold">{formatNumber($currentRoundData.totalShares)}</p>
+                        <p class="text-sm text-tertiary-300">+{$currentRoundData.tokenEmittedInRound} tokens this round</p>
+                      </div>
+                    </div>
+                    
+                    <!-- Additional metrics in a grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" style="grid-template-columns: 1fr 1.7fr 1.2fr 1.5fr">
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Platform Pool</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.platformPool)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Contributions Pool</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.investmentPool)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Capital Increase</h3>
+                        <p class="text-lg font-bold">{formatPercentage($currentRoundData.capitalIncrease)}</p>
+                      </div>
+                      
+                      <div class="bg-surface-800 p-4 rounded-lg">
+                        <h3 class="text-sm uppercase text-tertiary-300 opacity-70">Total Valuation</h3>
+                        <p class="text-lg font-bold">{formatCurrency($currentRoundData.minValuation)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Removed the visualization components from summary view -->
+                {/if}
+              </div>
+            {:else if $selectedView === 'token-distribution'}
+              <!-- Token Distribution Component -->
+              {#if $currentRoundData}
+                <TokenDistribution data={$currentRoundData} />
+              {/if}
+            {:else if $selectedView === 'investment'}
+              <!-- Investment Data Component -->
+              {#if $currentRoundData}
+                <InvestmentData data={$currentRoundData} />
+              {/if}
+            {:else if $selectedView === 'comparison'}
+              <!-- Round Comparison Component -->
+              {#if $tokenData.length > 0}
+                <RoundComparison allRounds={$tokenData} currentRound={$selectedRound} />
+              {/if}
+            {/if}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<style>
+  :global(body) {
+    background-color: var(--color-surface-900);
+    color: var(--color-tertiary-300);
+    font-family: var(--theme-font-family-base);
+    min-height: 100vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+  }
+  
+  :global(html) {
+    overflow-y: auto;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  main {
+    display: block;
+    width: 100%;
+    min-height: 100vh;
+    padding-bottom: 4rem;
+  }
+  
+  /* Debug styles to help identify overflow issues */
+  .debug-height {
+    position: fixed;
+    top: 0;
+    right: 0;
+    background: rgba(255,0,0,0.2);
+    color: white;
+    padding: 4px;
+    z-index: 1000;
+    font-size: 12px;
+  }
+  
+  /* Define CSS variables with fallbacks */
+  :root {
+    --color-surface-900: #0d1132;
+    --color-surface-800: #10153d;
+    --color-surface-700: #141a4d;
+    --color-tertiary-500: #dad3be;
+    --color-tertiary-300: #f0ede5;
+    --color-primary-500: #e9c96e;
+    --color-secondary-500: #40b7c8;
+    --theme-font-family-base: 'Rethink', sans-serif;
+    --theme-font-family-heading: 'VisioncreatorFamily', sans-serif;
+  }
+  
+  .font-heading {
+    font-family: var(--theme-font-family-heading);
+  }
+  
+  .font-base {
+    font-family: var(--theme-font-family-base);
+  }
+</style>
+</file>
+
+<file path="types.ts">
+// Define the TokenDataPoint interface for token emission data
+export interface TokenDataPoint {
+  round: number;
+  totalVCs: number;
+  newVCs: number;
+  investRound: number;
+  totalInvestSum: number;
+  tokenEmissionPrice: number;
+  tokenPerVC: number;
+  tokenEmittedInRound: number;
+  totalShares: number;
+  communityTokenPool: number;
+  addedTokensToPool: number;
+  investmentPool: number;
+  /** Platform Pool value (25% of investments) - in the JSON this is called "Platform Pool (SumInvest * 0,25)" */
+  platformPool: number;
+  totalPoolValue: number;
+  addedPoolValue: number;
+  capitalIncrease: number;
+  regCapitalShare: number;
+  foundersDAOTreasuryShare: number;
+  daoTreasuryShare: number;
+  perFounderShare: number;
+  minValuation: number;
+  daoTreasuryFoundersValue: number;
+  firstRoundEmissionValue: number;
+  daoTreasuryValue: number;
+  foundersShareValue: number;
+  description?: string;
+}
+</file>
+
+<file path="VC Tokens 2.json">
+[
+    {
+        "Round" : 1,
+        "Total VCs" : 1,
+        "New VCs" : 1,
+        "Invested in this Round" : "365 €",
+        "Total Invest Pool" : "365 €",
+        "Current Token Emission Price" : "1.00 €",
+        "Token Emission Per VC" : 365.00,
+        "Token Emission in this Round" : 365,
+        "Total Shares (regs. Capital + total Tokens emitted" : "25,730",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "26,095",
+        "Contributions Pool (Token) added this round" : 365,
+        "Contributions Pool (Token)  Total" : 365,
+        "Guardians Operations (Euro) Pool in %" : "100.00 %",
+        "Guardians Operations (Euro) added this round" : "365 €",
+        "Guardians Operations (Euro) total " : "365 €",
+        "Contributions Pool (Euro) in %" : "0.00 %",
+        "Contributions Pool (Euro) added this round" : "0 €",
+        "Contributions Pool (Euro) total " : "0 €",
+        "Capital increase in % per round" : "1.42 %",
+        "Founders  Token Shares" : "1.42 %",
+        "Founders Share (GmbH) of emissions" : "97.16 %",
+        "Founders holdings (Emissions + GmbH)" : "98.58 %",
+        "Founders holdings of all minted shares" : "100.00 %",
+        " Total valuation based on current emission price" : "25,730 €",
+        "Founders (GmbH) Valuation based on emission price" : "25,000 €",
+        "Per Founder Token Valuation on emission price" : "365 €",
+        "Total Founder Valuation based on emission price" : "25,365 €"
+    },
+    {
+        "Round" : 2,
+        "Total VCs" : 2,
+        "New VCs" : 1,
+        "Invested in this Round" : "365 €",
+        "Total Invest Pool" : "730 €",
+        "Current Token Emission Price" : "1.00 €",
+        "Token Emission Per VC" : 365.00,
+        "Token Emission in this Round" : 365,
+        "Total Shares (regs. Capital + total Tokens emitted" : "26,460",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "27,190",
+        "Contributions Pool (Token) added this round" : 365,
+        "Contributions Pool (Token)  Total" : 730,
+        "Guardians Operations (Euro) Pool in %" : "100.00 %",
+        "Guardians Operations (Euro) added this round" : "365 €",
+        "Guardians Operations (Euro) total " : "730 €",
+        "Contributions Pool (Euro) in %" : "0.00 %",
+        "Contributions Pool (Euro) added this round" : "0 €",
+        "Contributions Pool (Euro) total " : "0 €",
+        "Capital increase in % per round" : "1.38 %",
+        "Founders  Token Shares" : "2.76 %",
+        "Founders Share (GmbH) of emissions" : "94.48 %",
+        "Founders holdings (Emissions + GmbH)" : "97.24 %",
+        "Founders holdings of all minted shares" : "100.00 %",
+        " Total valuation based on current emission price" : "26,460 €",
+        "Founders (GmbH) Valuation based on emission price" : "25,000 €",
+        "Per Founder Token Valuation on emission price" : "365 €",
+        "Total Founder Valuation based on emission price" : "25,365 €"
+    },
+    {
+        "Round" : 3,
+        "Total VCs" : 3,
+        "New VCs" : 1,
+        "Invested in this Round" : "365 €",
+        "Total Invest Pool" : "1,095 €",
+        "Current Token Emission Price" : "1.00 €",
+        "Token Emission Per VC" : 365.00,
+        "Token Emission in this Round" : 365,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,190",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "28,285",
+        "Contributions Pool (Token) added this round" : 365,
+        "Contributions Pool (Token)  Total" : "1,095",
+        "Guardians Operations (Euro) Pool in %" : "100.00 %",
+        "Guardians Operations (Euro) added this round" : "365 €",
+        "Guardians Operations (Euro) total " : "1,095 €",
+        "Contributions Pool (Euro) in %" : "0.00 %",
+        "Contributions Pool (Euro) added this round" : "0 €",
+        "Contributions Pool (Euro) total " : "0 €",
+        "Capital increase in % per round" : "1.34 %",
+        "Founders  Token Shares" : "4.03 %",
+        "Founders Share (GmbH) of emissions" : "91.95 %",
+        "Founders holdings (Emissions + GmbH)" : "95.97 %",
+        "Founders holdings of all minted shares" : "100.00 %",
+        " Total valuation based on current emission price" : "27,190 €",
+        "Founders (GmbH) Valuation based on emission price" : "25,000 €",
+        "Per Founder Token Valuation on emission price" : "365 €",
+        "Total Founder Valuation based on emission price" : "25,365 €"
+    },
+    {
+        "Round" : 4,
+        "Total VCs" : 5,
+        "New VCs" : 2,
+        "Invested in this Round" : "730 €",
+        "Total Invest Pool" : "1,825 €",
+        "Current Token Emission Price" : "36.50 €",
+        "Token Emission Per VC" : 10.00,
+        "Token Emission in this Round" : 20,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,230",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "28,345",
+        "Contributions Pool (Token) added this round" : 20,
+        "Contributions Pool (Token)  Total" : "1,115",
+        "Guardians Operations (Euro) Pool in %" : "80.00 %",
+        "Guardians Operations (Euro) added this round" : "584 €",
+        "Guardians Operations (Euro) total " : "1,679 €",
+        "Contributions Pool (Euro) in %" : "20.00 %",
+        "Contributions Pool (Euro) added this round" : "146 €",
+        "Contributions Pool (Euro) total " : "146 €",
+        "Capital increase in % per round" : "0.07 %",
+        "Founders  Token Shares" : "4.02 %",
+        "Founders Share (GmbH) of emissions" : "91.81 %",
+        "Founders holdings (Emissions + GmbH)" : "95.83 %",
+        "Founders holdings of all minted shares" : "92.06 %",
+        " Total valuation based on current emission price" : "993,895 €",
+        "Founders (GmbH) Valuation based on emission price" : "912,500 €",
+        "Per Founder Token Valuation on emission price" : "13,323 €",
+        "Total Founder Valuation based on emission price" : "925,823 €"
+    },
+    {
+        "Round" : 5,
+        "Total VCs" : 8,
+        "New VCs" : 3,
+        "Invested in this Round" : "1,095 €",
+        "Total Invest Pool" : "2,920 €",
+        "Current Token Emission Price" : "39.11 €",
+        "Token Emission Per VC" : 9.33,
+        "Token Emission in this Round" : 28,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,286",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "28,429",
+        "Contributions Pool (Token) added this round" : 28,
+        "Contributions Pool (Token)  Total" : "1,143",
+        "Guardians Operations (Euro) Pool in %" : "75.00 %",
+        "Guardians Operations (Euro) added this round" : "821 €",
+        "Guardians Operations (Euro) total " : "2,500 €",
+        "Contributions Pool (Euro) in %" : "25.00 %",
+        "Contributions Pool (Euro) added this round" : "274 €",
+        "Contributions Pool (Euro) total " : "420 €",
+        "Capital increase in % per round" : "0.10 %",
+        "Founders  Token Shares" : "4.01 %",
+        "Founders Share (GmbH) of emissions" : "91.62 %",
+        "Founders holdings (Emissions + GmbH)" : "95.64 %",
+        "Founders holdings of all minted shares" : "91.79 %",
+        " Total valuation based on current emission price" : "1,067,078 €",
+        "Founders (GmbH) Valuation based on emission price" : "977,679 €",
+        "Per Founder Token Valuation on emission price" : "14,274 €",
+        "Total Founder Valuation based on emission price" : "991,953 €"
+    },
+    {
+        "Round" : 6,
+        "Total VCs" : 13,
+        "New VCs" : 5,
+        "Invested in this Round" : "1,825 €",
+        "Total Invest Pool" : "4,745 €",
+        "Current Token Emission Price" : "45.63 €",
+        "Token Emission Per VC" : 8.00,
+        "Token Emission in this Round" : 40,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,366",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "28,549",
+        "Contributions Pool (Token) added this round" : 40,
+        "Contributions Pool (Token)  Total" : "1,183",
+        "Guardians Operations (Euro) Pool in %" : "70.00 %",
+        "Guardians Operations (Euro) added this round" : "1,278 €",
+        "Guardians Operations (Euro) total " : "3,778 €",
+        "Contributions Pool (Euro) in %" : "30.00 %",
+        "Contributions Pool (Euro) added this round" : "548 €",
+        "Contributions Pool (Euro) total " : "967 €",
+        "Capital increase in % per round" : "0.15 %",
+        "Founders  Token Shares" : "4.00 %",
+        "Founders Share (GmbH) of emissions" : "91.35 %",
+        "Founders holdings (Emissions + GmbH)" : "95.36 %",
+        "Founders holdings of all minted shares" : "91.40 %",
+        " Total valuation based on current emission price" : "1,248,574 €",
+        "Founders (GmbH) Valuation based on emission price" : "1,140,625 €",
+        "Per Founder Token Valuation on emission price" : "16,653 €",
+        "Total Founder Valuation based on emission price" : "1,157,278 €"
+    },
+    {
+        "Round" : 7,
+        "Total VCs" : 21,
+        "New VCs" : 8,
+        "Invested in this Round" : "2,920 €",
+        "Total Invest Pool" : "7,665 €",
+        "Current Token Emission Price" : "48.67 €",
+        "Token Emission Per VC" : 7.50,
+        "Token Emission in this Round" : 60,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,486",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "28,729",
+        "Contributions Pool (Token) added this round" : 60,
+        "Contributions Pool (Token)  Total" : "1,243",
+        "Guardians Operations (Euro) Pool in %" : "65.00 %",
+        "Guardians Operations (Euro) added this round" : "1,898 €",
+        "Guardians Operations (Euro) total " : "5,676 €",
+        "Contributions Pool (Euro) in %" : "35.00 %",
+        "Contributions Pool (Euro) added this round" : "1,022 €",
+        "Contributions Pool (Euro) total " : "1,989 €",
+        "Capital increase in % per round" : "0.22 %",
+        "Founders  Token Shares" : "3.98 %",
+        "Founders Share (GmbH) of emissions" : "90.96 %",
+        "Founders holdings (Emissions + GmbH)" : "94.94 %",
+        "Founders holdings of all minted shares" : "90.83 %",
+        " Total valuation based on current emission price" : "1,337,652 €",
+        "Founders (GmbH) Valuation based on emission price" : "1,216,667 €",
+        "Per Founder Token Valuation on emission price" : "17,763 €",
+        "Total Founder Valuation based on emission price" : "1,234,430 €"
+    },
+    {
+        "Round" : 8,
+        "Total VCs" : 34,
+        "New VCs" : 13,
+        "Invested in this Round" : "4,745 €",
+        "Total Invest Pool" : "12,410 €",
+        "Current Token Emission Price" : "59.31 €",
+        "Token Emission Per VC" : 6.15,
+        "Token Emission in this Round" : 80,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,646",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "28,969",
+        "Contributions Pool (Token) added this round" : 80,
+        "Contributions Pool (Token)  Total" : "1,323",
+        "Guardians Operations (Euro) Pool in %" : "60.00 %",
+        "Guardians Operations (Euro) added this round" : "2,847 €",
+        "Guardians Operations (Euro) total " : "8,523 €",
+        "Contributions Pool (Euro) in %" : "40.00 %",
+        "Contributions Pool (Euro) added this round" : "1,898 €",
+        "Contributions Pool (Euro) total " : "3,887 €",
+        "Capital increase in % per round" : "0.29 %",
+        "Founders  Token Shares" : "3.96 %",
+        "Founders Share (GmbH) of emissions" : "90.43 %",
+        "Founders holdings (Emissions + GmbH)" : "94.39 %",
+        "Founders holdings of all minted shares" : "90.08 %",
+        " Total valuation based on current emission price" : "1,639,753 €",
+        "Founders (GmbH) Valuation based on emission price" : "1,482,813 €",
+        "Per Founder Token Valuation on emission price" : "21,649 €",
+        "Total Founder Valuation based on emission price" : "1,504,462 €"
+    },
+    {
+        "Round" : 9,
+        "Total VCs" : 55,
+        "New VCs" : 21,
+        "Invested in this Round" : "7,665 €",
+        "Total Invest Pool" : "20,075 €",
+        "Current Token Emission Price" : "63.88 €",
+        "Token Emission Per VC" : 5.71,
+        "Token Emission in this Round" : 120,
+        "Total Shares (regs. Capital + total Tokens emitted" : "27,886",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "29,329",
+        "Contributions Pool (Token) added this round" : 120,
+        "Contributions Pool (Token)  Total" : "1,443",
+        "Guardians Operations (Euro) Pool in %" : "55.00 %",
+        "Guardians Operations (Euro) added this round" : "4,216 €",
+        "Guardians Operations (Euro) total " : "12,739 €",
+        "Contributions Pool (Euro) in %" : "45.00 %",
+        "Contributions Pool (Euro) added this round" : "3,449 €",
+        "Contributions Pool (Euro) total " : "7,337 €",
+        "Capital increase in % per round" : "0.43 %",
+        "Founders  Token Shares" : "3.93 %",
+        "Founders Share (GmbH) of emissions" : "89.65 %",
+        "Founders holdings (Emissions + GmbH)" : "93.58 %",
+        "Founders holdings of all minted shares" : "88.97 %",
+        " Total valuation based on current emission price" : "1,781,218 €",
+        "Founders (GmbH) Valuation based on emission price" : "1,596,875 €",
+        "Per Founder Token Valuation on emission price" : "23,314 €",
+        "Total Founder Valuation based on emission price" : "1,620,189 €"
+    },
+    {
+        "Round" : 10,
+        "Total VCs" : 89,
+        "New VCs" : 34,
+        "Invested in this Round" : "12,410 €",
+        "Total Invest Pool" : "132,485 €",
+        "Current Token Emission Price" : "82.73 €",
+        "Token Emission Per VC" : 4.41,
+        "Token Emission in this Round" : 150,
+        "Total Shares (regs. Capital + total Tokens emitted" : "28,186",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "29,779",
+        "Contributions Pool (Token) added this round" : 150,
+        "Contributions Pool (Token)  Total" : "1,593",
+        "Guardians Operations (Euro) Pool in %" : "50.00 %",
+        "Guardians Operations (Euro) added this round" : "56,205 €",
+        "Guardians Operations (Euro) total " : "68,944 €",
+        "Contributions Pool (Euro) in %" : "50.00 %",
+        "Contributions Pool (Euro) added this round" : "56,205 €",
+        "Contributions Pool (Euro) total " : "63,542 €",
+        "Capital increase in % per round" : "0.53 %",
+        "Founders  Token Shares" : "3.88 %",
+        "Founders Share (GmbH) of emissions" : "88.70 %",
+        "Founders holdings (Emissions + GmbH)" : "92.58 %",
+        "Founders holdings of all minted shares" : "87.63 %",
+        " Total valuation based on current emission price" : "2,331,922 €",
+        "Founders (GmbH) Valuation based on emission price" : "2,068,333 €",
+        "Per Founder Token Valuation on emission price" : "30,198 €",
+        "Total Founder Valuation based on emission price" : "2,098,531 €"
+    },
+    {
+        "Round" : 11,
+        "Total VCs" : 144,
+        "New VCs" : 55,
+        "Invested in this Round" : "20,075 €",
+        "Total Invest Pool" : "276,560 €",
+        "Current Token Emission Price" : "100.38 €",
+        "Token Emission Per VC" : 3.64,
+        "Token Emission in this Round" : 200,
+        "Total Shares (regs. Capital + total Tokens emitted" : "28,836",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "30,629",
+        "Contributions Pool (Token) added this round" : 200,
+        "Contributions Pool (Token)  Total" : "1,793",
+        "Guardians Operations (Euro) Pool in %" : "45.00 %",
+        "Guardians Operations (Euro) added this round" : "64,834 €",
+        "Guardians Operations (Euro) total " : "133,777 €",
+        "Contributions Pool (Euro) in %" : "55.00 %",
+        "Contributions Pool (Euro) added this round" : "79,241 €",
+        "Contributions Pool (Euro) total " : "142,783 €",
+        "Capital increase in % per round" : "0.69 %",
+        "Founders  Token Shares" : "3.80 %",
+        "Founders Share (GmbH) of emissions" : "86.70 %",
+        "Founders holdings (Emissions + GmbH)" : "90.49 %",
+        "Founders holdings of all minted shares" : "85.20 %",
+        " Total valuation based on current emission price" : "2,894,414 €",
+        "Founders (GmbH) Valuation based on emission price" : "2,509,375 €",
+        "Per Founder Token Valuation on emission price" : "36,637 €",
+        "Total Founder Valuation based on emission price" : "2,546,012 €"
+    },
+    {
+        "Round" : 12,
+        "Total VCs" : 233,
+        "New VCs" : 89,
+        "Invested in this Round" : "32,485 €",
+        "Total Invest Pool" : "462,805 €",
+        "Current Token Emission Price" : "146.18 €",
+        "Token Emission Per VC" : 2.50,
+        "Token Emission in this Round" : 222,
+        "Total Shares (regs. Capital + total Tokens emitted" : "29,530",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "31,546",
+        "Contributions Pool (Token) added this round" : 222,
+        "Contributions Pool (Token)  Total" : "2,015",
+        "Guardians Operations (Euro) Pool in %" : "40.00 %",
+        "Guardians Operations (Euro) added this round" : "74,498 €",
+        "Guardians Operations (Euro) total " : "208,275 €",
+        "Contributions Pool (Euro) in %" : "60.00 %",
+        "Contributions Pool (Euro) added this round" : "111,747 €",
+        "Contributions Pool (Euro) total " : "254,530 €",
+        "Capital increase in % per round" : "0.75 %",
+        "Founders  Token Shares" : "3.71 %",
+        "Founders Share (GmbH) of emissions" : "84.66 %",
+        "Founders holdings (Emissions + GmbH)" : "88.37 %",
+        "Founders holdings of all minted shares" : "82.72 %",
+        " Total valuation based on current emission price" : "4,316,877 €",
+        "Founders (GmbH) Valuation based on emission price" : "3,654,599 €",
+        "Per Founder Token Valuation on emission price" : "53,357 €",
+        "Total Founder Valuation based on emission price" : "3,707,956 €"
+    },
+    {
+        "Round" : 13,
+        "Total VCs" : 377,
+        "New VCs" : 144,
+        "Invested in this Round" : "52,560 €",
+        "Total Invest Pool" : "606,027 €",
+        "Current Token Emission Price" : "212.87 €",
+        "Token Emission Per VC" : 1.71,
+        "Token Emission in this Round" : 247,
+        "Total Shares (regs. Capital + total Tokens emitted" : "30,274",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "32,536",
+        "Contributions Pool (Token) added this round" : 247,
+        "Contributions Pool (Token)  Total" : "2,262",
+        "Guardians Operations (Euro) Pool in %" : "35.00 %",
+        "Guardians Operations (Euro) added this round" : "85,128 €",
+        "Guardians Operations (Euro) total " : "293,403 €",
+        "Contributions Pool (Euro) in %" : "65.00 %",
+        "Contributions Pool (Euro) added this round" : "158,095 €",
+        "Contributions Pool (Euro) total " : "412,624 €",
+        "Capital increase in % per round" : "0.82 %",
+        "Founders  Token Shares" : "3.62 %",
+        "Founders Share (GmbH) of emissions" : "82.58 %",
+        "Founders holdings (Emissions + GmbH)" : "86.20 %",
+        "Founders holdings of all minted shares" : "80.20 %",
+        " Total valuation based on current emission price" : "6,444,549 €",
+        "Founders (GmbH) Valuation based on emission price" : "5,321,806 €",
+        "Per Founder Token Valuation on emission price" : "77,698 €",
+        "Total Founder Valuation based on emission price" : "5,399,505 €"
+    },
+    {
+        "Round" : 14,
+        "Total VCs" : 610,
+        "New VCs" : 233,
+        "Invested in this Round" : "85,045 €",
+        "Total Invest Pool" : "927,494 €",
+        "Current Token Emission Price" : "310.00 €",
+        "Token Emission Per VC" : 1.18,
+        "Token Emission in this Round" : 274,
+        "Total Shares (regs. Capital + total Tokens emitted" : "31,073",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "33,609",
+        "Contributions Pool (Token) added this round" : 274,
+        "Contributions Pool (Token)  Total" : "2,536",
+        "Guardians Operations (Euro) Pool in %" : "30.00 %",
+        "Guardians Operations (Euro) added this round" : "96,440 €",
+        "Guardians Operations (Euro) total " : "389,843 €",
+        "Contributions Pool (Euro) in %" : "70.00 %",
+        "Contributions Pool (Euro) added this round" : "225,026 €",
+        "Contributions Pool (Euro) total " : "637,651 €",
+        "Capital increase in % per round" : "0.88 %",
+        "Founders  Token Shares" : "3.52 %",
+        "Founders Share (GmbH) of emissions" : "80.46 %",
+        "Founders holdings (Emissions + GmbH)" : "83.98 %",
+        "Founders holdings of all minted shares" : "77.64 %",
+        " Total valuation based on current emission price" : "9,632,559 €",
+        "Founders (GmbH) Valuation based on emission price" : "7,749,958 €",
+        "Per Founder Token Valuation on emission price" : "113,149 €",
+        "Total Founder Valuation based on emission price" : "7,863,108 €"
+    },
+    {
+        "Round" : 15,
+        "Total VCs" : 987,
+        "New VCs" : 377,
+        "Invested in this Round" : "137,605 €",
+        "Total Invest Pool" : "1,358,261 €",
+        "Current Token Emission Price" : "451.43 €",
+        "Token Emission Per VC" : 0.81,
+        "Token Emission in this Round" : 305,
+        "Total Shares (regs. Capital + total Tokens emitted" : "31,933",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "34,774",
+        "Contributions Pool (Token) added this round" : 305,
+        "Contributions Pool (Token)  Total" : "2,841",
+        "Guardians Operations (Euro) Pool in %" : "25.00 %",
+        "Guardians Operations (Euro) added this round" : "107,692 €",
+        "Guardians Operations (Euro) total " : "497,535 €",
+        "Contributions Pool (Euro) in %" : "75.00 %",
+        "Contributions Pool (Euro) added this round" : "323,076 €",
+        "Contributions Pool (Euro) total " : "960,726 €",
+        "Capital increase in % per round" : "0.95 %",
+        "Founders  Token Shares" : "3.43 %",
+        "Founders Share (GmbH) of emissions" : "78.29 %",
+        "Founders holdings (Emissions + GmbH)" : "81.72 %",
+        "Founders holdings of all minted shares" : "75.04 %",
+        " Total valuation based on current emission price" : "14,415,363 €",
+        "Founders (GmbH) Valuation based on emission price" : "11,285,781 €",
+        "Per Founder Token Valuation on emission price" : "164,772 €",
+        "Total Founder Valuation based on emission price" : "11,450,554 €"
+    },
+    {
+        "Round" : 16,
+        "Total VCs" : "1,597",
+        "New VCs" : 610,
+        "Invested in this Round" : "222,650 €",
+        "Total Invest Pool" : "1,944,433 €",
+        "Current Token Emission Price" : "657.40 €",
+        "Token Emission Per VC" : 0.56,
+        "Token Emission in this Round" : 339,
+        "Total Shares (regs. Capital + total Tokens emitted" : "32,860",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "36,040",
+        "Contributions Pool (Token) added this round" : 339,
+        "Contributions Pool (Token)  Total" : "3,180",
+        "Guardians Operations (Euro) Pool in %" : "20.00 %",
+        "Guardians Operations (Euro) added this round" : "117,234 €",
+        "Guardians Operations (Euro) total " : "614,769 €",
+        "Contributions Pool (Euro) in %" : "80.00 %",
+        "Contributions Pool (Euro) added this round" : "468,937 €",
+        "Contributions Pool (Euro) total " : "1,429,664 €",
+        "Capital increase in % per round" : "1.03 %",
+        "Founders  Token Shares" : "3.33 %",
+        "Founders Share (GmbH) of emissions" : "76.08 %",
+        "Founders holdings (Emissions + GmbH)" : "79.41 %",
+        "Founders holdings of all minted shares" : "72.41 %",
+        " Total valuation based on current emission price" : "21,601,993 €",
+        "Founders (GmbH) Valuation based on emission price" : "16,434,897 €",
+        "Per Founder Token Valuation on emission price" : "239,949 €",
+        "Total Founder Valuation based on emission price" : "16,674,846 €"
+    },
+    {
+        "Round" : 17,
+        "Total VCs" : "2,584",
+        "New VCs" : 987,
+        "Invested in this Round" : "360,255 €",
+        "Total Invest Pool" : "2,755,454 €",
+        "Current Token Emission Price" : "957.33 €",
+        "Token Emission Per VC" : 0.38,
+        "Token Emission in this Round" : 376,
+        "Total Shares (regs. Capital + total Tokens emitted" : "33,863",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "37,419",
+        "Contributions Pool (Token) added this round" : 376,
+        "Contributions Pool (Token)  Total" : "3,556",
+        "Guardians Operations (Euro) Pool in %" : "15.00 %",
+        "Guardians Operations (Euro) added this round" : "121,653 €",
+        "Guardians Operations (Euro) total " : "736,422 €",
+        "Contributions Pool (Euro) in %" : "85.00 %",
+        "Contributions Pool (Euro) added this round" : "689,368 €",
+        "Contributions Pool (Euro) total " : "2,119,032 €",
+        "Capital increase in % per round" : "1.11 %",
+        "Founders  Token Shares" : "3.23 %",
+        "Founders Share (GmbH) of emissions" : "73.83 %",
+        "Founders holdings (Emissions + GmbH)" : "77.06 %",
+        "Founders holdings of all minted shares" : "69.74 %",
+        " Total valuation based on current emission price" : "32,417,616 €",
+        "Founders (GmbH) Valuation based on emission price" : "23,933,221 €",
+        "Per Founder Token Valuation on emission price" : "349,425 €",
+        "Total Founder Valuation based on emission price" : "24,282,646 €"
+    },
+    {
+        "Round" : 18,
+        "Total VCs" : "4,181",
+        "New VCs" : "1,597",
+        "Invested in this Round" : "582,905 €",
+        "Total Invest Pool" : "3,897,310 €",
+        "Current Token Emission Price" : "1,394.11 €",
+        "Token Emission Per VC" : 0.26,
+        "Token Emission in this Round" : 418,
+        "Total Shares (regs. Capital + total Tokens emitted" : "34,949",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "38,923",
+        "Contributions Pool (Token) added this round" : 418,
+        "Contributions Pool (Token)  Total" : "3,974",
+        "Guardians Operations (Euro) Pool in %" : "10.00 %",
+        "Guardians Operations (Euro) added this round" : "114,186 €",
+        "Guardians Operations (Euro) total " : "850,608 €",
+        "Contributions Pool (Euro) in %" : "90.00 %",
+        "Contributions Pool (Euro) added this round" : "1,027,670 €",
+        "Contributions Pool (Euro) total " : "3,146,702 €",
+        "Capital increase in % per round" : "1.20 %",
+        "Founders  Token Shares" : "3.13 %",
+        "Founders Share (GmbH) of emissions" : "71.53 %",
+        "Founders holdings (Emissions + GmbH)" : "74.67 %",
+        "Founders holdings of all minted shares" : "67.04 %",
+        " Total valuation based on current emission price" : "48,722,346 €",
+        "Founders (GmbH) Valuation based on emission price" : "34,852,646 €",
+        "Per Founder Token Valuation on emission price" : "508,849 €",
+        "Total Founder Valuation based on emission price" : "35,361,495 €"
+    },
+    {
+        "Round" : 19,
+        "Total VCs" : "6,765",
+        "New VCs" : "2,584",
+        "Invested in this Round" : "943,160 €",
+        "Total Invest Pool" : "5,533,569 €",
+        "Current Token Emission Price" : "2,030.16 €",
+        "Token Emission Per VC" : 0.18,
+        "Token Emission in this Round" : 465,
+        "Total Shares (regs. Capital + total Tokens emitted" : "36,128",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "40,567",
+        "Contributions Pool (Token) added this round" : 465,
+        "Contributions Pool (Token)  Total" : "4,439",
+        "Guardians Operations (Euro) Pool in %" : "5.00 %",
+        "Guardians Operations (Euro) added this round" : "81,813 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "95.00 %",
+        "Contributions Pool (Euro) added this round" : "1,554,446 €",
+        "Contributions Pool (Euro) total " : "4,701,148 €",
+        "Capital increase in % per round" : "1.29 %",
+        "Founders  Token Shares" : "3.03 %",
+        "Founders Share (GmbH) of emissions" : "69.20 %",
+        "Founders holdings (Emissions + GmbH)" : "72.23 %",
+        "Founders holdings of all minted shares" : "64.33 %",
+        " Total valuation based on current emission price" : "73,345,532 €",
+        "Founders (GmbH) Valuation based on emission price" : "50,753,992 €",
+        "Per Founder Token Valuation on emission price" : "741,008 €",
+        "Total Founder Valuation based on emission price" : "51,495,000 €"
+    },
+    {
+        "Round" : 20,
+        "Total VCs" : "10,946",
+        "New VCs" : "4,181",
+        "Invested in this Round" : "1,526,065 €",
+        "Total Invest Pool" : "7,919,076.51 €",
+        "Current Token Emission Price" : "2,956.41 €",
+        "Token Emission Per VC" : 0.12,
+        "Token Emission in this Round" : 516,
+        "Total Shares (regs. Capital + total Tokens emitted" : "37,410",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "42,366",
+        "Contributions Pool (Token) added this round" : 516,
+        "Contributions Pool (Token)  Total" : "4,955",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "2,385,508 €",
+        "Contributions Pool (Euro) total " : "7,086,656 €",
+        "Capital increase in % per round" : "1.38 %",
+        "Founders  Token Shares" : "2.93 %",
+        "Founders Share (GmbH) of emissions" : "66.83 %",
+        "Founders holdings (Emissions + GmbH)" : "69.75 %",
+        "Founders holdings of all minted shares" : "61.59 %",
+        " Total valuation based on current emission price" : "110,600,312 €",
+        "Founders (GmbH) Valuation based on emission price" : "22,173,077 €",
+        "Per Founder Token Valuation on emission price" : "1,079,090 €",
+        "Total Founder Valuation based on emission price" : "23,252,167 €"
+    },
+    {
+        "Round" : 21,
+        "Total VCs" : "17,711",
+        "New VCs" : "6,765",
+        "Invested in this Round" : "2,469,225 €",
+        "Total Invest Pool" : "10,388,302 €",
+        "Current Token Emission Price" : "3,623.92 €",
+        "Token Emission Per VC" : 0.101,
+        "Token Emission in this Round" : 681,
+        "Total Shares (regs. Capital + total Tokens emitted" : "38,773",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "44,410",
+        "Contributions Pool (Token) added this round" : 681,
+        "Contributions Pool (Token)  Total" : "5,637",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "2,469,225 €",
+        "Contributions Pool (Euro) total " : "9,555,881 €",
+        "Capital increase in % per round" : "1.76 %",
+        "Founders  Token Shares" : "2.82 %",
+        "Founders Share (GmbH) of emissions" : "19.34 %",
+        "Founders holdings (Emissions + GmbH)" : "22.17 %",
+        "Founders holdings of all minted shares" : "19.35 %",
+        "Guardians Treasury" : "45.13 %",
+        " Total valuation based on current emission price" : "140,510,467 €",
+        "Founders (GmbH) Valuation based on emission price" : "27,179,388 €",
+        "Per Founder Token Valuation on emission price" : "1,322,730 €",
+        "Total Founder Valuation based on emission price" : "28,502,118 €"
+    },
+    {
+        "Round" : 22,
+        "Total VCs" : "28,657",
+        "New VCs" : "10,946",
+        "Invested in this Round" : "3,995,290 €",
+        "Total Invest Pool" : "14,383,592 €",
+        "Current Token Emission Price" : "4,442.14 €",
+        "Token Emission Per VC" : 0.082,
+        "Token Emission in this Round" : 899,
+        "Total Shares (regs. Capital + total Tokens emitted" : "40,572",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "47,108",
+        "Contributions Pool (Token) added this round" : 899,
+        "Contributions Pool (Token)  Total" : "6,536",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "3,995,290 €",
+        "Contributions Pool (Euro) total " : "13,551,171 €",
+        "Capital increase in % per round" : "2.22 %",
+        "Founders  Token Shares" : "2.70 %",
+        "Founders Share (GmbH) of emissions" : "18.49 %",
+        "Founders holdings (Emissions + GmbH)" : "21.18 %",
+        "Founders holdings of all minted shares" : "18.25 %",
+        "Guardians Treasury" : "43.13 %",
+        " Total valuation based on current emission price" : "180,225,968 €",
+        "Founders (GmbH) Valuation based on emission price" : "33,316,041 €",
+        "Per Founder Token Valuation on emission price" : "1,621,381 €",
+        "Total Founder Valuation based on emission price" : "34,937,421 €"
+    },
+    {
+        "Round" : 23,
+        "Total VCs" : "46,368",
+        "New VCs" : "17,711",
+        "Invested in this Round" : "6,464,515 €",
+        "Total Invest Pool" : "20,848,107 €",
+        "Current Token Emission Price" : "5,445.10 €",
+        "Token Emission Per VC" : 0.067,
+        "Token Emission in this Round" : "1,187",
+        "Total Shares (regs. Capital + total Tokens emitted" : "42,946",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "50,669",
+        "Contributions Pool (Token) added this round" : "1,187",
+        "Contributions Pool (Token)  Total" : "7,723",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "6,464,515 €",
+        "Contributions Pool (Euro) total " : "20,015,686 €",
+        "Capital increase in % per round" : "2.76 %",
+        "Founders  Token Shares" : "2.55 %",
+        "Founders Share (GmbH) of emissions" : "17.46 %",
+        "Founders holdings (Emissions + GmbH)" : "20.01 %",
+        "Founders holdings of all minted shares" : "16.96 %",
+        "Guardians Treasury" : "40.75 %",
+        " Total valuation based on current emission price" : "233,847,016 €",
+        "Founders (GmbH) Valuation based on emission price" : "40,838,247 €",
+        "Per Founder Token Valuation on emission price" : "1,987,461 €",
+        "Total Founder Valuation based on emission price" : "42,825,709 €"
+    },
+    {
+        "Round" : 24,
+        "Total VCs" : "75,025",
+        "New VCs" : "28,657",
+        "Invested in this Round" : "10,459,805 €",
+        "Total Invest Pool" : "31,307,912 €",
+        "Current Token Emission Price" : "6,674.51 €",
+        "Token Emission Per VC" : 0.055,
+        "Token Emission in this Round" : "1,567",
+        "Total Shares (regs. Capital + total Tokens emitted" : "46,081",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "55,371",
+        "Contributions Pool (Token) added this round" : "1,567",
+        "Contributions Pool (Token)  Total" : "9,290",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "10,459,805 €",
+        "Contributions Pool (Euro) total " : "30,475,491 €",
+        "Capital increase in % per round" : "3.40 %",
+        "Founders  Token Shares" : "2.38 %",
+        "Founders Share (GmbH) of emissions" : "16.28 %",
+        "Founders holdings (Emissions + GmbH)" : "18.65 %",
+        "Founders holdings of all minted shares" : "15.52 %",
+        "Guardians Treasury" : "37.98 %",
+        " Total valuation based on current emission price" : "307,565,383 €",
+        "Founders (GmbH) Valuation based on emission price" : "50,058,842 €",
+        "Per Founder Token Valuation on emission price" : "2,436,197 €",
+        "Total Founder Valuation based on emission price" : "52,495,039 €"
+    },
+    {
+        "Round" : 25,
+        "Total VCs" : "121,393",
+        "New VCs" : "46,368",
+        "Invested in this Round" : "16,924,320 €",
+        "Total Invest Pool" : "48,232,232 €",
+        "Current Token Emission Price" : "8,181.51 €",
+        "Token Emission Per VC" : 0.045,
+        "Token Emission in this Round" : "2,069",
+        "Total Shares (regs. Capital + total Tokens emitted" : "50,218",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "61,577",
+        "Contributions Pool (Token) added this round" : "2,069",
+        "Contributions Pool (Token)  Total" : "11,359",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "16,924,320 €",
+        "Contributions Pool (Euro) total " : "47,399,811 €",
+        "Capital increase in % per round" : "4.12 %",
+        "Founders  Token Shares" : "2.18 %",
+        "Founders Share (GmbH) of emissions" : "14.93 %",
+        "Founders holdings (Emissions + GmbH)" : "17.12 %",
+        "Founders holdings of all minted shares" : "13.96 %",
+        "Guardians Treasury" : "34.85 %",
+        " Total valuation based on current emission price" : "410,857,157 €",
+        "Founders (GmbH) Valuation based on emission price" : "61,361,294 €",
+        "Per Founder Token Valuation on emission price" : "2,986,250 €",
+        "Total Founder Valuation based on emission price" : "64,347,544 €"
+    },
+    {
+        "Round" : 26,
+        "Total VCs" : "196,418",
+        "New VCs" : "75,025",
+        "Invested in this Round" : "27,384,125 €",
+        "Total Invest Pool" : "75,616,357 €",
+        "Current Token Emission Price" : "10,028.75 €",
+        "Token Emission Per VC" : 0.036,
+        "Token Emission in this Round" : "2,731",
+        "Total Shares (regs. Capital + total Tokens emitted" : "55,679",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "69,768",
+        "Contributions Pool (Token) added this round" : "2,731",
+        "Contributions Pool (Token)  Total" : "14,089",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "27,384,125 €",
+        "Contributions Pool (Euro) total " : "74,783,936 €",
+        "Capital increase in % per round" : "4.90 %",
+        "Founders  Token Shares" : "1.97 %",
+        "Founders Share (GmbH) of emissions" : "13.47 %",
+        "Founders holdings (Emissions + GmbH)" : "15.44 %",
+        "Founders holdings of all minted shares" : "12.32 %",
+        "Guardians Treasury" : "31.43 %",
+        " Total valuation based on current emission price" : "558,390,102 €",
+        "Founders (GmbH) Valuation based on emission price" : "75,215,651 €",
+        "Per Founder Token Valuation on emission price" : "3,660,495 €",
+        "Total Founder Valuation based on emission price" : "78,876,146 €"
+    },
+    {
+        "Round" : 27,
+        "Total VCs" : "317,811",
+        "New VCs" : "121,393",
+        "Invested in this Round" : "44,308,445 €",
+        "Total Invest Pool" : "119,924,802 €",
+        "Current Token Emission Price" : "12,293.08 €",
+        "Token Emission Per VC" : 0.030,
+        "Token Emission in this Round" : "3,604",
+        "Total Shares (regs. Capital + total Tokens emitted" : "62,888",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "80,581",
+        "Contributions Pool (Token) added this round" : "3,604",
+        "Contributions Pool (Token)  Total" : "17,694",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "44,308,445 €",
+        "Contributions Pool (Euro) total " : "119,092,381 €",
+        "Capital increase in % per round" : "5.73 %",
+        "Founders  Token Shares" : "1.74 %",
+        "Founders Share (GmbH) of emissions" : "11.93 %",
+        "Founders holdings (Emissions + GmbH)" : "13.67 %",
+        "Founders holdings of all minted shares" : "10.67 %",
+        "Guardians Treasury" : "27.83 %",
+        " Total valuation based on current emission price" : "773,082,166 €",
+        "Founders (GmbH) Valuation based on emission price" : "92,198,091 €",
+        "Per Founder Token Valuation on emission price" : "4,486,974 €",
+        "Total Founder Valuation based on emission price" : "96,685,065 €"
+    },
+    {
+        "Round" : 28,
+        "Total VCs" : "514,229",
+        "New VCs" : "196,418",
+        "Invested in this Round" : "71,692,570 €",
+        "Total Invest Pool" : "191,617,372 €",
+        "Current Token Emission Price" : "15,068.65 €",
+        "Token Emission Per VC" : 0.024,
+        "Token Emission in this Round" : "4,758",
+        "Total Shares (regs. Capital + total Tokens emitted" : "72,403",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "94,855",
+        "Contributions Pool (Token) added this round" : "4,758",
+        "Contributions Pool (Token)  Total" : "22,452",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "71,692,570 €",
+        "Contributions Pool (Euro) total " : "190,784,951 €",
+        "Capital increase in % per round" : "6.57 %",
+        "Founders  Token Shares" : "1.51 %",
+        "Founders Share (GmbH) of emissions" : "10.36 %",
+        "Founders holdings (Emissions + GmbH)" : "11.87 %",
+        "Founders holdings of all minted shares" : "9.06 %",
+        "Guardians Treasury" : "24.17 %",
+        " Total valuation based on current emission price" : "1,091,016,368 €",
+        "Founders (GmbH) Valuation based on emission price" : "113,014,883 €",
+        "Per Founder Token Valuation on emission price" : "5,500,058 €",
+        "Total Founder Valuation based on emission price" : "118,514,940 €"
+    },
+    {
+        "Round" : 29,
+        "Total VCs" : "832,040",
+        "New VCs" : "317,811",
+        "Invested in this Round" : "116,001,015 €",
+        "Total Invest Pool" : "307,618,387 €",
+        "Current Token Emission Price" : "18,470.90 €",
+        "Token Emission Per VC" : 0.020,
+        "Token Emission in this Round" : "6,280",
+        "Total Shares (regs. Capital + total Tokens emitted" : "84,963",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "113,695",
+        "Contributions Pool (Token) added this round" : "6,280",
+        "Contributions Pool (Token)  Total" : "28,732",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "116,001,015 €",
+        "Contributions Pool (Euro) total " : "306,785,966 €",
+        "Capital increase in % per round" : "7.39 %",
+        "Founders  Token Shares" : "1.29 %",
+        "Founders Share (GmbH) of emissions" : "8.83 %",
+        "Founders holdings (Emissions + GmbH)" : "10.12 %",
+        "Founders holdings of all minted shares" : "7.56 %",
+        "Guardians Treasury" : "20.60 %",
+        " Total valuation based on current emission price" : "1,569,351,700 €",
+        "Founders (GmbH) Valuation based on emission price" : "138,531,759 €",
+        "Per Founder Token Valuation on emission price" : "6,741,879 €",
+        "Total Founder Valuation based on emission price" : "145,273,638 €"
+    },
+    {
+        "Round" : 30,
+        "Total VCs" : "1,346,269",
+        "New VCs" : "514,229",
+        "Invested in this Round" : "187,693,585 €",
+        "Total Invest Pool" : "495,311,972 €",
+        "Current Token Emission Price" : "22,641.32 €",
+        "Token Emission Per VC" : 0.016,
+        "Token Emission in this Round" : "8,290",
+        "Total Shares (regs. Capital + total Tokens emitted" : "101,543",
+        "TOTAL Shares Minted (reg. capital + emission+c.pool)" : "138,565",
+        "Contributions Pool (Token) added this round" : "8,290",
+        "Contributions Pool (Token)  Total" : "37,022",
+        "Guardians Operations (Euro) Pool in %" : "0.00 %",
+        "Guardians Operations (Euro) added this round" : "0 €",
+        "Guardians Operations (Euro) total " : "932,421 €",
+        "Contributions Pool (Euro) in %" : "100.00 %",
+        "Contributions Pool (Euro) added this round" : "187,693,585 €",
+        "Contributions Pool (Euro) total " : "494,479,551 €",
+        "Capital increase in % per round" : "8.16 %",
+        "Founders  Token Shares" : "1.08 %",
+        "Founders Share (GmbH) of emissions" : "7.39 %",
+        "Founders holdings (Emissions + GmbH)" : "8.46 %",
+        "Founders holdings of all minted shares" : "6.20 %",
+        "Guardians Treasury" : "17.23 %",
+        " Total valuation based on current emission price" : "2,299,072,315 €",
+        "Founders (GmbH) Valuation based on emission price" : "169,809,920 €",
+        "Per Founder Token Valuation on emission price" : "8,264,083 €",
+        "Total Founder Valuation based on emission price" : "178,074,003 €"
+    }
+]
+</file>
+
+</files>
