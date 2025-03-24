@@ -18,7 +18,6 @@
 
 	<p>
 		<strong>Represented by:</strong><br />
-		Yvonne M&uuml;ller<br />
 		Samuel Andert
 	</p>
 
