@@ -10,34 +10,61 @@
 	// Animation states
 	let textVisible = false;
 	let buttonsVisible = false;
-	let titleVisible = false;
+	let brainVisible = false;
+	let connectionsVisible = false;
 	let sectionsVisible = false;
 	let cardsVisible = false;
 	let investVisible = false;
 	let journeyVisible = false;
 	
+	// Brain animation
+	let brainCanvas: HTMLCanvasElement | null = null;
+	let brainCtx: CanvasRenderingContext2D | null = null;
+	let brainNodes: {x: number, y: number, radius: number, vx: number, vy: number, connections: number[]}[] = [];
+	let brainLines: {start: number, end: number, progress: number, speed: number}[] = [];
+	let brainAnimationFrame: number;
+	let pulsating = 0;
+	
 	onMount(() => {
 		// Only run on client
 		if (typeof window !== 'undefined') {
+			// Initialize stars
 			initCanvas();
 			createStars();
 			animateStars();
 			
+			// Initialize brain animation only if canvas exists
+			setTimeout(() => {
+				if (brainCanvas) {
+					initBrainCanvas();
+					createBrainNodes();
+					animateBrain();
+				}
+			}, 100);
+			
 			// Resize handler
 			const handleResize = () => {
+				// Stars canvas
 				canvas.width = window.innerWidth;
 				canvas.height = window.innerHeight;
 				createStars();
+				
+				// Brain canvas
+				if (brainCanvas) {
+					brainCanvas.width = brainCanvas.offsetWidth;
+					brainCanvas.height = brainCanvas.offsetHeight;
+					createBrainNodes();
+				}
 			};
 			
 			window.addEventListener('resize', handleResize);
 			
 			// Staggered animations with fixed delays
-			setTimeout(() => { titleVisible = true; }, 300);
-			setTimeout(() => { textVisible = true; }, 1200);
+			setTimeout(() => { textVisible = true; }, 300);
+			setTimeout(() => { brainVisible = true; }, 1000);
+			setTimeout(() => { connectionsVisible = true; }, 1500);
 			setTimeout(() => { buttonsVisible = true; }, 2000);
 			setTimeout(() => { sectionsVisible = true; }, 2500);
-			setTimeout(() => { cardsVisible = true; }, 3000);
 			
 			// Add scroll animation detection
 			const handleScroll = () => {
@@ -72,6 +99,9 @@
 			return () => {
 				window.removeEventListener('resize', handleResize);
 				window.removeEventListener('scroll', handleScroll);
+				if (brainAnimationFrame) {
+					cancelAnimationFrame(brainAnimationFrame);
+				}
 			};
 		}
 	});
@@ -167,11 +197,7 @@
 			ctx.stroke();
 			
 			// Stop animation when off screen
-			if (
-				shootingStar.x > canvas.width ||
-				shootingStar.x < 0 ||
-				shootingStar.y > canvas.height
-			) {
+			if (shootingStar.x > canvas.width || shootingStar.x < 0 || shootingStar.y > canvas.height) {
 				return;
 			}
 			
@@ -180,14 +206,230 @@
 		
 		animate();
 	}
+	
+	// Brain animation functions
+	function initBrainCanvas() {
+		if (!brainCanvas) return;
+		
+		brainCanvas.width = brainCanvas.offsetWidth;
+		brainCanvas.height = brainCanvas.offsetHeight;
+		brainCtx = brainCanvas.getContext('2d');
+	}
+	
+	function createBrainNodes() {
+		if (!brainCanvas || !brainCtx) return;
+		
+		const width = brainCanvas.width;
+		const height = brainCanvas.height;
+		const centerX = width / 2;
+		const centerY = height / 2;
+		
+		brainNodes = [];
+		brainLines = [];
+		
+		// Create central "brain" node
+		brainNodes.push({
+			x: centerX,
+			y: centerY,
+			radius: 30,
+			vx: 0,
+			vy: 0,
+			connections: []
+		});
+		
+		// Create orbital nodes (services/data types)
+		const numNodes = 8;
+		const radius = Math.min(width, height) * 0.3;
+		
+		for (let i = 0; i < numNodes; i++) {
+			const angle = (i / numNodes) * Math.PI * 2;
+			const x = centerX + Math.cos(angle) * radius;
+			const y = centerY + Math.sin(angle) * radius;
+			
+			brainNodes.push({
+				x: x,
+				y: y,
+				radius: 12 + Math.random() * 8,
+				vx: Math.random() * 0.2 - 0.1,
+				vy: Math.random() * 0.2 - 0.1,
+				connections: [0] // All connect to central brain
+			});
+			
+			// Connect to central node
+			brainLines.push({
+				start: 0,
+				end: i + 1,
+				progress: 0,
+				speed: 0.005 + Math.random() * 0.01
+			});
+			
+			// Add some connections between nodes
+			if (i > 0 && Math.random() > 0.5) {
+				const connectTo = 1 + Math.floor(Math.random() * i);
+				brainNodes[i + 1].connections.push(connectTo);
+				brainNodes[connectTo].connections.push(i + 1);
+				
+				brainLines.push({
+					start: i + 1,
+					end: connectTo,
+					progress: 0,
+					speed: 0.005 + Math.random() * 0.01
+				});
+			}
+		}
+	}
+	
+	function animateBrain() {
+		if (!brainCanvas || !brainCtx) return;
+		
+		const width = brainCanvas.width;
+		const height = brainCanvas.height;
+		
+		brainCtx.clearRect(0, 0, width, height);
+		
+		// Update pulsating effect
+		pulsating += 0.05;
+		
+		// Draw connections (lines)
+		if (connectionsVisible) {
+			for (let i = 0; i < brainLines.length; i++) {
+				const line = brainLines[i];
+				const startNode = brainNodes[line.start];
+				const endNode = brainNodes[line.end];
+				
+				// Update progress
+				line.progress = Math.min(1, line.progress + line.speed);
+				
+				// Draw line with gradient
+				const gradient = brainCtx.createLinearGradient(
+					startNode.x, startNode.y, 
+					endNode.x, endNode.y
+				);
+				
+				// Different colors for central connections vs peripheral
+				if (line.start === 0 || line.end === 0) {
+					gradient.addColorStop(0, "rgba(59, 130, 246, 0.8)"); // Blue
+					gradient.addColorStop(1, "rgba(139, 92, 246, 0.8)"); // Purple
+				} else {
+					gradient.addColorStop(0, "rgba(139, 92, 246, 0.6)"); // Purple
+					gradient.addColorStop(1, "rgba(236, 72, 153, 0.6)"); // Pink
+				}
+				
+				brainCtx.strokeStyle = gradient;
+				brainCtx.lineWidth = 2;
+				brainCtx.beginPath();
+				
+				// Only draw up to current progress
+				const progressX = startNode.x + (endNode.x - startNode.x) * line.progress;
+				const progressY = startNode.y + (endNode.y - startNode.y) * line.progress;
+				
+				brainCtx.moveTo(startNode.x, startNode.y);
+				brainCtx.lineTo(progressX, progressY);
+				brainCtx.stroke();
+				
+				// Data packet animation along the line
+				if (line.progress > 0.1 && Math.random() > 0.97) {
+					const packetProgress = Math.random();
+					const packetX = startNode.x + (endNode.x - startNode.x) * packetProgress;
+					const packetY = startNode.y + (endNode.y - startNode.y) * packetProgress;
+					
+					brainCtx.beginPath();
+					brainCtx.arc(packetX, packetY, 3, 0, Math.PI * 2);
+					brainCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
+					brainCtx.fill();
+				}
+			}
+		}
+		
+		// Draw nodes
+		for (let i = 0; i < brainNodes.length; i++) {
+			const node = brainNodes[i];
+			
+			// Central node (brain)
+			if (i === 0 && brainVisible) {
+				// Pulsating glow effect
+				const glowRadius = 30 + Math.sin(pulsating) * 5;
+				const gradient = brainCtx.createRadialGradient(
+					node.x, node.y, glowRadius * 0.5,
+					node.x, node.y, glowRadius * 2
+				);
+				gradient.addColorStop(0, "rgba(59, 130, 246, 0.8)");
+				gradient.addColorStop(1, "rgba(59, 130, 246, 0)");
+				
+				brainCtx.beginPath();
+				brainCtx.arc(node.x, node.y, glowRadius * 2, 0, Math.PI * 2);
+				brainCtx.fillStyle = gradient;
+				brainCtx.fill();
+				
+				// Brain circle
+				brainCtx.beginPath();
+				brainCtx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+				brainCtx.fillStyle = "rgba(59, 130, 246, 0.9)";
+				brainCtx.fill();
+				
+				// Brain inner details
+				brainCtx.beginPath();
+				brainCtx.arc(node.x, node.y, node.radius * 0.7, 0, Math.PI * 2);
+				brainCtx.fillStyle = "rgba(255, 255, 255, 0.15)";
+				brainCtx.fill();
+				
+				// Neural pattern inside brain
+				brainCtx.beginPath();
+				for (let j = 0; j < 8; j++) {
+					const angle = (j / 8) * Math.PI * 2;
+					const innerRadius = node.radius * 0.4;
+					brainCtx.moveTo(node.x, node.y);
+					brainCtx.lineTo(
+						node.x + Math.cos(angle) * innerRadius,
+						node.y + Math.sin(angle) * innerRadius
+					);
+				}
+				brainCtx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+				brainCtx.lineWidth = 1;
+				brainCtx.stroke();
+			} 
+			// Peripheral nodes (services/data)
+			else if (i > 0 && connectionsVisible) {
+				// Update position with subtle movement
+				node.x += node.vx;
+				node.y += node.vy;
+				
+				// Boundary check and reverse direction
+				const maxDistance = Math.min(width, height) * 0.3;
+				const dx = node.x - width/2;
+				const dy = node.y - height/2;
+				const distance = Math.sqrt(dx*dx + dy*dy);
+				
+				if (distance > maxDistance || distance < maxDistance * 0.7) {
+					node.vx = -node.vx;
+					node.vy = -node.vy;
+				}
+				
+				// Draw node
+				brainCtx.beginPath();
+				brainCtx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+				brainCtx.fillStyle = i % 2 === 0 ? 
+					"rgba(139, 92, 246, 0.8)" : "rgba(236, 72, 153, 0.8)";
+				brainCtx.fill();
+				
+				// Draw service icon or symbol inside
+				brainCtx.beginPath();
+				brainCtx.arc(node.x, node.y, node.radius * 0.6, 0, Math.PI * 2);
+				brainCtx.fillStyle = "rgba(255, 255, 255, 0.2)";
+				brainCtx.fill();
+			}
+		}
+		
+		brainAnimationFrame = requestAnimationFrame(animateBrain);
+	}
 </script>
 
 <svelte:head>
-	<title>Visioncreator | Own Your Future</title>
+	<title>Hominio | Own Your Digital Life</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
 	<link
-		href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+		href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
 		rel="stylesheet"
 	/>
 	<style>
@@ -201,29 +443,6 @@
 			padding: 0;
 			overflow-x: hidden;
 		}
-		
-		@keyframes gradient {
-			0% { background-position: 0% 50%; }
-			50% { background-position: 100% 50%; }
-			100% { background-position: 0% 50%; }
-		}
-		
-		@keyframes fadeUp {
-			0% { 
-				opacity: 0;
-				transform: translateY(20px);
-			}
-			100% { 
-				opacity: 1;
-				transform: translateY(0);
-			}
-		}
-		
-		@keyframes glow {
-			0% { text-shadow: 0 0 5px rgba(255,255,255,0.3); }
-			50% { text-shadow: 0 0 20px rgba(255,255,255,0.5), 0 0 30px rgba(255,255,255,0.2); }
-			100% { text-shadow: 0 0 5px rgba(255,255,255,0.3); }
-		}
 	</style>
 </svelte:head>
 
@@ -232,441 +451,297 @@
 	
 	<div class="ambient-light"></div>
 	<div class="ambient-light-2"></div>
-	<div class="full-page-background"></div>
 	
+	<!-- Hero Section -->
 	<section class="hero">
-		<div class="time-indicator" class:visible={textVisible}>
-			<div class="current-date">MARCH 21, 2025</div>
-			<div class="timeline-divider"></div>
-			<div class="future-date">MARCH 21, 2026</div>
-		</div>
-		
-		<div class="hero-wrapper">
-			<!-- Future Vision Panel - Simplified -->
-			<div class="hero-left future-panel" class:visible={textVisible}>
-				<div class="future-badge">MARCH 21, 2026</div>
-				<h2 class="hero-statement">The Day Everything Changed</h2>
-				
-				<div class="hero-story">
-					<p>You're celebrating alongside 10,000 others who built something revolutionary together. You played a crucial role.</p>
-					
-					<div class="ownership-visual">
-						<div class="ownership-chart">
-							<div class="ownership-segment"></div>
-							<div class="ownership-segment"></div>
-							<div class="ownership-segment"></div>
-							<div class="ownership-you"></div>
-						</div>
-						<div class="ownership-label">You are an <span>owner</span> of Hominio</div>
-					</div>
-					
-					<p class="vision-highlight">This is just the beginning of a new era in how we build startups together.</p>
-				</div>
-			</div>
-
-			<!-- Current Day Call to Action Panel - Simplified -->
-			<div class="hero-right present-panel" class:visible={textVisible}>
-				<div class="present-badge">TODAY</div>
-				<h1 class="hero-title">Will you be a <span>pioneer</span>?</h1>
-				
-				<div class="hero-question">
-					<p>You have a choice: help build the future of startups, or watch it happen without you.</p>
-					
-					<div class="decision-prompt">
-						<span class="highlight-text">You deserve to own what you help build.</span>
-					</div>
-					
-					<p>Join us in creating Hominio, our first community-built and community-owned startup that gives everyone a stake in its success.</p>
-				</div>
+		<div class="hero-content">
+			<div class="hero-text" class:visible={textVisible}>
+				<h1>Master Your Digital Life with <span class="gradient-text">Voice</span></h1>
+				<p class="hero-subtitle">Hominio is your AI-powered digital brain. Organize your digital life with natural
+					voice commands and let Hominio handle the rest.</p>
 				
 				<div class="hero-actions" class:visible={buttonsVisible}>
-					<a href="/contribute" class="hero-cta primary">Join The Journey</a>
-					<a href="/invest" class="hero-cta secondary">Learn How</a>
+					<a href="#waitlist" class="hero-cta primary">Join Waitlist</a>
+					<a href="#how-it-works" class="hero-cta secondary">See Features</a>
+				</div>
+			</div>
+			
+			<div class="brain-container" class:visible={brainVisible}>
+				<canvas bind:this={brainCanvas} class="brain-canvas"></canvas>
+				
+				<div class="brain-labels" class:visible={connectionsVisible}>
+					<div class="brain-label" style="--index: 1; top: 20%; left: 15%;">
+						<span class="label-dot"></span>Voice Commands
+					</div>
+					<div class="brain-label" style="--index: 2; top: 30%; left: 75%;">
+						<span class="label-dot"></span>Calendar
+					</div>
+					<div class="brain-label" style="--index: 3; top: 65%; left: 25%;">
+						<span class="label-dot"></span>Email
+					</div>
+					<div class="brain-label" style="--index: 4; top: 70%; left: 70%;">
+						<span class="label-dot"></span>Documents
+					</div>
+					<div class="brain-label center">
+						<span class="label-pulse"></span>Hominio Brain
+					</div>
 				</div>
 			</div>
 		</div>
 		
 		<div class="scroll-indicator" class:visible={textVisible}>
-			<span>Scroll to explore</span>
-			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-				<path d="M12 5V19M12 19L5 12M12 19L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			<span>Explore Hominio</span>
+			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 5v14M5 12l7 7 7-7"/>
 			</svg>
 		</div>
 	</section>
 	
-	<!-- Hominio section (redesigned) -->
-	<div class="hominio-section" class:visible={sectionsVisible}>
-		<div class="hominio-container">
-			<div class="hominio-left">
-				<div class="hominio-label">INTRODUCING</div>
-				<h2 class="hominio-title">HOMINIO</h2>
-				<p class="hominio-description">
-					An AI-powered platform that lets you interact with your digital world through voice commands.
-				</p>
-				<ul class="hominio-features">
-					<li>Build mini-apps with simple voice instructions</li>
-					<li>Manage your private data securely</li>
-					<li>Control your digital experience</li>
-					<li>Everything runs locally on your device</li>
-				</ul>
-				<div class="hominio-cta">
-					<a href="#investment-section" class="hominio-button">Learn More</a>
-				</div>
-			</div>
-			<div class="hominio-right">
-				<div class="terminal">
-					<div class="terminal-header">
-						<div class="terminal-buttons">
-							<span></span>
-							<span></span>
-							<span></span>
-						</div>
-						<div class="terminal-title">Hominio AI</div>
-					</div>
-					<div class="terminal-body">
-						<div class="terminal-line">$ <span class="terminal-user">Launch Hominio</span></div>
-						<div class="terminal-line"><span class="terminal-system">Initializing AI system...</span></div>
-						<div class="terminal-line"><span class="terminal-system">Voice interface activated.</span></div>
-						<div class="terminal-line terminal-space"></div>
-						<div class="terminal-line"><span class="terminal-ai">How can I help you today?</span></div>
-						<div class="terminal-line"><span class="terminal-user">"Create a budget tracker app"</span></div>
-						<div class="terminal-line"><span class="terminal-ai">Building budget tracker... What features do you need?</span></div>
-						<div class="terminal-line terminal-current">|</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-	
-	<!-- JOIN US banner (simplified) -->
-	<div class="join-banner" class:visible={sectionsVisible}>
-		<div class="join-content">
-			<h2 class="join-heading">JOIN US IN BUILDING OUR FIRST COMMUNITY BUILT AND OWNED STARTUP</h2>
-		</div>
-	</div>
-	
-	<div class="participate-section" class:visible={sectionsVisible}>
-		<h2 class="section-title animate-fade-in">How to Participate</h2>
-		
-		<!-- Contribute section - simple sentence above Got an Idea -->
-		<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
-			<p>Contribute your skills and ideas to shape the future of Visioncreator and Hominio.</p>
+	<!-- How It Works Section -->
+	<section id="how-it-works" class="how-section" class:visible={sectionsVisible}>
+		<div class="section-header">
+			<h2 class="section-title">How It Works</h2>
+			<p class="section-subtitle">Hominio uses voice commands to simplify your digital life, connecting seamlessly with your apps and services.</p>
 		</div>
 		
-		<!-- Step by step idea flow as seen in screenshots -->
-		<div class="process-flow">
-			<!-- Step 1: Got an Idea? Share It! -->
-			<div class="process-card idea-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.4s;">
-				<div class="card-header">
-					<div class="icon-wrapper">
-						<svg class="megaphone-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<path d="M3 10.5V13.5M3 13.5H6M3 13.5L4.5 12M4.5 12L6 10.5M4.5 12L6.5 13.5M6.5 13.5L8 12M6.5 13.5H13" stroke="#5078C8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+		<div class="flow-container">
+			<div class="flow-track"></div>
+			
+			<!-- Step 1: Voice Command -->
+			<div class="flow-step">
+				<div class="step-number">1</div>
+				<div class="step-content">
+					<div class="step-icon voice-step">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+							<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+							<line x1="12" x2="12" y1="19" y2="22"></line>
 						</svg>
 					</div>
-					<h3 class="card-title">Got an Idea? Share It!</h3>
-				</div>
-				<div class="card-body">
-					<p>Have an idea or a way to make something better? Post it on our idea board! Whether it's a new feature or a small tweak, this is your chance to shape Visioncreator.</p>
+					<h3>Speak Your Command</h3>
+					<p>Just speak naturally to Hominio. No need to remember specific phrases or formats - Hominio understands natural language.</p>
 					
-					<!-- Example idea cards as shown in screenshot - keeping only the first one -->
-					<div class="idea-examples">
-						<div class="idea-example-card">
-							<div class="idea-user">
-								<div class="user-avatar">JD</div>
-								<span>John D.</span>
+					<div class="command-bubble">
+						<div class="sound-wave">
+							<div class="sound-bar"></div>
+							<div class="sound-bar"></div>
+							<div class="sound-bar"></div>
+							<div class="sound-bar"></div>
+							<div class="sound-bar"></div>
+						</div>
+						<div class="command-text">"Hominio, set up a meeting with Sarah about the project next Tuesday at 3 PM and remind me to prepare slides"</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Step 2: Hominio Processing -->
+			<div class="flow-step">
+				<div class="step-number">2</div>
+				<div class="step-content">
+					<div class="step-icon agent-step">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect width="16" height="20" x="4" y="2" rx="2"></rect>
+							<circle cx="12" cy="14" r="4"></circle>
+							<line x1="12" x2="12" y1="6" y2="6"></line>
+							<line x1="12" x2="12" y1="18" y2="18"></line>
+						</svg>
+					</div>
+					<h3>Hominio Agent Processes</h3>
+					<p>The Hominio Agent recognizes your command and breaks it down into actions. It identifies what services are required and how to coordinate between them.</p>
+					
+					<div class="agent-processing">
+						<div class="processing-icon"></div>
+						<div class="processing-steps">
+							<div class="processing-step">
+								<span class="step-label">Understanding intent</span>
+								<div class="step-progress" style="--delay: 0s;"></div>
 							</div>
-							<h4>Improve Onboarding Flow</h4>
-							<p>Create a more intuitive onboarding experience for new members with interactive tutorials.</p>
-							<div class="vote-count">
-								<span class="votes">12</span>
-								<span class="votes-label">VOTES</span>
-								<button class="vote-button">
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M12 5L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-										<path d="M5 12L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+							<div class="processing-step">
+								<span class="step-label">Identifying services</span>
+								<div class="step-progress" style="--delay: 0.5s;"></div>
+							</div>
+							<div class="processing-step">
+								<span class="step-label">Structuring request</span>
+								<div class="step-progress" style="--delay: 1s;"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Step 3: Task Completion -->
+			<div class="flow-step">
+				<div class="step-number">3</div>
+				<div class="step-content">
+					<div class="step-icon data-step">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+						</svg>
+					</div>
+					<h3>Task Completion</h3>
+					<p>Hominio interacts with the relevant services to fulfill your request. All data remains on your device, ensuring privacy and ownership.</p>
+					
+					<div class="completion-card">
+						<div class="card-header">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+								<polyline points="22 4 12 14.01 9 11.01"></polyline>
+							</svg>
+							Completed
+						</div>
+						<div class="card-body">
+							<h4>Meeting with Sarah</h4>
+							<p>Added to calendar: Tuesday, 3:00 PM - 4:00 PM</p>
+							<div class="card-details">
+								<div class="detail-item">
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
 									</svg>
-									Vote
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			
-			<!-- Step 2: Discuss and Vote -->
-			<div class="process-card vote-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.6s;">
-				<div class="card-header">
-					<div class="icon-wrapper">
-						<svg class="vote-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<circle cx="12" cy="12" r="8" stroke="#5078C8" stroke-width="2"/>
-							<path d="M12 8L12 16" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-							<path d="M16 12L8 12" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-						</svg>
-					</div>
-					<h3 class="card-title">Discuss and Vote</h3>
-				</div>
-				<div class="card-body">
-					<p>Your idea kicks off a conversation. We discuss it together as a collective, share feedback, and then vote. Get enough votes, and your idea turns into a draft—ready to take the next step.</p>
-					
-					<div class="vote-visualization">
-						<div class="users-voting">
-							<div class="user-vote">
-								<div class="user-avatar">
-									<span class="vote-plus">+1</span>
+									Project Meeting
+								</div>
+								<div class="detail-item">
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M10 3H8a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-9"></path>
+										<path d="M17 10h-2V8h2a3 3 0 1 0 0-6h-2v2h2a1 1 0 0 1 0 2h-2V4"></path>
+										<path d="M7 12h6"></path>
+										<path d="M7 16h6"></path>
+										<path d="M13 8h-3"></path>
+									</svg>
+									Reminder Added
 								</div>
 							</div>
-							<div class="user-vote">
-								<div class="user-avatar"></div>
-								<span class="vote-plus">+1</span>
-							</div>
-							<div class="user-vote">
-								<div class="user-avatar"></div>
-								<span class="vote-plus">+1</span>
-							</div>
-						</div>
-						<div class="vote-result">
-							<div class="big-vote-count">
-								<span>8</span>
-								<div class="votes-label">VOTES</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			
-			<!-- Step 3: Combined Success Earns & Investment Split -->
-			<div class="process-card combined-card animate-fade-in" class:visible={cardsVisible} style="animation-delay: 0.8s;">
-				<div class="card-header">
-					<div class="icon-wrapper">
-						<svg class="reward-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#5078C8" stroke-width="2"/>
-							<path d="M12 15V22" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-							<path d="M15 19H9" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-							<path d="M15 12L9 8" stroke="#5078C8" stroke-width="2" stroke-linecap="round"/>
-						</svg>
-					</div>
-					<h3 class="card-title">Success Earns You Rewards</h3>
-				</div>
-				<div class="card-body">
-					<p>Take ownership of your idea by defining its scope and resources. Successful projects earn you both payment and ownership tokens.</p>
-					
-					<div class="rewards-section">
-						<div class="budget-sliders">
-							<div class="slider-group">
-								<div class="slider-label">
-									<span>Development Time</span>
-									<span class="slider-value">2 weeks</span>
-								</div>
-								<div class="slider-track">
-									<div class="slider-progress" style="width: 40%;">
-										<div class="slider-handle"></div>
-									</div>
-								</div>
-							</div>
-							
-							<div class="slider-group">
-								<div class="slider-label">
-									<span>Complexity</span>
-									<span class="slider-value">Medium</span>
-								</div>
-								<div class="slider-track">
-									<div class="slider-progress" style="width: 60%;">
-										<div class="slider-handle"></div>
-									</div>
-								</div>
-							</div>
-						</div>
-						
-						<div class="budget-result">
-							<div class="budget-amount">€1,500</div>
-							<div class="token-amount">+ 150 VCR</div>
-							<div class="budget-label">Estimated Rewards</div>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-	</div>
+	</section>
 	
-	<!-- How to Invest Section -->
-	<div id="investment-section" class="investment-section" class:visible={sectionsVisible}>
-		<h2 class="section-title animate-fade-in">How to Invest</h2>
-		
-		<div class="contribute-intro animate-fade-in" style="animation-delay: 0.2s;">
-			<p>You can invest in Visioncreator by buying VCR tokens. Your investment helps build the future of community-owned startups.</p>
+	<!-- Marketplace Section -->
+	<section id="marketplace" class="marketplace-section" class:visible={sectionsVisible}>
+		<div class="section-header">
+			<h2 class="section-title">Vibe Marketplace</h2>
+			<p class="section-subtitle">Extend Hominio's functionality with community-created Vibes and Agents</p>
 		</div>
 		
-		<div class="split-container" class:visible={investVisible}>
-			<div class="split-header">
-				<h3 class="split-title">Investment Split</h3>
-				<p class="split-description">
-					All investments are split equally into two pools, both working together to grow Hominio as a community-owned project.
-				</p>
-			</div>
-			
-			<div class="split-chart">
-				<div class="split-half community">
-					<div class="split-label">Community Pool</div>
-					<div class="split-percentage">50%</div>
-					<div class="split-list">
-						<div class="split-item">Community proposals</div>
-						<div class="split-item">Public contributions</div>
-						<div class="split-item">Development grants</div>
-						<div class="split-item">Community-driven initiatives</div>
+		<div class="marketplace-grid">
+			<!-- Vibe Card 1 -->
+			<div class="vibe-card">
+				<div class="vibe-badge">FEATURED</div>
+				<h3>Work Assistant</h3>
+				<p>Organizes your work tasks, meetings, and documents. Integrates with productivity apps to provide a cohesive workflow.</p>
+				
+				<div class="vibe-creator">
+					<div class="creator-avatar">
+						<img src="https://i.pravatar.cc/40?img=1" alt="Creator avatar" />
+					</div>
+					<div class="creator-info">
+						<div class="creator-name">Alex Chen</div>
+						<div class="creator-title">Productivity Expert</div>
+					</div>
+					<div class="vibe-stats">
+						<div class="download-count">2.3k</div>
+						<div class="rating">
+							<span>★★★★★</span>
+						</div>
 					</div>
 				</div>
-				<div class="split-half platform">
-					<div class="split-label">Platform Pool</div>
-					<div class="split-percentage">50%</div>
-					<div class="split-list">
-						<div class="split-item">Hiring professional developers</div>
-						<div class="split-item">Infrastructure & operations</div>
-						<div class="split-item">Marketing campaigns</div>
-						<div class="split-item">Core feature development</div>
-					</div>
-				</div>
+				
+				<a href="#" class="vibe-cta">
+					<span>Download Vibe</span>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+						<polyline points="7 10 12 15 17 10"></polyline>
+						<line x1="12" x2="12" y1="15" y2="3"></line>
+					</svg>
+				</a>
 			</div>
 			
-			<div class="investment-info">
-				<div class="info-card">
-					<h3 class="info-title">Minimum Investment</h3>
-					<div class="budget-amount">€200</div>
-					<p class="budget-label">Entry-level investment to join Hominio</p>
+			<!-- Vibe Card 2 -->
+			<div class="vibe-card">
+				<div class="vibe-badge">POPULAR</div>
+				<h3>Budget Tracker</h3>
+				<p>Monitors expenses, manages subscriptions, and provides financial insights. Alerts you to unusual spending patterns.</p>
+				
+				<div class="vibe-creator">
+					<div class="creator-avatar">
+						<img src="https://i.pravatar.cc/40?img=2" alt="Creator avatar" />
+					</div>
+					<div class="creator-info">
+						<div class="creator-name">Maya Johnson</div>
+						<div class="creator-title">Financial Advisor</div>
+					</div>
+					<div class="vibe-stats">
+						<div class="download-count">1.7k</div>
+						<div class="rating">
+							<span>★★★★☆</span>
+						</div>
+					</div>
 				</div>
-				<div class="info-card">
-					<h3 class="info-title">Initial Fundraising</h3>
-					<div class="budget-amount">€8M</div>
-					<p class="budget-label">First phase target for Hominio launch</p>
+				
+				<a href="#" class="vibe-cta">
+					<span>Download Vibe</span>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+						<polyline points="7 10 12 15 17 10"></polyline>
+						<line x1="12" x2="12" y1="15" y2="3"></line>
+					</svg>
+				</a>
+			</div>
+			
+			<!-- Vibe Card 3 -->
+			<div class="vibe-card">
+				<div class="vibe-badge">NEW</div>
+				<h3>Writer's Block</h3>
+				<p>Capture ideas, organize research, and streamline your writing process. Perfect for content creators and authors.</p>
+				
+				<div class="vibe-creator">
+					<div class="creator-avatar">
+						<img src="https://i.pravatar.cc/40?img=3" alt="Creator avatar" />
+					</div>
+					<div class="creator-info">
+						<div class="creator-name">Leo Thompson</div>
+						<div class="creator-title">Author & Blogger</div>
+					</div>
+					<div class="vibe-stats">
+						<div class="download-count">952</div>
+						<div class="rating">
+							<span>★★★★★</span>
+						</div>
+					</div>
 				</div>
-				<div class="info-card">
-					<h3 class="info-title">Maximum Investment</h3>
-					<div class="budget-amount">Unlimited</div>
-					<p class="budget-label">No cap on how much you can contribute</p>
-				</div>
+				
+				<a href="#" class="vibe-cta">
+					<span>Download Vibe</span>
+					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+						<polyline points="7 10 12 15 17 10"></polyline>
+						<line x1="12" x2="12" y1="15" y2="3"></line>
+					</svg>
+				</a>
 			</div>
 		</div>
-	</div>
+		
+		<div class="marketplace-cta">
+			<h3>Create Your Own Vibes</h3>
+			<p>Join our developer program and create custom Vibes for yourself or to share with the community.</p>
+			<a href="#" class="vibe-developer-cta">Join Developer Program</a>
+		</div>
+	</section>
+	
+	<!-- Call to Action Section -->
+	<section id="waitlist" class="cta-section" class:visible={sectionsVisible}>
+		<div class="cta-content">
+			<h2 class="cta-title">Join the <span class="gradient-text">Hominio</span> Waitlist</h2>
+			<p class="cta-subtitle">Be among the first to experience the future of digital organization</p>
+			
+			<form class="waitlist-form">
+				<input type="email" placeholder="Enter your email" required />
+				<button type="submit" class="waitlist-button">Join Waitlist</button>
+			</form>
+		</div>
+	</section>
 </main>
-
-<!-- Personal Journey Section - Redesigned for visual storytelling -->
-<div id="journey-section" class="journey-section" class:visible={sectionsVisible}>
-	<h2 class="section-title animate-fade-in">Our Journey</h2>
-	
-	<div class="journey-container" class:visible={journeyVisible}>
-		<div class="timeline-intro">
-			<p class="timeline-intro-text animate-text">
-				From idea to innovation: The story of how VisionCreator came to be.
-			</p>
-		</div>
-		
-		<div class="timeline-container">
-			<!-- Vertical timeline track -->
-			<div class="timeline-path"></div>
-			
-			<!-- Chielo's beginning -->
-			<div class="timeline-node">
-				<div class="timeline-avatar">
-					<img src="/images/chielo_-43.JPG" alt="Chielo" />
-				</div>
-				<div class="timeline-pulse"></div>
-				<div class="timeline-content">
-					<div class="timeline-date">The Beginning</div>
-					<h3 class="timeline-title">The Dream</h3>
-					<p class="timeline-text">
-						At 16, I dreamed of building something meaningful but lacked resources and connections. 
-						Great ideas kept coming, but they remained just ideas.
-					</p>
-					<p class="timeline-highlight">
-						"There has to be a better way to bring ideas to life."
-					</p>
-				</div>
-			</div>
-			
-			<!-- Meeting Sami -->
-			<div class="timeline-node">
-				<div class="timeline-avatar">
-					<div class="timeline-avatar-placeholder">S</div>
-				</div>
-				<div class="timeline-pulse"></div>
-				<div class="timeline-content">
-					<div class="timeline-date">The Catalyst</div>
-					<h3 class="timeline-title">Meeting Sami</h3>
-					<p class="timeline-text">
-						Meeting Sami changed everything. A tech innovator with industry experience, 
-						we connected over shared frustrations with how startups operate.
-					</p>
-					<p class="timeline-highlight">
-						"What if everyone who helps build something actually owns a piece of it?"
-					</p>
-				</div>
-			</div>
-			
-			<!-- Meeting Yvonne -->
-			<div class="timeline-node">
-				<div class="timeline-avatar">
-					<div class="timeline-avatar-placeholder">Y</div>
-				</div>
-				<div class="timeline-pulse"></div>
-				<div class="timeline-content">
-					<div class="timeline-date">The Structure</div>
-					<h3 class="timeline-title">German Connection</h3>
-					<p class="timeline-text">
-						Yvonne brought crucial bureaucratic expertise and became our guide through Germany's complex 
-						regulatory framework, helping position our vision within the established system.
-					</p>
-					<p class="timeline-highlight">
-						"Innovation needs structure to thrive."
-					</p>
-				</div>
-			</div>
-			
-			<!-- Founding VisionCreator -->
-			<div class="timeline-node">
-				<div class="timeline-avatar">
-					<div class="timeline-avatar-placeholder">VC</div>
-				</div>
-				<div class="timeline-pulse"></div>
-				<div class="timeline-content">
-					<div class="timeline-date">The Launch</div>
-					<h3 class="timeline-title">VisionCreator Born</h3>
-					<p class="timeline-text">
-						In early 2023, we made it official. VisionCreator was founded with a simple but revolutionary principle: 
-						everyone who contributes gets ownership.
-					</p>
-					<p class="timeline-highlight">
-						Building a world where contribution determines your opportunity to own the future.
-					</p>
-				</div>
-			</div>
-			
-			<!-- Meeting Ceva -->
-			<div class="timeline-node">
-				<div class="timeline-avatar">
-					<div class="timeline-avatar-placeholder">C</div>
-				</div>
-				<div class="timeline-pulse"></div>
-				<div class="timeline-content">
-					<div class="timeline-date">The Foundation</div>
-					<h3 class="timeline-title">Ceva Completes Us</h3>
-					<p class="timeline-text">
-						Ceva's expertise in governance systems completed our founding team, creating the proposal and voting 
-						system that enables transparent, collective decision-making.
-					</p>
-					<p class="timeline-highlight">
-						"Good governance channels different perspectives toward better outcomes."
-					</p>
-				</div>
-			</div>
-		</div>
-		
-		<div class="timeline-conclusion">
-			<p class="timeline-conclusion-text animate-pulse-text">
-				Hominio is our first community-built and owned startup. Join us in building 
-				a new world of collaborative innovation and shared ownership!
-			</p>
-		</div>
-	</div>
-</div>
 
 <style>
 	/* Canvas for stars */
@@ -707,7 +782,7 @@
 	
 	@keyframes pulse {
 		0% { opacity: 0.5; transform: scale(1); }
-		50% { opacity: 0.7; transform: scale(1.05); }
+		50% { opacity: 0.7; transform: scale(1.1); }
 		100% { opacity: 0.5; transform: scale(1); }
 	}
 	
@@ -743,322 +818,75 @@
 	/* Hero Section Styling - New Streamlined Design */
 	.hero {
 		position: relative;
-		overflow: hidden;
-		padding-top: 2rem;
 		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
+		padding: 2rem;
 	}
 	
-	.time-indicator {
-		position: absolute;
-		top: 2rem;
-		left: 50%;
-		transform: translateX(-50%);
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		background: rgba(0, 0, 0, 0.4);
-		backdrop-filter: blur(10px);
-		padding: 0.5rem 1.5rem;
-		border-radius: 50px;
-		z-index: 10;
-		opacity: 0;
-		transition: opacity 0.8s ease, transform 0.8s ease;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-	}
-	
-	.time-indicator.visible {
-		opacity: 1;
-	}
-	
-	.current-date, .future-date {
-		font-weight: 700;
-		font-size: 0.9rem;
-		letter-spacing: 1px;
-	}
-	
-	.current-date {
-		color: #60A5FA;
-	}
-	
-	.future-date {
-		color: #8B5CF6;
-	}
-	
-	.timeline-divider {
-		height: 2px;
-		width: 80px;
-		background: linear-gradient(90deg, #60A5FA, #8B5CF6);
-		position: relative;
-	}
-	
-	.timeline-divider:before, .timeline-divider:after {
-		content: "";
-		position: absolute;
-		top: 50%;
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		transform: translateY(-50%);
-		background: white;
-	}
-	
-	.timeline-divider:before {
-		left: 0;
-	}
-	
-	.timeline-divider:after {
-		right: 0;
-	}
-	
-	.hero-wrapper {
-		position: relative;
-		z-index: 2;
+	.hero-content {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 3rem;
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 4rem 2rem;
-		min-height: 80vh;
+		gap: 2rem;
 		align-items: center;
+		max-width: 1200px;
+		margin: 0 auto;
 	}
 	
-	/* Future Panel Styling - Simplified */
-	.future-panel {
-		position: relative;
-		padding: 2.5rem;
-		background: rgba(91, 33, 182, 0.1);
-		border-radius: 16px;
-		border: 1px solid rgba(139, 92, 246, 0.2);
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-		backdrop-filter: blur(10px);
-		transition: all 0.8s ease-out;
+	.hero-text {
 		opacity: 0;
-		transform: translateX(-30px);
+		transform: translateY(20px);
+		transition: opacity 0.8s ease, transform 0.8s ease;
 	}
 	
-	.future-panel.visible {
+	.hero-text.visible {
 		opacity: 1;
-		transform: translateX(0);
+		transform: translateY(0);
 	}
 	
-	.future-badge {
-		position: absolute;
-		top: -15px;
-		left: 30px;
-		background: linear-gradient(135deg, #8B5CF6, #6366F1);
-		color: white;
-		padding: 0.5rem 1.5rem;
-		border-radius: 20px;
-		font-size: 0.8rem;
-		font-weight: 700;
-		letter-spacing: 1px;
-		text-transform: uppercase;
-		box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
-	}
-	
-	.hero-statement {
-		font-size: 2.5rem;
-		font-weight: 700;
-		margin-bottom: 1.5rem;
-		color: white;
-	}
-	
-	.hero-story {
-		font-size: 1.1rem;
-		line-height: 1.7;
-		color: rgba(255, 255, 255, 0.85);
-	}
-	
-	.hero-story p {
+	.hero-text h1 {
+		font-size: 3.5rem;
+		font-weight: 800;
+		line-height: 1.2;
 		margin-bottom: 1.5rem;
 	}
 	
-	/* New ownership visualization */
-	.ownership-visual {
-		margin: 2rem 0;
-		padding: 1.5rem;
-		background: rgba(139, 92, 246, 0.1);
-		border-radius: 12px;
-		border: 1px solid rgba(139, 92, 246, 0.2);
-		text-align: center;
-	}
-	
-	.ownership-chart {
-		display: flex;
-		justify-content: center;
-		gap: 0.4rem;
-		margin-bottom: 1rem;
-	}
-	
-	.ownership-segment {
-		height: 40px;
-		width: 8px;
-		background: rgba(139, 92, 246, 0.3);
-		border-radius: 4px;
-		position: relative;
-		transform-origin: bottom;
-		animation: rise 1.5s ease-out forwards;
-		animation-delay: calc(var(--index, 0) * 0.2s);
-		opacity: 0;
-	}
-	
-	.ownership-segment:nth-child(1) { --index: 1; height: 50px; }
-	.ownership-segment:nth-child(2) { --index: 2; height: 60px; }
-	.ownership-segment:nth-child(3) { --index: 3; height: 40px; }
-	
-	.ownership-you {
-		height: 70px;
-		width: 8px;
-		background: #8B5CF6;
-		border-radius: 4px;
-		position: relative;
-		transform-origin: bottom;
-		animation: rise 1.5s ease-out forwards;
-		animation-delay: 0.8s;
-		opacity: 0;
-	}
-	
-	.ownership-you:after {
-		content: "YOU";
-		position: absolute;
-		top: -20px;
-		left: 50%;
-		transform: translateX(-50%);
-		font-size: 0.7rem;
-		font-weight: 700;
-		color: #8B5CF6;
-	}
-	
-	@keyframes rise {
-		0% {
-			transform: scaleY(0);
-			opacity: 0;
-		}
-		100% {
-			transform: scaleY(1);
-			opacity: 1;
-		}
-	}
-	
-	.ownership-label {
-		font-size: 1.2rem;
-		font-weight: 600;
-		color: rgba(255, 255, 255, 0.9);
-	}
-	
-	.ownership-label span {
-		color: #8B5CF6;
-		text-transform: uppercase;
-		font-weight: 700;
-	}
-	
-	.vision-highlight {
-		font-style: italic;
-		border-left: 3px solid #8B5CF6;
-		padding-left: 1.2rem;
-		font-size: 1.15rem;
-		color: rgba(255, 255, 255, 0.95);
-	}
-	
-	/* Present Panel Styling - Simplified */
-	.present-panel {
-		position: relative;
-		padding: 2.5rem;
-		background: rgba(37, 99, 235, 0.1);
-		border-radius: 16px;
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-		backdrop-filter: blur(10px);
-		transition: all 0.8s ease-out;
-		transition-delay: 0.2s;
-		opacity: 0;
-		transform: translateX(30px);
-	}
-	
-	.present-panel.visible {
-		opacity: 1;
-		transform: translateX(0);
-	}
-	
-	.present-badge {
-		position: absolute;
-		top: -15px;
-		left: 30px;
-		background: linear-gradient(135deg, #3B82F6, #60A5FA);
-		color: white;
-		padding: 0.5rem 1.5rem;
-		border-radius: 20px;
-		font-size: 0.8rem;
-		font-weight: 700;
-		letter-spacing: 1px;
-		text-transform: uppercase;
-		box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
-	}
-	
-	.hero-title {
-		font-size: 2.8rem;
-		font-weight: 700;
-		margin-bottom: 1.5rem;
-		color: white;
-	}
-	
-	.hero-title span {
-		background: linear-gradient(90deg, #3B82F6, #93C5FD);
+	.gradient-text {
+		background: linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899);
 		-webkit-background-clip: text;
 		background-clip: text;
 		color: transparent;
-		font-weight: 800;
 	}
 	
-	.hero-question {
-		font-size: 1.1rem;
+	.hero-subtitle {
+		font-size: 1.25rem;
 		line-height: 1.6;
 		color: rgba(255, 255, 255, 0.8);
-		margin-bottom: 2rem;
-	}
-	
-	.hero-question p {
-		margin-bottom: 1.2rem;
-	}
-	
-	.decision-prompt {
-		margin: 1.5rem 0;
-		padding: 1.5rem;
-		background: rgba(59, 130, 246, 0.1);
-		border-radius: 12px;
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		text-align: center;
-	}
-	
-	.highlight-text {
-		color: #60A5FA;
-		font-weight: 600;
-		font-size: 1.2rem;
+		margin-bottom: 2.5rem;
+		max-width: 500px;
 	}
 	
 	.hero-actions {
 		display: flex;
 		gap: 1.5rem;
-		margin-top: 2.5rem;
+		opacity: 0;
+		transform: translateY(20px);
+		transition: opacity 0.5s ease, transform 0.5s ease;
+	}
+	
+	.hero-actions.visible {
+		opacity: 1;
+		transform: translateY(0);
 	}
 	
 	.hero-cta {
-		opacity: 0;
-		transform: translateY(20px);
-		transition: all 0.5s ease-out;
 		padding: 1rem 2rem;
 		border-radius: 8px;
 		font-weight: 600;
 		font-size: 1.1rem;
 		text-decoration: none;
 		text-align: center;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
 		transition: all 0.3s ease;
 		cursor: pointer;
 	}
@@ -1086,804 +914,990 @@
 		transform: translateY(-3px);
 	}
 	
-	.hero-cta.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.scroll-indicator {
-		position: absolute;
-		bottom: 2rem;
-		left: 50%;
-		transform: translateX(-50%);
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		color: rgba(255, 255, 255, 0.6);
-		font-size: 0.9rem;
-		opacity: 0;
-		transition: opacity 1.2s ease 1.5s, transform 0.3s ease;
-	}
-	
-	.scroll-indicator.visible {
-		opacity: 1;
-	}
-	
-	.scroll-indicator svg {
-		animation: bounce 2s infinite;
-	}
-	
-	@keyframes bounce {
-		0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-		40% {transform: translateY(10px);}
-		60% {transform: translateY(5px);}
-	}
-	
-	/* Media Queries for Hero Section */
-	@media (max-width: 1200px) {
-		.hero-wrapper {
-			gap: 2rem;
-			padding: 6rem 2rem 4rem;
-		}
-		
-		.hero-title {
-			font-size: 2.4rem;
-		}
-		
-		.hero-statement {
-			font-size: 2.2rem;
-		}
-	}
-	
-	@media (max-width: 992px) {
-		.hero-wrapper {
-			grid-template-columns: 1fr;
-			padding-top: 8rem;
-		}
-		
-		.future-panel, .present-panel {
-			max-width: 650px;
-			margin: 0 auto;
-		}
-		
-		.time-indicator {
-			top: 1rem;
-		}
-	}
-	
-	@media (max-width: 768px) {
-		.hero-title {
-			font-size: 2.2rem;
-		}
-		
-		.hero-statement {
-			font-size: 2rem;
-		}
-		
-		.future-panel, .present-panel {
-			padding: 2rem;
-		}
-		
-		.future-badge, .present-badge {
-			font-size: 0.7rem;
-			padding: 0.4rem 1.2rem;
-		}
-		
-		.time-indicator {
-			padding: 0.4rem 1rem;
-		}
-		
-		.current-date, .future-date {
-			font-size: 0.8rem;
-		}
-		
-		.timeline-divider {
-			width: 50px;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.hero-wrapper {
-			padding: 7rem 1rem 3rem;
-		}
-		
-		.hero-title {
-			font-size: 1.8rem;
-		}
-		
-		.hero-statement {
-			font-size: 1.8rem;
-		}
-		
-		.future-panel, .present-panel {
-			padding: 1.5rem;
-		}
-		
-		.hero-story, .hero-question {
-			font-size: 1rem;
-		}
-		
-		.hero-actions {
-			flex-direction: column;
-			gap: 1rem;
-		}
-		
-		.hero-cta {
-			width: 100%;
-		}
-		
-		.time-indicator {
-			width: 90%;
-			justify-content: center;
-		}
-	}
-	
-	/* Hominio Section (New Design) */
-	.hominio-section {
-		opacity: 0;
-		transform: translateY(30px);
-		transition: all 0.8s ease-out;
-		margin: 5rem auto;
-		max-width: 1400px;
-		padding: 0 2rem;
-	}
-	
-	.hominio-section.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.hominio-container {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 3rem;
-		background: rgba(20, 30, 60, 0.4);
-		border-radius: 16px;
-		overflow: hidden;
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3),
-					0 0 0 1px rgba(59, 130, 246, 0.2);
-		backdrop-filter: blur(10px);
-	}
-	
-	.hominio-left {
-		padding: 4rem 3rem;
-	}
-	
-	.hominio-label {
-		display: inline-block;
-		padding: 0.5rem 1rem;
-		background: rgba(59, 130, 246, 0.1);
-		border-radius: 20px;
-		font-size: 0.8rem;
-		font-weight: 700;
-		letter-spacing: 2px;
-		color: #60A5FA;
-		margin-bottom: 1.5rem;
-	}
-	
-	.hominio-title {
-		font-size: 4rem;
-		font-weight: 800;
-		margin: 0 0 1.5rem;
-		background: linear-gradient(135deg, #3B82F6, #93C5FD);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		line-height: 1;
-	}
-	
-	.hominio-description {
-		font-size: 1.3rem;
-		color: rgba(255, 255, 255, 0.9);
-		margin-bottom: 2rem;
-		line-height: 1.5;
-	}
-	
-	.hominio-features {
-		list-style: none;
-		padding: 0;
-		margin: 0 0 2.5rem;
-	}
-	
-	.hominio-features li {
+	/* Brain animation container */
+	.brain-container {
 		position: relative;
-		padding-left: 1.8rem;
-		margin-bottom: 1rem;
-		color: rgba(255, 255, 255, 0.8);
-		font-size: 1.1rem;
-	}
-	
-	.hominio-features li:before {
-		content: "";
-		position: absolute;
-		left: 0;
-		top: 0.5rem;
-		width: 0.8rem;
-		height: 0.8rem;
-		background: #3B82F6;
-		border-radius: 50%;
-	}
-	
-	.hominio-cta {
-		margin-top: 2rem;
-	}
-	
-	.hominio-button {
-		display: inline-block;
-		padding: 1rem 2.5rem;
-		background: linear-gradient(135deg, #3B82F6, #2563EB);
-		color: white;
-		font-weight: 600;
-		font-size: 1.1rem;
-		border-radius: 8px;
-		text-decoration: none;
-		transition: all 0.3s ease;
-		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-	}
-	
-	.hominio-button:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
-		background: linear-gradient(135deg, #4287f5, #1d4ed8);
-	}
-	
-	.hominio-right {
-		background: linear-gradient(135deg, rgba(30, 58, 138, 0.3), rgba(30, 58, 138, 0.1));
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 2rem;
-	}
-	
-	/* Terminal styling */
-	.terminal {
 		width: 100%;
-		max-width: 500px;
-		background: rgba(15, 23, 42, 0.9);
-		border-radius: 10px;
-		overflow: hidden;
-		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-		font-family: 'Courier New', monospace;
-	}
-	
-	.terminal-header {
-		background: rgba(30, 41, 59, 0.8);
-		padding: 0.8rem 1rem;
-		display: flex;
-		align-items: center;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-	}
-	
-	.terminal-buttons {
-		display: flex;
-		gap: 0.5rem;
-		margin-right: 1rem;
-	}
-	
-	.terminal-buttons span {
-		width: 12px;
-		height: 12px;
-		border-radius: 50%;
-		display: block;
-	}
-	
-	.terminal-buttons span:nth-child(1) {
-		background: #ff5f56;
-	}
-	
-	.terminal-buttons span:nth-child(2) {
-		background: #ffbd2e;
-	}
-	
-	.terminal-buttons span:nth-child(3) {
-		background: #27c93f;
-	}
-	
-	.terminal-title {
-		color: rgba(255, 255, 255, 0.7);
-		font-size: 0.9rem;
-		text-align: center;
-		flex-grow: 1;
-		margin-right: 3rem;
-	}
-	
-	.terminal-body {
-		padding: 1.5rem;
-		color: rgba(255, 255, 255, 0.9);
-		font-size: 0.95rem;
-		line-height: 1.5;
-	}
-	
-	.terminal-line {
-		margin-bottom: 0.8rem;
-	}
-	
-	.terminal-space {
-		height: 1rem;
-	}
-	
-	.terminal-system {
-		color: #a5a5a5;
-	}
-	
-	.terminal-user {
-		color: #5beda7;
-	}
-	
-	.terminal-ai {
-		color: #60A5FA;
-	}
-	
-	.terminal-current {
-		animation: blink 1s infinite;
-	}
-	
-	@keyframes blink {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0; }
-	}
-	
-	/* Media queries for hominio section */
-	@media (max-width: 1024px) {
-		.hominio-container {
-			grid-template-columns: 1fr;
-		}
-		
-		.hominio-right {
-			padding: 2rem 3rem 4rem;
-		}
-		
-		.hominio-title {
-			font-size: 3.5rem;
-		}
-	}
-	
-	@media (max-width: 768px) {
-		.hominio-left {
-			padding: 3rem 2rem;
-		}
-		
-		.hominio-title {
-			font-size: 3rem;
-		}
-		
-		.join-heading {
-			font-size: 1.8rem;
-		}
-		
-		.join-subtext {
-		font-size: 1rem;
-		}
-	}
-	
-	@media (max-width: 480px) {
-		.hominio-left {
-			padding: 2rem 1.5rem;
-		}
-		
-		.hominio-title {
-			font-size: 2.5rem;
-		}
-		
-		.hominio-description {
-			font-size: 1.1rem;
-		}
-		
-		.hominio-features li {
-			font-size: 1rem;
-		}
-		
-		.terminal-body {
-			padding: 1rem;
-			font-size: 0.8rem;
-		}
-		
-		.join-heading {
-			font-size: 1.5rem;
-		}
-	}
-	
-	/* Participate Section */
-	.participate-section {
-		opacity: 0;
-		transform: translateY(30px);
-		transition: all 0.8s ease-out;
-		padding: 4rem 2rem;
-		max-width: 1400px;
-		margin: 0 auto 5rem;
-	}
-	
-	.participate-section.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.section-title {
-		font-size: 2.5rem;
-		font-weight: 700;
-		text-align: center;
-		margin-bottom: 3rem;
-		color: white;
-	}
-
-	.contribute-intro {
-		text-align: center;
-		max-width: 700px;
-		margin: 0 auto 4rem;
-		font-size: 1.3rem;
-		color: rgba(255, 255, 255, 0.9);
-	}
-	
-	/* Process Cards */
-	.process-flow {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-		gap: 2rem;
-		margin-top: 3rem;
-	}
-	
-	.process-card {
+		padding-bottom: 100%;
 		opacity: 0;
 		transform: translateY(20px);
-		transition: all 0.6s ease-out;
-		background: rgba(30, 58, 138, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		border-radius: 12px;
-		padding: 2rem;
-		transition: transform 0.3s ease, box-shadow 0.3s ease;
+		transition: opacity 1s ease, transform 1s ease;
 	}
 	
-	.process-card.visible {
+	.brain-container.visible {
 		opacity: 1;
 		transform: translateY(0);
 	}
 	
-	.process-card:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.15);
-		border-color: rgba(59, 130, 246, 0.3);
-	}
-	
-	.card-header {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-	
-	.icon-wrapper {
-		width: 48px;
-		height: 48px;
-		border-radius: 50%;
-		background: rgba(59, 130, 246, 0.1);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	
-	.card-title {
-		font-size: 1.4rem;
-		font-weight: 600;
-		margin: 0;
-		color: white;
-	}
-	
-	.card-body {
-		color: rgba(255, 255, 255, 0.8);
-		font-size: 1rem;
-		line-height: 1.6;
-	}
-	
-	/* Idea Examples */
-	.idea-examples {
-		margin-top: 1.5rem;
-		display: grid;
-		gap: 1rem;
-	}
-	
-	.idea-example-card {
-		background: rgba(30, 58, 138, 0.15);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		border-radius: 8px;
-		padding: 1.25rem;
-		transition: transform 0.2s ease;
-	}
-	
-	.idea-example-card:hover {
-		transform: translateY(-3px);
-	}
-	
-	.idea-user {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.7);
-	}
-	
-	.user-avatar {
-		width: 28px;
-		height: 28px;
-		background: rgba(59, 130, 246, 0.2);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: #3B82F6;
-	}
-	
-	.idea-example-card h4 {
-		font-size: 1.1rem;
-		font-weight: 600;
-		margin: 0 0 0.5rem;
-		color: white;
-	}
-	
-	.idea-example-card p {
-		font-size: 0.95rem;
-		color: rgba(255, 255, 255, 0.7);
-		margin-bottom: 1rem;
-	}
-	
-	.vote-count {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-	}
-	
-	.votes {
-		color: #3B82F6;
-		font-weight: 600;
-	}
-	
-	.votes-label {
-		color: rgba(255, 255, 255, 0.5);
-		font-size: 0.8rem;
-		letter-spacing: 1px;
-	}
-	
-	.vote-button {
-		margin-left: auto;
-		background: rgba(59, 130, 246, 0.1);
-		border: 1px solid rgba(59, 130, 246, 0.3);
-		border-radius: 4px;
-		padding: 0.35rem 0.75rem;
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.8rem;
-		color: #3B82F6;
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-	
-	.vote-button:hover {
-		background: rgba(59, 130, 246, 0.2);
-	}
-	
-	/* Vote Visualization */
-	.vote-visualization {
-		margin-top: 1.5rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-	
-	.users-voting {
-		display: flex;
-	}
-	
-	.user-vote {
-		position: relative;
-		margin-right: -10px;
-	}
-	
-	.vote-plus {
+	.brain-canvas {
 		position: absolute;
-		top: -10px;
-		right: -5px;
-		background: #3B82F6;
-		color: white;
-		border-radius: 10px;
-		padding: 0.1rem 0.35rem;
-		font-size: 0.7rem;
-		font-weight: 600;
-	}
-	
-	.big-vote-count {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-	}
-	
-	.big-vote-count span {
-		font-size: 2.5rem;
-		font-weight: 700;
-		color: #3B82F6;
-		line-height: 1;
-	}
-	
-	/* Budget sliders */
-	.rewards-section {
-		margin-top: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.budget-sliders {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
-	}
-	
-	.slider-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.slider-label {
-		display: flex;
-		justify-content: space-between;
-		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.7);
-	}
-
-	.slider-value {
-		color: #3B82F6;
-		font-weight: 500;
-	}
-
-	.slider-track {
-		height: 8px;
-		background: rgba(255, 255, 255, 0.1);
-		border-radius: 4px;
-		overflow: hidden;
-	}
-
-	.slider-progress {
+		top: 0;
+		left: 0;
+		width: 100%;
 		height: 100%;
-		background: linear-gradient(90deg, #3B82F6, #60A5FA);
-		border-radius: 4px;
-		position: relative;
 	}
 	
-	.slider-handle {
+	/* Brain labels */
+	.brain-labels {
 		position: absolute;
-		right: 0;
-		top: 50%;
-		width: 16px;
-		height: 16px;
-		background: white;
-		border-radius: 50%;
-		transform: translate(50%, -50%);
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-	}
-
-	.budget-result {
-		margin-top: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		border-top: 1px solid rgba(255, 255, 255, 0.1);
-		padding-top: 1.5rem;
-	}
-
-	.budget-amount {
-		font-size: 2rem;
-		font-weight: 700;
-		color: white;
-	}
-	
-	.token-amount {
-		font-size: 1.1rem;
-		color: #60A5FA;
-		margin-top: 0.25rem;
-		font-weight: 600;
-	}
-	
-	.budget-label {
-		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.6);
-		margin-top: 0.5rem;
-	}
-	
-	/* Animation classes */
-	.animate-fade-in {
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
 		opacity: 0;
-		transform: translateY(20px);
-		animation: fadeIn 0.6s ease-out forwards;
+		transition: opacity 0.5s ease;
 	}
 	
-	@keyframes fadeIn {
+	.brain-labels.visible {
+		opacity: 1;
+	}
+	
+	.brain-label {
+		position: absolute;
+		display: flex;
+		align-items: center;
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.9);
+		background: rgba(0, 0, 0, 0.6);
+		padding: 0.3rem 0.7rem;
+		border-radius: 20px;
+		white-space: nowrap;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+		backdrop-filter: blur(5px);
+		opacity: 0;
+		transform: translateY(10px);
+		animation: fadeInLabel 0.5s ease forwards;
+		animation-delay: calc(var(--index) * 0.2s);
+	}
+	
+	@keyframes fadeInLabel {
 		to {
 			opacity: 1;
 			transform: translateY(0);
 		}
 	}
 	
-	/* Investment section */
-	.investment-section {
-		padding: 5rem 2rem;
+	.brain-label.center {
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: rgba(59, 130, 246, 0.2);
+		border: 1px solid rgba(59, 130, 246, 0.4);
+		padding: 0.4rem 0.8rem;
+		font-weight: 600;
+		color: #3B82F6;
+	}
+	
+	.label-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #3B82F6;
+		margin-right: 0.5rem;
+	}
+	
+	.label-pulse {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		background: rgba(59, 130, 246, 0.1);
+		z-index: -1;
+		animation: pulse-ring 2s infinite;
+	}
+	
+	@keyframes pulse-ring {
+		0% {
+			transform: translate(-50%, -50%) scale(0.8);
+			opacity: 0.5;
+		}
+		50% {
+			opacity: 0.2;
+		}
+		100% {
+			transform: translate(-50%, -50%) scale(1.5);
+			opacity: 0;
+		}
+	}
+	
+	/* Scroll indicator */
+	.scroll-indicator {
+		position: absolute;
+		bottom: 2rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1.5rem;
+		color: rgba(255, 255, 255, 0.8);
+	}
+	
+	.creator-avatar {
+		width: 32px;
+		height: 32px;
+		background: rgba(139, 92, 246, 0.2);
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: #8B5CF6;
+	}
+	
+	.vibe-stats {
+		display: flex;
+		justify-content: space-between;
+		padding-top: 1rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+	
+	.stat-number {
+		font-size: 1.2rem;
+		font-weight: 700;
+		color: #8B5CF6;
+	}
+	
+	.stat-label {
+		font-size: 0.8rem;
+		color: rgba(255, 255, 255, 0.6);
+	}
+	
+	.marketplace-cta {
+		text-align: center;
+		margin-top: 3rem;
+		padding: 3rem;
+		background: rgba(17, 24, 39, 0.3);
+		border-radius: 16px;
+		border: 1px solid rgba(55, 65, 81, 0.2);
+	}
+	
+	.marketplace-cta h3 {
+		font-size: 1.8rem;
+		font-weight: 600;
+		margin-bottom: 1rem;
+	}
+	
+	.marketplace-cta p {
+		color: rgba(255, 255, 255, 0.8);
+		max-width: 600px;
+		margin: 0 auto 2rem;
+	}
+	
+	.cta-button {
+		display: inline-block;
+		background: linear-gradient(135deg, #8B5CF6, #6366F1);
+		color: white;
+		padding: 1rem 2rem;
+		border-radius: 8px;
+		font-weight: 600;
+		text-decoration: none;
+		transition: all 0.3s ease;
+	}
+	
+	.cta-button:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+	}
+	
+	/* Call to Action Section */
+	.cta-section {
+		padding: 8rem 2rem;
+		max-width: 800px;
 		margin: 0 auto;
-		max-width: 1200px;
+		text-align: center;
 		opacity: 0;
 		transform: translateY(30px);
 		transition: all 0.8s ease-out;
 	}
 	
-	.investment-section.visible {
+	.cta-section.visible {
 		opacity: 1;
 		transform: translateY(0);
 	}
 	
-	.split-container {
-		opacity: 0;
-		transform: translateY(20px);
-		transition: all 0.5s ease-out 0.2s;
+	.cta-content {
+		padding: 4rem;
+		background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+		border-radius: 24px;
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 	}
 	
-	.split-container.visible {
-		opacity: 1;
-		transform: translateY(0);
-	}
-	
-	.split-header {
-		margin-bottom: 3rem;
-		text-align: center;
-	}
-	
-	.split-title {
-		font-size: 2.2rem;
+	.cta-content h2 {
+		font-size: 2.5rem;
 		font-weight: 700;
+		margin-bottom: 1.5rem;
+	}
+	
+	.cta-content p {
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 1.2rem;
+		margin-bottom: 2.5rem;
+	}
+	
+	.waitlist-form {
+		display: flex;
+		max-width: 500px;
+		margin: 0 auto 3rem;
+	}
+	
+	.waitlist-form input {
+		flex: 1;
+		padding: 1rem 1.5rem;
+		border-radius: 8px 0 0 8px;
+		border: 1px solid rgba(59, 130, 246, 0.3);
+		background: rgba(17, 24, 39, 0.6);
+		color: white;
+		font-size: 1rem;
+	}
+	
+	.waitlist-form input::placeholder {
+		color: rgba(255, 255, 255, 0.5);
+	}
+	
+	.waitlist-form button {
+		padding: 1rem 1.5rem;
+		background: linear-gradient(135deg, #3B82F6, #2563EB);
+		color: white;
+		font-weight: 600;
+		border: none;
+		border-radius: 0 8px 8px 0;
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+	
+	.waitlist-form button:hover {
+		background: linear-gradient(135deg, #2563EB, #1D4ED8);
+	}
+	
+	.community-note {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+	
+	.community-note svg {
+		flex-shrink: 0;
+	}
+	
+	.community-note p {
+		margin: 0;
+		font-size: 1rem;
+	}
+	
+	/* Media queries */
+	@media (max-width: 768px) {
+		.how-section, .marketplace-section, .cta-section {
+			padding: 5rem 1.5rem;
+		}
+		
+		.step-number {
+			width: 50px;
+			height: 50px;
+			font-size: 1.25rem;
+			margin-right: 1.5rem;
+		}
+		
+		.flow-track {
+			left: 25px;
+		}
+		
+		.vibe-card p {
+			min-height: auto;
+		}
+		
+		.marketplace-cta {
+			padding: 2rem 1.5rem;
+		}
+		
+		.cta-content {
+			padding: 3rem 1.5rem;
+		}
+		
+		.cta-content h2 {
+			font-size: 2rem;
+		}
+		
+		.cta-content p {
+			font-size: 1.1rem;
+		}
+	}
+	
+	@media (max-width: 640px) {
+		.waitlist-form {
+			flex-direction: column;
+			gap: 1rem;
+		}
+		
+		.waitlist-form input {
+			border-radius: 8px;
+			width: 100%;
+		}
+		
+		.waitlist-form button {
+			border-radius: 8px;
+			width: 100%;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.how-section, .marketplace-section, .cta-section {
+			padding: 4rem 1rem;
+		}
+		
+		.flow-step {
+			flex-direction: column;
+			gap: 1rem;
+		}
+		
+		.step-number {
+			margin-right: 0;
+			margin-bottom: 1.5rem;
+		}
+		
+		.flow-track {
+			display: none;
+		}
+		
+		.agent-processing {
+			flex-direction: column;
+			padding: 1rem;
+		}
+		
+		.card-details {
+			flex-direction: column;
+			gap: 0.75rem;
+		}
+		
+		.cta-content {
+			padding: 2rem 1rem;
+		}
+		
+		.cta-content h2 {
+			font-size: 1.8rem;
+		}
+		
+		.hero-text h1 {
+			font-size: 2rem;
+		}
+		
+		.hero-subtitle {
+			font-size: 1.1rem;
+		}
+		
+		.hero-actions {
+			flex-direction: column;
+		}
+		
+		.hero-cta {
+			width: 100%;
+		}
+	}
+	
+	/* How It Works Section */
+	.how-section {
+		padding: 8rem 2rem;
+		max-width: 900px;
+		margin: 0 auto;
+		opacity: 0;
+		transform: translateY(30px);
+		transition: all 0.8s ease-out;
+	}
+	
+	.how-section.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+
+	.section-header {
+		text-align: center;
+		margin-bottom: 4rem;
+	}
+	
+	.section-title {
+		font-size: 2.8rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+		background: linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899);
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+	
+	.section-subtitle {
+		font-size: 1.2rem;
+		color: rgba(255, 255, 255, 0.8);
+		max-width: 600px;
+		margin: 0 auto;
+	}
+	
+	.flow-container {
+		position: relative;
+		padding: 2rem 0;
+	}
+	
+	.flow-track {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 30px;
+		width: 2px;
+		background: linear-gradient(to bottom, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
+	}
+	
+	.flow-step {
+		display: flex;
+		margin-bottom: 5rem;
+		position: relative;
+	}
+	
+	.flow-step:last-child {
+		margin-bottom: 0;
+	}
+	
+	.step-number {
+		width: 60px;
+		height: 60px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.5rem;
+		font-weight: 700;
+		background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+		color: white;
+		margin-right: 2rem;
+		z-index: 1;
+		box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+	}
+	
+	.step-content {
+		flex: 1;
+		padding-top: 0.5rem;
+	}
+	
+	.step-icon {
+		width: 56px;
+		height: 56px;
+		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		margin-bottom: 1rem;
 		color: white;
 	}
 	
-	.split-description {
-		font-size: 1.1rem;
+	.voice-step {
+		background: linear-gradient(135deg, #3B82F6, #1E40AF);
+	}
+	
+	.agent-step {
+		background: linear-gradient(135deg, #8B5CF6, #4C1D95);
+	}
+	
+	.data-step {
+		background: linear-gradient(135deg, #EC4899, #831843);
+	}
+	
+	.step-content h3 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin-bottom: 0.75rem;
+	}
+	
+	.step-content p {
+		color: rgba(255, 255, 255, 0.7);
 		line-height: 1.6;
+		margin-bottom: 1.5rem;
+		max-width: 600px;
+	}
+	
+	/* Command Bubble */
+	.command-bubble {
+		background: rgba(59, 130, 246, 0.1);
+		border: 1px solid rgba(59, 130, 246, 0.2);
+		border-radius: 12px;
+		padding: 1.25rem;
+		margin-bottom: 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+	
+	.sound-wave {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 4px;
+		height: 40px;
+	}
+	
+	.sound-bar {
+		width: 4px;
+		height: 20px;
+		background: #3B82F6;
+		border-radius: 2px;
+		animation: soundWave 1.2s ease-in-out infinite;
+	}
+	
+	.sound-bar:nth-child(1) { animation-delay: 0s; }
+	.sound-bar:nth-child(2) { animation-delay: 0.2s; }
+	.sound-bar:nth-child(3) { animation-delay: 0.4s; }
+	.sound-bar:nth-child(4) { animation-delay: 0.2s; }
+	.sound-bar:nth-child(5) { animation-delay: 0s; }
+	
+	@keyframes soundWave {
+		0%, 100% { height: 20px; }
+		50% { height: 40px; }
+	}
+	
+	.command-text {
+		color: #60A5FA;
+		font-weight: 500;
+		text-align: center;
+	}
+	
+	/* Agent Processing */
+	.agent-processing {
+		background: rgba(139, 92, 246, 0.1);
+		border: 1px solid rgba(139, 92, 246, 0.2);
+		border-radius: 12px;
+		padding: 1.25rem;
+		display: flex;
+		align-items: center;
+		gap: 1.5rem;
+	}
+	
+	.processing-icon {
+		width: 48px;
+		height: 48px;
+		border-radius: 50%;
+		background: rgba(139, 92, 246, 0.2);
+		position: relative;
+	}
+	
+	.processing-icon:after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: rgba(139, 92, 246, 0.6);
+		transform: translate(-50%, -50%);
+		animation: pulse 1.5s infinite;
+	}
+	
+	@keyframes pulse {
+		0% {
+			transform: translate(-50%, -50%) scale(1);
+			opacity: 0.8;
+		}
+		100% {
+			transform: translate(-50%, -50%) scale(1.6);
+			opacity: 0;
+		}
+	}
+	
+	.processing-steps {
+		flex: 1;
+	}
+	
+	.processing-step {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.75rem;
+	}
+	
+	.processing-step:last-child {
+		margin-bottom: 0;
+	}
+	
+	.step-label {
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+	
+	.step-progress {
+		width: 0;
+		height: 4px;
+		background: linear-gradient(90deg, #8B5CF6, #EC4899);
+		border-radius: 2px;
+		animation: progress 1.5s forwards;
+		animation-delay: var(--delay, 0s);
+	}
+	
+	@keyframes progress {
+		0% { width: 0; }
+		100% { width: 100px; }
+	}
+	
+	/* Completion Card */
+	.completion-card {
+		background: rgba(16, 185, 129, 0.1);
+		border: 1px solid rgba(16, 185, 129, 0.2);
+		border-radius: 12px;
+		overflow: hidden;
+	}
+	
+	.card-header {
+		background: rgba(16, 185, 129, 0.2);
+		padding: 0.75rem 1.25rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: #10B981;
+		font-weight: 600;
+	}
+	
+	.card-body {
+		padding: 1.25rem;
+	}
+	
+	.card-body h4 {
+		margin: 0 0 0.5rem;
+		font-size: 1.1rem;
+		color: rgba(255, 255, 255, 0.9);
+	}
+	
+	.card-body p {
 		color: rgba(255, 255, 255, 0.8);
-		max-width: 800px;
+		margin-bottom: 1rem;
+	}
+	
+	.card-details {
+		display: flex;
+		gap: 1.5rem;
+	}
+	
+	.detail-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	/* Marketplace Section */
+	.marketplace-section {
+		padding: 8rem 2rem;
+		max-width: 1200px;
+		margin: 0 auto;
+		opacity: 0;
+		transform: translateY(30px);
+		transition: all 0.8s ease-out;
+	}
+	
+	.marketplace-section.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.marketplace-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 2rem;
+		margin: 3rem 0 4rem;
+	}
+	
+	.vibe-card {
+		background: rgba(17, 24, 39, 0.5);
+		border: 1px solid rgba(55, 65, 81, 0.3);
+		border-radius: 12px;
+		padding: 2rem;
+		transition: all 0.3s ease;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+	}
+	
+	.vibe-card:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+		border-color: rgba(139, 92, 246, 0.3);
+	}
+	
+	.vibe-badge {
+		position: absolute;
+		top: -10px;
+		left: 20px;
+		background: linear-gradient(135deg, #8B5CF6, #6366F1);
+		color: white;
+		padding: 0.4rem 1rem;
+		border-radius: 20px;
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+	
+	.vibe-card h3 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin: 1.5rem 0 1rem;
+	}
+	
+	.vibe-card p {
+		color: rgba(255, 255, 255, 0.7);
+		line-height: 1.6;
+		margin-bottom: 2rem;
+		min-height: 4.8rem;
+	}
+	
+	.vibe-creator {
+		display: flex;
+		align-items: center;
+		margin-top: auto;
+		margin-bottom: 1.5rem;
+	}
+	
+	.creator-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		overflow: hidden;
+		margin-right: 1rem;
+	}
+	
+	.creator-avatar img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	
+	.creator-info {
+		flex: 1;
+	}
+	
+	.creator-name {
+		font-weight: 600;
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.9);
+	}
+	
+	.creator-title {
+		font-size: 0.8rem;
+		color: rgba(255, 255, 255, 0.6);
+	}
+	
+	.vibe-stats {
+		text-align: right;
+	}
+	
+	.download-count {
+		font-weight: 600;
+		font-size: 0.9rem;
+		color: #8B5CF6;
+	}
+	
+	.rating {
+		font-size: 0.8rem;
+		color: #FCD34D;
+	}
+	
+	.vibe-cta {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.5rem;
+		padding: 0.8rem 1.5rem;
+		background: rgba(139, 92, 246, 0.1);
+		border: 1px solid rgba(139, 92, 246, 0.3);
+		border-radius: 8px;
+		color: #8B5CF6;
+		font-weight: 600;
+		text-decoration: none;
+		transition: all 0.3s ease;
+	}
+	
+	.vibe-cta:hover {
+		background: rgba(139, 92, 246, 0.2);
+		transform: translateY(-2px);
+	}
+	
+	.marketplace-cta {
+		text-align: center;
+		background: rgba(17, 24, 39, 0.5);
+		border: 1px solid rgba(55, 65, 81, 0.3);
+		border-radius: 12px;
+		padding: 3rem 2rem;
+	}
+	
+	.marketplace-cta h3 {
+		font-size: 1.8rem;
+		font-weight: 600;
+		margin-bottom: 1rem;
+	}
+	
+	.marketplace-cta p {
+		color: rgba(255, 255, 255, 0.7);
+		margin-bottom: 2rem;
+		max-width: 500px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+	
+	.vibe-developer-cta {
+		display: inline-flex;
+		align-items: center;
+		padding: 1rem 2rem;
+		background: linear-gradient(135deg, #8B5CF6, #6366F1);
+		color: white;
+		font-weight: 600;
+		border-radius: 8px;
+		text-decoration: none;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+	}
+	
+	.vibe-developer-cta:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 6px 15px rgba(139, 92, 246, 0.4);
+	}
+
+	/* Call to Action Section */
+	.cta-section {
+		padding: 8rem 2rem;
+		margin: 0 auto;
+		text-align: center;
+		background: radial-gradient(circle at top, rgba(59, 130, 246, 0.1), transparent 70%);
+		opacity: 0;
+		transform: translateY(30px);
+		transition: all 0.8s ease-out;
+	}
+	
+	.cta-section.visible {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	
+	.cta-content {
+		max-width: 600px;
 		margin: 0 auto;
 	}
 	
-	.split-chart {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 2rem;
+	.cta-title {
+		font-size: 3rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+	}
+	
+	.cta-subtitle {
+		font-size: 1.2rem;
+		color: rgba(255, 255, 255, 0.8);
 		margin-bottom: 3rem;
 	}
 	
-	.split-half {
-		background: rgba(30, 58, 138, 0.15);
-		border: 1px solid rgba(59, 130, 246, 0.2);
-		border-radius: 12px;
-		padding: 2rem;
-		transition: transform 0.3s ease, box-shadow 0.3s ease;
-		animation: fadeIn 0.6s ease-out forwards;
-		animation-delay: calc(var(--index, 0) * 0.2s);
-		opacity: 0;
+	.waitlist-form {
+		display: flex;
+		max-width: 500px;
+		margin: 0 auto;
+		gap: 1rem;
 	}
 	
-	.split-half:hover {
-		transform: translateY(-5px);
-		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-		border-color: rgba(59, 130, 246, 0.3);
+	.waitlist-form input {
+		flex: 1;
+		padding: 1rem 1.5rem;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 8px;
+		color: white;
+		font-size: 1rem;
 	}
 	
-	.split-half.community {
-		--index: 1;
+	.waitlist-form input:focus {
+		outline: none;
+		border-color: rgba(59, 130, 246, 0.5);
+		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 	}
 	
-	.split-half.platform {
-		--index: 2;
+	.waitlist-button {
+		padding: 1rem 2rem;
+		background: linear-gradient(135deg, #3B82F6, #2563EB);
+		color: white;
+		font-weight: 600;
+		border: none;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 	}
+	
+	.waitlist-button:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+	}
+	
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.section-title {
+			font-size: 2.2rem;
+		}
+		
+		.flow-step {
+			flex-direction: column;
+			padding-left: 30px;
+		}
+		
+		.step-number {
+			position: absolute;
+			left: 0;
+			top: 0;
+			transform: translateX(-50%);
+			margin-right: 0;
+		}
+		
+		.step-content {
+			padding-top: 0;
+			padding-left: 1.5rem;
+		}
+		
+		.waitlist-form {
+			flex-direction: column;
+		}
+		
+		.waitlist-button {
+			width: 100%;
+		}
+		
+		.marketplace-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+	
+	@media (max-width: 480px) {
+		.section-title {
+			font-size: 1.8rem;
+		}
+		
+		.cta-title {
+			font-size: 2.2rem;
+		}
+		
+		.cta-subtitle {
+			font-size: 1rem;
+		}
+		
+		.how-section, .marketplace-section, .cta-section {
+			padding: 5rem 1.5rem;
+		}
+	}
+
+	/* Features Section */
+	/* ... existing code ... */
 </style>
 
